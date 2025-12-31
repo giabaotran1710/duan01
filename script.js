@@ -251,4 +251,23 @@ const btn = document.querySelector(".login-btn");
     }, 2500);
   });
 
+
+  const toast = document.getElementById("toast-disabled");
+  const disabledLinks = document.querySelectorAll(".disabled-link");
+
+  let timer;
+
+  disabledLinks.forEach(link => {
+    link.addEventListener("click", (e) => {
+      e.preventDefault(); // chặn link #
+
+      toast.classList.add("show");
+
+      clearTimeout(timer);
+      timer = setTimeout(() => {
+        toast.classList.remove("show");
+      }, 1800);
+    });
+  });
+  
 });
