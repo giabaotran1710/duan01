@@ -43,70 +43,7 @@ closeBtn.addEventListener('click', () => {
   setInterval(glitchOnce, 500);
 
 
-
- const clock = document.getElementById("clock");
-
-  function createClock() {
-    clock.innerHTML = "";
-    const structure = ["d","d",":","d","d",":","d","d"];
-
-    structure.forEach(item => {
-      if (item === ":") {
-        const sep = document.createElement("span");
-        sep.className = "sep";
-        sep.textContent = ":";
-        clock.appendChild(sep);
-      } else {
-        const digit = document.createElement("div");
-        digit.className = "digit";
-
-        const current = document.createElement("span");
-        current.className = "current";
-        current.textContent = "0";
-
-        const next = document.createElement("span");
-        next.className = "next";
-        next.textContent = "0";
-
-        digit.append(current, next);
-        clock.appendChild(digit);
-      }
-    });
-  }
-
-  function updateClock() {
-    const now = new Date();
-    const time =
-      String(now.getHours()).padStart(2, '0') +
-      String(now.getMinutes()).padStart(2, '0') +
-      String(now.getSeconds()).padStart(2, '0');
-
-    const digits = document.querySelectorAll(".digit");
-    let i = 0;
-
-    digits.forEach(digit => {
-      const current = digit.querySelector(".current");
-      const next = digit.querySelector(".next");
-      const newVal = time[i++];
-
-      if (current.textContent !== newVal) {
-        next.textContent = newVal;
-        digit.classList.add("slide");
-
-        setTimeout(() => {
-          current.textContent = newVal;
-          digit.classList.remove("slide");
-        }, 350);
-      }
-    });
-  }
-
-  createClock();
-  updateClock();
-  setInterval(updateClock, 1000);
-
 const sky = document.querySelector('.sky');
-
 const METEOR_COUNT = 6;
 const BASE_DURATION = 3.5; // giây
 const VARIANCE = 0.2;      // ±20%
@@ -253,25 +190,33 @@ const btn = document.querySelector(".login-btn");
 
 
   const toast = document.getElementById("toast-disabled");
-  const disabledLinks = document.querySelectorAll(".disabled-link");
-
-  let timer;
-
-  disabledLinks.forEach(link => {
-    link.addEventListener("click", (e) => {
-      e.preventDefault(); // chặn link #
-
-      toast.classList.add("show");
-
-      clearTimeout(timer);
-      timer = setTimeout(() => {
-        toast.classList.remove("show");
-      }, 1800);
-    });
-  });
-
+const disabledLinks = document.querySelectorAll(".disabled-link");
 const guestLogin = document.getElementById("guestLogin");
 const accountBtn = document.querySelector(".account .dangnhap");
+
+let toastTimer;
+
+/* ===== HÀM TOAST DÙNG CHUNG ===== */
+function showToast(message, duration = 1800) {
+    clearTimeout(toastTimer);
+
+    toast.textContent = message;
+    toast.classList.add("show");
+
+    toastTimer = setTimeout(() => {
+        toast.classList.remove("show");
+    }, duration);
+}
+
+/* ===== LINK BỊ VÔ HIỆU HÓA ===== */
+disabledLinks.forEach(link => {
+    link.addEventListener("click", e => {
+        e.preventDefault();
+        showToast("Tính năng đang bị vô hiệu hóa");
+    });
+});
+
+/* ===== TẠO TÊN GUEST ===== */
 function generateGuestName() {
     let digits = "";
     for (let i = 0; i < 5; i++) {
@@ -280,30 +225,19 @@ function generateGuestName() {
     return "Guest" + digits;
 }
 
-
+/* ===== ĐĂNG NHẬP KHÁCH ===== */
 guestLogin.addEventListener("click", e => {
     e.preventDefault();
 
-    // Hiện toast
-    toast.textContent = "⏳ Đang đăng nhập với tư cách khách...";
-    toast.classList.add("show");
+    showToast("⏳ Đang đăng nhập bằng tài khoản khách...", 1500);
 
-    // Giả lập loading
     setTimeout(() => {
-        toast.classList.remove("show");
-
-        // Đóng popup
         popup.classList.remove("active");
         overlay.classList.remove("active");
 
-        // Đổi trạng thái nút
         const guestName = generateGuestName();
-accountBtn.textContent = guestName;
+        accountBtn.textContent = guestName;
 
-
-        // Đánh dấu đã đăng nhập khách
         document.body.classList.add("guest-mode");
     }, 1500);
-});
-
-});
+})})
