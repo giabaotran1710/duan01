@@ -1,10 +1,14 @@
-document.addEventListener("DOMContentLoaded", () => {
-  const closeBtn = document.querySelector('.close-popup');
+const popup = document.getElementById('popup');
+const overlay = document.getElementById('overlay');
 
-closeBtn.addEventListener('click', () => {
-    popup.classList.remove('active');
-    overlay.classList.remove('active');
-});
+const closeBtn = document.querySelector('.close-popup');
+if (closeBtn) {
+    closeBtn.addEventListener('click', () => {
+        popup.classList.remove('active');
+        overlay.classList.remove('active');
+    });
+}
+
 
 
   const volumeBtn = document.querySelector(".volume");
@@ -23,63 +27,60 @@ closeBtn.addEventListener('click', () => {
   }
 
   const textEl = document.getElementById("glitchText");
-  if (!textEl) return;
+  if (textEl) {
+    const original = textEl.innerText;
+    const chars = "*#!?";
 
-  const original = textEl.innerText;
-  const chars = "*#!?";
+    function glitchOnce() {
+        let arr = original.split("");
+        const i = Math.floor(Math.random() * arr.length);
 
-  function glitchOnce() {
-    let arr = original.split("");
-    const i = Math.floor(Math.random() * arr.length);
+        arr[i] = `<span class="glitch-char">${chars[Math.floor(Math.random() * chars.length)]}</span>`;
+        textEl.innerHTML = arr.join("");
 
-    arr[i] = `<span class="glitch-char">${chars[Math.floor(Math.random() * chars.length)]}</span>`;
-    textEl.innerHTML = arr.join("");
+        setTimeout(() => {
+            textEl.innerText = original;
+        }, 150);
+    }
 
-    setTimeout(() => {
-      textEl.innerText = original;
-    }, 150);
-  }
+    setInterval(glitchOnce, 500);
+}
 
-  setInterval(glitchOnce, 500);
 
 
 const sky = document.querySelector('.sky');
-const METEOR_COUNT = 6;
-const BASE_DURATION = 3.5; // giây
-const VARIANCE = 0.2;      // ±20%
 
-for (let i = 0; i < METEOR_COUNT; i++) {
-    const meteor = document.createElement('span');
-    meteor.className = 'meteor';
+if (sky) {
+    const METEOR_COUNT = 6;
+    const BASE_DURATION = 3.5;
+    const VARIANCE = 0.2;
 
-    // random vị trí ngang
-    meteor.style.left = Math.random() * 100 + '%';
+    for (let i = 0; i < METEOR_COUNT; i++) {
+        const meteor = document.createElement('span');
+        meteor.className = 'meteor';
 
-    // random delay (để không sync)
-    meteor.style.animationDelay = (Math.random() * 4).toFixed(2) + 's';
+        meteor.style.left = Math.random() * 100 + '%';
+        meteor.style.animationDelay = (Math.random() * 4).toFixed(2) + 's';
 
-    // random tốc độ ±20%
-    const speedFactor = 1 + (Math.random() * 2 - 1) * VARIANCE;
-    const duration = (BASE_DURATION * speedFactor).toFixed(2);
+        const speedFactor = 1 + (Math.random() * 2 - 1) * VARIANCE;
+        meteor.style.animationDuration = (BASE_DURATION * speedFactor).toFixed(2) + 's';
 
-    meteor.style.animationDuration = duration + 's';
+        meteor.style.setProperty('--tail', 150 + Math.random() * 120 + 'px');
 
-    // random độ dài đuôi
-    meteor.style.setProperty(
-        '--tail',
-        150 + Math.random() * 120 + 'px'
-    );
-
-    sky.appendChild(meteor);
+        sky.appendChild(meteor);
+    }
 }
+
+
+
 const pass = document.getElementById('password');
 const show = document.getElementById('showPass');
 
 show.addEventListener('change', () => {
     pass.type = show.checked ? 'text' : 'password';
 });
-const popup = document.getElementById('popup');
-const overlay = document.getElementById('overlay');
+
+
 const openBtn = document.getElementById('account');
 
 overlay.onclick = () => {
@@ -240,4 +241,6 @@ guestLogin.addEventListener("click", e => {
 
         document.body.classList.add("guest-mode");
     }, 1500);
-})})
+
+});
+
