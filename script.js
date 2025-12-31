@@ -251,4 +251,16 @@ const btn = document.querySelector(".login-btn");
     }, 2500);
   });
 
+
+  const typing = document.querySelector(".typing");
+
+const observer = new IntersectionObserver(entries => {
+    if (entries[0].isIntersecting) {
+        startTyping();
+        observer.disconnect();
+    }
+});
+
+observer.observe(typing);
+
 });
