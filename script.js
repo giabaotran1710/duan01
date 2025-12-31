@@ -251,22 +251,4 @@ const btn = document.querySelector(".login-btn");
     }, 2500);
   });
 
-
-const typingEl = document.querySelector(".typing");
-const fullText = typingEl.textContent;
-typingEl.textContent = "";
-let index = 0;
-const speed = 50;
-
-function typeChar() {
-    if (index < fullText.length) {
-        typingEl.textContent += fullText[index];
-        index++;
-        setTimeout(typeChar, speed);
-    }
-}
-
-typeChar();
-
-
 });
