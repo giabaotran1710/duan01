@@ -269,5 +269,41 @@ const btn = document.querySelector(".login-btn");
       }, 1800);
     });
   });
-  
+
+const guestLogin = document.getElementById("guestLogin");
+const accountBtn = document.querySelector(".account .dangnhap");
+function generateGuestName() {
+    let digits = "";
+    for (let i = 0; i < 5; i++) {
+        digits += Math.floor(Math.random() * 10);
+    }
+    return "Guest" + digits;
+}
+
+
+guestLogin.addEventListener("click", e => {
+    e.preventDefault();
+
+    // Hiện toast
+    toast.textContent = "⏳ Đang đăng nhập với tư cách khách...";
+    toast.classList.add("show");
+
+    // Giả lập loading
+    setTimeout(() => {
+        toast.classList.remove("show");
+
+        // Đóng popup
+        popup.classList.remove("active");
+        overlay.classList.remove("active");
+
+        // Đổi trạng thái nút
+        const guestName = generateGuestName();
+accountBtn.textContent = guestName;
+
+
+        // Đánh dấu đã đăng nhập khách
+        document.body.classList.add("guest-mode");
+    }, 1500);
+});
+
 });
