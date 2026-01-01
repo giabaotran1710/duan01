@@ -1,7 +1,14 @@
+/* =====================================================
+   BASIC ELEMENTS
+===================================================== */
 const popup = document.getElementById('popup');
 const overlay = document.getElementById('overlay');
-
 const closeBtn = document.querySelector('.close-popup');
+const openBtn = document.getElementById('account');
+
+/* =====================================================
+   POPUP OPEN / CLOSE
+===================================================== */
 if (closeBtn) {
     closeBtn.addEventListener('click', () => {
         popup.classList.remove('active');
@@ -9,129 +16,144 @@ if (closeBtn) {
     });
 }
 
+if (overlay) {
+    overlay.addEventListener('click', () => {
+        popup.classList.remove('active');
+        overlay.classList.remove('active');
+    });
+}
+
+if (openBtn) {
+    openBtn.addEventListener('click', () => {
+        popup.classList.add('active');
+        overlay.classList.add('active');
+        resetLoginForm();
+    });
+}
+
+/* =====================================================
+   AUDIO CONTROL
+===================================================== */
+const volumeBtn = document.querySelector(".volume");
+const audio = document.getElementById("bgMusic");
+
+if (volumeBtn && audio) {
+    volumeBtn.addEventListener("click", () => {
+        if (audio.paused) {
+            audio.play();
+            volumeBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+        } else {
+            audio.pause();
+            volumeBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+        }
+    });
+}
+
+/* =====================================================
+   GLITCH TEXT
+===================================================== */
 
 
-  const volumeBtn = document.querySelector(".volume");
-  const audio = document.getElementById("bgMusic");
+const glitchText = document.getElementById("glitchText");
 
-  if (volumeBtn && audio) {
-    volumeBtn.onclick = () => {
-      if (audio.paused) {
-        audio.play();
-        volumeBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
-      } else {
-        audio.pause();
-        volumeBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
-      }
-    };
-  }
-
-  const textEl = document.getElementById("glitchText");
-  if (textEl) {
-    const original = textEl.innerText;
+if (glitchText) {
+    const originalText = glitchText.innerText;
     const chars = "*#!?";
 
-    function glitchOnce() {
-        let arr = original.split("");
+    setInterval(() => {
+        let arr = originalText.split("");
         const i = Math.floor(Math.random() * arr.length);
-
         arr[i] = `<span class="glitch-char">${chars[Math.floor(Math.random() * chars.length)]}</span>`;
-        textEl.innerHTML = arr.join("");
+        glitchText.innerHTML = arr.join("");
 
         setTimeout(() => {
-            textEl.innerText = original;
+            glitchText.innerText = originalText;
         }, 150);
-    }
-
-    setInterval(glitchOnce, 500);
+    }, 500);
 }
 
 
 
+
+/* =====================================================
+   METEOR EFFECT
+===================================================== */
 const sky = document.querySelector('.sky');
 
 if (sky) {
     const METEOR_COUNT = 6;
-    const BASE_DURATION = 3.5;
-    const VARIANCE = 0.2;
 
     for (let i = 0; i < METEOR_COUNT; i++) {
         const meteor = document.createElement('span');
         meteor.className = 'meteor';
 
         meteor.style.left = Math.random() * 100 + '%';
-        meteor.style.animationDelay = (Math.random() * 4).toFixed(2) + 's';
-
-        const speedFactor = 1 + (Math.random() * 2 - 1) * VARIANCE;
-        meteor.style.animationDuration = (BASE_DURATION * speedFactor).toFixed(2) + 's';
-
+        meteor.style.animationDelay = (Math.random() * 4) + 's';
+        meteor.style.animationDuration = (3 + Math.random()) + 's';
         meteor.style.setProperty('--tail', 150 + Math.random() * 120 + 'px');
 
         sky.appendChild(meteor);
     }
 }
 
+/* =====================================================
+   PASSWORD SHOW / HIDE
+===================================================== */
+const passwordInput = document.getElementById('password');
+const showPass = document.getElementById('showPass');
 
+if (passwordInput && showPass) {
+    showPass.addEventListener('change', () => {
+        passwordInput.type = showPass.checked ? 'text' : 'password';
+    });
+}
 
-const pass = document.getElementById('password');
-const show = document.getElementById('showPass');
-
-show.addEventListener('change', () => {
-    pass.type = show.checked ? 'text' : 'password';
-});
-
-
-const openBtn = document.getElementById('account');
-
-overlay.onclick = () => {
-    popup.classList.remove('active');
-    overlay.classList.remove('active');
-};
-
+/* =====================================================
+   LOGIN FORM VALIDATION
+===================================================== */
 const usernameInput = document.getElementById('username');
 const loginBtn = document.querySelector('.login-btn');
-
 const usernameRegex = /^[a-zA-Z0-9@.]{6,}$/;
 let usernameTouched = false;
 
-/* ===== RESET + KHÓA KHI MỞ POPUP ===== */
-openBtn.onclick = () => {
-    popup.classList.add('active');
-    overlay.classList.add('active');
+function resetLoginForm() {
+    if (!usernameInput || !loginBtn) return;
 
     usernameInput.value = '';
     usernameTouched = false;
-    
+    loginBtn.disabled = true;
 
     const field = usernameInput.closest('.field');
-    field.classList.remove('invalid', 'valid');
-    field.querySelector('.error').textContent = '';
-    pass.value = '';
-    pass.type = 'password';
-    show.checked = false;
+    const error = field?.querySelector('.error');
 
-    const passField = pass.closest('.field');
-    passField.classList.remove('invalid', 'valid');
+    field?.classList.remove('invalid', 'valid');
+    if (error) error.textContent = '';
 
-    loginBtn.disabled = true;
-};
+    if (passwordInput) {
+        passwordInput.value = '';
+        passwordInput.type = 'password';
+    }
 
-/* ĐÁNH DẤU ĐÃ TƯƠNG TÁC */
-usernameInput.addEventListener('focus', () => {
-    usernameTouched = true;
-});
+    if (showPass) showPass.checked = false;
+}
 
-/* VALIDATE REALTIME */
-usernameInput.addEventListener('input', validateUsername);
+if (usernameInput) {
+    usernameInput.addEventListener('focus', () => {
+        usernameTouched = true;
+    });
+
+    usernameInput.addEventListener('input', validateUsername);
+}
 
 function validateUsername() {
+    if (!usernameInput || !loginBtn) return false;
+
     const value = usernameInput.value.trim();
     const field = usernameInput.closest('.field');
     const error = field.querySelector('.error');
 
     field.classList.remove('invalid', 'valid');
 
-    /* CHƯA TƯƠNG TÁC → KHÔNG HIỆN LỖI */
     if (!usernameTouched) {
         error.textContent = '';
         loginBtn.disabled = true;
@@ -152,9 +174,8 @@ function validateUsername() {
         return false;
     }
 
-
     if (!usernameRegex.test(value)) {
-        error.textContent = 'Tên người dùng không được chứa các kí tự đặc biệt';
+        error.textContent = 'Tên người dùng không được chứa ký tự đặc biệt';
         field.classList.add('invalid');
         loginBtn.disabled = true;
         return false;
@@ -166,41 +187,42 @@ function validateUsername() {
     return true;
 }
 
-/* CHẶN CLICK KHI CÒN SAI */
-loginBtn.addEventListener('click', (e) => {
-    if (!validateUsername()) {
-        e.preventDefault();
-    }
-});
+if (loginBtn) {
+    loginBtn.addEventListener('click', e => {
+        if (!validateUsername()) {
+            e.preventDefault();
+        }
+    });
+}
 
-const btn = document.querySelector(".login-btn");
-  const text = btn.querySelector(".btn-text");
+/* =====================================================
+   LOGIN BUTTON LOADING
+===================================================== */
+const loginBtnText = document.querySelector(".login-btn .btn-text");
 
-  btn.addEventListener("click", () => {
-    if (btn.classList.contains("processing")) return;
+if (loginBtn && loginBtnText) {
+    loginBtn.addEventListener("click", () => {
+        if (loginBtn.classList.contains("processing")) return;
 
-    btn.classList.add("processing");
-    text.textContent = "Đang xử lý";
+        loginBtn.classList.add("processing");
+        loginBtnText.textContent = "Đang xử lý";
 
-    // giả lập xử lý xong
-    setTimeout(() => {
-      btn.classList.remove("processing");
-      text.textContent = "Tiếp theo";
-    }, 2500);
-  });
+        setTimeout(() => {
+            loginBtn.classList.remove("processing");
+            loginBtnText.textContent = "Tiếp theo";
+        }, 2500);
+    });
+}
 
-
-  const toast = document.getElementById("toast-disabled");
+/* =====================================================
+   TOAST SYSTEM
+===================================================== */
+const toast = document.getElementById("toast-disabled");
 const disabledLinks = document.querySelectorAll(".disabled-link");
-const guestLogin = document.getElementById("guestLogin");
-const accountBtn = document.querySelector(".account .dangnhap");
-
 let toastTimer;
 
-/* ===== HÀM TOAST DÙNG CHUNG ===== */
 function showToast(message, duration = 1800) {
     clearTimeout(toastTimer);
-
     toast.textContent = message;
     toast.classList.add("show");
 
@@ -209,7 +231,6 @@ function showToast(message, duration = 1800) {
     }, duration);
 }
 
-/* ===== LINK BỊ VÔ HIỆU HÓA ===== */
 disabledLinks.forEach(link => {
     link.addEventListener("click", e => {
         e.preventDefault();
@@ -217,7 +238,30 @@ disabledLinks.forEach(link => {
     });
 });
 
-/* ===== TẠO TÊN GUEST ===== */
+/* =====================================================
+   ACCOUNT STATE (HOVER / STATIC)
+===================================================== */
+const account = document.querySelector('.account');
+const accountText = account?.querySelector('.dangnhap');
+
+function updateAccountState() {
+    if (!account || !accountText) return;
+
+    if (accountText.textContent.trim() !== "Đăng nhập") {
+        account.classList.add('static');
+    } else {
+        account.classList.remove('static');
+    }
+}
+
+// chạy khi load trang
+updateAccountState();
+
+/* =====================================================
+   GUEST LOGIN
+===================================================== */
+const guestLogin = document.getElementById("guestLogin");
+
 function generateGuestName() {
     let digits = "";
     for (let i = 0; i < 5; i++) {
@@ -226,21 +270,20 @@ function generateGuestName() {
     return "Guest" + digits;
 }
 
-/* ===== ĐĂNG NHẬP KHÁCH ===== */
-guestLogin.addEventListener("click", e => {
-    e.preventDefault();
+if (guestLogin) {
+    guestLogin.addEventListener("click", e => {
+        e.preventDefault();
 
-    showToast("⏳ Đang đăng nhập bằng tài khoản khách...", 1500);
+        showToast("⏳ Đang đăng nhập bằng tài khoản khách...", 1500);
 
-    setTimeout(() => {
-        popup.classList.remove("active");
-        overlay.classList.remove("active");
+        setTimeout(() => {
+            popup.classList.remove("active");
+            overlay.classList.remove("active");
 
-        const guestName = generateGuestName();
-        accountBtn.textContent = guestName;
+            accountText.textContent = generateGuestName();
+            updateAccountState();
 
-        document.body.classList.add("guest-mode");
-    }, 1500);
-
-});
-
+            document.body.classList.add("guest-mode");
+        }, 1500);
+    });
+}
