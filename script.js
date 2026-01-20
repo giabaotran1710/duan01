@@ -1,15 +1,20 @@
-
 const audio = document.getElementById("bgm");
 
 function playMusicOnce() {
-  audio.play().catch(() => {});
-  document.removeEventListener("click", playMusicOnce);
-  document.removeEventListener("touchstart", playMusicOnce);
+  if (!audio) return;
+
+  audio.play().then(() => {
+    document.removeEventListener("click", playMusicOnce);
+    document.removeEventListener("touchstart", playMusicOnce);
+  }).catch(() => {
+    // mobile cần tương tác mạnh hơn, nhưng click/touch là đủ
+  });
 }
 
 // Bắt mọi tương tác đầu tiên
-document.addEventListener("click", playMusicOnce);
-document.addEventListener("touchstart", playMusicOnce);
+document.addEventListener("click", playMusicOnce, { once: true });
+document.addEventListener("touchstart", playMusicOnce, { once: true });
+
 
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
