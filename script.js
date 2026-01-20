@@ -1,3 +1,16 @@
+
+const audio = document.getElementById("bgm");
+
+function playMusicOnce() {
+  audio.play().catch(() => {});
+  document.removeEventListener("click", playMusicOnce);
+  document.removeEventListener("touchstart", playMusicOnce);
+}
+
+// Bắt mọi tương tác đầu tiên
+document.addEventListener("click", playMusicOnce);
+document.addEventListener("touchstart", playMusicOnce);
+
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
 
