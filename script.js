@@ -1,20 +1,15 @@
-const audio = document.getElementById("bgm");
+document.addEventListener("DOMContentLoaded", () => {
+  const audio = document.getElementById("bgm");
 
-function playMusicOnce() {
-  if (!audio) return;
+  function playMusicOnce() {
+    audio.play().then(() => {
+      document.removeEventListener("click", playMusicOnce);
+      document.removeEventListener("touchstart", playMusicOnce);
+    }).catch(() => {});
+  }
 
-  audio.play().then(() => {
-    document.removeEventListener("click", playMusicOnce);
-    document.removeEventListener("touchstart", playMusicOnce);
-  }).catch(() => {
-    // mobile cần tương tác mạnh hơn, nhưng click/touch là đủ
-  });
-}
-
-// Bắt mọi tương tác đầu tiên
-document.addEventListener("click", playMusicOnce, { once: true });
-document.addEventListener("touchstart", playMusicOnce, { once: true });
-
+  document.addEventListener("click", playMusicOnce, { once: true });
+  document.addEventListener("touchstart", playMusicOnce, { once: true });
 
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
@@ -407,7 +402,4 @@ t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 }
 
 animate();
-
-
-
-
+});
