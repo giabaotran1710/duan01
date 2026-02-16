@@ -550,7 +550,7 @@ ctx.shadowOffsetY = 4;
 
 // chữ chính
 ctx.fillStyle = "#3a3a3a";
-ctx.font = "bold 38px Arial, sans-serif";
+ctx.font = "bold 28px Arial, sans-serif";
 
 const centerX = canvas.width / 2;
 const centerY = canvas.height / 2 - 20;
@@ -558,7 +558,7 @@ const centerY = canvas.height / 2 - 20;
 ctx.fillText("CÀO TOÀN BỘ MÀN HÌNH", centerX, centerY);
 
 // dòng 2
-ctx.font = "bold 22px Arial, sans-serif";
+ctx.font = "bold 18px Arial, sans-serif";
 ctx.fillText("Nhận được tối đa 3 lì xì", centerX, centerY + 60);
 
 ctx.restore();
