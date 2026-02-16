@@ -574,14 +574,14 @@ function generatePrizes() {
   const positions = [];
 
   for (let i = 0; i < 3; i++) {
-    const value = randomMoney(10000, 50000);
+    const value = randomMoney(5000, 50000);
 
     prizes.push(`🎉 ${value.toLocaleString()}đ`);
     prizeValues.push(value);
 
     const div = document.createElement("div");
     div.style.position = "absolute";
-    div.style.fontSize = "26px";
+    div.style.fontSize = "10px";
     div.style.fontWeight = "bold";
     div.style.color = "red";
     div.style.textShadow = "2px 2px 6px rgba(0,0,0,0.6)";
