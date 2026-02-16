@@ -180,12 +180,10 @@ function drawCloud(x, y, s) {
 }
 
 
-/* ================= WAVE & BOAT (GIỮ NGUYÊN) ================= */
 
 function wave(x) {
   const base = canvas.height * 0.56;
 
-  // dao động êm ↔ mạnh (loop hoàn hảo)
   const calmness = (Math.sin(waveMood) + 1) / 2; // 0 → 1
   const amplitude = lerp(4, 14, calmness);
 
@@ -402,4 +400,35 @@ t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 }
 
 animate();
+
+const button = document.getElementById("lucky");
+
+button.addEventListener("click", (e) => {
+  for (let i = 0; i < 50; i++) {
+    const lixi = document.createElement("div");
+    lixi.className = "lixi";
+    lixi.innerHTML = "🧧";
+
+    // vị trí bắt đầu
+    const rect = button.getBoundingClientRect();
+    lixi.style.left = rect.left + rect.width / 2 + "px";
+    lixi.style.top = rect.top + rect.height / 2 + "px";
+
+    // hướng bay ngẫu nhiên
+    const angle = Math.random() * 2 * Math.PI;
+    const distance = 150 + Math.random() * 100;
+
+    const x = Math.cos(angle) * distance + "px";
+    const y = Math.sin(angle) * distance + "px";
+
+    lixi.style.setProperty("--x", x);
+    lixi.style.setProperty("--y", y);
+
+    document.body.appendChild(lixi);
+
+    setTimeout(() => {
+      lixi.remove();
+    }, 1000);
+  }
+});
 });
