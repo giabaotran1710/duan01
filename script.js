@@ -11,6 +11,11 @@ document.addEventListener("DOMContentLoaded", () => {
   document.addEventListener("click", playMusicOnce, { once: true });
   document.addEventListener("touchstart", playMusicOnce, { once: true });
 
+  function randomMoney(min, max) {
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+
 const canvas = document.getElementById("bg");
 const ctx = canvas.getContext("2d");
 
@@ -312,6 +317,10 @@ let isRaining = false;
 
 /* ================= LOOP ================= */
 
+let isScratchMode = false;
+let animationId;
+
+
 function animate() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   ctx.globalAlpha = 1;
@@ -396,7 +405,9 @@ if (waveMood  > Math.PI * 2) waveMood  -= Math.PI * 2;
 
 t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 
-  requestAnimationFrame(animate);
+  if (!isScratchMode) {
+  animationId = requestAnimationFrame(animate);
+}
 }
 
 animate();
@@ -430,5 +441,230 @@ button.addEventListener("click", (e) => {
       lixi.remove();
     }, 1000);
   }
+  activateScratchMode();
+
 });
+/* ================= SCRATCH MODE ================= */
+
+const prizeContainer = document.createElement("div");
+prizeContainer.id = "prizeContainer";
+prizeContainer.style.position = "fixed";
+prizeContainer.style.inset = "0";
+prizeContainer.style.zIndex = "9998";
+prizeContainer.style.pointerEvents = "none";
+document.body.appendChild(prizeContainer);
+
+// ===== dữ liệu phần thưởng (số) =====
+let prizes = [];
+let prizesData = [];
+
+// tạo 3 phần thưởng ngẫu nhiên 10k–50k
+function generatePrizeValues() {
+  prizes = [];
+  prizesData = [];
+
+  for (let i = 0; i < 3; i++) {
+    const value = (Math.floor(Math.random() * 5) + 1) * 10000; // 10k–50k
+    prizesData.push(value);
+    prizes.push(`🎉 ${value.toLocaleString("vi-VN")}đ`);
+  }
+}
+
+
+function activateScratchMode() {
+  document.body.classList.add("scratch-mode");
+
+  // bật chế độ
+  isScratchMode = true;
+  cancelAnimationFrame(animationId);
+
+  // resize full màn
+  canvas.width = innerWidth;
+  canvas.height = innerHeight;
+  canvas.style.position = "fixed";
+  canvas.style.inset = "0";
+  canvas.style.zIndex = "9999";
+  generatePrizeValues();
+  generatePrizes();
+
+  // vẽ lớp bạc
+  ctx.globalCompositeOperation = "source-over";
+  // ===== Base gradient xám bạc đậm =====
+const silverGrad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+silverGrad.addColorStop(0, "#b3b3b3");
+silverGrad.addColorStop(0.25, "#9e9e9e");
+silverGrad.addColorStop(0.5, "#c4c4c4");
+silverGrad.addColorStop(0.75, "#8f8f8f");
+silverGrad.addColorStop(1, "#b0b0b0");
+
+ctx.fillStyle = silverGrad;
+ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+// ===== SỌC XÉO 70° RÕ HƠN =====
+ctx.save();
+
+ctx.translate(canvas.width / 2, canvas.height / 2);
+ctx.rotate(70 * Math.PI / 180);
+
+ctx.globalAlpha = 0.25; // tăng độ rõ
+
+const stripeSpacing = 18;  // khoảng cách sọc
+const stripeWidth = 8;     // độ dày sọc
+
+for (let i = -canvas.width; i < canvas.width; i += stripeSpacing) {
+
+  // tạo hiệu ứng kim loại sáng – tối xen kẽ
+  const stripeGrad = ctx.createLinearGradient(
+    i, 0,
+    i + stripeWidth, 0
+  );
+
+  stripeGrad.addColorStop(0, "rgba(255,255,255,0.7)");
+  stripeGrad.addColorStop(0.5, "rgba(200,200,200,0.4)");
+  stripeGrad.addColorStop(1, "rgba(120,120,120,0.6)");
+
+  ctx.fillStyle = stripeGrad;
+
+  ctx.fillRect(
+    i,
+    -canvas.height,
+    stripeWidth,
+    canvas.height * 2
+  );
+}
+
+ctx.restore();
+ctx.globalAlpha = 1;
+
+// ===== TEXT HƯỚNG DẪN (BỊ CÀO THEO) =====
+ctx.save();
+
+ctx.textAlign = "center";
+ctx.textBaseline = "middle";
+
+// đổ bóng
+ctx.shadowColor = "rgba(0,0,0,0.35)";
+ctx.shadowBlur = 10;
+ctx.shadowOffsetX = 2;
+ctx.shadowOffsetY = 4;
+
+// chữ chính
+ctx.fillStyle = "#3a3a3a";
+ctx.font = "bold 48px Arial, sans-serif";
+
+const centerX = canvas.width / 2;
+const centerY = canvas.height / 2 - 20;
+
+ctx.fillText("CÀO TOÀN BỘ MÀN HÌNH", centerX, centerY);
+
+// dòng 2
+ctx.font = "bold 32px Arial, sans-serif";
+ctx.fillText("Nhận được tối đa 3 lì xì", centerX, centerY + 60);
+
+ctx.restore();
+
+  ctx.globalCompositeOperation = "destination-out";
+}
+
+function generatePrizes() {
+  prizeContainer.innerHTML = "";
+  prizes = [];
+  prizeValues = [];
+
+  const positions = [];
+
+  for (let i = 0; i < 3; i++) {
+    const value = randomMoney(10000, 50000);
+
+    prizes.push(`🎉 ${value.toLocaleString()}đ`);
+    prizeValues.push(value);
+
+    const div = document.createElement("div");
+    div.style.position = "absolute";
+    div.style.fontSize = "26px";
+    div.style.fontWeight = "bold";
+    div.style.color = "red";
+    div.style.textShadow = "2px 2px 6px rgba(0,0,0,0.6)";
+    div.innerText = prizes[i];
+
+    let x, y, overlap;
+
+    do {
+      overlap = false;
+      x = Math.random() * (innerWidth - 200);
+      y = Math.random() * (innerHeight - 80);
+
+      for (let pos of positions) {
+        const dx = pos.x - x;
+        const dy = pos.y - y;
+        if (Math.sqrt(dx * dx + dy * dy) < 180) {
+          overlap = true;
+          break;
+        }
+      }
+    } while (overlap);
+
+    positions.push({ x, y });
+
+    div.style.left = x + "px";
+    div.style.top = y + "px";
+
+    prizeContainer.appendChild(div);
+  }
+}
+
+
+let isDrawing = false;
+
+canvas.addEventListener("mousedown", () => isDrawing = true);
+canvas.addEventListener("mouseup", () => isDrawing = false);
+canvas.addEventListener("mousemove", scratch);
+
+canvas.addEventListener("touchstart", () => isDrawing = true);
+canvas.addEventListener("touchend", () => isDrawing = false);
+canvas.addEventListener("touchmove", scratch);
+
+function scratch(e) {
+  if (!isScratchMode || !isDrawing) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 35, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+
+let popupShown = false;
+function checkScratchComplete() {
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  let cleared = 0;
+
+  for (let i = 3; i < imageData.data.length; i += 4) {
+    if (imageData.data[i] === 0) cleared++;
+  }
+
+  const percent = cleared / (canvas.width * canvas.height);
+
+  if (percent > 0.55 && !popupShown) {
+    popupShown = true;
+    showResultPopup();
+  }
+}
+function scratch(e) {
+  if (!isScratchMode || !isDrawing) return;
+
+  const rect = canvas.getBoundingClientRect();
+  const x = (e.touches ? e.touches[0].clientX : e.clientX) - rect.left;
+  const y = (e.touches ? e.touches[0].clientY : e.clientY) - rect.top;
+
+  ctx.beginPath();
+  ctx.arc(x, y, 35, 0, Math.PI * 2);
+  ctx.fill();
+
+  checkScratchComplete();
+}
+
 });
