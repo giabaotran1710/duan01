@@ -466,7 +466,7 @@ function generatePrizeValues() {
   for (let i = 0; i < 3; i++) {
     const value = (Math.floor(Math.random() * 5) + 1) * 10000; // 10k–50k
     prizesData.push(value);
-    prizes.push(`🎉 ${value.toLocaleString("vi-VN")}đ`);
+    prizes.push(` ${value.toLocaleString("vi-VN")}đ`);
   }
 }
 
