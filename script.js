@@ -574,7 +574,7 @@ function generatePrizes() {
   const positions = [];
 
   for (let i = 0; i < 3; i++) {
-    const value = randomMoney(30000, 50000);
+    const value = randomMoney(5000, 30000);
 
     prizes.push(`🎉 ${value.toLocaleString()}đ`);
     prizeValues.push(value);
