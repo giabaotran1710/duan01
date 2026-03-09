@@ -1,4 +1,16 @@
 document.addEventListener("DOMContentLoaded", () => {
+
+  const toggleBtn = document.getElementById("toggleBar");
+  const utilityBar = document.getElementById("utilityBar");
+
+  function toggleBar(){
+    utilityBar.classList.toggle("show");
+  }
+
+  toggleBtn.addEventListener("click", toggleBar);
+  toggleBtn.addEventListener("touchstart", toggleBar);
+
+
   const audio = document.getElementById("bgm");
 
   function playMusicOnce() {
@@ -422,10 +434,4 @@ musicBtn.addEventListener("click", () => {
   }else{
     audio.pause();
   }
-});
-const toggleBtn = document.getElementById("toggleBar");
-const utilityBar = document.getElementById("utilityBar");
-
-toggleBtn.addEventListener("click", () => {
-  utilityBar.classList.toggle("show");
 });
