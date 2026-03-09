@@ -413,3 +413,19 @@ t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 animate();
 
 });
+const musicBtn = document.getElementById("musicBtn");
+const audio = document.getElementById("bgm");
+
+musicBtn.addEventListener("click", () => {
+  if(audio.paused){
+    audio.play();
+  }else{
+    audio.pause();
+  }
+});
+const toggleBtn = document.getElementById("toggleBar");
+const utilityBar = document.getElementById("utilityBar");
+
+toggleBtn.addEventListener("click", () => {
+  utilityBar.classList.toggle("show");
+});
