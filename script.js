@@ -3,12 +3,43 @@ document.addEventListener("DOMContentLoaded", () => {
   const toggleBtn = document.getElementById("toggleBar");
   const utilityBar = document.getElementById("utilityBar");
 
+   let autoCloseTimer;
+
+  function startAutoClose(){
+    clearTimeout(autoCloseTimer);
+
+    autoCloseTimer = setTimeout(() => {
+      utilityBar.classList.remove("show");
+    }, 3000); // 3 giây
+  }
+
   function toggleBar(){
+
     utilityBar.classList.toggle("show");
+
+    if(utilityBar.classList.contains("show")){
+      startAutoClose();
+    }else{
+      clearTimeout(autoCloseTimer);
+    }
+
   }
 
   toggleBtn.addEventListener("click", toggleBar);
   toggleBtn.addEventListener("touchstart", toggleBar);
+
+  /* nếu người dùng bấm vào thanh thì reset timer */
+  utilityBar.addEventListener("click", startAutoClose);
+  utilityBar.addEventListener("touchstart", startAutoClose);
+
+
+
+
+
+
+
+
+
 
 
   const audio = document.getElementById("bgm");
@@ -435,3 +466,4 @@ musicBtn.addEventListener("click", () => {
     audio.pause();
   }
 });
+
