@@ -3,14 +3,14 @@ document.addEventListener("DOMContentLoaded", () => {
   const toggleBtn = document.getElementById("toggleBar");
   const utilityBar = document.getElementById("utilityBar");
 
-   let autoCloseTimer;
+  let autoCloseTimer;
 
   function startAutoClose(){
     clearTimeout(autoCloseTimer);
 
     autoCloseTimer = setTimeout(() => {
       utilityBar.classList.remove("show");
-    }, 3000); // 3 giây
+    }, 10000);
   }
 
   function toggleBar(){
@@ -25,13 +25,8 @@ document.addEventListener("DOMContentLoaded", () => {
 
   }
 
-  toggleBtn.addEventListener("click", toggleBar);
-  toggleBtn.addEventListener("touchstart", toggleBar);
-
-  /* nếu người dùng bấm vào thanh thì reset timer */
-  utilityBar.addEventListener("click", startAutoClose);
-  utilityBar.addEventListener("touchstart", startAutoClose);
-
+  toggleBtn.addEventListener("pointerdown", toggleBar);
+  utilityBar.addEventListener("pointerdown", startAutoClose);
 
 
 
