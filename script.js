@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     autoCloseTimer = setTimeout(() => {
       utilityBar.classList.remove("show");
-    }, 10000);
+    }, 3000); //3 giây
   }
 
   function toggleBar(){
@@ -32,22 +32,6 @@ document.addEventListener("DOMContentLoaded", () => {
 
 
 
-
-
-
-
-
-  const audio = document.getElementById("bgm");
-
-  function playMusicOnce() {
-    audio.play().then(() => {
-      document.removeEventListener("click", playMusicOnce);
-      document.removeEventListener("touchstart", playMusicOnce);
-    }).catch(() => {});
-  }
-
-  document.addEventListener("click", playMusicOnce, { once: true });
-  document.addEventListener("touchstart", playMusicOnce, { once: true });
 
   function randomMoney(min, max) {
   return Math.floor(Math.random() * (max - min + 1)) + min;
@@ -450,15 +434,5 @@ t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 
 animate();
 
-});
-const musicBtn = document.getElementById("musicBtn");
-const audio = document.getElementById("bgm");
-
-musicBtn.addEventListener("click", () => {
-  if(audio.paused){
-    audio.play();
-  }else{
-    audio.pause();
-  }
 });
 
