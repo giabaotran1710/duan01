@@ -10,7 +10,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     autoCloseTimer = setTimeout(() => {
       utilityBar.classList.remove("show");
-    }, 3000); //3 giây
+    }, 9000); //9 giây
   }
 
   function toggleBar(){
@@ -434,5 +434,22 @@ t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
 
 animate();
 
+const letters = ["W","O","R","D"];
+let i = 0;
+
+const letter = document.getElementById("word-letter");
+
+setInterval(() => {
+
+  i++;
+  if(i >= letters.length) i = 0;
+
+  letter.textContent = letters[i];
+
+  letter.style.animation = "none";
+  letter.offsetHeight;
+  letter.style.animation = "slideLetter 0.5s linear";
+
+},900);
 });
 
