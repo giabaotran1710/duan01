@@ -102,5 +102,5 @@ const words = [
 "Bánh xe","Bánh pía","Bánh da lợn","Bánh tiêu","Bánh chuối","Bánh kẹp",
 "Cua biển","Tôm tích",
 "Cá lóc","Cá rô phi","Cá chim","Cá linh","Cá nóc","Cá trê","Cá điêu hồng","Cá mè trắng",
-"Con dơi","Hươu cao cổ","Gấu trúc","Chuột túi","Con cáo","Tinh tinh","Linh dương",Linh cẩu","Linh miêu","Con muỗi","Lăng quăng","Bọ gậy","Rệp sáp","Chàng hiu","Cóc tía","Lạc đà","Cá sấu","Con sóc","Con mèo","Con tê tê","Đà điểu"
+"Con dơi","Hươu cao cổ","Gấu trúc","Chuột túi","Con cáo","Tinh tinh","Linh dương","Linh cẩu","Linh miêu","Con muỗi","Lăng quăng","Bọ gậy","Rệp sáp","Chàng hiu","Cóc tía","Lạc đà","Cá sấu","Con sóc","Con mèo","Con tê tê","Đà điểu"
 ];
