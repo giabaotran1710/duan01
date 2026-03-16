@@ -48,6 +48,5 @@ const words = [
 "Cầu vồng","Cầu treo","Cầu vượt","Cầu khỉ",
 "Lay lất",
 "Lung linh",
-"Huyền bí","Huyền ảo",
-
+"Huyền bí","Huyền ảo"
 ];
