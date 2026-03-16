@@ -84,5 +84,5 @@ const words = [
 "Hồng hào",
 "Đồng tiền","Đồng xu","Đồng lòng","Đồng bộ",
 "Tái sinh","Tái diễn",
-"Bài học","Bài bạc",
+"Bài học","Bài bạc"
 ];
