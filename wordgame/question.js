@@ -37,5 +37,17 @@ const words = [
 "Trứng gà","Trứng vịt",
 "Đại bàng","Chim ưng","Chim sẻ","Con vẹt",
 "Cá mập","Rùa biển",
+"Chung sức",
+"Đồng lòng",
+"Biển Đông",
+"Núi cao",
+"Vọng lâu",
+"Hang động",
+"Động đất","Động kinh","Động trời",
+"Mây mù",
+"Cầu vồng","Cầu treo","Cầu vượt","Cầu khỉ",
+"Lay lất",
+"Lung linh",
+"Huyền bí","Huyền ảo",
 
 ];
