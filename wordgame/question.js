@@ -1,5 +1,4 @@
-const words = [
-
+const words = [
 "Đủng đỉnh",
 "Trần gian",
 "Hấp dẫn",
