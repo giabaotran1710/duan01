@@ -8,7 +8,7 @@ const words = [
 "Trào phúng",
 "Hào nhoáng",
 "Lập phương",  
-"Hợp nhất","
+"Hợp nhất",
 "Hân hoan",
 "Sầu riêng",
 "Hoàng thượng",
