@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Game Ghép Từ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<script src="question.js"></script>
+
+<style>
+
+body{
+  margin:0;
+  font-family:Arial;
+  background:#1e2a38;
+  color:white;
+  text-align:center;
+}
+
+.game{
+  margin-top:80px;
+}
+
+h2{
+  font-size:40px;
+}
+
+/* bảng điểm */
+
+#ui{
+  margin:20px;
+  font-size:22px;
+  display:flex;
+  justify-content:center;
+  gap:40px;
+}
+
+#letters span{
+  display:inline-block;
+  padding:10px 14px;
+  margin:6px;
+  background:#0188ff;
+  border-radius:8px;
+  cursor:pointer;
+  font-size:22px;
+  transition:0.2s;
+  border: 2px solid whitesmoke;
+}
+
+#letters span:hover{
+  background:#feb200;
+  transform:scale(1.2);
+  color: black;
+}
+
+#answerArea{
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  gap:15px;
+  margin-top:25px;
+}
+
+#answer{
+  font-size:32px;
+  letter-spacing:4px;
+  max-height: 40px;
+  min-width:250px;
+  min-height:36px;
+  border:2px solid #ffffff55;
+  padding:10px 15px;
+  border-radius:8px;
+}
+
+#clearBtn{
+  padding:8px 16px;
+  font-size:16px;
+  border:none;
+  border-radius:6px;
+  cursor:pointer;
+  background:#ff5555;
+  color:white;
+}
+
+#clearBtn:hover{
+  background:#ff7777;
+}
+
+#result{
+  margin-top:20px;
+  font-size:22px;
+}
+
+.used{
+opacity:0.3;
+pointer-events:none;
+}
+
+</style>
+</head>
+
+<body>
+
+<div class="game">
+
+<h2>GHÉP TỪ</h2>
+
+<div id="ui">
+⭐ Điểm: <b id="score">0</b>
+⏱ Thời gian: <b id="time">10</b>
+</div>
+
+<div id="letters"></div>
+
+<div id="answerArea">
+
+<div id="answer"></div>
+
+<button id="clearBtn">CLEAR</button>
+
+</div>
+<p id="result"></p>
+
+</div>
+
+<script>
+
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+let currentWord="";
+let answer="";
+
+let score=0;
+let timeLeft=10;
+let timer;
+
+function shuffleWord(word){
+
+let letters = word.replaceAll(" ","").split("");
+
+for(let i = letters.length - 1; i > 0; i--){
+const j = Math.floor(Math.random() * (i + 1));
+[letters[i], letters[j]] = [letters[j], letters[i]];
+}
+
+return letters;
+
+}
+
+function renderLetters(letters){
+
+const box=document.getElementById("letters");
+box.innerHTML="";
+
+letters.forEach(letter=>{
+
+const span=document.createElement("span");
+span.textContent=letter;
+
+span.onclick=()=>{
+
+if(span.classList.contains("used")) return;
+
+answer+=letter;
+
+document.getElementById("answer").textContent=answer;
+
+span.classList.add("used");
+
+checkAnswer();
+
+};
+
+box.appendChild(span);
+
+});
+
+}
+
+function startTimer(){
+
+clearInterval(timer);
+
+timeLeft=20;
+document.getElementById("time").textContent=timeLeft;
+
+timer=setInterval(()=>{
+
+timeLeft--;
+
+document.getElementById("time").textContent=timeLeft;
+
+if(timeLeft<=0){
+
+clearInterval(timer);
+
+document.getElementById("result").textContent="Hết giờ!";
+
+setTimeout(newQuestion,1500);
+
+}
+
+},1000);
+
+}
+
+function newQuestion(){
+
+answer="";
+document.getElementById("answer").textContent="";
+document.getElementById("result").textContent="";
+
+currentWord=words[Math.floor(Math.random()*words.length)];
+
+const letters=shuffleWord(currentWord);
+
+renderLetters(letters);
+
+startTimer();
+
+}
+
+function checkAnswer(){
+
+const correct=currentWord.replaceAll(" ","");
+
+if(answer.length===correct.length){
+
+clearInterval(timer);
+
+if(answer.toLowerCase()===correct){
+
+score+=1;
+
+document.getElementById("score").textContent=score;
+
+document.getElementById("result").textContent="🎉 Chính xác!";
+
+}else{
+
+document.getElementById("result").textContent="❌ Không chính xác!";
+
+}
+
+setTimeout(newQuestion,2000);
+
+}
+
+}
+
+newQuestion();
+
+document.getElementById("clearBtn").onclick=function(){
+
+answer="";
+
+document.getElementById("answer").textContent="";
+
+/* khôi phục chữ */
+
+document.querySelectorAll("#letters span").forEach(span=>{
+span.classList.remove("used");
+});
+
+};
+
+function playClick(){
+
+const osc = audioCtx.createOscillator();
+const gain = audioCtx.createGain();
+
+osc.connect(gain);
+gain.connect(audioCtx.destination);
+
+osc.frequency.setValueAtTime(700, audioCtx.currentTime);
+osc.frequency.exponentialRampToValueAtTime(300, audioCtx.currentTime + 0.1);
+
+gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.1);
+
+osc.start();
+osc.stop(audioCtx.currentTime + 0.1);
+
+}
+
+</script>
+
+</body>
+</html>
