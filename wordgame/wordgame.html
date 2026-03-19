@@ -355,14 +355,72 @@ infoPopup.onclick = (e) => {
 };
 
 /* ===== GAME ===== */
-
 function shuffleWord(word){
-let letters = word.replaceAll(" ","").split("");
-for(let i = letters.length - 1; i > 0; i--){
-const j = Math.floor(Math.random() * (i + 1));
-[letters[i], letters[j]] = [letters[j], letters[i]];
+
+  if(currentMode === "hard"){
+    return hardShuffle(word); // 🔴 khó
+  }
+
+  return easyShuffle(word); // 🔵 dễ
 }
-return letters;
+
+function easyShuffle(word){
+
+  let letters = word.replaceAll(" ","").split("");
+
+  for(let i = letters.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [letters[i], letters[j]] = [letters[j], letters[i]];
+  }
+
+  return letters;
+}
+
+function hardShuffle(word){
+
+  const original = word.replaceAll(" ","").split("");
+  let shuffled;
+
+  do{
+    shuffled = [...original];
+
+    for(let i = shuffled.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+    }
+
+  } while(isTooEasy(original, shuffled));
+
+  return shuffled;
+}
+
+function isTooEasy(original, shuffled){
+
+  let samePosition = 0;
+  let sameAdjacent = 0;
+
+  for(let i = 0; i < original.length; i++){
+    if(original[i] === shuffled[i]){
+      samePosition++;
+    }
+  }
+
+  for(let i = 0; i < original.length - 1; i++){
+    if(
+      original[i] === shuffled[i] &&
+      original[i+1] === shuffled[i+1]
+    ){
+      sameAdjacent++;
+    }
+  }
+
+  return samePosition > 1 || sameAdjacent > 0;
+}
+
+if(currentMode === "hard"){
+  for(let i=0;i<2;i++){
+    shuffled.sort(()=>Math.random()-0.5);
+  }
 }
 
 function renderLetters(letters){
@@ -418,16 +476,30 @@ setTimeout(newQuestion,1500);
 },1000);
 }
 
+let usedWords = [];
+
 function newQuestion(){
+
 const ans = document.getElementById("answer");
 ans.classList.remove("wrongEffect","correctEffect");
 ans.style.color = "white";
+
 answer="";
 document.getElementById("answer").textContent="";
 document.getElementById("result").textContent="";
 
 let wordList = currentMode === "easy" ? words : words2;
-currentWord = wordList[Math.floor(Math.random()*wordList.length)];
+
+/* 🔥 lọc bỏ câu đã đúng */
+let availableWords = wordList.filter(w => !usedWords.includes(w));
+
+/* nếu hết câu thì reset */
+if(availableWords.length === 0){
+  usedWords = [];
+  availableWords = wordList;
+}
+
+currentWord = availableWords[Math.floor(Math.random()*availableWords.length)];
 
 renderLetters(shuffleWord(currentWord));
 startTimer();
@@ -447,6 +519,7 @@ if(answer.toLowerCase()===correct.toLowerCase()){
 
 score+=1;
 document.getElementById("score").textContent=score;
+usedWords.push(currentWord);
 animateScore();
 document.getElementById("result").textContent="🎉 Chính xác!";
 
