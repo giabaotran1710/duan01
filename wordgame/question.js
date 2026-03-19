@@ -263,6 +263,5 @@ const words = [
 "Thư pháp",
 "Múa rối",
 "Con tò he",
-"Phong tục",
-
+"Phong tục"
 ];
