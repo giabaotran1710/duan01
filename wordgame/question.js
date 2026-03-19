@@ -192,5 +192,10 @@ const words = [
 "Trừng trị",
 "Nhanh nhẹn","Nhục nhã",
 "Bão tố",
-"Bền vững"
+"Bền vững",
+"Xê dịch",
+"Mạt chược",
+"Trầm hương",
+"Súc tích",
+"Xúc xích"
 ];
