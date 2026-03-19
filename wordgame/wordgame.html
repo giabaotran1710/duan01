@@ -6,7 +6,6 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
 <script src="question.js"></script>
-<script src="question2.js"></script>
 
 <style>
 
@@ -333,12 +332,13 @@ h2{
 const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let currentWord="";
+let originalWord="";
 let answer="";
 let score=0;
 let timeLeft=10;
 let timer;
-
 let currentMode = "easy";
+let usedWords = [];
 
 /* ===== INFO POPUP ===== */
 const infoBtn = document.getElementById("infoBtn");
@@ -347,69 +347,60 @@ const closeInfo = document.getElementById("closeInfo");
 
 infoBtn.onclick = () => infoPopup.style.display = "flex";
 closeInfo.onclick = () => infoPopup.style.display = "none";
-
 infoPopup.onclick = (e) => {
-  if(e.target === infoPopup){
-    infoPopup.style.display = "none";
-  }
+  if(e.target === infoPopup) infoPopup.style.display = "none";
 };
 
-/* ===== GAME ===== */
-function shuffleWord(word){
+/* ===== FORMAT WORD ===== */
+function formatWord(word){
 
   if(currentMode === "hard"){
-    return hardShuffle(word); // 🔴 khó
+    return word.toLowerCase(); 
   }
+  word = word.toLowerCase();
 
-  return easyShuffle(word); // 🔵 dễ
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+/* ===== SHUFFLE ===== */
+function shuffleWord(word){
+  return currentMode === "hard" ? hardShuffle(word) : easyShuffle(word);
 }
 
 function easyShuffle(word){
-
   let letters = word.replaceAll(" ","").split("");
-
   for(let i = letters.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
     [letters[i], letters[j]] = [letters[j], letters[i]];
   }
-
   return letters;
 }
 
 function hardShuffle(word){
-
   const original = word.replaceAll(" ","").split("");
   let shuffled;
 
   do{
     shuffled = [...original];
-
     for(let i = shuffled.length - 1; i > 0; i--){
       const j = Math.floor(Math.random() * (i + 1));
       [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
     }
-
   } while(isTooEasy(original, shuffled));
 
   return shuffled;
 }
 
 function isTooEasy(original, shuffled){
-
   let samePosition = 0;
   let sameAdjacent = 0;
 
   for(let i = 0; i < original.length; i++){
-    if(original[i] === shuffled[i]){
-      samePosition++;
-    }
+    if(original[i] === shuffled[i]) samePosition++;
   }
 
   for(let i = 0; i < original.length - 1; i++){
-    if(
-      original[i] === shuffled[i] &&
-      original[i+1] === shuffled[i+1]
-    ){
+    if(original[i] === shuffled[i] && original[i+1] === shuffled[i+1]){
       sameAdjacent++;
     }
   }
@@ -417,142 +408,138 @@ function isTooEasy(original, shuffled){
   return samePosition > 1 || sameAdjacent > 0;
 }
 
-if(currentMode === "hard"){
-  for(let i=0;i<2;i++){
-    shuffled.sort(()=>Math.random()-0.5);
+/* ===== RENDER ===== */
+function renderLetters(letters){
+  const box=document.getElementById("letters");
+  box.innerHTML="";
+
+  letters.forEach(letter=>{
+    const span=document.createElement("span");
+    span.textContent=letter;
+
+    if(currentMode === "hard"){
+      span.style.background = "#ff4444";
+      span.style.color = "black";
+    }else{
+      span.style.background = "#0188ff";
+      span.style.color = "white";
+    }
+
+    span.onclick=()=>{
+      if(span.classList.contains("used")) return;
+
+      answer+=letter;
+      document.getElementById("answer").textContent=answer;
+      span.classList.add("used");
+
+      checkAnswer();
+    };
+
+    box.appendChild(span);
+  });
+}
+
+/* ===== TIMER ===== */
+function startTimer(){
+  clearInterval(timer);
+
+  timeLeft = currentMode === "easy" ? 25 : 20;
+  document.getElementById("time").textContent=timeLeft;
+
+  timer=setInterval(()=>{
+    timeLeft--;
+    document.getElementById("time").textContent=timeLeft;
+
+    if(timeLeft<=0){
+      clearInterval(timer);
+
+      const ans = document.getElementById("answer");
+      ans.textContent = currentWord;
+      ans.classList.add("wrongEffect");
+
+      document.getElementById("result").textContent="Hết giờ!";
+
+      setTimeout(newQuestion,1500);
+    }
+
+  },1000);
+}
+
+/* ===== NEW QUESTION ===== */
+function newQuestion(){
+
+  const ans = document.getElementById("answer");
+  ans.classList.remove("wrongEffect","correctEffect");
+  ans.style.color = "white";
+
+  answer="";
+  document.getElementById("answer").textContent="";
+  document.getElementById("result").textContent="";
+
+  let availableWords = words.filter(w => !usedWords.includes(w));
+
+  if(availableWords.length === 0){
+    usedWords = [];
+    availableWords = words;
+  }
+
+  let rawWord = availableWords[Math.floor(Math.random()*availableWords.length)];
+
+  originalWord = rawWord;
+  currentWord = formatWord(rawWord);
+
+  renderLetters(shuffleWord(currentWord));
+  startTimer();
+}
+
+/* ===== CHECK ===== */
+function checkAnswer(){
+
+  const correct = originalWord.replaceAll(" ","");
+
+  if(answer.length===correct.length){
+
+    clearInterval(timer);
+
+    const ans = document.getElementById("answer");
+
+    if(answer.toLowerCase()===correct.toLowerCase()){
+
+      score++;
+      document.getElementById("score").textContent=score;
+
+      usedWords.push(originalWord);
+
+      animateScore();
+
+      document.getElementById("result").textContent="🎉 Chính xác!";
+
+      ans.textContent = currentWord;
+      ans.classList.add("correctEffect");
+
+    }else{
+
+      document.getElementById("result").textContent="❌ Không chính xác!";
+
+      ans.textContent = currentWord;
+      ans.classList.add("wrongEffect");
+
+    }
+
+    setTimeout(newQuestion,2000);
   }
 }
 
-function renderLetters(letters){
-const box=document.getElementById("letters");
-box.innerHTML="";
-
-letters.forEach(letter=>{
-const span=document.createElement("span");
-span.textContent=letter;
-
-/* 🔥 set màu theo mode */
-if(currentMode === "hard"){
-  span.style.background = "#ff4444";
-  span.style.color = "black";
-}else{
-  span.style.background = "#0188ff";
-  span.style.color = "white";
-}
-
-span.onclick=()=>{
-if(span.classList.contains("used")) return;
-
-answer+=letter;
-document.getElementById("answer").textContent=answer;
-span.classList.add("used");
-
-checkAnswer();
-};
-
-box.appendChild(span);
-});
-}
-
-function startTimer(){
-clearInterval(timer);
-timeLeft = currentMode === "easy" ? 25 : 20;
-document.getElementById("time").textContent=timeLeft;
-
-timer=setInterval(()=>{
-timeLeft--;
-document.getElementById("time").textContent=timeLeft;
-
-if(timeLeft<=0){
-clearInterval(timer);
-document.getElementById("result").textContent="Hết giờ!";
-
-const ans = document.getElementById("answer");
-ans.textContent = currentWord;
-ans.classList.add("wrongEffect");
-document.getElementById("answer").textContent = currentWord;
-setTimeout(newQuestion,1500);
-}
-},1000);
-}
-
-let usedWords = [];
-
-function newQuestion(){
-
-const ans = document.getElementById("answer");
-ans.classList.remove("wrongEffect","correctEffect");
-ans.style.color = "white";
-
-answer="";
-document.getElementById("answer").textContent="";
-document.getElementById("result").textContent="";
-
-let wordList = currentMode === "easy" ? words : words2;
-
-/* 🔥 lọc bỏ câu đã đúng */
-let availableWords = wordList.filter(w => !usedWords.includes(w));
-
-/* nếu hết câu thì reset */
-if(availableWords.length === 0){
-  usedWords = [];
-  availableWords = wordList;
-}
-
-currentWord = availableWords[Math.floor(Math.random()*availableWords.length)];
-
-renderLetters(shuffleWord(currentWord));
-startTimer();
-}
-
-function checkAnswer(){
-
-const correct=currentWord.replaceAll(" ","");
-
-if(answer.length===correct.length){
-
-clearInterval(timer);
-
-const ans = document.getElementById("answer");
-
-if(answer.toLowerCase()===correct.toLowerCase()){
-
-score+=1;
-document.getElementById("score").textContent=score;
-usedWords.push(currentWord);
-animateScore();
-document.getElementById("result").textContent="🎉 Chính xác!";
-
-/* 🔥 HIỆN ĐÁP ÁN ĐÚNG */
-ans.textContent = currentWord;
-ans.classList.add("correctEffect");
-
-}else{
-
-document.getElementById("result").textContent="❌ Không chính xác!";
-
-/* 🔥 HIỆN ĐÁP ÁN SAI */
-ans.textContent = currentWord;
-ans.classList.add("wrongEffect");
-
-}
-
-setTimeout(newQuestion,2000);
-
-}
-
-}
-
-/* clear */
+/* ===== CLEAR ===== */
 document.getElementById("clearBtn").onclick=function(){
-answer="";
-document.getElementById("answer").textContent="";
-document.querySelectorAll("#letters span").forEach(span=>{
-span.classList.remove("used");
-});
+  answer="";
+  document.getElementById("answer").textContent="";
+  document.querySelectorAll("#letters span").forEach(span=>{
+    span.classList.remove("used");
+  });
 };
 
-
+/* ===== SCORE EFFECT ===== */
 function animateScore(){
 
   const answerArea = document.getElementById("answerArea");
@@ -567,33 +554,24 @@ function animateScore(){
 
   document.body.appendChild(float);
 
-  /* 🎯 TÍNH TÂM */
   const startX = rect1.left + rect1.width / 2;
   const startY = rect1.top + rect1.height / 2;
-
   const endX = rect2.left + rect2.width / 2;
   const endY = rect2.top + rect2.height / 2;
 
-  /* đặt vị trí ban đầu */
   float.style.left = startX + "px";
   float.style.top = startY + "px";
 
-  /* khoảng di chuyển */
-  const dx = endX - startX;
-  const dy = endY - startY;
+  float.style.setProperty("--dx", (endX - startX) + "px");
+  float.style.setProperty("--dy", (endY - startY) + "px");
 
-  float.style.setProperty("--dx", dx + "px");
-  float.style.setProperty("--dy", dy + "px");
-
-  /* xoá sau animation */
   setTimeout(()=>float.remove(),800);
 
-  /* hiệu ứng điểm */
   scoreEl.classList.add("score-pop");
   setTimeout(()=>scoreEl.classList.remove("score-pop"),300);
 }
-/* ===== MODE ===== */
 
+/* ===== MODE ===== */
 const modeToggle = document.getElementById("modeToggle");
 const easyBtn = document.getElementById("easyBtn");
 const hardBtn = document.getElementById("hardBtn");
@@ -614,6 +592,8 @@ easyBtn.onclick = () => {
   if(!confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
 
   score = 0;
+  usedWords = [];
+
   document.getElementById("score").textContent = score;
 
   currentMode = "easy";
@@ -627,6 +607,8 @@ hardBtn.onclick = () => {
   if(!confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
 
   score = 0;
+  usedWords = [];
+
   document.getElementById("score").textContent = score;
 
   currentMode = "hard";
@@ -634,10 +616,10 @@ hardBtn.onclick = () => {
   newQuestion();
 };
 
+/* INIT */
 updateUI();
 newQuestion();
 
 </script>
-
 </body>
 </html>
