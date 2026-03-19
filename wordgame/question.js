@@ -197,5 +197,17 @@ const words = [
 "Mạt chược",
 "Trầm hương",
 "Súc tích",
-"Xúc xích"
+"Xúc xích",
+"Bông tai",
+"Khuyên tai",
+"Trong sạch",
+"Chụp hình",
+"Nhiếp ảnh",
+"Thiên thạch",
+"Cổ phiếu","Trái phiếu",
+"Mông lung",
+"Sát thủ",
+"Hình chóp",
+"Dăm bụt",
+"Phương hướng"
 ];
