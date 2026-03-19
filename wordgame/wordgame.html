@@ -5,7 +5,9 @@
 <title>Sắp xếp từ</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
+<!-- 2 bộ câu hỏi -->
 <script src="question.js"></script>
+<script src="question2.js"></script>
 
 <style>
 
@@ -25,8 +27,39 @@ h2{
   font-size:40px;
 }
 
-/* bảng điểm */
+/* toggle */
+#modeToggle{
+  display:flex;
+  justify-content:center;
+  margin-bottom:20px;
+  border-radius:10px;
+  overflow:hidden;
+  border:2px solid white;
+  width:160px;
+  margin-left:auto;
+  margin-right:auto;
+}
 
+#modeToggle span{
+  flex:1;
+  padding:10px;
+  cursor:pointer;
+  font-weight:bold;
+  transition:0.3s;
+}
+
+/* màu */
+.active.easy{
+  background:#0188ff;
+  color:white;
+}
+
+.active.hard{
+  background:#ff4444;
+  color:black;
+}
+
+/* bảng điểm */
 #ui{
   margin:20px;
   font-size:22px;
@@ -94,8 +127,8 @@ h2{
 }
 
 .used{
-opacity:0.3;
-pointer-events:none;
+  opacity:0.3;
+  pointer-events:none;
 }
 
 </style>
@@ -107,6 +140,12 @@ pointer-events:none;
 
 <h2>GHÉP TỪ</h2>
 
+<!-- nút chọn mode -->
+<div id="modeToggle">
+  <span id="easyBtn" class="active easy">Dễ</span>
+  <span id="hardBtn">Khó</span>
+</div>
+
 <div id="ui">
 ⭐ Điểm: <b id="score">0</b>
 ⏱ Thời gian: <b id="time">10</b>
@@ -115,12 +154,10 @@ pointer-events:none;
 <div id="letters"></div>
 
 <div id="answerArea">
-
 <div id="answer"></div>
-
 <button id="clearBtn">CLEAR</button>
-
 </div>
+
 <p id="result"></p>
 
 </div>
@@ -131,10 +168,12 @@ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
 let currentWord="";
 let answer="";
-
 let score=0;
 let timeLeft=10;
 let timer;
+
+/* mode */
+let currentMode = "easy";
 
 function shuffleWord(word){
 
@@ -164,7 +203,6 @@ span.onclick=()=>{
 if(span.classList.contains("used")) return;
 
 answer+=letter;
-
 document.getElementById("answer").textContent=answer;
 
 span.classList.add("used");
@@ -189,15 +227,12 @@ document.getElementById("time").textContent=timeLeft;
 timer=setInterval(()=>{
 
 timeLeft--;
-
 document.getElementById("time").textContent=timeLeft;
 
 if(timeLeft<=0){
 
 clearInterval(timer);
-
 document.getElementById("result").textContent="Hết giờ!";
-
 setTimeout(newQuestion,1500);
 
 }
@@ -212,7 +247,10 @@ answer="";
 document.getElementById("answer").textContent="";
 document.getElementById("result").textContent="";
 
-currentWord=words[Math.floor(Math.random()*words.length)];
+/* chọn bộ câu hỏi */
+let wordList = currentMode === "easy" ? words : words2;
+
+currentWord = wordList[Math.floor(Math.random()*wordList.length)];
 
 const letters=shuffleWord(currentWord);
 
@@ -233,9 +271,7 @@ clearInterval(timer);
 if(answer.toLowerCase()===correct.toLowerCase()){
 
 score+=1;
-
 document.getElementById("score").textContent=score;
-
 document.getElementById("result").textContent="🎉 Chính xác!";
 
 }else{
@@ -250,20 +286,38 @@ setTimeout(newQuestion,2000);
 
 }
 
-newQuestion();
-
+/* clear */
 document.getElementById("clearBtn").onclick=function(){
 
 answer="";
-
 document.getElementById("answer").textContent="";
-
-/* khôi phục chữ */
 
 document.querySelectorAll("#letters span").forEach(span=>{
 span.classList.remove("used");
 });
 
+};
+
+/* toggle mode */
+const easyBtn = document.getElementById("easyBtn");
+const hardBtn = document.getElementById("hardBtn");
+
+easyBtn.onclick = () => {
+  currentMode = "easy";
+
+  easyBtn.classList.add("active","easy");
+  hardBtn.classList.remove("active","hard");
+
+  newQuestion();
+};
+
+hardBtn.onclick = () => {
+  currentMode = "hard";
+
+  hardBtn.classList.add("active","hard");
+  easyBtn.classList.remove("active","easy");
+
+  newQuestion();
 };
 
 function playClick(){
@@ -284,6 +338,9 @@ osc.start();
 osc.stop(audioCtx.currentTime + 0.1);
 
 }
+
+/* start */
+newQuestion();
 
 </script>
 
