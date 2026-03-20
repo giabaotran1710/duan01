@@ -3,7 +3,7 @@ const words = [
 "Đủng đỉnh",
 "Trần gian",
 "Hấp dẫn",
-"Tiểu thuyết",
+"Tiểu thuyết","Tiểu thương",
 "Tập trung","Tập thể",
 "Trào phúng",
 "Hào nhoáng",
@@ -384,6 +384,6 @@ const words = [
 "Liên lụy",
 "Chống đối",
 "Bồng bềnh",
-"Tiểu thương",
-"Thương nhân"
+"Thương nhân",
+"Gian manh","Gian xảo","Gian thương","Gian dối","Gian lận"
 ];
