@@ -129,7 +129,7 @@ h2{
 /* trạng thái active */
 .easyMode #easyBtn { color: white; }
 .hardMode #hardBtn { color: black; }
-.superHardMode #superHardBtn { color: rgb(242, 255, 0); }
+.superHardMode #superHardBtn { color: #f2ff00; }
 
 /* slider theo chế độ */
 .easyMode #slider { left: 0; background: #0188ff; }
@@ -268,6 +268,26 @@ h2{
   100%{ transform:scale(1); }
 }
 
+/* ==== HÓA ĐÁ TOÀN BỘ ==== */
+/* Hiệu ứng nứt + hóa đá */
+.frozenAll {
+  background-color: #636060 !important; /* bắt buộc override màu cũ */
+  color: #3c3b3b !important;            /* chữ đen */
+  pointer-events: none;                  /* không thể click */
+  position: relative;
+  opacity: 0.4;
+}
+
+.frozenAll::after {
+  content: "";
+  position: absolute;
+  color:white;
+  top: 0; left: 0;
+  width: 100%; height: 100%;
+  opacity: 1;
+  border-radius: 8px;
+  pointer-events: none;
+}
 
 </style>
 </head>
@@ -338,6 +358,7 @@ let timeLeft=10;
 let timer;
 let currentMode = "easy";
 let usedWords = [];
+
 
 /* ===== INFO POPUP ===== */
 const infoBtn = document.getElementById("infoBtn");
@@ -462,32 +483,71 @@ function superHardFilter(original, shuffled){
 
 /* ===== RENDER ===== */
 function renderLetters(letters){
-  const box=document.getElementById("letters");
-  box.innerHTML="";
+  const box = document.getElementById("letters");
+  box.innerHTML = "";
 
-  letters.forEach(letter=>{
-    const span=document.createElement("span");
-    span.textContent=letter;
+  letters.forEach(letter => {
+    const span = document.createElement("span");
+    span.textContent = letter;
+    span.style.position = "relative";
 
+    // màu chữ theo chế độ
     if(currentMode === "hard"){
-  span.style.background = "#ff4444";  // chế độ Khó
-  span.style.color = "black";
-} else if(currentMode === "superHard"){ 
-  span.style.background = "#8000ff";  // màu tím
-  span.style.color = "#ffd700";       // chữ vàng
-} else { // easy
-  span.style.background = "#0188ff";
-  span.style.color = "white";
-}
+      span.style.background = "#ff4444";
+      span.style.color = "black";
+    } else if(currentMode === "superHard"){
+      span.style.background = "#9900ff"; // tím
+      span.style.color = "yellow";
+    } else {
+      span.style.background = "#0188ff";
+      span.style.color = "white";
+    }
 
-    span.onclick=()=>{
+    span.onclick = () => {
       if(span.classList.contains("used")) return;
 
-      answer+=letter;
-      document.getElementById("answer").textContent=answer;
-      span.classList.add("used");
+      if(currentMode === "superHard"){
+        const originalLetters = originalWord.replaceAll(" ", "").split("");
+        const nextIndex = answer.length; // vị trí chữ tiếp theo cần chọn
+        const expectedLetter = originalLetters[nextIndex].toLowerCase();
 
-      checkAnswer();
+        // kiểm tra nếu chữ click không đúng chữ tiếp theo
+        if(letter.toLowerCase() !== expectedLetter){
+          freezeAllLetters(); // hóa đá
+          document.getElementById("result").textContent = "Bạn đã chọn sai!";
+          const ans = document.getElementById("answer");
+          ans.classList.add("wrongEffect");
+          ans.textContent = currentWord; 
+          setTimeout(newQuestion, 1500);
+          return;
+        }
+
+        // chữ đúng: thêm vào answer
+        answer += letter;
+        document.getElementById("answer").textContent = answer;
+        span.classList.add("used");
+
+        // nếu đủ từ, điểm +1, chuyển câu mới
+        if(answer.length === originalLetters.length){
+          clearInterval(timer);
+          score++;
+          document.getElementById("score").textContent = score;
+          usedWords.push(originalWord);
+          animateScore();
+          document.getElementById("result").textContent = "🎉 Chính xác!";
+          const ans = document.getElementById("answer");
+          ans.textContent = currentWord;
+          ans.classList.add("correctEffect");
+          setTimeout(newQuestion, 1000);
+        }
+
+      } else {
+        // chế độ Easy/Hard bình thường
+        answer += letter;
+        document.getElementById("answer").textContent = answer;
+        span.classList.add("used");
+        checkAnswer();
+      }
     };
 
     box.appendChild(span);
@@ -503,7 +563,7 @@ function startTimer(){
 } else if(currentMode === "hard"){
   timeLeft = 20;
 } else if(currentMode === "superHard"){
-  timeLeft = 15;
+  timeLeft = 40;
 }
   document.getElementById("time").textContent=timeLeft;
 
@@ -526,6 +586,19 @@ function startTimer(){
   },1000);
 }
 
+/* ===== CLICK LETTERS & CHECK ANSWER ===== */
+function isLetterInWord(letter) {
+  const normalizedWord = originalWord.replaceAll(" ", "").toLowerCase();
+  return normalizedWord.includes(letter.toLowerCase());
+}
+
+function freezeAllLetters() {
+  document.querySelectorAll("#letters span").forEach(span => {
+    span.classList.add("frozen");
+    span.style.background = "#888"; // xám
+    span.style.color = "black";     // chữ đen
+  });
+}
 /* ===== NEW QUESTION ===== */
 function newQuestion(){
 
@@ -554,42 +627,57 @@ function newQuestion(){
 }
 
 /* ===== CHECK ===== */
-function checkAnswer(){
+function checkAnswer() {
+  const ans = document.getElementById("answer");
 
-  const correct = originalWord.replaceAll(" ","");
+  if (currentMode === "superHard") {
+    // Super Hard: kiểm tra xem đã đủ tất cả chữ từ câu
+    const correctLetters = originalWord.replaceAll(" ", "").toLowerCase().split("");
+    const typedLetters = answer.toLowerCase().split("");
 
-  if(answer.length===correct.length){
+    const allMatch = correctLetters.every(l => typedLetters.includes(l));
 
-    clearInterval(timer);
-
-    const ans = document.getElementById("answer");
-
-    if(answer.toLowerCase()===correct.toLowerCase()){
-
+    if (allMatch) {
+      clearInterval(timer);
       score++;
-      document.getElementById("score").textContent=score;
-
+      document.getElementById("score").textContent = score;
       usedWords.push(originalWord);
 
       animateScore();
-
-      document.getElementById("result").textContent="🎉 Chính xác!";
-
+      document.getElementById("result").textContent = "🎉 Chính xác!";
       ans.textContent = currentWord;
       ans.classList.add("correctEffect");
 
-    }else{
-
-      document.getElementById("result").textContent="❌ Không chính xác!";
-
-      ans.textContent = currentWord;
-      ans.classList.add("wrongEffect");
-
+      setTimeout(newQuestion, 1500);
     }
+    // Không kiểm tra sai ở đây nữa, vì đã xử lý ngay khi click chữ sai trong renderLetters()
+  } else {
+    // Easy / Hard: kiểm tra chữ theo thứ tự cũ
+    const correct = originalWord.replaceAll(" ", "");
 
-    setTimeout(newQuestion,2000);
+    if (answer.length === correct.length) {
+      clearInterval(timer);
+
+      if (answer.toLowerCase() === correct.toLowerCase()) {
+        score++;
+        document.getElementById("score").textContent = score;
+        usedWords.push(originalWord);
+
+        animateScore();
+        document.getElementById("result").textContent = "🎉 Chính xác!";
+        ans.textContent = currentWord;
+        ans.classList.add("correctEffect");
+      } else {
+        document.getElementById("result").textContent = "❌ Không chính xác!";
+        ans.textContent = currentWord;
+        ans.classList.add("wrongEffect");
+      }
+
+      setTimeout(newQuestion, 2000);
+    }
   }
 }
+
 
 /* ===== CLEAR ===== */
 document.getElementById("clearBtn").onclick=function(){
