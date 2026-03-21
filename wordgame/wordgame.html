@@ -289,9 +289,125 @@ h2{
   pointer-events: none;
 }
 
-#modeToggle.locked {
+
+#modeToggle.locked span{
   pointer-events: none;
-  opacity: 0.6;
+}
+
+/* Easy đang chọn → làm mờ Hard + SuperHard */
+#modeToggle.locked.easyMode #hardBtn,
+#modeToggle.locked.easyMode #superHardBtn{
+  opacity: 0.4;
+  filter: grayscale(70%);
+}
+
+/* Hard đang chọn → làm mờ Easy + SuperHard */
+#modeToggle.locked.hardMode #easyBtn,
+#modeToggle.locked.hardMode #superHardBtn{
+  opacity: 0.4;
+  filter: grayscale(70%);
+}
+
+/* SuperHard đang chọn → làm mờ Easy + Hard */
+#modeToggle.locked.superHardMode #easyBtn,
+#modeToggle.locked.superHardMode #hardBtn{
+  opacity: 0.4;
+  filter: grayscale(70%);
+}
+
+#modeToggle.locked #slider{
+  opacity: 1;
+}
+
+#slider{
+  position:absolute;
+  width:33.33%;
+  height:100%;
+  border-radius:12px;
+  transition:0.35s cubic-bezier(0.4,0,0.2,1);
+  z-index:0;
+  overflow:hidden;
+}
+
+/* ✨ vệt sáng */
+#slider::after{
+  content:"";
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,0.7), transparent);
+  opacity:0;
+  transform:translateX(-100%);
+}
+
+/* khi trượt thì kích hoạt */
+#slider.trail::after{
+  animation: sliderTrail 0.5s ease;
+}
+
+@keyframes sliderTrail{
+  0%{
+    opacity:0;
+    transform:translateX(-100%);
+  }
+  40%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    transform:translateX(100%);
+  }
+}
+
+/* nền cần relative để shine chạy */
+#modeToggle span{
+  position: relative;
+  overflow: hidden;
+}
+
+/* hiệu ứng bóng */
+#modeToggle span::after{
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 60%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,255,0.5),
+    transparent
+  );
+  transform: skewX(-20deg);
+}
+
+/* chạy shine khi HARD */
+.hardMode #hardBtn::after{
+  animation: shineMove 2s infinite;
+}
+
+/* chạy shine khi SUPER HARD */
+.superHardMode #superHardBtn::after{
+  animation: shineMove 1.5s infinite;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,255,0,0.8),
+    transparent
+  );
+}
+
+/* animation */
+@keyframes shineMove{
+  0%{
+    left: -100%;
+  }
+  100%{
+    left: 150%;
+  }
 }
 </style>
 </head>
@@ -567,8 +683,9 @@ function renderLetters(letters){
 /* ===== TIMER ===== */
 function startTimer(){
   if(timer){
-  clearInterval(timer);}
-
+  clearInterval(timer);
+  timer = null;
+}
   if(currentMode === "easy"){
   timeLeft = 25;
 } else if(currentMode === "hard"){
@@ -758,6 +875,7 @@ function updateUI(){
   else if(currentMode === "superHard") modeToggle.classList.add("superHardMode");
 }
 
+
 // sự kiện chọn chế độ
 easyBtn.onclick = () => {
   if(isSwithingMode) return;
@@ -765,16 +883,27 @@ easyBtn.onclick = () => {
 
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
 
+  isSwithingMode = true;
+  modeToggle.classList.add("locked");
+
   score = 0;
   usedWords = [];
-
   document.getElementById("score").textContent = score;
 
   currentMode = "easy";
   updateUI();
+
+  const slider = document.getElementById("slider");
+  slider.classList.remove("trail"); 
+  void slider.offsetWidth; // reset animation
+  slider.classList.add("trail");
+
   newQuestion();
 
-  setTimneout(()=> isSwithingMode = false,300);
+  setTimeout(() => {
+  isSwithingMode = false;
+  modeToggle.classList.remove("locked");
+}, 3000);
 };
 
 hardBtn.onclick = () => {
@@ -783,38 +912,60 @@ hardBtn.onclick = () => {
 
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
 
+  isSwithingMode = true;
+  modeToggle.classList.add("locked");
+
   score = 0;
   usedWords = [];
-
   document.getElementById("score").textContent = score;
 
   currentMode = "hard";
   updateUI();
-  newQuestion();
-  setTimneout(()=> isSwithingMode = false,300);
-};
 
+  const slider = document.getElementById("slider");
+  slider.classList.remove("trail"); 
+  void slider.offsetWidth; // reset animation
+  slider.classList.add("trail");
+
+  newQuestion();
+
+ setTimeout(() => {
+  isSwithingMode = false;
+  modeToggle.classList.remove("locked");
+}, 3000);
+};
 superHardBtn.onclick = () => {
   if(isSwithingMode) return;
   if(currentMode === "superHard") return;
+
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
-  score = 0; usedWords = [];
+
+  isSwithingMode = true;
+  modeToggle.classList.add("locked");
+
+  score = 0;
+  usedWords = [];
   document.getElementById("score").textContent = score;
+
   currentMode = "superHard";
   updateUI();
+  const slider = document.getElementById("slider");
+  slider.classList.remove("trail"); 
+  void slider.offsetWidth; // reset animation
+  slider.classList.add("trail");
   newQuestion();
-  setTimneout(()=> isSwithingMode = false,300);
+
+  setTimeout(() => {
+  isSwithingMode = false;
+  modeToggle.classList.remove("locked");
+}, 3000);
 };
 
 /* ===== INIT ===== */
 updateUI();
 newQuestion();
 
-modeToggle.classList.add("locked");
-setTimeout(()=>{
-  modeToggle.classList.remove("locked");
-  isSwithingMode = false;
-},300);
+
 </script>
 </body>
 </html>
