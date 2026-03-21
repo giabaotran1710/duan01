@@ -289,6 +289,10 @@ h2{
   pointer-events: none;
 }
 
+#modeToggle.locked {
+  pointer-events: none;
+  opacity: 0.6;
+}
 </style>
 </head>
 
@@ -355,9 +359,12 @@ let originalWord="";
 let answer="";
 let score=0;
 let timeLeft=10;
-let timer;
+let timer = null;
 let currentMode = "easy";
 let usedWords = [];
+let isTransitioning = false;
+let isFrozen = false;
+let isSwithingMode = false;
 
 
 /* ===== INFO POPUP ===== */
@@ -504,15 +511,18 @@ function renderLetters(letters){
     }
 
     span.onclick = () => {
+      if(isFrozen) return;
       if(span.classList.contains("used")) return;
 
       if(currentMode === "superHard"){
+        if(isTransitioning) return;
         const originalLetters = originalWord.replaceAll(" ", "").split("");
         const nextIndex = answer.length; // vị trí chữ tiếp theo cần chọn
         const expectedLetter = originalLetters[nextIndex].toLowerCase();
 
         // kiểm tra nếu chữ click không đúng chữ tiếp theo
         if(letter.toLowerCase() !== expectedLetter){
+          isFrozen = true;
           freezeAllLetters(); // hóa đá
           document.getElementById("result").textContent = "Bạn đã chọn sai!";
           const ans = document.getElementById("answer");
@@ -556,7 +566,8 @@ function renderLetters(letters){
 
 /* ===== TIMER ===== */
 function startTimer(){
-  clearInterval(timer);
+  if(timer){
+  clearInterval(timer);}
 
   if(currentMode === "easy"){
   timeLeft = 25;
@@ -573,6 +584,7 @@ function startTimer(){
 
     if(timeLeft<=0){
       clearInterval(timer);
+      timer=null;
 
       const ans = document.getElementById("answer");
       ans.textContent = currentWord;
@@ -601,6 +613,11 @@ function freezeAllLetters() {
 }
 /* ===== NEW QUESTION ===== */
 function newQuestion(){
+  isFrozen=false;
+  if(isTransitioning) return;
+  isTransitioning = true;
+  clearInterval(timer);
+  timer=null;
 
   const ans = document.getElementById("answer");
   ans.classList.remove("wrongEffect","correctEffect");
@@ -624,8 +641,10 @@ function newQuestion(){
 
   renderLetters(shuffleWord(currentWord));
   startTimer();
-}
 
+  setTimeout(()=>{isTransitioning = false;
+  },300);
+}
 /* ===== CHECK ===== */
 function checkAnswer() {
   const ans = document.getElementById("answer");
@@ -741,6 +760,7 @@ function updateUI(){
 
 // sự kiện chọn chế độ
 easyBtn.onclick = () => {
+  if(isSwithingMode) return;
   if(currentMode === "easy") return;
 
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
@@ -753,9 +773,12 @@ easyBtn.onclick = () => {
   currentMode = "easy";
   updateUI();
   newQuestion();
+
+  setTimneout(()=> isSwithingMode = false,300);
 };
 
 hardBtn.onclick = () => {
+  if(isSwithingMode) return;
   if(currentMode === "hard") return;
 
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
@@ -768,9 +791,11 @@ hardBtn.onclick = () => {
   currentMode = "hard";
   updateUI();
   newQuestion();
+  setTimneout(()=> isSwithingMode = false,300);
 };
 
 superHardBtn.onclick = () => {
+  if(isSwithingMode) return;
   if(currentMode === "superHard") return;
   if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
   score = 0; usedWords = [];
@@ -778,11 +803,18 @@ superHardBtn.onclick = () => {
   currentMode = "superHard";
   updateUI();
   newQuestion();
+  setTimneout(()=> isSwithingMode = false,300);
 };
 
 /* ===== INIT ===== */
 updateUI();
 newQuestion();
+
+modeToggle.classList.add("locked");
+setTimeout(()=>{
+  modeToggle.classList.remove("locked");
+  isSwithingMode = false;
+},300);
 </script>
 </body>
 </html>
