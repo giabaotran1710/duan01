@@ -199,6 +199,7 @@ h2{
   color:white;
 }
 
+
 #clearBtn:hover{
   background:#ff7777;
 }
@@ -404,7 +405,12 @@ h2{
     transparent
   );
 }
-
+body.superHardMode #clearBtn{
+  background: #555 !important;
+  cursor: not-allowed !important;
+  opacity: 0.4 !important;
+  pointer-events: none !important;
+}
 /* animation */
 @keyframes shineMove{
   0%{
@@ -414,6 +420,7 @@ h2{
     left: 150%;
   }
 }
+
 </style>
 </head>
 
@@ -556,58 +563,39 @@ function isTooEasy(original, shuffled){
 }
 
 function superHardShuffle(word){
-  const original = word.replaceAll(" ","").split("");
-  if(original.length <= 5) return easyShuffle(word);
 
-  let shuffled;
+  const letters = word.replaceAll(" ","").split("");
 
-  do{
-    shuffled = [...original];
+  // 🔤 danh sách nguyên âm tiếng Việt (full dấu)
+  const vowels = "aăâeêioôơuưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ";
 
-    // shuffle cơ bản
-    for(let i = shuffled.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  let vowelGroup = [];
+  let consonantGroup = [];
+
+  // tách nguyên âm và phụ âm
+  letters.forEach(l => {
+    if(vowels.includes(l.toLowerCase())){
+      vowelGroup.push(l);
+    } else {
+      consonantGroup.push(l);
     }
+  });
 
-    // đảo ngẫu nhiên
-    if(Math.random() < 0.5) shuffled.reverse();
+  // 🔀 trộn phụ âm
+  for(let i = consonantGroup.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [consonantGroup[i], consonantGroup[j]] = [consonantGroup[j], consonantGroup[i]];
+  }
 
-    // cắt đôi đổi chỗ
-    let cut = Math.floor(shuffled.length / 2);
-    shuffled = shuffled.slice(cut).concat(shuffled.slice(0, cut));
+  // 🔀 trộn nhẹ nguyên âm (optional cho khó hơn)
+  for(let i = vowelGroup.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [vowelGroup[i], vowelGroup[j]] = [vowelGroup[j], vowelGroup[i]];
+  }
 
-    // shuffle lần 2
-    for(let i = shuffled.length - 1; i > 0; i--){
-      const j = Math.floor(Math.random() * (i + 1));
-      [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
-    }
-
-  } while(superHardFilter(original, shuffled));
-
-  return shuffled;
+  // 🎯 ghép lại: nguyên âm trước, phụ âm sau
+  return [...vowelGroup, ...consonantGroup];
 }
-function superHardFilter(original, shuffled){
-  let samePos = 0;
-  let nearPos = 0;
-  let samePair = 0;
-
-  for(let i=0;i<original.length;i++){
-    if(original[i] === shuffled[i]) samePos++;
-  }
-
-  for(let i=0;i<original.length;i++){
-    let origIndex = original.indexOf(shuffled[i]);
-    if(Math.abs(origIndex - i) <= 2) nearPos++;
-  }
-
-  for(let i=0;i<original.length-1;i++){
-    if(original[i]===shuffled[i] && original[i+1]===shuffled[i+1]) samePair++;
-  }
-
-  return samePos > 0 || nearPos > 2 || samePair > 0;
-}
-
 
 /* ===== RENDER ===== */
 function renderLetters(letters){
@@ -638,27 +626,24 @@ function renderLetters(letters){
       if(currentMode === "superHard"){
         if(isTransitioning) return;
         const originalLetters = originalWord.replaceAll(" ", "").split("");
-        const nextIndex = answer.length; // vị trí chữ tiếp theo cần chọn
+        const nextIndex = answer.length;
         const expectedLetter = originalLetters[nextIndex].toLowerCase();
 
-        // kiểm tra nếu chữ click không đúng chữ tiếp theo
         if(letter.toLowerCase() !== expectedLetter){
           isFrozen = true;
-          freezeAllLetters(); // hóa đá
+          freezeAllLetters(); 
           document.getElementById("result").textContent = "Bạn đã chọn sai!";
           const ans = document.getElementById("answer");
           ans.classList.add("wrongEffect");
           ans.textContent = currentWord; 
-          setTimeout(newQuestion, 1500);
+          setTimeout(newQuestion, 1700);
           return;
         }
 
-        // chữ đúng: thêm vào answer
         answer += letter;
         document.getElementById("answer").textContent = answer;
         span.classList.add("used");
 
-        // nếu đủ từ, điểm +1, chuyển câu mới
         if(answer.length === originalLetters.length){
           clearInterval(timer);
           score++;
@@ -669,11 +654,11 @@ function renderLetters(letters){
           const ans = document.getElementById("answer");
           ans.textContent = currentWord;
           ans.classList.add("correctEffect");
-          setTimeout(newQuestion, 1000);
+          setTimeout(newQuestion, 1700);
         }
 
       } else {
-        // chế độ Easy/Hard bình thường
+      
         answer += letter;
         document.getElementById("answer").textContent = answer;
         span.classList.add("used");
@@ -714,7 +699,7 @@ function startTimer(){
 
       document.getElementById("result").textContent="Hết giờ!";
 
-      setTimeout(newQuestion,1500);
+      setTimeout(newQuestion,1700); 
     }
 
   },1000);
@@ -789,7 +774,7 @@ function checkAnswer() {
       ans.textContent = currentWord;
       ans.classList.add("correctEffect");
 
-      setTimeout(newQuestion, 1500);
+      setTimeout(newQuestion, 1700);
     }
     // Không kiểm tra sai ở đây nữa, vì đã xử lý ngay khi click chữ sai trong renderLetters()
   } else {
@@ -814,20 +799,27 @@ function checkAnswer() {
         ans.classList.add("wrongEffect");
       }
 
-      setTimeout(newQuestion, 2000);
+      setTimeout(newQuestion, 1700);
     }
   }
 }
 
 
 /* ===== CLEAR ===== */
-document.getElementById("clearBtn").onclick=function(){
+const clearBtn = 
+document.getElementById("clearBtn");
+clearBtn.addEventListener("click",function(e){
+  if(currentMode === "superHard"){
+    e.preventDefault();
+    return;
+  }
+  
   answer="";
   document.getElementById("answer").textContent="";
-  document.querySelectorAll("#letters span").forEach(span=>{
+  document.querySelectorAll("#letters sp an").forEach(span=>{
     span.classList.remove("used");
   });
-};
+});
 
 /* ===== SCORE EFFECT ===== */
 function animateScore(){
@@ -875,11 +867,21 @@ modeToggle.appendChild(superHardBtn);
 // cập nhật UI cho 3 chế độ
 function updateUI(){
   modeToggle.classList.remove("easyMode","hardMode","superHardMode");
-  if(currentMode === "easy") modeToggle.classList.add("easyMode");
-  else if(currentMode === "hard") modeToggle.classList.add("hardMode");
-  else if(currentMode === "superHard") modeToggle.classList.add("superHardMode");
-}
+  document.body.classList.remove("easyMode","hardMode","superHardMode");
 
+  if(currentMode === "easy"){
+    modeToggle.classList.add("easyMode");
+    document.body.classList.add("easyMode");
+  }
+  else if(currentMode === "hard"){
+    modeToggle.classList.add("hardMode");
+    document.body.classList.add("hardMode");
+  }
+  else if(currentMode === "superHard"){
+    modeToggle.classList.add("superHardMode");
+    document.body.classList.add("superHardMode");
+  }
+}
 
 // sự kiện chọn chế độ
 easyBtn.onclick = () => {
