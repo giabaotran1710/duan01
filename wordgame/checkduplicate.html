@@ -2,213 +2,225 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Protected Tool</title>
+<title>Check trùng question.js</title>
 
 <style>
 body{
   margin:0;
   font-family:Arial;
-  background:#0f0f0f;
-  color:#fff;
+  color:white;
+  padding:20px;
+
+  background: linear-gradient(135deg,#0f172a,#1e3a8a,#4c1d95);
+  background-size: 300% 300%;
+  animation: bgMove 10s ease infinite;
 }
 
-/* ===== LOCK SCREEN ===== */
-#lockScreen{
+@keyframes bgMove{
+  0%{background-position:0% 50%;}
+  50%{background-position:100% 50%;}
+  100%{background-position:0% 50%;}
+}
+
+/* ===== POPUP ===== */
+#passwordPopup{
   position:fixed;
   inset:0;
+  background:rgba(0,0,0,0.7);
   display:flex;
   justify-content:center;
   align-items:center;
-  background: radial-gradient(circle at top, #1a1a2e, #0f0f0f);
+  backdrop-filter: blur(8px);
   z-index:9999;
 }
 
-/* card */
-.lock-box{
-  backdrop-filter: blur(20px);
-  background: rgba(255,255,255,0.05);
-  border:1px solid rgba(255,255,255,0.1);
+.box{
+  background: rgba(30,42,56,0.85);
+  padding:25px;
   border-radius:20px;
-  padding:40px;
-  width:300px;
+  width:90%;
+  max-width:320px;
   text-align:center;
-  box-shadow: 0 0 30px rgba(0,170,255,0.2);
+  box-shadow:0 0 30px rgba(0,170,255,0.3);
 }
 
-/* tiêu đề */
-.lock-box h2{
+/* ===== DISPLAY ===== */
+#display{
+  font-size:26px;
+  letter-spacing:10px;
   margin-bottom:20px;
-  color:#00aaff;
-  text-shadow:0 0 10px #00aaff;
+  padding:10px;
+  border-radius:10px;
+  background:rgba(255,255,255,0.05);
 }
 
-/* input */
-.lock-box input{
-  width:100%;
-  padding:12px;
-  border-radius:10px;
-  border:none;
-  outline:none;
-  background:#111;
-  color:#fff;
-  text-align:center;
-  font-size:18px;
-  letter-spacing:3px;
-  margin-bottom:15px;
+/* ===== KEYPAD ===== */
+.keypad{
+  display:grid;
+  grid-template-columns: repeat(3,1fr);
+  gap:10px;
 }
 
-/* button */
-.lock-box button{
-  width:100%;
-  padding:12px;
+.key{
+  padding:15px;
+  font-size:20px;
+  border-radius:12px;
   border:none;
-  border-radius:10px;
-  background:linear-gradient(45deg,#00aaff,#00ffcc);
-  color:#000;
-  font-weight:bold;
+  background:rgba(255,255,255,0.1);
+  color:white;
   cursor:pointer;
   transition:0.2s;
 }
 
-.lock-box button:hover{
-  transform:scale(1.05);
+.key:hover{
+  background:#00aaff;
+  transform:scale(1.1);
 }
 
-/* lỗi */
-.error{
-  margin-top:10px;
-  color:#ff5555;
-  opacity:0;
-  transition:0.3s;
+.key:active{
+  transform:scale(0.9);
 }
 
-/* rung */
-.shake{
-  animation:shake 0.3s;
+/* special buttons */
+.ok{
+  background:#00aaff;
 }
 
-@keyframes shake{
-  0%{transform:translateX(0)}
-  25%{transform:translateX(-5px)}
-  50%{transform:translateX(5px)}
-  75%{transform:translateX(-5px)}
-  100%{transform:translateX(0)}
+.clear{
+  background:#ff4444;
 }
 
-/* ===== MAIN (ẨN BAN ĐẦU) ===== */
-#mainContent{
-  display:none;
-  padding:20px;
+/* ===== UI ===== */
+h2{
+  text-shadow:0 0 10px #00aaff;
 }
+
+.result{
+  margin-top:20px;
+  padding:15px;
+  border-radius:12px;
+  background:rgba(255,255,255,0.05);
+}
+
+.duplicate{color:#ff5555;}
+.okText{color:#00ff99;}
 </style>
 </head>
 
 <body>
 
-<!-- 🔐 LOCK SCREEN -->
-<div id="lockScreen">
-  <div class="lock-box" id="lockBox">
-    <h2>🔐 Protected</h2>
-    <input type="password" id="password" placeholder="Nhập mật khẩu">
-    <button onclick="checkPassword()">Mở khóa</button>
-    <div class="error" id="errorText">Sai mật khẩu!</div>
+<!-- 🔐 PASSWORD -->
+<div id="passwordPopup">
+  <div class="box">
+    <h3>🔐 Nhập mật khẩu</h3>
+
+    <div id="display">----</div>
+
+    <div class="keypad">
+      <button class="key">1</button>
+      <button class="key">4</button>
+      <button class="key">7</button>
+
+      <button class="key">2</button>
+      <button class="key">5</button>
+      <button class="key">8</button>
+
+      <button class="key">3</button>
+      <button class="key">6</button>
+      <button class="key">9</button>
+
+      <button class="key clear">X</button>
+      <button class="key">0</button>
+      <button class="key ok">OK</button>
+    </div>
   </div>
 </div>
 
-<!-- 🔥 TOOL CỦA BẠN -->
-<div id="mainContent">
-
 <h2>🔍 Kiểm tra từ trùng (question.js)</h2>
-<div id="status">⏳ Đang load dữ liệu...</div>
-<div id="result"></div>
-
-</div>
+<div id="status">⏳ Đang load...</div>
+<div class="result" id="result"></div>
 
 <script>
-const PASSWORD = "1724";
 
-// auto login nếu đã mở trước đó
-if(sessionStorage.getItem("unlocked") === "true"){
-  unlock();
-}
+const correctPassword = "1234";
+let inputPass = "";
 
-// enter = submit
-document.getElementById("password").addEventListener("keypress", function(e){
-  if(e.key === "Enter") checkPassword();
+/* ===== KEYPAD ===== */
+document.querySelectorAll(".key").forEach(btn=>{
+  btn.onclick = () => {
+    const val = btn.textContent;
+
+    if(val === "X"){
+      inputPass = inputPass.slice(0,-1);
+    }
+    else if(val === "OK"){
+      checkPassword();
+      return;
+    }
+    else{
+      if(inputPass.length < 6){
+        inputPass += val;
+      }
+    }
+
+    updateDisplay();
+  };
 });
 
-function checkPassword(){
-  const input = document.getElementById("password").value;
-  const error = document.getElementById("errorText");
-  const box = document.getElementById("lockBox");
+function updateDisplay(){
+  document.getElementById("display").textContent =
+    inputPass.padEnd(4,"-").split("").map(()=> "•").join("");
+}
 
-  if(input === PASSWORD){
-    sessionStorage.setItem("unlocked","true");
-    unlock();
+function checkPassword(){
+  if(inputPass === correctPassword){
+    document.getElementById("passwordPopup").style.display = "none";
   }else{
-    error.style.opacity = 1;
-    box.classList.add("shake");
-    setTimeout(()=> box.classList.remove("shake"),300);
+    alert("❌ Sai mật khẩu!");
+    inputPass = "";
+    updateDisplay();
   }
 }
 
-function unlock(){
-  document.getElementById("lockScreen").style.display = "none";
-  document.getElementById("mainContent").style.display = "block";
-  initTool();
-}
-
-/* ===== TOOL ===== */
-
-// chuẩn hoá
+/* ===== CHECK DUP ===== */
 function normalize(word){
   return word.toLowerCase().replace(/["',]/g,"").trim();
 }
 
-// load + check
-function initTool(){
+window.onload = () => {
   fetch("question.js")
     .then(res => res.text())
     .then(text => {
-      document.getElementById("status").textContent = "✅ Đã load question.js";
+      document.getElementById("status").textContent = "✅ Đã load";
       checkDuplicate(text);
-    })
-    .catch(()=>{
-      document.getElementById("status").textContent = "❌ Không tìm thấy file";
     });
-}
+};
 
-// check trùng
 function checkDuplicate(text){
   const lines = text.split("\n");
+  let map = {}, html="", found=false;
 
-  let map = {};
-  let resultHTML = "";
-  let found = false;
-
-  lines.forEach((line,i)=>{
-    let word = normalize(line);
-    if(!word) return;
-
-    if(!map[word]) map[word] = [];
-    map[word].push(i+1);
+  lines.forEach((l,i)=>{
+    let w = normalize(l);
+    if(!w) return;
+    if(!map[w]) map[w]=[];
+    map[w].push(i+1);
   });
 
   for(let w in map){
-    if(map[w].length > 1){
-      found = true;
-      resultHTML += `<div style="color:#ff5555">
-        ❌ "${w}" → dòng: ${map[w].join(", ")}
-      </div>`;
+    if(map[w].length>1){
+      found=true;
+      html+=`<div class="duplicate">❌ "${w}" → ${map[w].join(", ")}</div>`;
     }
   }
 
   if(!found){
-    resultHTML = `<div style="color:#00ff99">✅ Không có từ trùng</div>`;
+    html=`<div class="okText">✅ Không trùng</div>`;
   }
 
-  document.getElementById("result").innerHTML = resultHTML;
+  document.getElementById("result").innerHTML = html;
 }
+
 </script>
 
 </body>
