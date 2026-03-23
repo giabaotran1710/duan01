@@ -217,35 +217,63 @@ function checkPassword(){
 
 /* ===== CHECK DUPLICATE ===== */
 function startCheck(){
+
+  if(typeof words === "undefined"){
+    document.getElementById("status").textContent = "❌ Không load được";
+    return;
+  }
+
   document.getElementById("status").textContent = "✅ ĐÃ KIỂM TRA";
 
   let map = {};
   let html = "";
   let found = false;
 
-  words.forEach((w,i)=>{
-    let word = w.toLowerCase().trim().replace(/\s+/g," ");
+  // 👉 lấy text gốc từ file (QUAN TRỌNG)
+  fetch("question.js?v=" + Date.now())
+    .then(res => res.text())
+    .then(text => {
 
-    if(!map[word]) map[word] = [];
-    map[word].push(i+1);
-  });
+      const lines = text.split("\n");
 
-  for(let w in map){
-    if(map[w].length > 1){
-      found = true;
-      html += `
-        <div class="duplicate">
-          ❌ "${w}" → Dòng: ${map[w].join(", ")}
-        </div>
-      `;
-    }
-  }
+      lines.forEach((line, lineIndex) => {
 
-  if(!found){
-    html = `<div class="okText">✅ Không có từ nào bị trùng</div>`;
-  }
+        // tìm chuỗi trong ""
+        const matches = line.match(/"(.*?)"/g);
 
-  document.getElementById("result").innerHTML = html;
+        if(!matches) return;
+
+        matches.forEach(str => {
+          let word = str
+            .replace(/"/g,"")
+            .toLowerCase()
+            .trim()
+            .replace(/\s+/g," ");
+
+          if(!map[word]) map[word] = [];
+          map[word].push(lineIndex + 1); // 👈 dòng thật
+        });
+
+      });
+
+      for(let w in map){
+        if(map[w].length > 1){
+          found = true;
+          html += `
+            <div class="duplicate">
+              ❌ "${w}" → dòng: ${map[w].join(", ")}
+            </div>
+          `;
+        }
+      }
+
+      if(!found){
+        html = `<div class="okText">✅ Không có từ nào bị trùng</div>`;
+      }
+
+      document.getElementById("result").innerHTML = html;
+
+    });
 }
 </script>
 
