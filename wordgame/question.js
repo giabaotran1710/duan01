@@ -478,5 +478,7 @@ const words = [
 "Muối mặn",
 "Sấm rền",
 "Phương pháp",
-"Chủng tộc","Chủng loại"
+"Chủng tộc","Chủng loại",
+"Sấm rền",
+"Côn đồ"
 ];
