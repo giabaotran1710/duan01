@@ -1,6 +1,13 @@
 const words = [
 
 "Lững thững",
+"Lắc vòng",
+"Vòng eo",
+"Thon gọn",
+"Gọn gàng",
+"Ràng buộc",
+"Bóng bay",
+"Khí cầu",
 "Bâng khuâng",
 "Ngổn ngang",
 "Lắt léo",
