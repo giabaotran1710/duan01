@@ -143,7 +143,7 @@ const words = [
 "Mưu lược","Mưu mẹo",
 "Con giáp","Con vẹt",
 "Trùng sinh","Trùng hợp",
-"Phản ứng","Phản lực","Phản đối","Phản hồi","Phản chiếu","Phản bội",
+"Phản ứng","Phản lực","Phản đối","Phản hồi","Phản chiếu","Phản bội","Phản kích","Phản phệ",
 "Thuyền buôn","Thuyền buồm",
 "Cướp giật",
 "Tiêu điều","Tiêu đề","Tiêu tan",
@@ -473,12 +473,9 @@ const words = [
 "Đồng phạm",
 "Mốc nối",
 "Liên kết","Liên kích",
-"Phản kích","Phản lực","Phản phệ",
 "Gừng cay",
 "Muối mặn",
 "Sấm rền",
 "Phương pháp",
 "Chủng tộc","Chủng loại",
-"Sấm rền",
-"Côn đồ"
 ];
