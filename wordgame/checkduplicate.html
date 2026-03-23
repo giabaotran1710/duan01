@@ -2,54 +2,171 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Check trùng question.js</title>
+<title>Protected Tool</title>
 
 <style>
 body{
+  margin:0;
+  font-family:Arial;
   background:#0f0f0f;
   color:#fff;
-  font-family:Arial;
-  padding:20px;
 }
 
-h2{
+/* ===== LOCK SCREEN ===== */
+#lockScreen{
+  position:fixed;
+  inset:0;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  background: radial-gradient(circle at top, #1a1a2e, #0f0f0f);
+  z-index:9999;
+}
+
+/* card */
+.lock-box{
+  backdrop-filter: blur(20px);
+  background: rgba(255,255,255,0.05);
+  border:1px solid rgba(255,255,255,0.1);
+  border-radius:20px;
+  padding:40px;
+  width:300px;
+  text-align:center;
+  box-shadow: 0 0 30px rgba(0,170,255,0.2);
+}
+
+/* tiêu đề */
+.lock-box h2{
+  margin-bottom:20px;
   color:#00aaff;
+  text-shadow:0 0 10px #00aaff;
 }
 
-.result{
-  margin-top:20px;
-  line-height:1.6;
+/* input */
+.lock-box input{
+  width:100%;
+  padding:12px;
+  border-radius:10px;
+  border:none;
+  outline:none;
+  background:#111;
+  color:#fff;
+  text-align:center;
+  font-size:18px;
+  letter-spacing:3px;
+  margin-bottom:15px;
 }
 
-.duplicate{
+/* button */
+.lock-box button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:10px;
+  background:linear-gradient(45deg,#00aaff,#00ffcc);
+  color:#000;
+  font-weight:bold;
+  cursor:pointer;
+  transition:0.2s;
+}
+
+.lock-box button:hover{
+  transform:scale(1.05);
+}
+
+/* lỗi */
+.error{
+  margin-top:10px;
   color:#ff5555;
+  opacity:0;
+  transition:0.3s;
 }
 
-.ok{
-  color:#00ff99;
+/* rung */
+.shake{
+  animation:shake 0.3s;
+}
+
+@keyframes shake{
+  0%{transform:translateX(0)}
+  25%{transform:translateX(-5px)}
+  50%{transform:translateX(5px)}
+  75%{transform:translateX(-5px)}
+  100%{transform:translateX(0)}
+}
+
+/* ===== MAIN (ẨN BAN ĐẦU) ===== */
+#mainContent{
+  display:none;
+  padding:20px;
 }
 </style>
 </head>
 
 <body>
 
-<h2>🔍 Kiểm tra từ trùng (question.js)</h2>
+<!-- 🔐 LOCK SCREEN -->
+<div id="lockScreen">
+  <div class="lock-box" id="lockBox">
+    <h2>🔐 Protected</h2>
+    <input type="password" id="password" placeholder="Nhập mật khẩu">
+    <button onclick="checkPassword()">Mở khóa</button>
+    <div class="error" id="errorText">Sai mật khẩu!</div>
+  </div>
+</div>
 
+<!-- 🔥 TOOL CỦA BẠN -->
+<div id="mainContent">
+
+<h2>🔍 Kiểm tra từ trùng (question.js)</h2>
 <div id="status">⏳ Đang load dữ liệu...</div>
-<div class="result" id="result"></div>
+<div id="result"></div>
+
+</div>
 
 <script>
+const PASSWORD = "1724";
 
-// chuẩn hoá từ
-function normalize(word){
-  return word
-    .toLowerCase()
-    .replace(/["',]/g,"")
-    .trim();
+// auto login nếu đã mở trước đó
+if(sessionStorage.getItem("unlocked") === "true"){
+  unlock();
 }
 
-// load file và check
-window.onload = () => {
+// enter = submit
+document.getElementById("password").addEventListener("keypress", function(e){
+  if(e.key === "Enter") checkPassword();
+});
+
+function checkPassword(){
+  const input = document.getElementById("password").value;
+  const error = document.getElementById("errorText");
+  const box = document.getElementById("lockBox");
+
+  if(input === PASSWORD){
+    sessionStorage.setItem("unlocked","true");
+    unlock();
+  }else{
+    error.style.opacity = 1;
+    box.classList.add("shake");
+    setTimeout(()=> box.classList.remove("shake"),300);
+  }
+}
+
+function unlock(){
+  document.getElementById("lockScreen").style.display = "none";
+  document.getElementById("mainContent").style.display = "block";
+  initTool();
+}
+
+/* ===== TOOL ===== */
+
+// chuẩn hoá
+function normalize(word){
+  return word.toLowerCase().replace(/["',]/g,"").trim();
+}
+
+// load + check
+function initTool(){
   fetch("question.js")
     .then(res => res.text())
     .then(text => {
@@ -57,10 +174,9 @@ window.onload = () => {
       checkDuplicate(text);
     })
     .catch(()=>{
-      document.getElementById("status").textContent =
-        "❌ Không tìm thấy question.js (kiểm tra đường dẫn)";
+      document.getElementById("status").textContent = "❌ Không tìm thấy file";
     });
-};
+}
 
 // check trùng
 function checkDuplicate(text){
@@ -72,7 +188,6 @@ function checkDuplicate(text){
 
   lines.forEach((line,i)=>{
     let word = normalize(line);
-
     if(!word) return;
 
     if(!map[word]) map[word] = [];
@@ -82,21 +197,18 @@ function checkDuplicate(text){
   for(let w in map){
     if(map[w].length > 1){
       found = true;
-      resultHTML += `
-        <div class="duplicate">
-          ❌ "${w}" → dòng: ${map[w].join(", ")}
-        </div>
-      `;
+      resultHTML += `<div style="color:#ff5555">
+        ❌ "${w}" → dòng: ${map[w].join(", ")}
+      </div>`;
     }
   }
 
   if(!found){
-    resultHTML = `<div class="ok">✅ Không có từ trùng</div>`;
+    resultHTML = `<div style="color:#00ff99">✅ Không có từ trùng</div>`;
   }
 
   document.getElementById("result").innerHTML = resultHTML;
 }
-
 </script>
 
 </body>
