@@ -1,6 +1,20 @@
 const words = [
 
 "Hành nghề","Lành nghề",
+"Gà trống","Trống đồng",
+"Chung kết","Bán kết","Tứ kết","Vòng loại",
+"Mã lực","
+"Hồng hào",
+"Biên giới","Biên cương","Biên độ","Biên kịch",
+"Phán xét","Phán quyết",
+"Lưu hương",
+"Nồng nặc","Lông vũ",
+"Khiêu vũ","Điệu nhảy",
+"Tắm gội",
+"Trái ô liu",
+"Dầu dừa","Kẹo dừa","Kẹo dẻo","Kẹo mút",
+"Chảy máu",
+"Sinh tồn","Sinh sôi",
 "Hương ước","Quy ước",
 "Cộng đồng",
 "Khuyến khích","Giáo dục",
