@@ -3,8 +3,7 @@ const words = [
 "Hành nghề","Lành nghề",
 "Gà trống","Trống đồng",
 "Chung kết","Bán kết","Tứ kết","Vòng loại",
-"Mã lực","
-"Hồng hào",
+"Mã lực",
 "Biên giới","Biên cương","Biên độ","Biên kịch",
 "Phán xét","Phán quyết",
 "Lưu hương",
