@@ -269,19 +269,104 @@ function aiMove(){
 function smartAI(player){
   let enemy = player === "X" ? "O" : "X";
 
-  // thắng
+  // 🥇 thắng ngay
   let move = findWin(player);
   if(move) return move;
 
-  // chặn
+  // 🥈 chặn ngay
   move = findWin(enemy);
   if(move) return move;
 
-  // random gần
-  let moves = getEmptyCells();
-  if(moves.length === 0) return null;
+  let bestScore = -Infinity;
+  let bestMove = null;
 
-  return moves[Math.floor(Math.random()*moves.length)];
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") continue;
+
+      // ❗ chỉ xét ô gần quân → cực quan trọng
+      if(!hasNeighbor(r,c)) continue;
+
+      let score =
+        evaluate(r,c,player) +
+        evaluate(r,c,enemy)*0.8;
+
+      if(score > bestScore){
+        bestScore = score;
+        bestMove = [r,c];
+      }
+    }
+  }
+
+  // fallback nhẹ (không random toàn map nữa)
+  if(!bestMove){
+    let empty = getEmptyCells();
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+
+  return bestMove;
+}
+
+function hasNeighbor(r,c){
+  for(let dr=-1;dr<=1;dr++){
+    for(let dc=-1;dc<=1;dc++){
+      let nr=r+dr, nc=c+dc;
+
+      if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE){
+        if(board[nr][nc] !== "") return true;
+      }
+    }
+  }
+  return false;
+}
+
+function evaluate(r,c,player){
+  return (
+    scoreDir(r,c,1,0,player)+
+    scoreDir(r,c,0,1,player)+
+    scoreDir(r,c,1,1,player)+
+    scoreDir(r,c,1,-1,player)
+  );
+}
+
+function scoreDir(r,c,dr,dc,player){
+  let count = 1;
+  let open = 0;
+
+  let i=r+dr, j=c+dc;
+  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+    count++; i+=dr; j+=dc;
+  }
+  if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+
+  i=r-dr; j=c-dc;
+  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+    count++; i-=dr; j-=dc;
+  }
+  if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+
+  return getScore(count, open);
+}
+
+function getScore(count, open){
+  if(count >= 5) return 100000;
+
+  if(count === 4){
+    if(open === 2) return 10000;
+    if(open === 1) return 1000;
+  }
+
+  if(count === 3){
+    if(open === 2) return 500;
+    if(open === 1) return 100;
+  }
+
+  if(count === 2){
+    if(open === 2) return 50;
+    if(open === 1) return 10;
+  }
+
+  return 1;
 }
 
 // ===== FIND WIN =====
