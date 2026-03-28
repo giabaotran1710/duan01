@@ -14,8 +14,7 @@ body{
   color:white;
 }
 
-h2{ margin:10px; }
-
+/* ===== BOARD ===== */
 #board{
   display:grid;
   grid-template-columns: repeat(20, 28px);
@@ -45,6 +44,23 @@ h2{ margin:10px; }
   background:#444 !important;
 }
 
+/* ===== OVERLAY ===== */
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+#dice{
+  font-size:50px;
+  margin-top:20px;
+}
+
 button{
   padding:10px 20px;
   background:#0188ff;
@@ -53,15 +69,50 @@ button{
   border-radius:6px;
   cursor:pointer;
 }
+
+#status{
+  font-size:22px;
+  margin-top:10px;
+}
+
+#statusTop{
+  font-size:20px;
+  margin-top:10px;
+}
+
+.show{
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp{
+  from{
+    transform: translateY(40px);
+    opacity:0;
+  }
+  to{
+    transform: translateY(0);
+    opacity:1;
+  }
+}
 </style>
 </head>
 
 <body>
 
 <h2>🤖 Caro vs Máy</h2>
-<div id="status">Lượt của bạn (X)</div>
+<div id="statusTop">Nhấn bắt đầu</div>
 <div id="board"></div>
+
 <button onclick="resetGame()">Chơi lại</button>
+
+<!-- OVERLAY -->
+<div id="overlay">
+  <button onclick="startGame()">🎲 Bắt đầu</button>
+  <div id="dice"></div>
+  <div id="status">Nhấn bắt đầu</div>
+</div>
+
+<script src="AIx.js"></script>
 
 <script>
 const SIZE = 20;
@@ -71,8 +122,21 @@ let cells = [];
 let gameOver = false;
 let lastCell = null;
 
+let human = "X";
+let ai = "O";
+
 const boardDiv = document.getElementById("board");
-const statusDiv = document.getElementById("status");
+const statusOverlay = document.getElementById("status");
+const statusTop = document.getElementById("statusTop");
+
+// ===== HIỆU ỨNG STATUS =====
+function showStatus(text){
+  statusOverlay.textContent = text;
+
+  statusOverlay.classList.remove("show");
+  void statusOverlay.offsetWidth;
+  statusOverlay.classList.add("show");
+}
 
 // ===== TẠO BÀN =====
 function createBoard(){
@@ -98,19 +162,57 @@ function createBoard(){
   }
 }
 
+// ===== START GAME =====
+function startGame(){
+  let faces = ["X","X","X","O","O","O"];
+  let dice = document.getElementById("dice");
+
+  let interval = setInterval(()=>{
+    dice.textContent = faces[Math.floor(Math.random()*6)];
+  },100);
+
+  setTimeout(()=>{
+    clearInterval(interval);
+
+    let result = faces[Math.floor(Math.random()*6)];
+    dice.textContent = result;
+
+    if(result === "X"){
+      human = "X";
+      ai = "O";
+
+      showStatus("Bạn đi trước (X)");
+      statusTop.textContent = "Lượt của bạn (X)";
+    }else{
+      human = "O";
+      ai = "X";
+
+      showStatus("Máy đi trước (X)");
+      statusTop.textContent = "🤖 Máy đang đi...";
+    }
+
+    document.getElementById("overlay").style.display = "none";
+
+    if(ai === "X"){
+      setTimeout(aiMove, 500);
+    }
+
+  },3000);
+}
+
 // ===== NGƯỜI CHƠI =====
 function playerMove(r,c){
   if(gameOver || board[r][c] !== "") return;
 
-  place(r,c,"X");
+  place(r,c,human);
 
-  if(checkWin(r,c,"X")){
-    statusDiv.textContent = "🎉 Bạn thắng!";
+  if(checkWin(r,c,human)){
+    statusTop.textContent = "🎉 Bạn thắng!";
     gameOver = true;
     return;
   }
 
-  statusDiv.textContent = "🤖 Máy đang nghĩ...";
+  statusTop.textContent = "🤖 Máy đang nghĩ...";
   setTimeout(aiMove, 300);
 }
 
@@ -118,26 +220,42 @@ function playerMove(r,c){
 function aiMove(){
   if(gameOver) return;
 
-  let move =
-    findWin("O") ||  // thắng
-    findWin("X") ||  // chặn
-    randomNear();    // random
+  let move;
+
+  if(ai === "X"){
+    move = getAIMove(board, "X");
+  }else{
+    move = basicAI(board, "O");
+  }
 
   if(!move) return;
 
   const [r,c] = move;
-  place(r,c,"O");
+  place(r,c,ai);
 
-  if(checkWin(r,c,"O")){
-    statusDiv.textContent = "🤖 Máy thắng!";
+  if(checkWin(r,c,ai)){
+    statusTop.textContent = "🤖 Máy thắng!";
     gameOver = true;
     return;
   }
 
-  statusDiv.textContent = "Lượt của bạn (X)";
+  statusTop.textContent = "Lượt của bạn (" + human + ")";
 }
 
-// ===== ĐẶT QUÂN =====
+// ===== AI O ĐƠN GIẢN =====
+function basicAI(board, player){
+  let enemy = player === "X" ? "O" : "X";
+
+  let move = findWin(board, player);
+  if(move) return move;
+
+  move = findWin(board, enemy);
+  if(move) return move;
+
+  return [10,10];
+}
+
+// ===== PLACE =====
 function place(r,c,player){
   board[r][c] = player;
 
@@ -150,7 +268,7 @@ function place(r,c,player){
   lastCell = cell;
 }
 
-// ===== KIỂM TRA THẮNG =====
+// ===== WIN =====
 function checkWin(r,c,player){
   return (
     count(r,c,1,0,player)+count(r,c,-1,0,player)>=4 ||
@@ -163,11 +281,7 @@ function checkWin(r,c,player){
 function count(r,c,dr,dc,player){
   let i=r+dr, j=c+dc, cnt=0;
 
-  while(
-    i>=0 && i<SIZE &&
-    j>=0 && j<SIZE &&
-    board[i][j] === player
-  ){
+  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
     cnt++;
     i+=dr;
     j+=dc;
@@ -176,10 +290,8 @@ function count(r,c,dr,dc,player){
   return cnt;
 }
 
-// ===== AI =====
-
-// tìm nước thắng hoặc chặn
-function findWin(player){
+// ===== FIND WIN =====
+function findWin(board, player){
   for(let r=0;r<SIZE;r++){
     for(let c=0;c<SIZE;c++){
       if(board[r][c] !== "") continue;
@@ -194,49 +306,16 @@ function findWin(player){
   return null;
 }
 
-// random gần quân
-function randomNear(){
-  let moves = [];
-
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      if(board[r][c] !== "") continue;
-
-      if(hasNeighbor(r,c)){
-        moves.push([r,c]);
-      }
-    }
-  }
-
-  if(moves.length === 0){
-    return [10,10]; // trung tâm
-  }
-
-  return moves[Math.floor(Math.random()*moves.length)];
-}
-
-function hasNeighbor(r,c){
-  for(let dr=-1;dr<=1;dr++){
-    for(let dc=-1;dc<=1;dc++){
-      let nr=r+dr, nc=c+dc;
-
-      if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE){
-        if(board[nr][nc] !== "") return true;
-      }
-    }
-  }
-  return false;
-}
-
 // ===== RESET =====
 function resetGame(){
   gameOver = false;
   lastCell = null;
-  statusDiv.textContent = "Lượt của bạn (X)";
+  statusTop.textContent = "Nhấn bắt đầu";
   createBoard();
+  document.getElementById("overlay").style.display = "flex";
 }
 
-// ===== INIT =====
+// INIT
 createBoard();
 </script>
 
