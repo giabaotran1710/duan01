@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Caro vs Máy</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+body{
+  margin:0;
+  font-family:Arial;
+  text-align:center;
+  background:#0f172a;
+  color:white;
+}
+
+h2{ margin:10px; }
+
+#board{
+  display:grid;
+  grid-template-columns: repeat(20, 28px);
+  justify-content:center;
+  margin:20px auto;
+}
+
+.cell{
+  width:28px;
+  height:28px;
+  border:1px solid #555;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size:16px;
+}
+
+.cell:hover{
+  background:#1e3a8a;
+}
+
+.X{ color:#00d4ff; font-weight:bold; }
+.O{ color:#ff4d4d; font-weight:bold; }
+
+.last{
+  background:#444 !important;
+}
+
+button{
+  padding:10px 20px;
+  background:#0188ff;
+  border:none;
+  color:white;
+  border-radius:6px;
+  cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<h2>🤖 Caro vs Máy</h2>
+<div id="status">Lượt của bạn (X)</div>
+<div id="board"></div>
+<button onclick="resetGame()">Chơi lại</button>
+
+<script>
+const SIZE = 20;
+
+let board = [];
+let cells = [];
+let gameOver = false;
+let lastCell = null;
+
+const boardDiv = document.getElementById("board");
+const statusDiv = document.getElementById("status");
+
+// ===== TẠO BÀN =====
+function createBoard(){
+  board = [];
+  cells = [];
+  boardDiv.innerHTML = "";
+
+  for(let r=0;r<SIZE;r++){
+    board[r] = [];
+    cells[r] = [];
+
+    for(let c=0;c<SIZE;c++){
+      board[r][c] = "";
+
+      const cell = document.createElement("div");
+      cell.className = "cell";
+
+      cell.onclick = () => playerMove(r,c);
+
+      boardDiv.appendChild(cell);
+      cells[r][c] = cell;
+    }
+  }
+}
+
+// ===== NGƯỜI CHƠI =====
+function playerMove(r,c){
+  if(gameOver || board[r][c] !== "") return;
+
+  place(r,c,"X");
+
+  if(checkWin(r,c,"X")){
+    statusDiv.textContent = "🎉 Bạn thắng!";
+    gameOver = true;
+    return;
+  }
+
+  statusDiv.textContent = "🤖 Máy đang nghĩ...";
+  setTimeout(aiMove, 300);
+}
+
+// ===== MÁY =====
+function aiMove(){
+  if(gameOver) return;
+
+  let move =
+    findWin("O") ||  // thắng
+    findWin("X") ||  // chặn
+    randomNear();    // random
+
+  if(!move) return;
+
+  const [r,c] = move;
+  place(r,c,"O");
+
+  if(checkWin(r,c,"O")){
+    statusDiv.textContent = "🤖 Máy thắng!";
+    gameOver = true;
+    return;
+  }
+
+  statusDiv.textContent = "Lượt của bạn (X)";
+}
+
+// ===== ĐẶT QUÂN =====
+function place(r,c,player){
+  board[r][c] = player;
+
+  const cell = cells[r][c];
+  cell.textContent = player;
+  cell.classList.add(player);
+
+  if(lastCell) lastCell.classList.remove("last");
+  cell.classList.add("last");
+  lastCell = cell;
+}
+
+// ===== KIỂM TRA THẮNG =====
+function checkWin(r,c,player){
+  return (
+    count(r,c,1,0,player)+count(r,c,-1,0,player)>=4 ||
+    count(r,c,0,1,player)+count(r,c,0,-1,player)>=4 ||
+    count(r,c,1,1,player)+count(r,c,-1,-1,player)>=4 ||
+    count(r,c,1,-1,player)+count(r,c,-1,1,player)>=4
+  );
+}
+
+function count(r,c,dr,dc,player){
+  let i=r+dr, j=c+dc, cnt=0;
+
+  while(
+    i>=0 && i<SIZE &&
+    j>=0 && j<SIZE &&
+    board[i][j] === player
+  ){
+    cnt++;
+    i+=dr;
+    j+=dc;
+  }
+
+  return cnt;
+}
+
+// ===== AI =====
+
+// tìm nước thắng hoặc chặn
+function findWin(player){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") continue;
+
+      board[r][c] = player;
+      let win = checkWin(r,c,player);
+      board[r][c] = "";
+
+      if(win) return [r,c];
+    }
+  }
+  return null;
+}
+
+// random gần quân
+function randomNear(){
+  let moves = [];
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") continue;
+
+      if(hasNeighbor(r,c)){
+        moves.push([r,c]);
+      }
+    }
+  }
+
+  if(moves.length === 0){
+    return [10,10]; // trung tâm
+  }
+
+  return moves[Math.floor(Math.random()*moves.length)];
+}
+
+function hasNeighbor(r,c){
+  for(let dr=-1;dr<=1;dr++){
+    for(let dc=-1;dc<=1;dc++){
+      let nr=r+dr, nc=c+dc;
+
+      if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE){
+        if(board[nr][nc] !== "") return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ===== RESET =====
+function resetGame(){
+  gameOver = false;
+  lastCell = null;
+  statusDiv.textContent = "Lượt của bạn (X)";
+  createBoard();
+}
+
+// ===== INIT =====
+createBoard();
+</script>
+
+</body>
+</html>
