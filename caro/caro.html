@@ -14,7 +14,6 @@ body{
   color:white;
 }
 
-/* ===== BOARD ===== */
 #board{
   display:grid;
   grid-template-columns: repeat(20, 4.5vw);
@@ -27,27 +26,23 @@ body{
   height:4.5vw;
   max-width:28px;
   max-height:28px;
-
   border:1px solid #555;
   display:flex;
   align-items:center;
   justify-content:center;
-
+  cursor:pointer;
   font-size:14px;
+  box-sizing:border-box;
 }
 
-.cell:hover{
-  background:#1e3a8a;
-}
+.cell:hover{ background:#1e3a8a; }
 
 .X{ color:#00d4ff; font-weight:bold; }
 .O{ color:#ff4d4d; font-weight:bold; }
 
-.last{
-  background:#444 !important;
-}
+.last{ background:#444 !important; }
 
-/* ===== OVERLAY ===== */
+/* overlay */
 #overlay{
   position:fixed;
   inset:0;
@@ -59,10 +54,7 @@ body{
   z-index:10;
 }
 
-#dice{
-  font-size:50px;
-  margin-top:20px;
-}
+#dice{ font-size:50px; margin-top:20px; }
 
 button{
   padding:10px 20px;
@@ -74,11 +66,6 @@ button{
 }
 
 #status{
-  font-size:22px;
-  margin-top:10px;
-}
-
-#statusTop{
   font-size:20px;
   margin-top:10px;
 }
@@ -88,14 +75,8 @@ button{
 }
 
 @keyframes slideUp{
-  from{
-    transform: translateY(40px);
-    opacity:0;
-  }
-  to{
-    transform: translateY(0);
-    opacity:1;
-  }
+  from{ transform:translateY(40px); opacity:0; }
+  to{ transform:translateY(0); opacity:1; }
 }
 </style>
 </head>
@@ -105,17 +86,13 @@ button{
 <h2>🤖 Caro vs Máy</h2>
 <div id="statusTop">Nhấn bắt đầu</div>
 <div id="board"></div>
-
 <button onclick="resetGame()">Chơi lại</button>
 
-<!-- OVERLAY -->
 <div id="overlay">
   <button onclick="startGame()">🎲 Bắt đầu</button>
   <div id="dice"></div>
   <div id="status">Nhấn bắt đầu</div>
 </div>
-
-<script src="AIx.js"></script>
 
 <script>
 const SIZE = 20;
@@ -148,170 +125,37 @@ function createBoard(){
   boardDiv.innerHTML = "";
 
   for(let r=0;r<SIZE;r++){
-    board[r] = [];
-    cells[r] = [];
+    board[r]=[];
+    cells[r]=[];
 
     for(let c=0;c<SIZE;c++){
-      board[r][c] = "";
+      board[r][c]="";
 
-      const cell = document.createElement("div");
-      cell.className = "cell";
-      cell.onclick = () => playerMove(r,c);
+      const cell=document.createElement("div");
+      cell.className="cell";
+      cell.onclick=()=>playerMove(r,c);
 
       boardDiv.appendChild(cell);
-      cells[r][c] = cell;
+      cells[r][c]=cell;
     }
   }
 }
 
-// ===== LẤY Ô TRỐNG =====
+// ===== UTILS =====
 function getEmptyCells(){
-  let arr = [];
+  let arr=[];
   for(let r=0;r<SIZE;r++){
     for(let c=0;c<SIZE;c++){
-      if(board[r][c] === "") arr.push([r,c]);
+      if(board[r][c]==="") arr.push([r,c]);
     }
   }
   return arr;
-}
-
-// ===== START =====
-function startGame(){
-  let faces = ["X","X","X","O","O","O"];
-  let dice = document.getElementById("dice");
-
-  let interval = setInterval(()=>{
-    dice.textContent = faces[Math.floor(Math.random()*6)];
-  },100);
-
-  setTimeout(()=>{
-    clearInterval(interval);
-
-    let result = faces[Math.floor(Math.random()*6)];
-    dice.textContent = result;
-
-    if(result === "X"){
-  human = "X";
-  ai = "O";
-  currentTurn = "X";
-}else{
-  human = "O";
-  ai = "X";
-  currentTurn = "X";
-}
-      showStatus("Bạn đi trước (X)");
-      statusTop.textContent = "Lượt của bạn (X)";
-    }else{
-      human = "O";
-      ai = "X";
-      showStatus("Máy đi trước (X)");
-      statusTop.textContent = "🤖 Máy đang đi...";
-    }
-
-    setTimeout(()=>{
-      document.getElementById("overlay").style.display = "none";
-
-      if(ai === "X"){
-        setTimeout(aiMove, 300);
-      }
-    },800);
-
-  },3000);
-}
-
-// ===== PLAYER =====
-function playerMove(r,c){
-  if(
-    gameOver ||
-    board[r][c] !== "" ||
-    currentTurn !== human   // 🔒 khóa lượt
-  ) return;
-
-  place(r,c,human);
-  currentTurn = ai;
-
-  if(checkWin(r,c,human)){
-    statusTop.textContent = "🎉 Bạn thắng!";
-    gameOver = true;
-    return;
-  }
-
-  statusTop.textContent = "🤖 Máy đang nghĩ...";
-  setTimeout(aiMove, 300);
-}
-
-// ===== AI MOVE =====
-function aiMove(){
-  if(gameOver || currentTurn !== ai) return;
-
-  let move = smartAI(ai);
-
-  if(!move || board[move[0]][move[1]] !== ""){
-    let empty = getEmptyCells();
-    if(empty.length === 0) return;
-    move = empty[Math.floor(Math.random()*empty.length)];
-  }
-
-  const [r,c] = move;
-  place(r,c,ai);
-  currentTurn = human;
-
-  if(checkWin(r,c,ai)){
-    statusTop.textContent = "🤖 Máy thắng!";
-    gameOver = true;
-    return;
-  }
-
-  statusTop.textContent = "Lượt của bạn ("+human+")";
-}
-
-// ===== AI THÔNG MINH =====
-function smartAI(player){
-  let enemy = player === "X" ? "O" : "X";
-
-  // 🥇 thắng ngay
-  let move = findWin(player);
-  if(move) return move;
-
-  // 🥈 chặn ngay
-  move = findWin(enemy);
-  if(move) return move;
-
-  let bestScore = -Infinity;
-  let bestMove = null;
-
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      if(board[r][c] !== "") continue;
-
-      // ❗ chỉ xét ô gần quân → cực quan trọng
-      if(!hasNeighbor(r,c)) continue;
-
-      let score =
-        evaluate(r,c,player) +
-        evaluate(r,c,enemy)*0.8;
-
-      if(score > bestScore){
-        bestScore = score;
-        bestMove = [r,c];
-      }
-    }
-  }
-
-  // fallback nhẹ (không random toàn map nữa)
-  if(!bestMove){
-    let empty = getEmptyCells();
-    return empty[Math.floor(Math.random()*empty.length)];
-  }
-
-  return bestMove;
 }
 
 function hasNeighbor(r,c){
   for(let dr=-1;dr<=1;dr++){
     for(let dc=-1;dc<=1;dc++){
       let nr=r+dr, nc=c+dc;
-
       if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE){
         if(board[nr][nc] !== "") return true;
       }
@@ -320,85 +164,153 @@ function hasNeighbor(r,c){
   return false;
 }
 
+// ===== START =====
+function startGame(){
+  let faces=["X","X","X","O","O","O"];
+  let dice=document.getElementById("dice");
+
+  let interval=setInterval(()=>{
+    dice.textContent=faces[Math.floor(Math.random()*6)];
+  },100);
+
+  setTimeout(()=>{
+    clearInterval(interval);
+
+    let result=faces[Math.floor(Math.random()*6)];
+    dice.textContent=result;
+
+    if(result==="X"){
+      human="X"; ai="O"; currentTurn="X";
+      showStatus("Bạn đi trước (X)");
+      statusTop.textContent="Lượt của bạn (X)";
+    }else{
+      human="O"; ai="X"; currentTurn="X";
+      showStatus("Máy đi trước (X)");
+      statusTop.textContent="🤖 Máy đang đi...";
+    }
+
+    setTimeout(()=>{
+      document.getElementById("overlay").style.display="none";
+
+      if(ai==="X") setTimeout(aiMove,300);
+    },800);
+
+  },3000);
+}
+
+// ===== PLAYER =====
+function playerMove(r,c){
+  if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
+
+  place(r,c,human);
+  currentTurn=ai;
+
+  if(checkWin(r,c,human)){
+    statusTop.textContent="🎉 Bạn thắng!";
+    gameOver=true;
+    return;
+  }
+
+  statusTop.textContent="🤖 Máy đang nghĩ...";
+  setTimeout(aiMove,300);
+}
+
+// ===== AI =====
+function aiMove(){
+  if(gameOver || currentTurn!==ai) return;
+
+  let move=smartAI(ai);
+
+  if(!move || board[move[0]][move[1]]!==""){
+    let empty=getEmptyCells();
+    if(empty.length===0) return;
+    move=empty[Math.floor(Math.random()*empty.length)];
+  }
+
+  const[r,c]=move;
+  place(r,c,ai);
+  currentTurn=human;
+
+  if(checkWin(r,c,ai)){
+    statusTop.textContent="🤖 Máy thắng!";
+    gameOver=true;
+    return;
+  }
+
+  statusTop.textContent="Lượt của bạn ("+human+")";
+}
+
+// ===== SMART AI (CHẤM ĐIỂM) =====
+function smartAI(player){
+  let enemy=player==="X"?"O":"X";
+
+  let move=findWin(player);
+  if(move) return move;
+
+  move=findWin(enemy);
+  if(move) return move;
+
+  let bestScore=-Infinity;
+  let bestMove=null;
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c]!=="") continue;
+      if(!hasNeighbor(r,c)) continue;
+
+      let score=
+        evaluate(r,c,player)+
+        evaluate(r,c,enemy)*0.9;
+
+      if(score>bestScore){
+        bestScore=score;
+        bestMove=[r,c];
+      }
+    }
+  }
+
+  if(!bestMove){
+    let empty=getEmptyCells();
+    return empty[Math.floor(Math.random()*empty.length)];
+  }
+
+  return bestMove;
+}
+
+// ===== EVALUATE =====
 function evaluate(r,c,player){
   return (
-    scoreDir(r,c,1,0,player)+
-    scoreDir(r,c,0,1,player)+
-    scoreDir(r,c,1,1,player)+
-    scoreDir(r,c,1,-1,player)
+    scoreDirection(r,c,1,0,player)+
+    scoreDirection(r,c,0,1,player)+
+    scoreDirection(r,c,1,1,player)+
+    scoreDirection(r,c,1,-1,player)
   );
 }
 
-function scoreDir(r,c,dr,dc,player){
-  let count = 1;
-  let open = 0;
+function scoreDirection(r,c,dr,dc,player){
+  let count=1, open=0;
 
-  let i=r+dr, j=c+dc;
-  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+  let i=r+dr,j=c+dc;
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){
     count++; i+=dr; j+=dc;
   }
-  if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+  if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") open++;
 
   i=r-dr; j=c-dc;
-  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){
     count++; i-=dr; j-=dc;
   }
-  if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+  if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") open++;
 
-  return getScore(count, open);
+  return getScore(count,open);
 }
 
-function getScore(count, open){
-  if(count >= 5) return 100000;
-
-  if(count === 4){
-    if(open === 2) return 10000;
-    if(open === 1) return 1000;
-  }
-
-  if(count === 3){
-    if(open === 2) return 500;
-    if(open === 1) return 100;
-  }
-
-  if(count === 2){
-    if(open === 2) return 50;
-    if(open === 1) return 10;
-  }
-
+function getScore(count,open){
+  if(count>=5) return 100000;
+  if(count===4) return open===2?10000:1000;
+  if(count===3) return open===2?500:100;
+  if(count===2) return open===2?50:10;
   return 1;
-}
-
-// ===== FIND WIN =====
-function findWin(player){
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      if(board[r][c] !== "") continue;
-
-      board[r][c] = player;
-
-      if(checkWin(r,c,player)){
-        board[r][c] = "";
-        return [r,c];
-      }
-
-      board[r][c] = "";
-    }
-  }
-  return null;
-}
-
-// ===== PLACE =====
-function place(r,c,player){
-  board[r][c] = player;
-
-  const cell = cells[r][c];
-  cell.textContent = player;
-  cell.classList.add(player);
-
-  if(lastCell) lastCell.classList.remove("last");
-  cell.classList.add("last");
-  lastCell = cell;
 }
 
 // ===== WIN =====
@@ -412,45 +324,48 @@ function checkWin(r,c,player){
 }
 
 function count(r,c,dr,dc,player){
-  let i=r+dr, j=c+dc, cnt=0;
-
-  while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
-    cnt++;
-    i+=dr;
-    j+=dc;
+  let i=r+dr,j=c+dc,cnt=0;
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){
+    cnt++; i+=dr; j+=dc;
   }
-
   return cnt;
+}
+
+function findWin(player){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c]!=="") continue;
+
+      board[r][c]=player;
+      if(checkWin(r,c,player)){
+        board[r][c]="";
+        return [r,c];
+      }
+      board[r][c]="";
+    }
+  }
+  return null;
 }
 
 // ===== RESET =====
 function resetGame(){
-  // reset logic
-  gameOver = false;
-  lastCell = null;
+  gameOver=false;
+  lastCell=null;
+  human="X";
+  ai="O";
+  currentTurn="X";
 
-  // reset người chơi mặc định
-  human = "X";
-  ai = "O";
-
-  // reset bàn
   createBoard();
 
-  // reset UI
-  statusTop.textContent = "";
-  statusOverlay.textContent = "Nhấn bắt đầu";
-
-  currentTurn = "X";
-
-  // reset xúc xắc
-  document.getElementById("dice").textContent = "";
-  statusOverlay.classList.remove("show");
-
-  // hiện lại overlay
-  const overlay = document.getElementById("overlay");
-  overlay.style.display = "flex";
+  statusTop.textContent="Nhấn bắt đầu";
+  statusOverlay.textContent="Nhấn bắt đầu";
+  document.getElementById("dice").textContent="";
+  document.getElementById("overlay").style.display="flex";
 }
 
 // INIT
 createBoard();
 </script>
+
+</body>
+</html>
