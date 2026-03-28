@@ -127,6 +127,7 @@ let lastCell = null;
 
 let human = "X";
 let ai = "O";
+let currentTurn = "X";
 
 const boardDiv = document.getElementById("board");
 const statusOverlay = document.getElementById("status");
@@ -190,8 +191,14 @@ function startGame(){
     dice.textContent = result;
 
     if(result === "X"){
-      human = "X";
-      ai = "O";
+  human = "X";
+  ai = "O";
+  currentTurn = "X";
+}else{
+  human = "O";
+  ai = "X";
+  currentTurn = "X";
+}
       showStatus("Bạn đi trước (X)");
       statusTop.textContent = "Lượt của bạn (X)";
     }else{
@@ -214,9 +221,14 @@ function startGame(){
 
 // ===== PLAYER =====
 function playerMove(r,c){
-  if(gameOver || board[r][c] !== "") return;
+  if(
+    gameOver ||
+    board[r][c] !== "" ||
+    currentTurn !== human   // 🔒 khóa lượt
+  ) return;
 
   place(r,c,human);
+  currentTurn = ai;
 
   if(checkWin(r,c,human)){
     statusTop.textContent = "🎉 Bạn thắng!";
@@ -230,17 +242,10 @@ function playerMove(r,c){
 
 // ===== AI MOVE =====
 function aiMove(){
-  if(gameOver) return;
+  if(gameOver || currentTurn !== ai) return;
 
-  let move;
+  let move = smartAI(ai);
 
-  if(ai === "X"){
-    move = smartAI("X");
-  }else{
-    move = smartAI("O");
-  }
-
-  // 🔒 chống lỗi tuyệt đối
   if(!move || board[move[0]][move[1]] !== ""){
     let empty = getEmptyCells();
     if(empty.length === 0) return;
@@ -249,6 +254,7 @@ function aiMove(){
 
   const [r,c] = move;
   place(r,c,ai);
+  currentTurn = human;
 
   if(checkWin(r,c,ai)){
     statusTop.textContent = "🤖 Máy thắng!";
@@ -348,6 +354,8 @@ function resetGame(){
   // reset UI
   statusTop.textContent = "";
   statusOverlay.textContent = "Nhấn bắt đầu";
+
+  currentTurn = "X";
 
   // reset xúc xắc
   document.getElementById("dice").textContent = "";
