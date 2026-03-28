@@ -563,7 +563,7 @@ const words = [
 "Khoe mẽ",
 "Khô khan",
 "Tối giản",
-"Kìm chế",
+"Kiềm chế",
 "Cá lìm kiềm",
 "Que diêm",
 "Tuần tra",
