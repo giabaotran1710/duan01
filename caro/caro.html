@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<title>Caro vs Máy</title>
+<title>Cờ Caro PVE</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <style>
@@ -16,22 +16,21 @@ body{
 
 #board{
   display:grid;
-  grid-template-columns: repeat(20, 4.5vw);
-  justify-content:center;
+  grid-template-columns: repeat(13, 1fr);
+  width: 95vw;
+  max-width: 420px;
   margin:20px auto;
 }
 
 .cell{
-  width:4.5vw;
-  height:4.5vw;
-  max-width:28px;
-  max-height:28px;
+  width:100%;
+  aspect-ratio:1/1;
   border:1px solid #555;
   display:flex;
   align-items:center;
   justify-content:center;
   cursor:pointer;
-  font-size:14px;
+  font-size: min(4vw, 18px);
   box-sizing:border-box;
 }
 
@@ -77,16 +76,112 @@ button{
   from{ transform:translateY(40px); opacity:0; }
   to{ transform:translateY(0); opacity:1; }
 }
+  #scoreBar{
+  width:90%;
+  height:15px;
+  margin:15px auto;
+  display:flex;
+  background:#222;
+  display: none;
+}
+
+#scoreX{
+  height:100%;
+  background:#00d4ff;
+  color:black;
+  font-weight:bold;
+  font-size:10px;
+  line-height:15px;
+  text-align:left;
+  padding-left:2px;
+}
+
+#scoreO{
+  height:100%;
+  background:#ff4d4d;
+  color:black;
+  font-weight:bold;
+  font-size:10px;
+  line-height:15px;
+  text-align:right;
+  padding-right:2px;
+}
+  
+  #toggleScore{
+  position:fixed;
+  top:10px;
+  right:10px;
+  z-index:20;
+
+  width:40px;
+  height:40px;
+  border-radius:50%; /* 🔥 vòng tròn */
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:20px;
+  background:rgba(255,255,255,0.1);
+  border:2px solid white; /* 🔥 viền */
+
+  cursor:pointer;
+  transition:0.2s;
+}
+
+/* hover cho đẹp */
+#toggleScore:hover{
+  background:rgba(255,255,255,0.2);
+}
+
+/* trạng thái tắt */
+#toggleScore.off{
+  opacity:0.4;
+  border-color:#888;
+}
+  
+  #warning{
+  font-size:14px;
+  color:#ffcc00;
+  margin-top:5px;
+  min-height:18px; /* tránh layout nhảy */
+  opacity:0.9;
+}
+  
+ #winLine{
+  position: absolute;
+  pointer-events: none;
+  z-index: 999;
+}
+
+.win-line{
+  position: absolute;
+  height: 6px;
+  background: red;
+  border-radius: 3px;
+  animation: drawLine 0.4s ease forwards;
+}
+
+@keyframes drawLine{
+  from { transform: scaleX(0); }
+  to   { transform: scaleX(1); }
+}
 </style>
 </head>
 
 <body>
 
-<h2>🤖 Caro vs Máy</h2>
+<h2>🤖 Caro vs AI.GiaBao</h2>
+  <button id="toggleScore">💡</button>
 <div id="statusTop">Đang chờ...</div>
+  <div id="warning"></div>
 <div id="board"></div>
 <button onclick="resetGame()">Chơi lại</button>
-
+ <div id="scoreBar">
+  <div id="scoreX">50%</div>
+  <div id="scoreO">50%</div>
+</div>
+<div id="winLine"></div>
 <div id="overlay">
 <button id="startBtn" onclick="startGame()">🎲 BẮT ĐẦU</button>
   <div id="dice"></div>
@@ -94,7 +189,10 @@ button{
 </div>
 
 <script>
-const SIZE = 20;
+  
+ let hasWarned = false;   // đã cảnh báo chưa
+let warningText = "";    // lưu câu đã random
+const SIZE = 13;
 
 let board = [];
 let cells = [];
@@ -104,20 +202,34 @@ let lastCell = null;
 let human = "X";
 let ai = "O";
 let currentTurn = "X";
+let aiThinking = false;
 
 const boardDiv = document.getElementById("board");
 const statusOverlay = document.getElementById("status");
 const statusTop = document.getElementById("statusTop");
 const overlay = document.getElementById("overlay");
-
-// ===== STATUS =====
+const warningDiv = document.getElementById("warning");
+  
 function showStatus(text){
   statusOverlay.textContent = text;
   statusOverlay.classList.remove("show");
   void statusOverlay.offsetWidth;
   statusOverlay.classList.add("show");
 }
+  
+function getRandomTaunt(){
+  const taunts = [
+    "Bạn chuẩn bị thua!",
+    "Đầu hàng đi. Gần thua tới nơi rồi :)",
+    "Chắc phải kết liễu sớm 😂",
+    "Gg đi, thua là vừa rồi đó.",
+    "Haha chuẩn bị có người bấm nút chơi lại cho coi 🤡"
+  ];
 
+  return taunts[Math.floor(Math.random()*taunts.length)];
+}
+  
+  
 // ===== BOARD =====
 function createBoard(){
   board = [];
@@ -167,6 +279,7 @@ function hasNeighbor(r,c){
 // ===== START =====
 function startGame(){
   document.getElementById("startBtn").style.display = "none";
+
   let faces=["X","X","X","O","O","O"];
   let dice=document.getElementById("dice");
 
@@ -190,8 +303,8 @@ function startGame(){
       human="O";
       ai="X";
       currentTurn="X";
-      showStatus("Máy đi trước (X)");
-      statusTop.textContent="🤖 Máy đang đi...";
+      showStatus("AI.GiaBao đi trước (X)");
+      statusTop.textContent="🤖 AI.GiaBao đang đi...";
     }
 
     setTimeout(()=>{
@@ -204,6 +317,7 @@ function startGame(){
 
   },3000);
 }
+
 function place(r,c,player){
   board[r][c] = player;
 
@@ -214,95 +328,393 @@ function place(r,c,player){
   if(lastCell) lastCell.classList.remove("last");
   cell.classList.add("last");
   lastCell = cell;
+  updateScore();
 }
-
+function getOccupiedCount(){
+  let count = 0;
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") count++;
+    }
+  }
+  return count;
+}
 // ===== PLAYER =====
 function playerMove(r,c){
   if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
 
   place(r,c,human);
+  setTimeout(()=>{
+  if(!hasWarned && isMateIn3()){
+    warningDiv.textContent = getRandomTaunt();
+    hasWarned = true;
+  }
+},200);
   currentTurn=ai;
 
   if(checkWin(r,c,human)){
     statusTop.textContent="🎉 Bạn thắng!";
+    let winLine = getWinningLine(r, c, player);
+
+if(winLine){
+  drawWinLine(winLine);
+}
     gameOver=true;
     return;
   }
 
-  statusTop.textContent="🤖 Máy đang nghĩ...";
+  statusTop.textContent="🤖 AI.GiaBao đang suy nghĩ...";
   setTimeout(aiMove,300);
 }
 
 // ===== AI =====
 function aiMove(){
-  if(gameOver || currentTurn!==ai) return;
+  if(gameOver || currentTurn!==ai || aiThinking) return;
 
-  let move=smartAI(ai);
+  aiThinking = true;
+  // 📌 lấy vùng giữa (ví dụ 3x3: 7–9 nếu SIZE ~ 15)
+let center = Math.floor(SIZE / 2);
 
-  if(!move || board[move[0]][move[1]]!==""){
-    let empty=getEmptyCells();
-    if(empty.length===0) return;
-    move=empty[Math.floor(Math.random()*empty.length)];
+// tạo vùng trung tâm 3x3
+let possibleMoves = [];
+
+for(let i = center - 1; i <= center + 1; i++){
+  for(let j = center - 1; j <= center + 1; j++){
+    if(board[i][j] === ""){
+      possibleMoves.push([i, j]);
+    }
   }
+}
 
-  const[r,c]=move;
-  place(r,c,ai);
-  currentTurn=human;
+if(possibleMoves.length > 0){
+  [r, c] = possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
+}
 
-  if(checkWin(r,c,ai)){
-    statusTop.textContent="🤖 Máy thắng!";
-    gameOver=true;
+  // 🚀 1. THẮNG NGAY
+  let winNow = findWin(ai);
+  if(winNow){
+    [r,c] = winNow;
+    place(r,c,ai);
+
+    statusTop.textContent = "🤖 AI.GiaBao thắng!";
+    gameOver = true;
+
+    aiThinking = false;
     return;
   }
 
-  statusTop.textContent="Lượt của bạn ("+human+")";
-}
+  // 🚀 2. CHẶN NGAY
+  let blockNow = findWin(human);
+  if(blockNow){
+    [r,c] = blockNow;
+    place(r,c,ai);
 
-// ===== SMART AI =====
-function smartAI(player){
-  let enemy=player==="X"?"O":"X";
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn ("+human+")";
 
-  let move=findWin(player);
-  if(move) return move;
+    // 🔥 mind game (FIX)
+    setTimeout(()=>{
+      if(!hasWarned){
+        let winNow = findWin(ai);
+        let doubleThreat = hasDoubleThreat(ai);
 
-  move=findWin(enemy);
-  if(move) return move;
-
-  let bestScore=-Infinity;
-  let bestMove=null;
-
-  for(let r=0;r<SIZE;r++){
-    for(let c=0;c<SIZE;c++){
-      if(board[r][c]!=="") continue;
-      if(!hasNeighbor(r,c)) continue;
-
-      let score=
-        evaluate(r,c,player)+
-        evaluate(r,c,enemy)*0.9;
-
-      if(score>bestScore){
-        bestScore=score;
-        bestMove=[r,c];
+        if(winNow || doubleThreat){
+          hasWarned = true;
+          warningText = getRandomTaunt();
+          warningDiv.textContent = warningText;
+        }
       }
+    },400);
+
+    aiThinking = false;
+    return;
+  }
+  
+  // 🚀 3. TẠO 4 MỞ
+  for(let i=0;i<SIZE;i++){
+    for(let j=0;j<SIZE;j++){
+      if(board[i][j] !== "") continue;
+
+      board[i][j] = ai;
+
+      if(isOpenFour(i,j,ai)){
+        board[i][j] = "";
+
+        place(i,j,ai);
+        currentTurn = human;
+        statusTop.textContent = "Lượt của bạn ("+human+")";
+
+        aiThinking = false;
+        return;
+      }
+
+      board[i][j] = "";
     }
   }
 
-  if(!bestMove){
-    let empty=getEmptyCells();
+  // 🚀 4. AI CHÍNH
+  let move = smartAI(ai);
+
+  if(!move || board[move[0]][move[1]]!==""){
+    let empty = getEmptyCells();
+    if(empty.length===0){
+      aiThinking = false;
+      return;
+    }
+    move = empty[Math.floor(Math.random()*empty.length)];
+  }
+
+  [r,c] = move;
+  place(r,c,ai);
+
+  // 🚀 5. CHECK WIN
+  let winLine = getWinLine(r, c, ai);
+
+if(winLine){
+  drawWinLine(winLine);
+
+  statusTop.textContent = "🤖 AI.GiaBao thắng!";
+  gameOver = true;
+  aiThinking = false;
+  return;
+}
+
+  // 🚀 6. TURN
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+
+  // 🔥 mind game (FIX CHUẨN)
+  setTimeout(()=>{
+    if(!hasWarned){
+      let winNow = findWin(ai);
+      let doubleThreat = hasDoubleThreat(ai);
+
+      if(winNow || doubleThreat){
+        hasWarned = true;
+        warningText = getRandomTaunt();
+        warningDiv.textContent = warningText;
+      }
+    }
+  },400);
+
+  aiThinking = false;
+}
+
+// ===== SMART AI =====
+const MAX_DEPTH = 4; // có thể tăng lên 4 nếu máy mạnh
+
+function smartAI(player){
+  let bestScore = -Infinity;
+  let bestMove = null;
+
+  let moves = getEmptyCells();
+
+  // ưu tiên ô gần quân cờ (giảm độ rộng tìm kiếm)
+  moves = moves.filter(([r,c]) => hasNeighbor(r,c));
+
+  for (let [r,c] of moves){
+    board[r][c] = player;
+
+    let score = minimax(MAX_DEPTH - 1, false, player, -Infinity, Infinity);
+
+    board[r][c] = "";
+
+    if (score > bestScore){
+      bestScore = score;
+      bestMove = [r,c];
+    }
+  }
+
+  // fallback nếu không có nước tốt
+  if (!bestMove){
+    let empty = getEmptyCells();
     return empty[Math.floor(Math.random()*empty.length)];
   }
 
   return bestMove;
 }
+  function predictWinInMoves(player, depth){
+  let enemy = player === "X" ? "O" : "X";
+
+  if(depth === 0) return null;
+
+  let moves = getEmptyCells();
+
+  for(let [r,c] of moves){
+    if(!hasNeighbor(r,c)) continue;
+
+    board[r][c] = player;
+
+    // nếu đi phát thắng luôn
+    if(checkWin(r,c,player)){
+      board[r][c] = "";
+      return 1;
+    }
+
+    // giả lập: người chơi phản công
+    let allLose = true;
+
+    let enemyMoves = getEmptyCells();
+
+    for(let [er,ec] of enemyMoves){
+      if(!hasNeighbor(er,ec)) continue;
+
+      board[er][ec] = enemy;
+
+      // nếu người chơi có thể thoát → không phải ép thắng
+      let result = predictWinInMoves(player, depth-1);
+
+      board[er][ec] = "";
+
+      if(!result){
+        allLose = false;
+        break;
+      }
+    }
+
+    board[r][c] = "";
+
+    if(allLose){
+      return depth;
+    }
+  }
+
+  return null;
+}
+// ===== MINIMAX =====
+function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
+  let humanPlayer = (aiPlayer === "X") ? "O" : "X";
+
+  // check terminal
+  if (depth === 0) return evaluateBoard(aiPlayer);
+
+  let winner = checkWinnerGlobal();
+  if (winner === aiPlayer) return 100000;
+  if (winner === humanPlayer) return -100000;
+
+  let moves = getEmptyCells();
+  moves = moves.filter(([r,c]) => hasNeighbor(r,c));
+
+  if (isMaximizing){
+    let maxEval = -Infinity;
+
+    for (let [r,c] of moves){
+      board[r][c] = aiPlayer;
+
+      let eval = minimax(depth - 1, false, aiPlayer, alpha, beta);
+
+      board[r][c] = "";
+
+      maxEval = Math.max(maxEval, eval);
+      alpha = Math.max(alpha, eval);
+
+      if (beta <= alpha) break; // cắt tỉa
+    }
+
+    return maxEval;
+  } else {
+    let minEval = Infinity;
+
+    for (let [r,c] of moves){
+      board[r][c] = humanPlayer;
+
+      let eval = minimax(depth - 1, true, aiPlayer, alpha, beta);
+
+      board[r][c] = "";
+
+      minEval = Math.min(minEval, eval);
+      beta = Math.min(beta, eval);
+
+      if (beta <= alpha) break; // cắt tỉa
+    }
+
+    return minEval;
+  }
+}
+  
+  function isOpenFour(r,c,player){
+  const dirs = [
+    [1,0],[0,1],[1,1],[1,-1]
+  ];
+
+  for(let [dr,dc] of dirs){
+    let count = 1;
+    let openEnds = 0;
+
+    // tiến
+    let i=r+dr, j=c+dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+      count++; i+=dr; j+=dc;
+    }
+    if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===""){
+      openEnds++;
+    }
+
+    // lùi
+    i=r-dr; j=c-dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+      count++; i-=dr; j-=dc;
+    }
+    if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===""){
+      openEnds++;
+    }
+
+    // 🔥 4 mở thật sự
+    if(count === 4 && openEnds === 2){
+      return true;
+    }
+  }
+
+  return false;
+}
+  
+  function evaluateBoard(player){
+  let score = 0;
+  let enemy = (player === "X") ? "O" : "X";
+
+  for (let r=0;r<SIZE;r++){
+    for (let c=0;c<SIZE;c++){
+      if (board[r][c] !== player) continue;
+
+      score += evaluate(r,c,player) * 1.2;
+    }
+  }
+
+  for (let r=0;r<SIZE;r++){
+    for (let c=0;c<SIZE;c++){
+      if (board[r][c] !== enemy) continue;
+
+      score -= evaluate(r,c,enemy) * 1.1;
+    }
+  }
+
+  return score;
+}
+  function checkWinnerGlobal(){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "" && checkWin(r,c,board[r][c])){
+        return board[r][c];
+      }
+    }
+  }
+  return null;
+}
 
 // ===== EVALUATE =====
 function evaluate(r,c,player){
-  return (
+  let score =
     scoreDirection(r,c,1,0,player)+
     scoreDirection(r,c,0,1,player)+
     scoreDirection(r,c,1,1,player)+
-    scoreDirection(r,c,1,-1,player)
-  );
+    scoreDirection(r,c,1,-1,player);
+
+  // 🔥 PHẠT ĐÁNH Ở RÌA
+  if(r === 0 || c === 0 || r === SIZE-1 || c === SIZE-1){
+    score -= 100;
+  }
+
+  return score;
 }
 
 function scoreDirection(r,c,dr,dc,player){
@@ -320,17 +732,31 @@ function scoreDirection(r,c,dr,dc,player){
   }
   if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") open++;
 
-  return getScore(count,open);
-}
+  // 🔥 WIN
+if(count>=5) return 100000;
 
-function getScore(count,open){
-  if(count>=5) return 100000;
-  if(count===4) return open===2?10000:1000;
-  if(count===3) return open===2?500:100;
-  if(count===2) return open===2?50:10;
-  return 1;
-}
+// 🔥 4 mở 2 đầu (cực mạnh)
+if(count===4 && open===2) return 20000;
 
+// ⚠️ 4 cụt 1 đầu (yếu hơn rất nhiều)
+if(count===4 && open===1) return 500;
+
+// ❌ 4 chết (2 đầu bị chặn)
+if(count===4 && open===0) return 0;
+
+// 🔥 3 mở
+if(count===3 && open===2) return 5000;
+
+// ⚠️ 3 cụt
+if(count===3 && open===1) return 200;
+
+// 2
+if(count===2 && open===2) return 50;
+if(count===2 && open===1) return 10;
+
+return 1;
+}
+  
 // ===== WIN =====
 function checkWin(r,c,player){
   return (
@@ -372,6 +798,7 @@ function resetGame(){
   human="X";
   ai="O";
   currentTurn="X";
+  
 
   createBoard();
 
@@ -379,11 +806,223 @@ function resetGame(){
   statusOverlay.textContent="Tung xúc xắc để xem ai đi trước";
   document.getElementById("dice").textContent="";
   overlay.style.display="flex";
-document.getElementById("startBtn").style.display = "inline-block";
+  document.getElementById("startBtn").style.display = "inline-block";
+  warningDiv.textContent ="";
+  hasWarned = false;
+  warningText ="";
+  updateScore();
 }
 
 // INIT
 createBoard();
+  
+  function updateScore(){
+  let scoreX = 0;
+  let scoreO = 0;
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] === "X"){
+        scoreX += evaluate(r,c,"X");
+      }
+      if(board[r][c] === "O"){
+        scoreO += evaluate(r,c,"O");
+      }
+    }
+  }
+
+  let total = scoreX + scoreO;
+
+  let percentX = 50;
+  let percentO = 50;
+
+  if(total > 0){
+    percentX = Math.round(scoreX / total * 100);
+    percentO = 100 - percentX;
+  }
+
+  // 👉 chiều dài thanh vẫn theo %
+  document.getElementById("scoreX").style.width = percentX + "%";
+  document.getElementById("scoreO").style.width = percentO + "%";
+
+  // 🔥 hiển thị ĐIỂM THẬT
+  document.getElementById("scoreX").textContent = scoreX;
+  document.getElementById("scoreO").textContent = scoreO;
+}
+  
+  let showScore = false;
+
+const toggleBtn = document.getElementById("toggleScore");
+const scoreBar = document.getElementById("scoreBar");
+
+// trạng thái ban đầu
+toggleBtn.classList.add("off");
+
+toggleBtn.onclick = () => {
+  showScore = !showScore;
+
+  if(showScore){
+    scoreBar.style.display = "flex";
+    toggleBtn.classList.remove("off");
+  }else{
+    scoreBar.style.display = "none";
+    toggleBtn.classList.add("off");
+  }
+};
+  
+  function isMateIn3(){
+  let moves = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
+
+  for(let [r,c] of moves){
+
+    board[r][c] = human;
+
+    // ❗ nếu tồn tại 1 nước không bị mate → chưa cảnh báo
+    if(!aiMateDepth(3)){
+      board[r][c] = "";
+      return false;
+    }
+
+    board[r][c] = "";
+  }
+
+  return true; // 🔥 chắc chắn thua
+}
+  
+  function aiMateDepth(depth){
+  if(depth === 0) return false;
+
+  let moves = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
+if(moves.length > 25) return false;
+  // ===== AI TURN =====
+  for(let [r,c] of moves){
+
+    board[r][c] = ai;
+
+    // thắng ngay
+    if(checkWin(r,c,ai)){
+      board[r][c] = "";
+      return true;
+    }
+
+    // ===== PLAYER TURN =====
+    let playerCanEscape = false;
+
+    let counters = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
+
+    for(let [r2,c2] of counters){
+
+      board[r2][c2] = human;
+
+      // nếu player tìm được đường sống → break
+      if(!aiMateDepth(depth - 1)){
+        playerCanEscape = true;
+      }
+
+      board[r2][c2] = "";
+
+      if(playerCanEscape) break;
+    }
+
+    board[r][c] = "";
+
+    // nếu tồn tại 1 nước AI mà player KHÔNG thoát
+    if(!playerCanEscape){
+      return true;
+    }
+  }
+
+  return false;
+}
+  
+  function getWinningLine(r, c, player) {
+  const directions = [
+    [1,0], [0,1], [1,1], [1,-1]
+  ];
+
+  for (let [dr, dc] of directions) {
+    let line = [[r,c]];
+
+    // đi 1 hướng
+    let i = r + dr, j = c + dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
+      line.push([i,j]);
+      i += dr; j += dc;
+    }
+
+    // đi ngược
+    i = r - dr; j = c - dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
+      line.unshift([i,j]);
+      i -= dr; j -= dc;
+    }
+
+    if(line.length >= 5){
+      return line.slice(0,5); // lấy đúng 5 ô
+    }
+  }
+
+  return null;
+}
+  function getWinLine(r, c, player){
+  const dirs = [
+    [1,0], [0,1], [1,1], [1,-1]
+  ];
+
+  for(let [dr,dc] of dirs){
+    let line = [[r,c]];
+
+    // đi 1 phía
+    let i = r+dr, j = c+dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+      line.push([i,j]);
+      i+=dr; j+=dc;
+    }
+
+    // đi phía ngược lại
+    i = r-dr; j = c-dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+      line.unshift([i,j]);
+      i-=dr; j-=dc;
+    }
+
+    if(line.length >= 5){
+      return line.slice(0,5); // chỉ lấy đúng 5 ô
+    }
+  }
+
+  return null;
+}
+  
+  function drawWinLine(line){
+  const first = line[0];
+  const last = line[4];
+
+  const cellSize = 40; // chỉnh theo size ô của bạn
+
+  const x1 = first[1] * cellSize + cellSize/2;
+  const y1 = first[0] * cellSize + cellSize/2;
+
+  const x2 = last[1] * cellSize + cellSize/2;
+  const y2 = last[0] * cellSize + cellSize/2;
+
+  const dx = x2 - x1;
+  const dy = y2 - y1;
+
+  const length = Math.sqrt(dx*dx + dy*dy);
+  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
+
+  const lineEl = document.createElement("div");
+  lineEl.className = "win-line";
+
+  lineEl.style.width = length + "px";
+  lineEl.style.left = x1 + "px";
+  lineEl.style.top = y1 + "px";
+  lineEl.style.transform = `rotate(${angle}deg)`;
+  lineEl.style.transformOrigin = "0 50%";
+
+  document.getElementById("winLine").appendChild(lineEl);
+}
 </script>
 
 </body>
