@@ -52,7 +52,7 @@ body{
   z-index:10;
 }
 
-#dice{ font-size:50px; margin-top:20px; }
+#dice{ font-size:150px; margin-top:1px; }
 
 button{
   width: 150px;
@@ -110,7 +110,7 @@ button{
   text-align:right;
   padding-right:2px;
 }
-  
+
   #toggleScore{
   position:fixed;
   top:10px;
@@ -143,7 +143,7 @@ button{
   opacity:0.4;
   border-color:#888;
 }
-  
+
   #warning{
   font-size:14px;
   color:#ffcc00;
@@ -152,24 +152,20 @@ button{
   opacity:0.9;
 }
   
- #winLine{
-  position: absolute;
-  pointer-events: none;
-  z-index: 999;
+  #winLine{
+  position:absolute;
+  top:0;
+  left:0;
+  width:100%;
+  height:100%;
 }
 
 .win-line{
-  position: absolute;
-  height: 6px;
-  background: red;
-  border-radius: 3px;
-  animation: drawLine 0.4s ease forwards;
+  position:absolute;
+  height:4px;
+  background:red; !important
 }
 
-@keyframes drawLine{
-  from { transform: scaleX(0); }
-  to   { transform: scaleX(1); }
-}
 </style>
 </head>
 
@@ -181,19 +177,21 @@ button{
 <div id="board"></div>
 <button onclick="resetGame()">Chơi lại</button>
  <div id="scoreBar">
-  <div id="scoreX">50%</div>
-  <div id="scoreO">50%</div>
+  <div id="scoreX">0</div>
+  <div id="scoreO">0</div>
 </div>
-<div id="winLine"></div>
+<div id="board-wrapper" style="position:relative;">
+  <div id="board"></div>
+  <div id="winLine"></div>
+</div>
 <div id="overlay">
 <button id="startBtn" onclick="startGame()">🎲 BẮT ĐẦU VỚI MÁY</button>
   <div id="dice"></div>
   <div id="status">Tung xúc xắc để xem ai đi trước</div>
 </div>
 <script>
-  
- let hasWarned = false;   // đã cảnh báo chưa
-let warningText = "";    // lưu câu đã random
+
+
 const SIZE = 13;
 
 let board = [];
@@ -211,27 +209,16 @@ const statusOverlay = document.getElementById("status");
 const statusTop = document.getElementById("statusTop");
 const overlay = document.getElementById("overlay");
 const warningDiv = document.getElementById("warning");
-  
+
 function showStatus(text){
   statusOverlay.textContent = text;
   statusOverlay.classList.remove("show");
   void statusOverlay.offsetWidth;
   statusOverlay.classList.add("show");
 }
-  
-function getRandomTaunt(){
-  const taunts = [
-    "Bạn chuẩn bị thua!",
-    "Đầu hàng đi. Gần thua tới nơi rồi :)",
-    "Chắc phải kết liễu sớm 😂",
-    "Gg đi, thua là vừa rồi đó.",
-    "Haha chuẩn bị có người bấm nút chơi lại cho coi 🤡"
-  ];
 
-  return taunts[Math.floor(Math.random()*taunts.length)];
-}
-  
-  
+
+
 // ===== BOARD =====
 function createBoard(){
   board = [];
@@ -286,13 +273,13 @@ function startGame(){
   let dice=document.getElementById("dice");
 
   let interval=setInterval(()=>{
-    dice.textContent=faces[Math.floor(Math.random()*6)];
+    dice.textContent=faces[Math.floor(Math.random(0)*6)];
   },100);
 
   setTimeout(()=>{
     clearInterval(interval);
 
-    let result=faces[Math.floor(Math.random()*6)];
+    let result=faces[Math.floor(Math.random(0)*6)];
     dice.textContent=result;
 
     if(result==="X"){
@@ -346,24 +333,20 @@ function playerMove(r,c){
   if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
 
   place(r,c,human);
-  setTimeout(()=>{
-  if(!hasWarned && isMateIn3()){
-    warningDiv.textContent = getRandomTaunt();
-    hasWarned = true;
-  }
-},200);
   currentTurn=ai;
 
   if(checkWin(r,c,human)){
-    statusTop.textContent="🎉 Bạn thắng!";
-    let winLine = getWinningLine(r, c, player);
+  statusTop.textContent="🎉 Bạn thắng!";
 
-if(winLine){
-  drawWinLine(winLine);
-}
-    gameOver=true;
-    return;
+  let winLine = getWinLine(r, c, human);
+
+  if(winLine){
+    drawWinLine(winLine);
   }
+
+  gameOver=true;
+  return;
+}
 
   statusTop.textContent="🤖 AI.GiaBao đang suy nghĩ...";
   setTimeout(aiMove,300);
@@ -413,25 +396,10 @@ if(possibleMoves.length > 0){
 
     currentTurn = human;
     statusTop.textContent = "Lượt của bạn ("+human+")";
-
-    // 🔥 mind game (FIX)
-    setTimeout(()=>{
-      if(!hasWarned){
-        let winNow = findWin(ai);
-        let doubleThreat = hasDoubleThreat(ai);
-
-        if(winNow || doubleThreat){
-          hasWarned = true;
-          warningText = getRandomTaunt();
-          warningDiv.textContent = warningText;
-        }
-      }
-    },400);
-
     aiThinking = false;
     return;
   }
-  
+
   // 🚀 3. TẠO 4 MỞ
   for(let i=0;i<SIZE;i++){
     for(let j=0;j<SIZE;j++){
@@ -484,21 +452,6 @@ if(winLine){
   // 🚀 6. TURN
   currentTurn = human;
   statusTop.textContent = "Lượt của bạn ("+human+")";
-
-  // 🔥 mind game (FIX CHUẨN)
-  setTimeout(()=>{
-    if(!hasWarned){
-      let winNow = findWin(ai);
-      let doubleThreat = hasDoubleThreat(ai);
-
-      if(winNow || doubleThreat){
-        hasWarned = true;
-        warningText = getRandomTaunt();
-        warningDiv.textContent = warningText;
-      }
-    }
-  },400);
-
   aiThinking = false;
 }
 
@@ -633,7 +586,7 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
     return minEval;
   }
 }
-  
+
   function isOpenFour(r,c,player){
   const dirs = [
     [1,0],[0,1],[1,1],[1,-1]
@@ -669,7 +622,7 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
 
   return false;
 }
-  
+
   function evaluateBoard(player){
   let score = 0;
   let enemy = (player === "X") ? "O" : "X";
@@ -758,7 +711,7 @@ if(count===2 && open===1) return 10;
 
 return 1;
 }
-  
+
 // ===== WIN =====
 function checkWin(r,c,player){
   return (
@@ -800,7 +753,7 @@ function resetGame(){
   human="X";
   ai="O";
   currentTurn="X";
-  
+
 
   createBoard();
 
@@ -809,15 +762,12 @@ function resetGame(){
   document.getElementById("dice").textContent="";
   overlay.style.display="flex";
   document.getElementById("startBtn").style.display = "inline-block";
-  warningDiv.textContent ="";
-  hasWarned = false;
-  warningText ="";
   updateScore();
 }
 
 // INIT
 createBoard();
-  
+
   function updateScore(){
   let scoreX = 0;
   let scoreO = 0;
@@ -851,7 +801,7 @@ createBoard();
   document.getElementById("scoreX").textContent = scoreX;
   document.getElementById("scoreO").textContent = scoreO;
 }
-  
+
   let showScore = false;
 
 const toggleBtn = document.getElementById("toggleScore");
@@ -871,101 +821,7 @@ toggleBtn.onclick = () => {
     toggleBtn.classList.add("off");
   }
 };
-  
-  function isMateIn3(){
-  let moves = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
 
-  for(let [r,c] of moves){
-
-    board[r][c] = human;
-
-    // ❗ nếu tồn tại 1 nước không bị mate → chưa cảnh báo
-    if(!aiMateDepth(3)){
-      board[r][c] = "";
-      return false;
-    }
-
-    board[r][c] = "";
-  }
-
-  return true; // 🔥 chắc chắn thua
-}
-  
-  function aiMateDepth(depth){
-  if(depth === 0) return false;
-
-  let moves = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
-if(moves.length > 25) return false;
-  // ===== AI TURN =====
-  for(let [r,c] of moves){
-
-    board[r][c] = ai;
-
-    // thắng ngay
-    if(checkWin(r,c,ai)){
-      board[r][c] = "";
-      return true;
-    }
-
-    // ===== PLAYER TURN =====
-    let playerCanEscape = false;
-
-    let counters = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
-
-    for(let [r2,c2] of counters){
-
-      board[r2][c2] = human;
-
-      // nếu player tìm được đường sống → break
-      if(!aiMateDepth(depth - 1)){
-        playerCanEscape = true;
-      }
-
-      board[r2][c2] = "";
-
-      if(playerCanEscape) break;
-    }
-
-    board[r][c] = "";
-
-    // nếu tồn tại 1 nước AI mà player KHÔNG thoát
-    if(!playerCanEscape){
-      return true;
-    }
-  }
-
-  return false;
-}
-  
-  function getWinningLine(r, c, player) {
-  const directions = [
-    [1,0], [0,1], [1,1], [1,-1]
-  ];
-
-  for (let [dr, dc] of directions) {
-    let line = [[r,c]];
-
-    // đi 1 hướng
-    let i = r + dr, j = c + dc;
-    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
-      line.push([i,j]);
-      i += dr; j += dc;
-    }
-
-    // đi ngược
-    i = r - dr; j = c - dc;
-    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
-      line.unshift([i,j]);
-      i -= dr; j -= dc;
-    }
-
-    if(line.length >= 5){
-      return line.slice(0,5); // lấy đúng 5 ô
-    }
-  }
-
-  return null;
-}
   function getWinLine(r, c, player){
   const dirs = [
     [1,0], [0,1], [1,1], [1,-1]
@@ -995,12 +851,12 @@ if(moves.length > 25) return false;
 
   return null;
 }
-  
+
   function drawWinLine(line){
   const first = line[0];
   const last = line[4];
 
-  const cellSize = 40; // chỉnh theo size ô của bạn
+  const cellSize = boardDiv.offsetWidth / SIZE; // chỉnh theo size ô của bạn
 
   const x1 = first[1] * cellSize + cellSize/2;
   const y1 = first[0] * cellSize + cellSize/2;
