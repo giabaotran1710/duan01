@@ -12,13 +12,11 @@ body{
   text-align:center;
   background:#0f172a;
   color:white;
-  user-select: none;
-  -webkit-user-select: none;
 }
 
 #board{
   display:grid;
-  grid-template-columns: repeat(13, 1fr);
+  grid-template-columns: repeat(15, 1fr);
   width: 95vw;
   max-width: 420px;
   margin:20px auto;
@@ -36,12 +34,14 @@ body{
   box-sizing:border-box;
 }
 
-.cell:hover{ background:#1e3a8a; }
 
 .X{ color:#00d4ff; font-weight:bold; }
 .O{ color:#ff4d4d; font-weight:bold; }
 
-.last{ background:#444 !important; }
+.last{ 
+  background:#888;
+  font-weight:1000;
+}
 
 #overlay{
   position:fixed;
@@ -57,7 +57,7 @@ body{
 #dice{ font-size:150px; margin-top:1px; }
 
 button{
-  width: 150px;
+  width: 135px;
   height: 40px;
   padding:10px 1px;
   background:#0188ff;
@@ -67,8 +67,27 @@ button{
   cursor:pointer;
   display: inline-block;
   margin-top: 5px;
+  transition: all 0.25s ease;
+}
+  
+ .win{
+  position: relative; /* 🔥 bắt buộc để ::after hoạt động */
+  z-index: 3;
 }
 
+.win::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:#FFD15B;
+  opacity:0;
+
+  animation: winFade 0.6s ease forwards;
+  animation-delay:1s;
+
+  pointer-events:none;
+}
+  
 #status{
   font-size:20px;
   margin-top:10px;
@@ -89,30 +108,51 @@ button{
   display:flex;
   background:#222;
   display: none;
+  margin-top:-460px;
 }
 
 #scoreX{
   height:100%;
   background:#00d4ff;
-  color:black;
-  font-weight:bold;
-  font-size:10px;
-  line-height:15px;
-  text-align:left;
-  padding-left:2px;
+  width:50%
 }
 
 #scoreO{
   height:100%;
   background:#ff4d4d;
-  color:black;
-  font-weight:bold;
-  font-size:10px;
-  line-height:15px;
-  text-align:right;
-  padding-right:2px;
+  width:50%;
 }
 
+/* 🔥 text cố định */
+#scoreText{
+  position:absolute;
+  inset:0;
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  font-weight:999;
+  pointer-events:none;
+  padding:0 5px;
+  margin-top: -397px;
+  font-size: 14px;
+}
+
+/* màu chữ */
+#textX{
+  color:black;
+  margin-left:20px;
+}
+
+#textO{
+  color:black;
+  margin-right:20px;
+}
+
+  #scoreX, #scoreO{
+  min-width: 1px;
+  transition: width 0.5s ease-out; /* 🔥 mượt ở đây */
+}
+  
   #toggleScore{
   position:fixed;
   top:10px;
@@ -152,6 +192,7 @@ button{
   margin-top:5px;
   min-height:18px; /* tránh layout nhảy */
   opacity:0.9;
+  translateY: -100px
 }
   
   #winLine{
@@ -161,12 +202,23 @@ button{
   width:100%;
   height:100%;
 }
-
-.win-line{
-  position:absolute;
-  height:4px;
-  background:red; !important
+ #blub{
+   font-size:10px;
+   color: yellow;
+   margin-top:2px;
+   animation: slideUp 2s ease;
+   
+  .button:disabled{
+  cursor: not-allowed;
+  opacity: 0.4;
+  filter: grayscale(1) brightness(0.8);
+  transform: scale(0.98);
 }
+  .button:disabled:hover{
+  transform: none;
+  background: inherit;
+}
+
 
 </style>
 </head>
@@ -177,24 +229,31 @@ button{
 <div id="statusTop">Đang chờ...</div>
   <div id="warning"></div>
 <div id="board"></div>
-<button onclick="resetGame()">Chơi lại</button>
+<button id="btnUndo" onclick="undoMove()">↩️ Hoàn tác</button>
+  <button onclick="resetGame()">Chơi lại</button>
  <div id="scoreBar">
-  <div id="scoreX">0</div>
-  <div id="scoreO">0</div>
+  <div id="scoreX"></div>
+  <div id="scoreO"></div>
+   <!-- 🔥 TEXT FIXED -->
+  <div id="scoreText">
+    <span id="textX">0</span>
+    <span id="textO">0</span>
+  </div>
+</div>
 </div>
 <div id="board-wrapper" style="position:relative;">
   <div id="board"></div>
-  <div id="winLine"></div>
 </div>
 <div id="overlay">
 <button id="startBtn" onclick="startGame()">🎲 BẮT ĐẦU VỚI MÁY</button>
   <div id="dice"></div>
   <div id="status">Tung xúc xắc để xem ai đi trước</div>
+  <div id="blub">Gợi ý: Ấn vào biểu tượng bóng đèn để xem đánh giá nước đi</div>
 </div>
 <script>
 
 
-const SIZE = 13;
+const SIZE = 15;
 
 let board = [];
 let cells = [];
@@ -206,11 +265,36 @@ let ai = "O";
 let currentTurn = "X";
 let aiThinking = false;
 
+let rawX = scoreX;
+let rawO = scoreO;
+let moveHistory = [];
+let canUndo = false;     // đã có nước đi chưa
+let undoUsed = false;    // đã dùng undo trong lượt này chưa
+
+
+// 🔥 nếu có số âm → dịch toàn bộ lên
+let minScore = Math.min(rawX, rawO);
+
+if(minScore < 0){
+  rawX += Math.abs(minScore);
+  rawO += Math.abs(minScore);
+}
+  let total = rawX + rawO;
+
+let percentX = 50;
+let percentO = 50;
+
+if(total > 0){
+  percentX = Math.round(rawX / total * 100);
+  percentO = 100 - percentX;
+}
+  
 const boardDiv = document.getElementById("board");
 const statusOverlay = document.getElementById("status");
 const statusTop = document.getElementById("statusTop");
 const overlay = document.getElementById("overlay");
 const warningDiv = document.getElementById("warning");
+  const undoBtn = document.getElementById("btnUndo");
 
 function showStatus(text){
   statusOverlay.textContent = text;
@@ -311,7 +395,7 @@ function startGame(){
 
 function place(r,c,player){
   board[r][c] = player;
-
+  moveHistory.push([r,c,player]);
   const cell = cells[r][c];
   cell.textContent = player;
   cell.classList.add(player);
@@ -319,6 +403,42 @@ function place(r,c,player){
   if(lastCell) lastCell.classList.remove("last");
   cell.classList.add("last");
   lastCell = cell;
+  updateScore();
+}
+  
+  function undoMove(){
+  if(!canUndo || undoUsed || gameOver) return;
+
+  // 🔥 chỉ cho undo 1 lần
+  undoUsed = true;
+
+  let steps = (moveHistory.length >= 2) ? 2 : 1;
+
+  for(let i=0;i<steps;i++){
+    let last = moveHistory.pop();
+    if(!last) break;
+
+    let [r,c] = last;
+
+    board[r][c] = "";
+
+    const cell = cells[r][c];
+    cell.textContent = "";
+    cell.classList.remove("X","O","last","win");
+  }
+
+  // cập nhật lastCell
+  if(moveHistory.length > 0){
+    let [r,c] = moveHistory[moveHistory.length-1];
+    lastCell = cells[r][c];
+    lastCell.classList.add("last");
+  }else{
+    lastCell = null;
+  }
+
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+
   updateScore();
 }
 function getOccupiedCount(){
@@ -330,11 +450,22 @@ function getOccupiedCount(){
   }
   return count;
 }
+  
+  function updateUndoButton(){
+  if(!canUndo || undoUsed){
+    undoBtn.disabled = true;
+  }else{
+    undoBtn.disabled = false;
+  }
+}
+  
 // ===== PLAYER =====
 function playerMove(r,c){
   if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
 
   place(r,c,human);
+  canUndo = true;
+undoUsed = false; // 🔥 reset mỗi lượt mới
   currentTurn=ai;
 
   if(checkWin(r,c,human)){
@@ -342,9 +473,9 @@ function playerMove(r,c){
 
   let winLine = getWinLine(r, c, human);
 
-  if(winLine){
-    drawWinLine(winLine);
-  }
+if(winLine){
+  highlightWinCells(winLine);
+}
 
   gameOver=true;
   return;
@@ -401,6 +532,96 @@ if(possibleMoves.length > 0){
     aiThinking = false;
     return;
   }
+  // CHAN 3 DUONG 3 MO
+  for(let [r,c] of getEmptyCells()){
+  if(!hasNeighbor(r,c)) continue;
+
+  board[r][c] = human;
+
+  let threes = countOpenThrees(r,c,human);
+
+  board[r][c] = "";
+
+  if(threes >= 2){
+    place(r,c,ai); // 🔥 chặn ngay
+    currentTurn = human;
+    return;
+  }
+}
+  
+  // 🚀 2.5: CHẶN THEO MỨC NGUY HIỂM (3 mở / 4 mở)
+let bestThreat = -Infinity;
+let bestBlock = null;
+
+for(let [r,c] of getEmptyCells()){
+  if(!hasNeighbor(r,c)) continue;
+
+  // giả lập người chơi đánh
+  board[r][c] = human;
+
+  let threatScore = evaluate(r,c,human);
+
+  board[r][c] = "";
+
+  // 🔥 ưu tiên chặn theo mức điểm
+  if(threatScore > bestThreat){
+    bestThreat = threatScore;
+    bestBlock = [r,c];
+  }
+}
+
+// 🚨 nếu là 4 mở → chặn NGAY
+if(bestThreat >= 20000){
+  let [r,c] = bestBlock;
+  place(r,c,ai);
+
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+  aiThinking = false;
+  return;
+}
+
+// chỉ chặn 3 mở nếu AI không có nước tấn công mạnh
+if(bestThreat >= 5000){
+  let attackMove = smartAI(ai);
+
+  if(attackMove){
+    let [ar,ac] = attackMove;
+
+    board[ar][ac] = ai;
+    let attackScore = evaluate(ar,ac,ai);
+    board[ar][ac] = "";
+
+    if(attackScore > 8000){
+      // 👉 tấn công mạnh hơn → KHÔNG chặn
+    }else{
+      // 👉 chặn
+      let [r,c] = bestBlock;
+      place(r,c,ai);
+
+      currentTurn = human;
+      statusTop.textContent = "Lượt của bạn ("+human+")";
+      aiThinking = false;
+      return;
+    }
+  }
+}
+  //TAO 3 DUONG 3 MO
+  for(let [r,c] of getEmptyCells()){
+  if(!hasNeighbor(r,c)) continue;
+
+  board[r][c] = ai;
+
+  let threes = countOpenThrees(r,c,ai);
+
+  board[r][c] = "";
+
+  if(threes >= 2){ // double đã mạnh, triple là win
+    place(r,c,ai);
+    currentTurn = human;
+    return;
+  }
+}
 
   // 🚀 3. TẠO 4 MỞ
   for(let i=0;i<SIZE;i++){
@@ -423,6 +644,20 @@ if(possibleMoves.length > 0){
       board[i][j] = "";
     }
   }
+    // 🚨 PHÁT HIỆN NGUY HIỂM (3 mở / 4 mở)
+let dangerMoves = detectThreatMove(human);
+
+if(dangerMoves.length > 0){
+  let [r,c] = dangerMoves[0];
+
+  place(r,c,ai);
+
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+
+  aiThinking = false;
+  return;
+}
 
   // 🚀 4. AI CHÍNH
   let move = smartAI(ai);
@@ -440,12 +675,15 @@ if(possibleMoves.length > 0){
   place(r,c,ai);
 
   // 🚀 5. CHECK WIN
+    if(checkWin(r,c,ai)){
   let winLine = getWinLine(r, c, ai);
 
 if(winLine){
-  drawWinLine(winLine);
-
-  statusTop.textContent = "🤖 AI.GiaBao thắng!";
+  setTimeout(()=>{
+  highlightWinCells(winLine);
+},5000);
+}
+  statusTop.textContent="🤖 AI.GiaBao thắng!";
   gameOver = true;
   aiThinking = false;
   return;
@@ -457,6 +695,27 @@ if(winLine){
   aiThinking = false;
 }
 
+  function detectThreatMove(player){
+  let moves = getEmptyCells();
+  let threats = [];
+
+  for(let [r,c] of moves){
+    if(!hasNeighbor(r,c)) continue;
+
+    board[r][c] = player;
+
+    let score = evaluate(r,c,player);
+
+    board[r][c] = "";
+
+    // 🔥 NGƯỠNG nhận diện nguy hiểm
+    if(score >= 4000){ // tương đương 3 mở mạnh
+      threats.push([r,c]);
+    }
+  }
+
+  return threats;
+}
 // ===== SMART AI =====
 const MAX_DEPTH = 4; // có thể tăng lên 4 nếu máy mạnh
 
@@ -588,7 +847,37 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
     return minEval;
   }
 }
+function isOpenThree(r,c,dr,dc,player){
+  let count = 1;
+  let open = 0;
 
+  let i=r+dr, j=c+dc;
+  while(inBoard(i,j) && board[i][j]===player){
+    count++; i+=dr; j+=dc;
+  }
+  if(inBoard(i,j) && board[i][j]==="") open++;
+
+  i=r-dr; j=c-dc;
+  while(inBoard(i,j) && board[i][j]===player){
+    count++; i-=dr; j-=dc;
+  }
+  if(inBoard(i,j) && board[i][j]==="") open++;
+
+  return (count===3 && open===2);
+}
+  
+  function countOpenThrees(r,c,player){
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+  let total = 0;
+
+  for(let [dr,dc] of dirs){
+    if(isOpenThree(r,c,dr,dc,player)){
+      total++;
+    }
+  }
+
+  return total;
+}
   function isOpenFour(r,c,player){
   const dirs = [
     [1,0],[0,1],[1,1],[1,-1]
@@ -624,7 +913,50 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
 
   return false;
 }
+  
+  function countOpenThrees(player){
+  let count = 0;
 
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") continue;
+
+      board[r][c] = player;
+
+      let openThree = 0;
+
+      const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+
+      for(let [dr,dc] of dirs){
+        let cnt = 1, open = 0;
+
+        let i=r+dr, j=c+dc;
+        while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+          cnt++; i+=dr; j+=dc;
+        }
+        if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+
+        i=r-dr; j=c-dc;
+        while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]===player){
+          cnt++; i-=dr; j-=dc;
+        }
+        if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j]==="") open++;
+
+        if(cnt === 3 && open === 2){
+          openThree++;
+        }
+      }
+
+      if(openThree >= 2){
+        count++;
+      }
+
+      board[r][c] = "";
+    }
+  }
+
+  return count;
+}
   function evaluateBoard(player){
   let score = 0;
   let enemy = (player === "X") ? "O" : "X";
@@ -666,6 +998,7 @@ function evaluate(r,c,player){
     scoreDirection(r,c,1,1,player)+
     scoreDirection(r,c,1,-1,player);
 
+  
   // 🔥 PHẠT ĐÁNH Ở RÌA
   if(r === 0 || c === 0 || r === SIZE-1 || c === SIZE-1){
     score -= 100;
@@ -703,6 +1036,7 @@ if(count===4 && open===0) return 0;
 
 // 🔥 3 mở
 if(count===3 && open===2) return 5000;
+    
 
 // ⚠️ 3 cụt
 if(count===3 && open===1) return 200;
@@ -800,8 +1134,8 @@ createBoard();
   document.getElementById("scoreO").style.width = percentO + "%";
 
   // 🔥 hiển thị ĐIỂM THẬT
-  document.getElementById("scoreX").textContent = scoreX;
-  document.getElementById("scoreO").textContent = scoreO;
+  document.getElementById("textX").textContent = scoreX;
+document.getElementById("textO").textContent = scoreO;
 }
 
   let showScore = false;
@@ -818,12 +1152,14 @@ toggleBtn.onclick = () => {
   if(showScore){
     scoreBar.style.display = "flex";
     toggleBtn.classList.remove("off");
+
+
   }else{
     scoreBar.style.display = "none";
     toggleBtn.classList.add("off");
+
   }
 };
-
   function getWinLine(r, c, player){
   const dirs = [
     [1,0], [0,1], [1,1], [1,-1]
@@ -853,35 +1189,13 @@ toggleBtn.onclick = () => {
 
   return null;
 }
+  
 
-  function drawWinLine(line){
-  const first = line[0];
-  const last = line[4];
-
-  const cellSize = boardDiv.offsetWidth / SIZE; // chỉnh theo size ô của bạn
-
-  const x1 = first[1] * cellSize + cellSize/2;
-  const y1 = first[0] * cellSize + cellSize/2;
-
-  const x2 = last[1] * cellSize + cellSize/2;
-  const y2 = last[0] * cellSize + cellSize/2;
-
-  const dx = x2 - x1;
-  const dy = y2 - y1;
-
-  const length = Math.sqrt(dx*dx + dy*dy);
-  const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-
-  const lineEl = document.createElement("div");
-  lineEl.className = "win-line";
-
-  lineEl.style.width = length + "px";
-  lineEl.style.left = x1 + "px";
-  lineEl.style.top = y1 + "px";
-  lineEl.style.transform = `rotate(${angle}deg)`;
-  lineEl.style.transformOrigin = "0 50%";
-
-  document.getElementById("winLine").appendChild(lineEl);
+  function highlightWinCells(line){
+  line.forEach(([r,c])=>{
+    const cell = cells[r][c];
+    cell.classList.add("win");
+  });
 }
 
 </script>
