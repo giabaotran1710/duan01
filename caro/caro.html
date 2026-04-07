@@ -70,7 +70,6 @@ button{
   transition: all 0.25s ease;
   allign-item: center;
 }
-  
  .win{
   position: relative; /* 🔥 bắt buộc để ::after hoạt động */
   z-index: 3;
@@ -254,7 +253,7 @@ button{
    font-size:10px;
    color: yellow;
    margin-top:2px;
-   animation: slideUp 2s ease;
+   animation: slideUp 2s ease;}
    
   .button:disabled{
   cursor: not-allowed;
@@ -265,6 +264,16 @@ button{
   .button:disabled:hover{
   transform: none;
   background: inherit;
+}
+   
+   #confettiCanvas{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 99999;
 }
 
 
@@ -303,6 +312,7 @@ button{
   <div id="status">Tung xúc xắc để xem ai đi trước</div>
   <div id="blub">Gợi ý: Ấn vào biểu tượng bóng đèn để xem đánh giá nước đi</div>
 </div>
+  <canvas id="confettiCanvas"></canvas>
 <script>
   
 const SIZE = 15;
@@ -322,6 +332,7 @@ let rawO = scoreO;
 let moveHistory = [];
 let canUndo = false;     // đã có nước đi chưa
 let undoUsed = false;    // đã dùng undo trong lượt này chưa
+let cache = new Map();
 
 // 🔥 nếu có số âm → dịch toàn bộ lên
 let minScore = Math.min(rawX, rawO);
@@ -528,6 +539,7 @@ function playerMove(r,c){
 
   if(checkWin(r,c,human)){
   statusTop.textContent="🎉 Bạn thắng!";
+  launchConfetti();
 
   gameOver=true;
   return;
@@ -567,6 +579,7 @@ if(possibleMoves.length > 0){
     place(r,c,ai);
 
     statusTop.textContent = "🤖 AI.GiaBao thắng!";
+    launchConfetti();
     gameOver = true;
 
     aiThinking = false;
@@ -625,6 +638,7 @@ if(possibleMoves.length > 0){
   // 🚀 5. CHECK WIN
     if(checkWin(r,c,ai)){
   statusTop.textContent="🤖 AI.GiaBao thắng!";
+   launchConfetti();
   gameOver = true;
   aiThinking = false;
   return;
@@ -637,6 +651,20 @@ if(possibleMoves.length > 0){
   aiThinking = false;
 }
 
+  function getSmartMoves(){
+  let moves = getEmptyCells().filter(([r,c]) => hasNeighbor(r,c));
+
+  // 🔥 chỉ giữ top N nước tốt nhất
+  let scored = moves.map(([r,c]) => {
+    let score = evaluate(r,c,ai) + evaluate(r,c,human);
+    return {r,c,score};
+  });
+
+  scored.sort((a,b) => b.score - a.score);
+
+  return scored.slice(0, 10).map(m => [m.r, m.c]); // 🔥 chỉ lấy top 8
+}
+  
 // ===== SMART AI =====
 const MAX_DEPTH = 4; // có thể tăng lên 4 nếu máy mạnh
 
@@ -644,10 +672,7 @@ function smartAI(player){
   let bestScore = -Infinity;
   let bestMove = null;
 
-  let moves = getEmptyCells();
-
-  // ưu tiên ô gần quân cờ (giảm độ rộng tìm kiếm)
-  moves = moves.filter(([r,c]) => hasNeighbor(r,c));
+  let moves = getSmartMoves();
 
   for (let [r,c] of moves){
     board[r][c] = player;
@@ -673,6 +698,10 @@ function smartAI(player){
   
 // ===== MINIMAX =====
 function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
+ let key = JSON.stringify(board) + depth + isMaximizing;
+
+  if(cache.has(key)){
+    return cache.get(key);}
   let humanPlayer = (aiPlayer === "X") ? "O" : "X";
 
   // check terminal
@@ -684,6 +713,9 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
 
   let moves = getEmptyCells();
   moves = moves.filter(([r,c]) => hasNeighbor(r,c));
+  moves.sort((a,b)=>{
+  return evaluate(b[0],b[1],aiPlayer) - evaluate(a[0],a[1],aiPlayer);
+});
 
   if (isMaximizing){
     let maxEval = -Infinity;
@@ -1072,6 +1104,91 @@ function updateComment(text){
     commentaryDiv.classList.remove("shrink");
 
   }, 500);
+}
+  
+const canvas = document.getElementById("confettiCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let confetti = [];
+
+function randomColor(){
+  const colors = ["#ff4d4d", // đỏ
+  "#00d4ff", // xanh dương
+  "#00ff88", // xanh lá
+  "#ffd700", // vàng
+  "#ff00ff", // hồng tím
+  "#ff8800", // cam
+  "#ffffff", // trắng
+  "#a855f7", // tím
+  "#22c55e", // xanh neon
+  "#f43f5e"  // đỏ
+  ];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+function launchConfetti(){
+  confetti = [];
+
+  for(let i=0;i<1000;i++){
+    let fromLeft = Math.random() < 0.5;
+
+    confetti.push({
+      x: fromLeft ? 0 : canvas.width,
+      y: canvas.height,
+
+      vx: (Math.random()*6 + 2) * (fromLeft ? 1 : -1), // bắn ngang
+      vy: -(Math.random()*7 + 6), // bắn lên
+
+      gravity: 0.12,
+      size: Math.random()*9 + 2,
+
+      color: randomColor(),
+
+      angle: Math.random()*360,
+      spin: Math.random()*15 - 5,
+
+      shape: Math.random() < 0.5 ? "rect" : "line"
+    });
+  }
+
+  animateConfetti();
+}
+
+function animateConfetti(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  confetti.forEach(p=>{
+    // physics
+    p.vx *= 0.985;
+    p.vy += p.gravity;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.angle += p.spin;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle * Math.PI/180);
+
+    ctx.fillStyle = p.color;
+
+    if(p.shape === "rect"){
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+    }else{
+      ctx.fillRect(-p.size/2, -p.size/2, p.size * 0.2, p.size * 1.5);
+    }
+
+    ctx.restore();
+  });
+
+  // lọc hạt còn trên màn hình
+  confetti = confetti.filter(p => p.y < canvas.height + 20);
+
+  if(confetti.length > 0){
+    requestAnimationFrame(animateConfetti);
+  }
 }
 </script>
 
