@@ -68,7 +68,7 @@ button{
   display: inline-block;
   margin-top: 5px;
   transition: all 0.25s ease;
-  allign-item: center;
+  align-items: center;
 }
  .win{
   position: relative; /* 🔥 bắt buộc để ::after hoạt động */
@@ -250,22 +250,29 @@ button{
   
   
  #blub{
-   font-size:10px;
-   color: yellow;
-   margin-top:2px;
-   animation: slideUp 2s ease;}
-   
-  .button:disabled{
+  font-size:10px;
+  color: yellow;
+  margin-top:2px;
+  animation: slideUp 2s ease;
+} /* 🔥 đóng lại ở đây */
+
+/* ✅ CSS riêng */
+#btnUndo {
+  background: #888;
+  opacity: 0.5;
   cursor: not-allowed;
-  opacity: 0.4;
-  filter: grayscale(1) brightness(0.8);
-  transform: scale(0.98);
 }
-  .button:disabled:hover{
-  transform: none;
-  background: inherit;
+
+#btnUndo:disabled {
+  background: #888;
 }
-   
+
+#btnUndo:enabled {
+  background: #0188ff;
+  opacity: 1;
+  cursor: pointer;
+}
+  
    #confettiCanvas{
   position: fixed;
   top: 0;
@@ -354,6 +361,7 @@ let canUndo = false;     // đã có nước đi chưa
 let undoUsed = false;    // đã dùng undo trong lượt này chưa
 let cache = new Map();
 
+
 // 🔥 nếu có số âm → dịch toàn bộ lên
 let minScore = Math.min(rawX, rawO);
 
@@ -377,9 +385,12 @@ const statusTop = document.getElementById("statusTop");
 const overlay = document.getElementById("overlay");
 const commentaryDiv = document.getElementById("commentary");
 const resetBtn = document.getElementById("btnReset");
+const btnUndo = document.getElementById("btnUndo");
+
   
   function undoMove(){
   if(!canUndo || undoUsed || gameOver) return;
+if(getTotalPieces() <= 9) return;
 
   // 🔥 chỉ cho undo 1 lần
   undoUsed = true;
@@ -412,6 +423,7 @@ const resetBtn = document.getElementById("btnReset");
   statusTop.textContent = "Lượt của bạn ("+human+")";
 
   updateScore();
+  updateUndoButton();
 }
 
 function showStatus(text){
@@ -442,6 +454,7 @@ function createBoard(){
 
       boardDiv.appendChild(cell);
       cells[r][c]=cell;
+      updateUndoButton();
     }
   }
 }
@@ -471,6 +484,7 @@ function hasNeighbor(r,c){
 
 // ===== START =====
 function startGame(){
+  
   document.getElementById("startBtn").style.display = "none";
 
   let faces=["X","X","X","O","O","O"];
@@ -478,7 +492,7 @@ function startGame(){
 
   let interval=setInterval(()=>{
     dice.textContent=faces[Math.floor(Math.random(0)*6)];
-  },100);
+  },150);
 
   setTimeout(()=>{
     clearInterval(interval);
@@ -533,12 +547,30 @@ function place(r,c,player){
   updateScore();
 }
   
-  function updateUndoButton(){
-  if(!canUndo || undoUsed){
-    undoBtn.disabled = true;
-  }else{
-    undoBtn.disabled = false;
+function updateUndoButton(){
+
+  let isActive = (
+    !gameOver &&
+    !undoUsed &&
+    canUndo &&
+    getTotalPieces() >= 10
+  );
+
+  btnUndo.disabled = !isActive;
+
+  btnUndo.classList.toggle("active", isActive);
+}
+  
+  function getTotalPieces(){
+  let count = 0;
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") count++;
+    }
   }
+
+  return count;
 }
   
   
@@ -556,6 +588,9 @@ function playerMove(r,c){
   if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
 
   place(r,c,human);
+  canUndo = true;
+undoUsed = false;
+  updateUndoButton();
   currentTurn=ai;
 
   if(checkWin(r,c,human)){
@@ -565,6 +600,7 @@ function playerMove(r,c){
   launchConfetti();
 
   gameOver=true;
+    updateUndoButton();
   return;
 }
 
@@ -606,6 +642,7 @@ if(possibleMoves.length > 0){
     resetBtn.textContent = "Chơi lại";
     launchConfetti();
     gameOver = true;
+    updateUndoButton();
 
     aiThinking = false;
     return;
@@ -668,6 +705,7 @@ if(possibleMoves.length > 0){
    launchConfetti();
   gameOver = true;
   aiThinking = false;
+      updateUndoButton();
   return;
 }
 
@@ -1102,9 +1140,7 @@ function resetGame(){
   currentTurn="X";
   playerStartTime = 0
 
-
-  createBoard();
-
+createBoard();
   statusTop.textContent="Đang chờ...";
   statusOverlay.textContent="Tung xúc xắc để xem ai đi trước";
   document.getElementById("dice").textContent="";
@@ -1114,9 +1150,8 @@ function resetGame(){
   statusTop.classList.remove("win");
   resetBtn.textContent = "Chơi lại";
   updateScore();
+  updateUndoButton();
 }
-
-// INIT
 createBoard();
   
 function updateComment(text){
