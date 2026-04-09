@@ -301,7 +301,25 @@ button{
   border-radius: 12px;
 
 }
+  /* hàng ngang chính */
+.action-bar{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content:center;
+}
 
+ .undo-container{
+  display: flex;
+  flex-direction: column; /* 🔥 xếp dọc */
+  align-items: center;   /* căn giữa */
+  gap: 4px;              /* khoảng cách button - text */
+}
+#undolimit{
+  color: yellow;
+  margin-top:-2px;
+  font-size:12px;
+}
 
 </style>
 </head>
@@ -315,9 +333,13 @@ button{
   <div id="commentary"></div>
 
   <div id="board"></div>
-
+<div class="action-bar">
+<div class="undo-container">
   <button id="btnUndo" onclick="undoMove()">↩️ Hoàn tác</button>
+  <div id="undolimit">Số lần còn: 3/3</div>
+</div>
   <button id="btnReset" onclick="resetGame()">Chơi lại</button>
+</div>
 
 <div id="scoreBar">
   <div id="scoreX"></div>
@@ -360,6 +382,8 @@ let moveHistory = [];
 let canUndo = false;     // đã có nước đi chưa
 let undoUsed = false;    // đã dùng undo trong lượt này chưa
 let cache = new Map();
+let maxUndo = 3;
+let undoLeft = 3;
 
 // 🔥 nếu có số âm → dịch toàn bộ lên
 let minScore = Math.min(rawX, rawO);
@@ -388,6 +412,11 @@ const btnUndo = document.getElementById("btnUndo");
 
   
   function undoMove(){
+    if(undoLeft <= 0){
+    document.getElementById("undolimit").textContent = "Bạn đã sử dụng hết lượt";
+    updateUndoButton();
+    return;
+  }
   if(!canUndo || undoUsed || gameOver) return;
 if(getTotalPieces() <= 9) return;
 
@@ -422,10 +451,19 @@ if(getTotalPieces() <= 9) return;
   statusTop.textContent = "Lượt của bạn ("+human+")";
   commentary.textContent="↩️ Bạn vừa mới thực hiện lại nước đi";
 
+  undoLeft--;
+
+  // cập nhật UI
+  updateUndoUI();
   updateScore();
   updateUndoButton();
 }
 
+  function updateUndoUI(){
+  document.getElementById("undolimit").textContent =
+    `Số lần còn: ${undoLeft}/${maxUndo}`;
+}
+  
 function showStatus(text){
   statusOverlay.textContent = text;
   statusOverlay.classList.remove("show");
@@ -552,7 +590,8 @@ function updateUndoButton(){
     !gameOver &&
     !undoUsed &&
     canUndo &&
-    getTotalPieces() >= 10
+    getTotalPieces() >= 10 &&
+    undoLeft >0
   );
 
   btnUndo.disabled = !isActive;
@@ -1162,6 +1201,8 @@ createBoard();
   commentary.textContent="Bạn đã ấn chơi lại";
   statusTop.classList.remove("win");
   resetBtn.textContent = "Chơi lại";
+  undoLeft = maxUndo;
+  updateUndoUI();
   updateScore();
 }
 
