@@ -1,5 +1,11 @@
 const words = [
 
+"Trưởng thành","Trẻ con",
+"Diễn viên","Hoả tốc",
+"Công văn","Chủ tịch",
+"Lạnh lẽo","Lạnh cóng",
+"Gay cấn",
+"Chúc mừng",
 "Hành nghề","Lành nghề",
 "Gà trống","Trống đồng",
 "Chung kết","Bán kết","Tứ kết","Vòng loại",
