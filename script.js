@@ -27,7 +27,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
   toggleBtn.addEventListener("pointerdown", toggleBar);
   utilityBar.addEventListener("pointerdown", startAutoClose);
-
+});
 
 /* =============================================
    SÓNG BIỂN — Canvas Background
