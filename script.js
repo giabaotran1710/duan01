@@ -1,3 +1,34 @@
+document.addEventListener("DOMContentLoaded", () => {
+
+  const toggleBtn = document.getElementById("toggleBar");
+  const utilityBar = document.getElementById("utilityBar");
+
+  let autoCloseTimer;
+
+  function startAutoClose(){
+    clearTimeout(autoCloseTimer);
+
+    autoCloseTimer = setTimeout(() => {
+      utilityBar.classList.remove("show");
+    }, 9000); //9 giây
+  }
+
+  function toggleBar(){
+
+    utilityBar.classList.toggle("show");
+
+    if(utilityBar.classList.contains("show")){
+      startAutoClose();
+    }else{
+      clearTimeout(autoCloseTimer);
+    }
+
+  }
+
+  toggleBtn.addEventListener("pointerdown", toggleBar);
+  utilityBar.addEventListener("pointerdown", startAutoClose);
+
+
 /* =============================================
    SÓNG BIỂN — Canvas Background
    Gọi file này SAU khi DOM đã load:
