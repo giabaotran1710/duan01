@@ -713,7 +713,16 @@ function quitGame() { clearTimer(); showGameOver(false); }
 // ── GAME INIT ─────────────────────────────────────────────
 function startGame() {
   // Unlock AudioContext ngay khi có gesture từ người dùng
-  getAudio();
+  try {
+    if (!audioCtx) {
+      audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if (audioCtx.state === 'suspended') {
+      audioCtx.resume();
+    }
+  } catch (e) {
+    console.log("Audio không khởi tạo được:", e);
+  }
   sequence = [];
   playerSeq = [];
   round = 1;
@@ -763,7 +772,7 @@ function buildColorGrid() {
   });
 }
 
-// ── ROUND LOGIC 
+// ── ROUND LOGIC ───────────────────────────────────────────
 async function nextRound() {
   const diffIdx = getDifficulty(round);
   const diff = LEVELS[diffIdx];
@@ -908,3 +917,125 @@ function handleColorClick(colorIdx) {
     }
   }
 }
+
+// ── TIMER ─────────────────────────────────────────────────
+function startTimer(seconds) {
+  const wrap = document.getElementById('timer-wrap');
+  const ring = document.getElementById('timer-ring');
+  const txt = document.getElementById('timer-text');
+  const circumference = 125.66;
+  wrap.style.display = 'flex';
+  timerLeft = seconds;
+  txt.textContent = seconds;
+  ring.style.strokeDashoffset = 0;
+  phase = 'input';
+
+  clearInterval(timerInterval);
+  timerInterval = setInterval(() => {
+    timerLeft -= 0.1;
+    const pct = timerLeft / seconds;
+    ring.style.strokeDashoffset = circumference * (1 - pct);
+    txt.textContent = Math.ceil(timerLeft);
+
+    if (timerLeft <= 0) {
+      clearInterval(timerInterval);
+      timeUp();
+    }
+  }, 100);
+}
+
+function clearTimer() {
+  clearInterval(timerInterval);
+  document.getElementById('timer-wrap').style.display = 'none';
+}
+
+function timeUp() {
+  enableButtons(false);
+  playError();
+  lives--;
+  updateLives();
+  if (lives <= 0) {
+    setMessage('⏱ Hết giờ! Game over!', 'error');
+    setTimeout(function() { playGameOver(); showGameOver(true); }, 600);
+  } else {
+    setMessage('⏱ Hết giờ! Còn ' + lives + ' mạng. Xem lại...', 'error');
+    playerSeq = [];
+    setTimeout(async function() {
+      buildSeqDisplay();
+      setMessage('Xem lại chuỗi...', 'info');
+      const diff = LEVELS[getDifficulty(round)];
+      await sleep(400);
+      await showSequence(diff.speed);
+      playerSeq = [];
+      setMessage('Chọn lại ' + sequence.length + ' màu theo thứ tự!', '');
+      enableButtons(true);
+      updateProgress(0);
+      startTimer(diff.timer);
+    }, 1200);
+  }
+}
+
+// ── UI HELPERS ────────────────────────────────────────────
+function setMessage(txt, type = '') {
+  const el = document.getElementById('message');
+  el.textContent = txt;
+  el.className = 'message' + (type ? ' ' + type : '');
+}
+
+function enableButtons(on) {
+  phase = on ? 'input' : 'idle';
+  const diff = LEVELS[getDifficulty(round)];
+  document.querySelectorAll('.color-btn').forEach(function(b) {
+    const idx = parseInt(b.dataset.colorIdx);
+    b.disabled = !on || idx >= diff.colors;
+  });
+}
+
+function updateStats() {
+  document.getElementById('val-level').textContent = round;
+  document.getElementById('val-score').textContent = score;
+  updateLives();
+}
+
+function updateLives() {
+  const wrap = document.getElementById('lives-wrap');
+  const maxLives = LEVELS[getDifficulty(round)].lives;
+  const displayMax = 3;
+  wrap.innerHTML = '';
+  for (let i = 0; i < displayMax; i++) {
+    const dot = document.createElement('div');
+    dot.className = 'life-dot' + (i >= lives ? ' lost' : '');
+    wrap.appendChild(dot);
+  }
+}
+
+function updateDiffBadge(diff) {
+  const badge = document.getElementById('diff-badge');
+  badge.textContent = diff.name;
+  badge.className = 'difficulty-badge ' + diff.cls;
+}
+
+function updateProgress(pct) {
+  document.getElementById('progress-bar').style.width = pct + '%';
+}
+
+function bumpStat(id) {
+  const el = document.getElementById(id);
+  el.textContent = (id === 'val-score') ? score : round;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
+
+function showGameOver(died) {
+  clearTimer();
+  document.getElementById('over-title').textContent = died ? 'GAME OVER' : 'KẾT THÚC';
+  document.getElementById('over-score').textContent = score;
+  document.getElementById('over-stats').textContent =
+    `Vòng đạt được: ${round - 1}  •  Chuỗi dài nhất: ${sequence.length} màu`;
+  showScreen('over');
+}
+</script>
+</body>
+</html>
+ 
