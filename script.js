@@ -1,455 +1,107 @@
-document.addEventListener("DOMContentLoaded", () => {
+/* =============================================
+   SÓNG BIỂN — Canvas Background
+   Gọi file này SAU khi DOM đã load:
+   <script src="ocean.js"></script>
+   ============================================= */
+(function () {
+  var canvas = document.getElementById("bg");
+  var ctx    = canvas.getContext("2d");
+  var W, H, t = 0;
 
-  const toggleBtn = document.getElementById("toggleBar");
-  const utilityBar = document.getElementById("utilityBar");
-
-  let autoCloseTimer;
-
-  function startAutoClose(){
-    clearTimeout(autoCloseTimer);
-
-    autoCloseTimer = setTimeout(() => {
-      utilityBar.classList.remove("show");
-    }, 9000); //9 giây
+  function resize() {
+    W = canvas.width  = window.innerWidth;
+    H = canvas.height = window.innerHeight;
   }
+  window.addEventListener("resize", resize);
+  resize();
 
-  function toggleBar(){
-
-    utilityBar.classList.toggle("show");
-
-    if(utilityBar.classList.contains("show")){
-      startAutoClose();
-    }else{
-      clearTimeout(autoCloseTimer);
-    }
-
-  }
-
-  toggleBtn.addEventListener("pointerdown", toggleBar);
-  utilityBar.addEventListener("pointerdown", startAutoClose);
-
-
-
-
-
-
-  function randomMoney(min, max) {
-  return Math.floor(Math.random() * (max - min + 1)) + min;
-}
-
-
-const canvas = document.getElementById("bg");
-const ctx = canvas.getContext("2d");
-
-/* ================= SETUP ================= */
-
-function resize() {
-  canvas.width = innerWidth;
-  canvas.height = innerHeight;
-}
-addEventListener("resize", resize);
-resize();
-
-let t = 0;
-let wavePhase = 0;      // pha sóng chính
-let waveMood = 0;       // trạng thái êm ↔ động
-
-
-/* ================= SKY TIME ================= */
-
-// skyTime chạy vô hạn, dùng % để chia pha
-let skyTime = 0;
-let sky = 1; // 1 day | 2 afternoon | 3 sunset | 4 night
-
-// giữ mặt trời đứng yên
-let sunHold = 0;
-const SUN_HOLD_TIME = 1; // ~4 giây (60fps)
-
-/* ================= SUN ================= */
-
-let sunY = canvas.height * 0.22;
-let sunTargetY = sunY;
-let sunColorT = 0; // 0 vàng | 1 đỏ
-
-/* ================= STARS ================= */
-
-const stars = Array.from({ length: 120 }, () => ({
-  x: Math.random(),
-  y: Math.random(),
-  r: Math.random() * 1.3,
-  s: Math.random() * 10
-}));
-
-/* ================= HELPERS ================= */
-
-function lerp(a, b, t) {
-  return a + (b - a) * t;
-}
-
-function lerpColor(c1, c2, t) {
-  return `rgb(
-    ${Math.round(lerp(c1[0], c2[0], t))},
-    ${Math.round(lerp(c1[1], c2[1], t))},
-    ${Math.round(lerp(c1[2], c2[2], t))}
-  )`;
-}
-
-/* ================= SKY ================= */
-
-function drawSky() {
-  const p = (skyTime % 1 + 1) % 1; // chống lỗi âm
-
-  const colors = [
-    { top: [124,199,255], bottom: [43,108,191] }, // sáng
-    { top: [255,200,120], bottom: [255,140,80] }, // chiều
-    { top: [255,120,80],  bottom: [120,60,80] },  // hoàng hôn
-    { top: [10,20,45],    bottom: [5,10,25] },    // đêm
-    { top: [124,199,255], bottom: [43,108,191] }  // quay lại sáng
+  var waves = [
+    { a:0.055, wl:0.012, sp:0.018, yo:0.62, alpha:0.18, r:100, g:200, b:255 },
+    { a:0.040, wl:0.018, sp:0.012, yo:0.68, alpha:0.14, r: 60, g:160, b:230 },
+    { a:0.030, wl:0.025, sp:0.022, yo:0.73, alpha:0.22, r: 30, g:120, b:200 },
+    { a:0.022, wl:0.035, sp:0.008, yo:0.78, alpha:0.30, r: 10, g: 80, b:170 },
+    { a:0.015, wl:0.050, sp:0.030, yo:0.82, alpha:0.35, r:  5, g: 50, b:130 },
   ];
 
-  const i = Math.floor(p * 4);
-  const tt = (p * 4) % 1;
+  var stars = [];
+  function initStars() {
+    var rng = 1;
+    for (var s = 0; s < 80; s++) {
+      rng = (rng * 16807) % 2147483647;
+      var sx = rng % W;
+      rng = (rng * 16807) % 2147483647;
+      var sy = rng % Math.floor(H * 0.45);
+      rng = (rng * 16807) % 2147483647;
+      stars.push({ x: sx, y: sy, r: 0.5 + (rng % 10) / 10 });
+    }
+  }
 
-  const top = lerpColor(colors[i].top, colors[i + 1].top, tt);
-  const bot = lerpColor(colors[i].bottom, colors[i + 1].bottom, tt);
+  function draw() {
+    /* --- Bầu trời --- */
+    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    sky.addColorStop(0,   "#050d1a");
+    sky.addColorStop(0.4, "#0a1a30");
+    sky.addColorStop(0.7, "#0d2540");
+    sky.addColorStop(1,   "#0a1828");
+    ctx.fillStyle = sky;
+    ctx.fillRect(0, 0, W, H);
 
-  const g = ctx.createLinearGradient(0, 0, 0, canvas.height);
-  g.addColorStop(0, top);
-  g.addColorStop(1, bot);
+    /* --- Ánh sáng mờ giữa trời --- */
+    var glow = ctx.createRadialGradient(W*0.5, H*0.22, 0, W*0.5, H*0.22, W*0.45);
+    glow.addColorStop(0,   "rgba(120,190,255,0.07)");
+    glow.addColorStop(0.5, "rgba(60,130,200,0.03)");
+    glow.addColorStop(1,   "rgba(0,0,0,0)");
+    ctx.fillStyle = glow;
+    ctx.fillRect(0, 0, W, H);
 
-  ctx.fillStyle = g;
-  ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-  // sao chỉ ban đêm
-  if (sky === 4) {
-    ctx.fillStyle = "white";
-    stars.forEach(s => {
-      ctx.globalAlpha = 0.4 + Math.sin(t + s.s) * 0.4;
+    /* --- Sao nhấp nháy --- */
+    stars.forEach(function (st) {
+      var tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.2 + st.x));
       ctx.beginPath();
-      ctx.arc(
-        s.x * canvas.width,
-        s.y * canvas.height * 0.6,
-        s.r,
-        0,
-        Math.PI * 2
-      );
+      ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+      ctx.fillStyle = "rgba(200,230,255," + (tw * 0.8) + ")";
       ctx.fill();
     });
-    ctx.globalAlpha = 1;
-  }
-}
 
-/* ================= SUN ================= */
+    /* --- Các lớp sóng --- */
+    waves.forEach(function (w) {
+      var baseY = H * w.yo, amp = H * w.a;
+      ctx.beginPath();
+      ctx.moveTo(0, H);
+      for (var x = 0; x <= W; x += 3) {
+        var y = baseY
+          + Math.sin(x * w.wl + t * w.sp * 60) * amp
+          + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H);
+      ctx.closePath();
+      var wg = ctx.createLinearGradient(0, baseY - amp, 0, H);
+      wg.addColorStop(0, "rgba(" + w.r + "," + w.g + "," + w.b + "," + w.alpha + ")");
+      wg.addColorStop(1, "rgba(5,15,30,0.6)");
+      ctx.fillStyle = wg;
+      ctx.fill();
+    });
 
-function drawSun() {
-  if (sky === 4) return;
+    /* --- Highlight đỉnh sóng --- */
+    waves.slice(0, 3).forEach(function (w) {
+      var baseY = H * w.yo, amp = H * w.a;
+      ctx.beginPath();
+      for (var x = 0; x <= W; x += 3) {
+        var y = baseY
+          + Math.sin(x * w.wl + t * w.sp * 60) * amp
+          + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
+        if (x === 0) ctx.moveTo(x, y); else ctx.lineTo(x, y);
+      }
+      ctx.strokeStyle = "rgba(180,230,255,0.12)";
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+    });
 
-  const x = canvas.width * 0.75;
-
-  sunY = lerp(sunY, sunTargetY, 0.03);
-  sunColorT = lerp(sunColorT, sky >= 3 ? 1 : 0, 0.02);
-
-  const r = Math.round(lerp(255, 255, sunColorT));
-  const g = Math.round(lerp(216, 107, sunColorT));
-  const b = Math.round(lerp(77, 44, sunColorT));
-
-  const color = `rgb(${r},${g},${b})`;
-  const glow = lerp(90, 130, sunColorT);
-  const radius = lerp(42, 38, sunColorT);
-
-  const grad = ctx.createRadialGradient(x, sunY, 5, x, sunY, glow);
-  grad.addColorStop(0, "#fff1c1");
-  grad.addColorStop(0.5, color);
-  grad.addColorStop(1, "rgba(255,120,0,0)");
-
-  ctx.fillStyle = grad;
-  ctx.beginPath();
-  ctx.arc(x, sunY, glow, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, sunY, radius, 0, Math.PI * 2);
-  ctx.fill();
-}
-
-/* ================= CLOUD ================= */
-
-function drawCloud(x, y, s) {
-  ctx.save();
-  ctx.translate(x, y);
-  ctx.scale(s, s);
-
-  const blobs = [
-    { x: -40, y: 0,  r: 28 },
-    { x: -15, y: -15, r: 34 },
-    { x: 15,  y: -10, r: 38 },
-    { x: 45,  y: 0,  r: 26 }
-  ];
-
-  blobs.forEach(b => {
-    const g = ctx.createRadialGradient(
-      b.x - 8, b.y - 8, b.r * 0.2,
-      b.x, b.y, b.r
-    );
-
-    g.addColorStop(0, "rgba(255,255,255,0.95)");
-    g.addColorStop(0.6, "rgba(255,255,255,0.85)");
-    g.addColorStop(1, "rgba(255,255,255,0.0)");
-
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(b.x, b.y, b.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  ctx.restore();
-}
-
-
-
-function wave(x) {
-  const base = canvas.height * 0.56;
-
-  const calmness = (Math.sin(waveMood) + 1) / 2; // 0 → 1
-  const amplitude = lerp(4, 14, calmness);
-
-  const rainBoost = isRaining ? 1.3 : 1;
-
-  return base + Math.sin(x * 0.035 + wavePhase) * amplitude * rainBoost;
-}
-
-
-function drawSea() {
-  ctx.beginPath();
-  ctx.moveTo(0, canvas.height);
-  for (let x = 0; x <= canvas.width; x++) {
-    ctx.lineTo(x, wave(x));
-  }
-  ctx.lineTo(canvas.width, canvas.height);
-  ctx.closePath();
-  ctx.fillStyle = "#2b75e3";
-  ctx.fill();
-}
-
-function drawBoat() {
-  const x = canvas.width * 0.4;
-  const y = wave(x);
-  const dx = 6;
-  const slope = wave(x + dx) - wave(x - dx);
-  const tilt = slope * 0.04;
-
-
-  ctx.save();
-  ctx.translate(x, y - 8);
-  ctx.rotate(tilt);
-
-  /* ===== SHADOW ===== */
-  ctx.fillStyle = "rgba(0,0,0,0.15)";
-  ctx.beginPath();
-  ctx.ellipse(0, 12, 32, 6, 0, 0, Math.PI * 2);
-  ctx.fill();
-
-  /* ===== HULL ===== */
-  const hullGrad = ctx.createLinearGradient(0, -4, 0, 14);
-  hullGrad.addColorStop(0, "#a05a3a");
-  hullGrad.addColorStop(1, "#5a2e1a");
-
-  ctx.fillStyle = hullGrad;
-  ctx.beginPath();
-  ctx.moveTo(-34, 0);
-  ctx.quadraticCurveTo(0, 14, 34, 0);
-  ctx.lineTo(26, 10);
-  ctx.lineTo(-26, 10);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.strokeStyle = "#3a1d10";
-  ctx.stroke();
-
-  /* ===== DECK ===== */
-  ctx.fillStyle = "#c98a5a";
-  ctx.beginPath();
-  ctx.roundRect(-18, -2, 36, 6, 4);
-  ctx.fill();
-
-  /* ===== MAST ===== */
-  ctx.strokeStyle = "#2b2b2b";
-  ctx.lineWidth = 2;
-  ctx.beginPath();
-  ctx.moveTo(0, -2);
-  ctx.lineTo(0, -44);
-  ctx.stroke();
-
-  /* ===== ROPE ===== */
-  ctx.strokeStyle = "rgba(0,0,0,0.35)";
-  ctx.lineWidth = 1;
-  ctx.beginPath();
-  ctx.moveTo(0, -38);
-  ctx.lineTo(18, -10);
-  ctx.stroke();
-
-  /* ===== MAIN SAIL ===== */
-  const sailGrad = ctx.createLinearGradient(0, -40, 26, -10);
-  sailGrad.addColorStop(0, "#ffffff");
-  sailGrad.addColorStop(1, "#dddddd");
-
-  ctx.fillStyle = sailGrad;
-  ctx.beginPath();
-  ctx.moveTo(0, -44);
-  ctx.quadraticCurveTo(30, -28, 0, -12);
-  ctx.closePath();
-  ctx.fill();
-
-  /* ===== FRONT SAIL ===== */
-  ctx.fillStyle = "#f0f0f0";
-  ctx.beginPath();
-  ctx.moveTo(0, -32);
-  ctx.lineTo(-18, -12);
-  ctx.lineTo(0, -12);
-  ctx.closePath();
-  ctx.fill();
-
-  ctx.restore();
-}
-
-//MƯA//
-function drawRain() {
-  ctx.strokeStyle = "rgba(200,200,255,0.6)";
-  ctx.lineWidth = 1;
-
-  for (let i = 0; i < 120; i++) {
-    const x = Math.random() * canvas.width;
-    const y = Math.random() * canvas.height;
-    ctx.beginPath();
-    ctx.moveTo(x, y);
-    ctx.lineTo(x + 2, y + 12);
-    ctx.stroke();
-  }
-}
-
-/* ================= RAIN TIME CONTROL ================= */
-
-let rainStartTime = 4000; // 4 giây
-let rainEndTime   = 14000; // mưa 3 giây (10 → 13s)
-let rainCycle     = 15000; // mỗi 15 giây lặp lại
-
-let isRaining = false;
-
-
-/* ================= LOOP ================= */
-
-let isScratchMode = false;
-let animationId;
-
-
-function animate() {
-  ctx.clearRect(0, 0, canvas.width, canvas.height);
-  ctx.globalAlpha = 1;
-  let waveTime = 0;
-  const DAY_WAVE_AMP = 12;
-  const NIGHT_WAVE_AMP = 3;
-  let currentWaveAmp = DAY_WAVE_AMP;
-
-
-  // 👉 GIẢM TỐC ĐỘ ĐỂ CẢNH DÀI HƠN
-  skyTime += 0.00025;
-  const now = performance.now();
-  const cycleTime = now % rainCycle;
-
-  isRaining = cycleTime >= rainStartTime && cycleTime <= rainEndTime;
-
-
-  const phase = skyTime % 1;
-
-  // phân pha
-  if (phase < 0.25) sky = 1;
-  else if (phase < 0.5) sky = 2;
-  else if (phase < 0.6) sky = 3;
-  else sky = 4;
-
-  let targetWaveAmp = DAY_WAVE_AMP;
-
-// giả sử:
-// sky 1 = ngày
-// sky 2 = hoàng hôn
-// sky 3,4 = đêm
-
-if (sky === 2) {
-  targetWaveAmp = 8;          // hoàng hôn: dịu
-}
-
-if (sky >= 3) {
-  targetWaveAmp = NIGHT_WAVE_AMP; // đêm: lặng
-}
-
-currentWaveAmp += (targetWaveAmp - currentWaveAmp) * 0.02;
-
-
-  // LOGIC MẶT TRỜI
-  if (sky === 1 && sunHold < SUN_HOLD_TIME) {
-    sunHold++;
-    sunTargetY = canvas.height * 0.22;
-  } else if (sky === 2 || sky === 3) {
-    sunHold = 0;
-    const sunsetProgress = Math.min(
-      Math.max((phase - 0.25) / 0.35, 0),
-      1
-    );
-    sunTargetY = lerp(
-      canvas.height * 0.22,
-      canvas.height * 0.55,
-      sunsetProgress
-    );
-  } else {
-    sunHold = 0;
+    t += 0.016;
+    requestAnimationFrame(draw);
   }
 
-  drawSky();
-  drawSun();
-
-  drawCloud(canvas.width * 0.2 + Math.sin(t) * 40, canvas.height * 0.2, 1.1);
-  drawCloud(canvas.width * 0.5 + Math.sin(t * 0.7) * 50, canvas.height * 0.16, 0.9);
-
-  if (sky >= 3 && isRaining) {
-  drawRain();
-}
-
-
-  drawSea();
-  drawBoat();
-
-  wavePhase += 0.025;   // sóng chạy
-waveMood  += 0.003;   // biển êm ↔ động (rất chậm)
-
-if (wavePhase > Math.PI * 2) wavePhase -= Math.PI * 2;
-if (waveMood  > Math.PI * 2) waveMood  -= Math.PI * 2;
-
-t += 0.01; // chỉ dùng cho mây / sao / hiệu ứng nhỏ
-
-  if (!isScratchMode) {
-  animationId = requestAnimationFrame(animate);
-}
-}
-
-animate();
-
-const letters = ["W","O","R","D"];
-let i = 0;
-
-const letter = document.getElementById("word-letter");
-
-setInterval(() => {
-
-  i++;
-  if(i >= letters.length) i = 0;
-
-  letter.textContent = letters[i];
-
-  letter.style.animation = "none";
-  letter.offsetHeight;
-  letter.style.animation = "slideLetter 0.5s linear";
-
-},900);
-});
-
+  initStars();
+  draw();
+})();
