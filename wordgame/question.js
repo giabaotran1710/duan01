@@ -1,7 +1,7 @@
 const words = [
 
 "Trưởng thành","Trẻ con",
-"Diễn viên","Hoả tốc",
+"Hoả tốc",
 "Công văn","Chủ tịch",
 "Lạnh lẽo","Lạnh cóng",
 "Gay cấn",
