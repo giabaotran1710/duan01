@@ -707,110 +707,19 @@ undoUsed = false;
 function aiMove(){
   if(gameOver || currentTurn!==ai || aiThinking) return;
   aiThinking = true;
-  
-  if(getOccupiedCount() === 0){
-    let center = Math.floor(SIZE / 2); // = 7 với SIZE=15
-    let offset = Math.floor(Math.random() * 3) - 1; // -1, 0, hoặc 1
-    let r = center + offset;
-    let c = center + offset;
-    place(r, c, ai);
-    currentTurn = human;
-    statusTop.textContent = "Lượt của bạn (" + human + ")";
-    playerStartTime = Date.now();
-    aiThinking = false;
-    boardDiv.classList.remove("disabled");
-    return;
-  }
-  
-  // 🔥 Xóa cache mỗi lượt để tránh dùng kết quả cũ
   hashTable.clear();
 
-  // 🚀 1. THẮNG NGAY
-  let winNow = findWin(ai);
-  if(winNow){
-    let [r,c] = winNow;
-    place(r,c,ai);
-    statusTop.textContent = "🤖 AI.GiaBao thắng!";
-    statusTop.classList.add("win");
-    resetBtn.textContent = "Chơi lại";
-    launchConfetti();
-    gameOver = true;
-    aiThinking = false;
-    updateUndoButton();
-    return;
-  }
-
-  // 🚀 2. CHẶN NGAY (người chơi sắp thắng)
-  let blockNow = findWin(human);
-  if(blockNow){
-    let [r,c] = blockNow;
-    place(r,c,ai);
-    currentTurn = human;
-    statusTop.textContent = "Lượt của bạn ("+human+")";
-    playerStartTime = Date.now();
-    aiThinking = false;
-    boardDiv.classList.remove("disabled");
-    return;
-  }
-
-  // 🚀 3. TẠO DOUBLE THREAT (bẫy đôi cho AI)
-  let doubleThreat = findDoubleThreat(ai);
-  if(doubleThreat){
-    let [r,c] = doubleThreat;
-    place(r,c,ai);
-    currentTurn = human;
-    statusTop.textContent = "Lượt của bạn ("+human+")";
-    playerStartTime = Date.now();
-    aiThinking = false;
-    boardDiv.classList.remove("disabled");
-    return;
-  }
-
-  // 🚀 4. CHẶN DOUBLE THREAT của người chơi
-  let blockDouble = findDoubleThreat(human);
-  if(blockDouble){
-    let [r,c] = blockDouble;
-    place(r,c,ai);
-    currentTurn = human;
-    statusTop.textContent = "Lượt của bạn ("+human+")";
-    playerStartTime = Date.now();
-    aiThinking = false;
-    boardDiv.classList.remove("disabled");
-    return;
-  }
-
-  // 🚀 5. TẠO 4 MỞ
-  for(let i=0;i<SIZE;i++){
-    for(let j=0;j<SIZE;j++){
-      if(board[i][j] !== "") continue;
-      board[i][j] = ai;
-      if(isOpenFour(i,j,ai)){
-        board[i][j] = "";
-        place(i,j,ai);
-        currentTurn = human;
-        statusTop.textContent = "Lượt của bạn ("+human+")";
-        playerStartTime = Date.now();
-        aiThinking = false;
-        boardDiv.classList.remove("disabled");
-        return;
-      }
-      board[i][j] = "";
-    }
-  }
-
-  // 🚀 6. AI CHÍNH (minimax)
-  let move = smartAI(ai);
+  let move = getBestMove();
 
   if(!move){
-    let empty = getEmptyCells().filter(([r,c]) => hasNeighbor2(r,c));
+    let empty = getEmptyCells();
     if(empty.length === 0){ aiThinking = false; return; }
-    move = empty[0];
+    move = empty[Math.floor(Math.random()*empty.length)];
   }
 
   let [r,c] = move;
   place(r,c,ai);
 
-  // 🚀 7. CHECK WIN
   if(checkWin(r,c,ai)){
     statusTop.textContent = "🤖 AI.GiaBao thắng!";
     resetBtn.textContent = "Chơi lại";
@@ -818,10 +727,10 @@ function aiMove(){
     launchConfetti();
     gameOver = true;
     aiThinking = false;
+    updateUndoButton();
     return;
   }
 
-  // 🚀 8. TRẢ LƯỢT
   currentTurn = human;
   statusTop.textContent = "Lượt của bạn ("+human+")";
   playerStartTime = Date.now();
@@ -829,14 +738,74 @@ function aiMove(){
   boardDiv.classList.remove("disabled");
 }
 
-  // ===== SMART MOVES (mở rộng vùng tìm kiếm) =====
+// Hàm tìm nước đi tốt nhất với thứ tự ưu tiên rõ ràng
+function getBestMove(){
+  // Nước đầu tiên → trung tâm
+  if(getOccupiedCount() === 0){
+    let center = Math.floor(SIZE/2);
+    let off = Math.floor(Math.random()*3)-1;
+    return [center+off, center+off];
+  }
+
+  // 1. AI thắng ngay
+  let win = findWin(ai);
+  if(win) return win;
+
+  // 2. Chặn người chơi thắng ngay (5 quân)
+  let block5 = findWin(human);
+  if(block5) return block5;
+
+  // 3. Tạo 4 mở cho AI trước (nếu AI có 3 mở → tạo 4 mở, ép người chơi phải chặn)
+  let make4 = findOpenFourAI();
+  if(make4) return make4;
+
+  // 4. Chặn người chơi có 4 mở (nếu AI không thể tạo 4 mở thì mới chặn)
+  let block4 = findOpenFourHuman();
+  if(block4) return block4;
+
+  // 5. Minimax quyết định
+  return smartAI(ai);
+}
+
+// Tìm ô mà người chơi sẽ tạo được 4 mở → phải chặn
+function findOpenFourHuman(){
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") continue;
+      board[r][c] = human;
+      if(isOpenFour(r,c,human)){
+        board[r][c] = "";
+        return [r,c];
+      }
+      board[r][c] = "";
+    }
+  }
+  return null;
+}
+
+// Tìm ô để AI tạo 4 mở
+function findOpenFourAI(){
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") continue;
+      board[r][c] = ai;
+      if(isOpenFour(r,c,ai)){
+        board[r][c] = "";
+        return [r,c];
+      }
+      board[r][c] = "";
+    }
+  }
+  return null;
+}
+
+  // ===== SMART MOVES =====
   function getSmartMoves(){
   let moves = [];
 
   for(let r=0; r<SIZE; r++){
     for(let c=0; c<SIZE; c++){
       if(board[r][c] !== "") continue;
-      // Mở rộng vùng lân cận lên 2 ô thay vì 1
       if(hasNeighbor2(r,c)) moves.push([r,c]);
     }
   }
@@ -844,7 +813,8 @@ function aiMove(){
   let scored = moves.map(([r,c]) => {
     let atk = scoreCell(r, c, ai);
     let def = scoreCell(r, c, human);
-    return { r, c, score: Math.max(atk, def) + atk * 0.5 };
+    // Phòng thủ quan trọng hơn tấn công một chút
+    return { r, c, score: Math.max(atk, def * 1.1) };
   });
 
   scored.sort((a,b) => b.score - a.score);
@@ -864,8 +834,9 @@ function hasNeighbor2(r,c){
   return false;
 }
 
-// Tính điểm tổng hợp cho 1 ô (không cần đặt quân)
+// Tính điểm tổng hợp cho 1 ô — chỉ gọi khi ô trống
 function scoreCell(r, c, player){
+  if(board[r][c] !== "") return 0;
   board[r][c] = player;
   let s = scoreDirection(r,c,1,0,player)
          + scoreDirection(r,c,0,1,player)
@@ -877,13 +848,14 @@ function scoreCell(r, c, player){
 
 // ===== PHÁT HIỆN DOUBLE THREAT =====
 function countThreats(r, c, player){
+  if(board[r][c] !== "") return 0; // ô đã có quân
   board[r][c] = player;
   let threats = 0;
   const dirs = [[1,0],[0,1],[1,1],[1,-1]];
 
   for(let [dr,dc] of dirs){
     let val = scoreDirection(r,c,dr,dc,player);
-    if(val >= 5000) threats++; // 3 mở hoặc 4 mở
+    if(val >= 8000) threats++; // 3 mở hoặc 4 mở
   }
 
   board[r][c] = "";
@@ -920,9 +892,14 @@ function smartAI(player){
   let moves = getSmartMoves();
 
   for(let [r,c] of moves){
+    if(board[r][c] !== "") continue; // bảo vệ tuyệt đối
     board[r][c] = player;
+    boardHash ^= zobristTable[r][c][player];
+
     let score = minimax(MAX_DEPTH - 1, false, player, -Infinity, Infinity);
+
     board[r][c] = "";
+    boardHash ^= zobristTable[r][c][player];
 
     if(score > bestScore){
       bestScore = score;
@@ -974,13 +951,14 @@ function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
   if(isMaximizing){
     let maxEval = -Infinity;
     for(let [r,c] of moves){
+      if(board[r][c] !== "") continue; // bảo vệ tuyệt đối
       board[r][c] = aiPlayer;
       boardHash ^= zobristTable[r][c][aiPlayer];
 
       let val = minimax(depth-1, false, aiPlayer, alpha, beta);
 
       board[r][c] = "";
-boardHash ^= zobristTable[r][c][aiPlayer];
+      boardHash ^= zobristTable[r][c][aiPlayer];
 
       maxEval = Math.max(maxEval, val);
       alpha = Math.max(alpha, val);
@@ -990,6 +968,7 @@ boardHash ^= zobristTable[r][c][aiPlayer];
   } else {
     let minEval = Infinity;
     for(let [r,c] of moves){
+      if(board[r][c] !== "") continue; // bảo vệ tuyệt đối
       board[r][c] = humanPlayer;
       boardHash ^= zobristTable[r][c][humanPlayer];
 
@@ -1030,10 +1009,23 @@ function evaluateBoard(player){
   let score = 0;
   let enemy = (player === "X") ? "O" : "X";
 
+  // Đánh giá các ô trống tiềm năng (không gọi scoreCell trên ô có quân)
   for(let r=0; r<SIZE; r++){
     for(let c=0; c<SIZE; c++){
-      if(board[r][c] === player)  score += scoreCell(r,c,player) * 1.3;
-      if(board[r][c] === enemy)   score -= scoreCell(r,c,enemy)  * 1.2;
+      if(board[r][c] === player){
+        // Tính điểm thực tế của quân đã đặt bằng scoreDirection trực tiếp
+        let s = scoreDirection(r,c,1,0,player)
+              + scoreDirection(r,c,0,1,player)
+              + scoreDirection(r,c,1,1,player)
+              + scoreDirection(r,c,1,-1,player);
+        score += s * 1.3;
+      } else if(board[r][c] === enemy){
+        let s = scoreDirection(r,c,1,0,enemy)
+              + scoreDirection(r,c,0,1,enemy)
+              + scoreDirection(r,c,1,1,enemy)
+              + scoreDirection(r,c,1,-1,enemy);
+        score -= s * 1.2;
+      }
     }
   }
   return score;
@@ -1086,6 +1078,8 @@ function scoreDirection(r,c,dr,dc,player){
 }
 
 // ===== WIN =====
+// count() trả về số quân LIÊN TIẾP theo 1 hướng (không tính ô hiện tại)
+// Thắng khi tổng 2 hướng đối nhau >= 4 (tức là 5 quân liên tiếp tổng cộng)
 function checkWin(r,c,player){
   return (
     count(r,c,1,0,player)+count(r,c,-1,0,player)>=4 ||
@@ -1286,7 +1280,7 @@ else {
   return { open3, open4 };
 }
 
-  // ===== RESET =====
+// ===== RESET =====
 function resetGame(){
   gameOver=false;
   lastCell=null;
@@ -1294,6 +1288,11 @@ function resetGame(){
   ai="O";
   currentTurn="X";
   playerStartTime = 0;
+  boardHash = 0;        // reset zobrist hash
+  hashTable.clear();    // xóa cache cũ
+  moveHistory = [];
+  canUndo = false;
+  undoUsed = false;
 
 createBoard();
   statusTop.textContent="Đang chờ...";
@@ -1416,4 +1415,3 @@ function animateConfetti(){
 
 </body>
 </html>
- 
