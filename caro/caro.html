@@ -423,7 +423,7 @@ let undoUsed = false;    // đã dùng undo trong lượt này chưa
 let cache = new Map();
 let maxUndo = 3;
 let undoLeft = 3;
-playerStartTime = Date.now();
+playerStartTime = 0;
 
 
 // 🔥 nếu có số âm → dịch toàn bộ lên
@@ -706,8 +706,21 @@ undoUsed = false;
 // ===== AI =====
 function aiMove(){
   if(gameOver || currentTurn!==ai || aiThinking) return;
-
   aiThinking = true;
+  
+  if(getOccupiedCount() === 0){
+    let center = Math.floor(SIZE / 2); // = 7 với SIZE=15
+    let offset = Math.floor(Math.random() * 3) - 1; // -1, 0, hoặc 1
+    let r = center + offset;
+    let c = center + offset;
+    place(r, c, ai);
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn (" + human + ")";
+    playerStartTime = Date.now();
+    aiThinking = false;
+    boardDiv.classList.remove("disabled");
+    return;
+  }
   
   // 🚀 1. THẮNG NGAY
   let winNow = findWin(ai);
@@ -734,6 +747,7 @@ function aiMove(){
 
     currentTurn = human;
     statusTop.textContent = "Lượt của bạn ("+human+")";
+    playerStartTime = Date.now(); 
     aiThinking = false;
     return;
   }
@@ -751,7 +765,7 @@ function aiMove(){
         place(i,j,ai);
         currentTurn = human;
         statusTop.textContent = "Lượt của bạn ("+human+")";
-
+        playerStartTime = Date.now(); 
         aiThinking = false;
         return;
       }
@@ -1123,6 +1137,7 @@ toggleBtn.onclick = () => {
 
   if(player !== ai) return;
   if(!commentaryDiv) return;
+  if(playerStartTime === 0) return;
 
   let time = Math.floor((Date.now() - playerStartTime) / 1000);
   let { open3, open4 } = analyzeMoveLite(r, c, player);
@@ -1234,7 +1249,7 @@ function resetGame(){
   human="X";
   ai="O";
   currentTurn="X";
-  playerStartTime = Date.now();
+  playerStartTime = 0;
 
 createBoard();
   statusTop.textContent="Đang chờ...";
