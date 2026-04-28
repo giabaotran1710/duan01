@@ -1,0 +1,1419 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Cờ Caro PVE</title>
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@700;900&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+
+<style>
+body{
+  margin:0;
+  font-family:Calibri;
+  text-align:center;
+  background:#031228;
+  color:white;
+  user-select: none;
+}
+
+#board{
+  display:grid;
+  grid-template-columns: repeat(15, 1fr);
+  width: 95vw;
+  max-width: 420px;
+  margin:20px auto;
+}
+
+.cell{
+  width:100%;
+  aspect-ratio:1/1;
+  border:1px solid #555;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-size: min(4vw, 18px);
+  box-sizing:border-box;
+}
+
+
+.X{ color:#00d4ff; font-weight:bold; }
+.O{ color:#ff4d4d; font-weight:bold; }
+
+.X{
+  color: #00eaff;
+  text-shadow: 0 0 10px #00eaff;
+}
+
+.O{
+  color: #ff2d75;
+  text-shadow:0 0 11px #ff2d75;
+}
+
+.last{ 
+  font-weight:1000;
+  animation: blink 0.9s infinite;
+}
+  
+  @keyframes blink{
+  0%   { opacity: 0.7; }
+  25%  { opacity: 0.3;}
+  50%  { opacity: 0.0; }
+  75%  { opacity: 0.3;}
+  100% { opacity: 0.7; }
+}
+
+#overlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,0.85);
+  display:flex;
+  flex-direction:column;
+  justify-content:center;
+  align-items:center;
+  z-index:10;
+}
+
+#dice{ font-size:150px; margin-top:1px; }
+
+button{
+  width: 100px;
+  height: 35px;
+  padding:10px 5px;
+  background: linear-gradient(200deg, #4facfe, #00f2fe);
+  border:none;
+  color:black;
+  border-radius:6px;
+  cursor:pointer;
+  display: inline-block;
+  margin-top: 5px;
+  transition: all 0.25s ease;
+  align-items: center;
+}
+ .win{
+  position: relative; /* 🔥 bắt buộc để ::after hoạt động */
+  z-index: 3;
+}
+
+.win::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:#FFD15B;
+  opacity:0;
+
+  animation: winFade 0.6s ease forwards;
+  animation-delay:1s;
+
+  pointer-events:none;
+}
+  
+#status{
+  font-size:20px;
+  margin-top:10px;
+}
+
+.show{
+  animation: slideUp 0.5s ease;
+}
+
+@keyframes slideUp{
+  from{ transform:translateY(40px); opacity:0; }
+  to{ transform:translateY(0); opacity:1; }
+}
+  #scoreBar{
+  position:relative;
+  width:100%;
+  height:16px;
+  margin-top:30px;
+  display: none;
+  background:#222;
+  border-radius:0px;
+  overflow:hidden;
+}
+
+/* Thanh X */
+#scoreX{
+  position:absolute;
+  left:0;
+  top:0;
+  height:100%;
+  width:50%; /* default */
+
+  background:#00d4ff;
+  transition: width 0.4s ease;
+}
+
+/* Thanh O */
+#scoreO{
+  position:absolute;
+  right:0;
+  top:0;
+  height:100%;
+  width:50%; /* default */
+
+  background:#ff4d4d;
+  transition: width 0.6s ease-out;
+}
+
+/* TEXT */
+#scoreText{
+  position:absolute;
+  inset:0;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  padding:0 6px;
+  pointer-events:none;
+  font-size:16px;
+  font-weight:999;
+
+  z-index:2;
+}
+  #gameContainer{
+  width:95vw;
+  max-width:420px;
+  margin:0 auto;
+}
+
+
+
+/* màu chữ */
+#textX{
+  color:black;
+  text-align: left;
+  flex: none;
+  
+}
+
+#textO{
+  color:black;
+  text-align: right;
+  flex: none;
+}
+
+  #scoreX, #scoreO{
+  height:100%;
+  transition: width 0.5s ease-out;
+  will-change: width;
+  min-width:2px;
+}
+
+#scoreX{
+  background:#00d4ff;
+  min-width:1%;
+  z-index:1;
+}
+
+#scoreO{
+  background:#ff4d4d;
+  min-width:1%;
+  z-index:1;
+}
+  
+  #toggleScore{
+  z-index:20;
+
+  width:35px;
+  height:35px;
+  transform:translateX(12px);
+  margin-left:0px;
+  border-radius:50%; /* 🔥 vòng tròn */
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:25px;
+  background:rgba(255,255,255,0.1);
+  border:2px solid yellow; /* 🔥 viền */
+
+  cursor:pointer;
+  transition:2s;
+}
+
+
+/* trạng thái tắt */
+#toggleScore.off{
+  opacity:0.1;
+  border-color:#888;
+  filter: grayscale(100%);
+}
+
+  #commentary {
+  display: inline-block;
+  margin-top:20px;
+  padding: 2px 16px;
+  font-size: 13px;
+  border: 2px solid #333;
+  color: pink;
+  border-radius: 999px; /* 🔥 bo tròn kiểu island */
+
+  white-space: nowrap; /* 🔥 giữ 1 dòng */
+  overflow: hidden;
+
+  transform-origin: center;
+  transition: transform 1s ease, opacity 0.2s;
+}
+
+/* trạng thái thu nhỏ */
+#commentary.shrink {
+  transform: scaleX(0.9); /* 🔥 co ngang */
+  opacity: 0.6;
+}
+  
+  
+ #blub{
+  font-size:10px;
+  color: yellow;
+  margin-top:2px;
+  animation: slideUp 2s ease;
+} /* 🔥 đóng lại ở đây */
+
+/* ✅ CSS riêng */
+#btnUndo {
+  background: #888;
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+#btnUndo:disabled {
+  background: #888;
+}
+
+#btnUndo:enabled {
+  background: linear-gradient(50deg, #68ff32, #68ff99);
+  opacity: 1;
+  cursor: pointer;
+}
+  
+   #confettiCanvas{
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 99999;
+}
+  
+  #statusTop{
+  transition: all 0.5s ease;
+  position: relative;
+  z-index: 5;
+}
+
+/* 🔥 trạng thái WIN */
+#statusTop.win{
+  top: 50%;
+  left: 50%;
+  margin-top: 5px;
+  transform: translate(-50%, -30%) scale(1);
+  background: rgba(44, 198, 102, 0.4); /* 🔥 nền mờ */
+  color: white; /* chữ vẫn rõ */
+  font-family: 'Montserrat', sans-serif;
+  font-weight: 300;
+  font-size:30px;
+  padding: 7px 0px;
+}
+
+  /* hàng ngang chính */
+.action-bar{
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  justify-content:center;
+}
+
+ .undo-container{
+  display: flex;
+  flex-direction: column; /* 🔥 xếp dọc */
+  align-items: center;   /* căn giữa */
+  gap: 4px;              /* khoảng cách button - text */
+}
+#undolimit{
+  color: yellow;
+  margin-top:-2px;
+  font-size:12px;
+}
+  .test{
+  width: 60px;       /* 🔥 ép xuống dòng */
+  word-break: break-word;
+  margin-left: 5px;
+  font-size: 12px;
+  opacity: 0.8;
+  transform: translateY(-6px);
+}
+ 
+footer{
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: monospace; /* 🔥 kiểu version code */
+}
+  
+</style>
+</head>
+
+<body>
+<h2>CỜ CARO</h2>
+<div id="gameContainer">
+
+  <div id="statusTop">Đang chờ...</div>
+  <div id="commentary">...</div>
+
+  <div id="board"></div>
+<div class="action-bar">
+<div class="undo-container">
+  <button id="btnUndo" onclick="undoMove()">↩️ Hoàn tác</button>
+  <div id="undolimit">Số lần còn: 3/3</div>
+</div>
+  <button id="btnReset" onclick="resetGame()">Chơi lại</button>
+  <button id="toggleScore">💡</button>
+  <p class="test">ĐÁNH GIÁ THẾ TRẬN</p>
+</div>
+
+<div id="scoreBar">
+  <div id="scoreX"></div>
+  <div id="scoreO"></div>
+
+  <div id="scoreText">
+    <span id="textX">0</span>
+    <span id="textO">0</span>
+  </div>
+</div>
+
+</div>
+<div id="board-wrapper" style="position:relative;">
+</div>
+<div id="overlay">
+<button id="startBtn" onclick="startGame()">🎲 BẮT ĐẦU</button>
+  <div id="dice"></div>
+  <div id="status">Tung xúc xắc để xem ai đi trước</div>
+  <div id="blub">Gợi ý: Ấn vào biểu tượng bóng đèn để xem đánh giá nước đi</div>
+</div>
+  <canvas id="confettiCanvas"></canvas>
+  <footer> Version:D20260412-H23M30T0050    »»»   developed by Tran Gia Bao</footer>
+<script>
+  
+ 
+const SIZE = 15;
+
+let board = [];
+let cells = [];
+let gameOver = false;
+let lastCell = null;
+
+let human = "X";
+let ai = "O";
+let currentTurn = "X";
+let aiThinking = false;
+
+let rawX = scoreX;
+let rawO = scoreO;
+let moveHistory = [];
+let canUndo = false;     // đã có nước đi chưa
+let undoUsed = false;    // đã dùng undo trong lượt này chưa
+let cache = new Map();
+let maxUndo = 3;
+let undoLeft = 3;
+playerStartTime = 0;
+
+
+// 🔥 nếu có số âm → dịch toàn bộ lên
+let minScore = Math.min(rawX, rawO);
+
+if(minScore < 0){
+  rawX += Math.abs(minScore);
+  rawO += Math.abs(minScore);
+}
+  let total = rawX + rawO;
+
+let percentX = 50;
+let percentO = 50;
+
+if(total > 0){
+  percentX = Math.round(rawX / total * 100);
+  percentO = 100 - percentX;
+}
+  
+const boardDiv = document.getElementById("board");
+const statusOverlay = document.getElementById("status");
+const statusTop = document.getElementById("statusTop");
+const overlay = document.getElementById("overlay");
+const commentaryDiv = document.getElementById("commentary");
+const resetBtn = document.getElementById("btnReset");
+const btnUndo = document.getElementById("btnUndo");
+
+  
+  function handleClick(r, c){
+
+  if(currentTurn !== "human") return;
+
+  place(r, c, human);
+
+  currentTurn = "ai";
+
+  // 🔥 KHÓA BOARD NGAY
+  boardDiv.classList.add("disabled");
+
+  setTimeout(()=>{
+    aiMove();
+  }, 500);
+}
+  
+  function undoMove(){
+    if(undoLeft <= 0){
+    document.getElementById("undolimit").textContent = "Bạn đã sử dụng hết lượt";
+    updateUndoButton();
+    return;
+  }
+  if(!canUndo || undoUsed || gameOver) return;
+if(getTotalPieces() <= 9) return;
+
+  // 🔥 chỉ cho undo 1 lần
+  undoUsed = true;
+
+  let steps = (moveHistory.length >= 2) ? 2 : 1;
+
+  for(let i=0;i<steps;i++){
+    let last = moveHistory.pop();
+    if(!last) break;
+
+    let [r,c] = last;
+
+    board[r][c] = "";
+
+    const cell = cells[r][c];
+    cell.textContent = "";
+    cell.classList.remove("X","O","last","win");
+  }
+
+  // cập nhật lastCell
+  if(moveHistory.length > 0){
+    let [r,c] = moveHistory[moveHistory.length-1];
+    lastCell = cells[r][c];
+    lastCell.classList.add("last");
+  }else{
+    lastCell = null;
+  }
+
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+  commentary.textContent="↩️ Bạn vừa mới thực hiện lại nước đi";
+
+  undoLeft--;
+
+  // cập nhật UI
+  updateUndoUI();
+  updateScore();
+  updateUndoButton();
+}
+
+  function updateUndoUI(){
+  document.getElementById("undolimit").textContent =
+    `Số lần còn: ${undoLeft}/${maxUndo}`;
+}
+  
+function showStatus(text){
+  statusOverlay.textContent = text;
+  statusOverlay.classList.remove("show");
+  void statusOverlay.offsetWidth;
+  statusOverlay.classList.add("show");
+}
+
+
+
+// ===== BOARD =====
+function createBoard(){
+  board = [];
+  cells = [];
+  boardDiv.innerHTML = "";
+
+  for(let r=0;r<SIZE;r++){
+    board[r]=[];
+    cells[r]=[];
+
+    for(let c=0;c<SIZE;c++){
+      board[r][c]="";
+
+      const cell=document.createElement("div");
+      cell.className="cell";
+      cell.onclick=()=>playerMove(r,c);
+
+      boardDiv.appendChild(cell);
+      cells[r][c]=cell;
+    }
+  }
+}
+
+// ===== UTILS =====
+function getEmptyCells(){
+  let arr=[];
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c]==="") arr.push([r,c]);
+    }
+  }
+  return arr;
+}
+
+function hasNeighbor(r,c){
+  for(let dr=-1;dr<=1;dr++){
+    for(let dc=-1;dc<=1;dc++){
+      let nr=r+dr, nc=c+dc;
+      if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE){
+        if(board[nr][nc] !== "") return true;
+      }
+    }
+  }
+  return false;
+}
+
+// ===== START =====
+function startGame(){
+  
+  document.getElementById("startBtn").style.display = "none";
+
+  let faces=["X","X","X","O","O","O"];
+  let dice=document.getElementById("dice");
+
+  let interval=setInterval(()=>{
+    dice.textContent=faces[Math.floor(Math.random(0)*6)];
+  },150);
+
+  setTimeout(()=>{
+    clearInterval(interval);
+
+    let result=faces[Math.floor(Math.random(0)*6)];
+    dice.textContent=result;
+
+    if(result==="X"){
+      human="X";
+      ai="O";
+      currentTurn="X";
+      playerStartTime = Date.now();
+      showStatus("Bạn đi trước (X)");
+      statusTop.textContent="Lượt của bạn (X)";
+      commentary.textContent="Có vẻ như bạn là một cao thủ chơi cờ Caro 🧐";
+    }else{
+      human="O";
+      ai="X";
+      currentTurn="X";
+      commentary.textContent="Nói trước. Tôi sẽ không nhường đâu!";
+      showStatus("AI.GiaBao đi trước (X)");
+      statusTop.textContent="🤖 AI.GiaBao đang đi...";
+    }
+
+    setTimeout(()=>{
+      overlay.style.display="none";
+
+      if(currentTurn === ai){
+        setTimeout(aiMove,300);
+      }
+    },800);
+
+  },3000);
+}
+
+function place(r,c,player){
+  board[r][c] = player;
+  moveHistory.push([r,c,player]);
+  
+  const cell = cells[r][c];
+  cell.textContent = player;
+  cell.classList.add(player);
+
+  if(lastCell) lastCell.classList.remove("last");
+  cell.classList.add("last");
+  lastCell = cell;
+  try{
+  showComment(r, c, player);
+}catch(e){
+  console.error("Comment error:", e);
+}
+  updateScore();
+}
+  
+function updateUndoButton(){
+
+  let isActive = (
+    !gameOver &&
+    !undoUsed &&
+    canUndo &&
+    getTotalPieces() >= 10 &&
+    undoLeft >0
+  );
+
+  btnUndo.disabled = !isActive;
+
+  btnUndo.classList.toggle("active", isActive);
+}
+  
+  function getTotalPieces(){
+  let count = 0;
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "") count++;
+    }
+  }
+
+  return count;
+}
+  
+  
+function getOccupiedCount(){
+  let count = 0;
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") count++;
+    }
+  }
+  return count;
+}
+// ===== PLAYER =====
+function playerMove(r,c){
+  if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
+
+  place(r,c,human);
+  canUndo = true;
+undoUsed = false;
+  updateUndoButton();
+  currentTurn=ai;
+
+  if(checkWin(r,c,human)){
+  statusTop.textContent="🎉 Bạn thắng!";
+   statusTop.classList.add("win");
+   resetBtn.textContent = "Ván mới";
+  launchConfetti();
+
+  gameOver=true;
+    updateUndoButton();
+  return;
+}
+
+  statusTop.textContent="🤖 AI.GiaBao đang suy nghĩ...";
+  setTimeout(aiMove,300);
+}
+
+// ===== AI =====
+function aiMove(){
+  if(gameOver || currentTurn!==ai || aiThinking) return;
+  aiThinking = true;
+  
+  if(getOccupiedCount() === 0){
+    let center = Math.floor(SIZE / 2); // = 7 với SIZE=15
+    let offset = Math.floor(Math.random() * 3) - 1; // -1, 0, hoặc 1
+    let r = center + offset;
+    let c = center + offset;
+    place(r, c, ai);
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn (" + human + ")";
+    playerStartTime = Date.now();
+    aiThinking = false;
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+  
+  // 🔥 Xóa cache mỗi lượt để tránh dùng kết quả cũ
+  hashTable.clear();
+
+  // 🚀 1. THẮNG NGAY
+  let winNow = findWin(ai);
+  if(winNow){
+    let [r,c] = winNow;
+    place(r,c,ai);
+    statusTop.textContent = "🤖 AI.GiaBao thắng!";
+    statusTop.classList.add("win");
+    resetBtn.textContent = "Chơi lại";
+    launchConfetti();
+    gameOver = true;
+    aiThinking = false;
+    updateUndoButton();
+    return;
+  }
+
+  // 🚀 2. CHẶN NGAY (người chơi sắp thắng)
+  let blockNow = findWin(human);
+  if(blockNow){
+    let [r,c] = blockNow;
+    place(r,c,ai);
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn ("+human+")";
+    playerStartTime = Date.now();
+    aiThinking = false;
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+
+  // 🚀 3. TẠO DOUBLE THREAT (bẫy đôi cho AI)
+  let doubleThreat = findDoubleThreat(ai);
+  if(doubleThreat){
+    let [r,c] = doubleThreat;
+    place(r,c,ai);
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn ("+human+")";
+    playerStartTime = Date.now();
+    aiThinking = false;
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+
+  // 🚀 4. CHẶN DOUBLE THREAT của người chơi
+  let blockDouble = findDoubleThreat(human);
+  if(blockDouble){
+    let [r,c] = blockDouble;
+    place(r,c,ai);
+    currentTurn = human;
+    statusTop.textContent = "Lượt của bạn ("+human+")";
+    playerStartTime = Date.now();
+    aiThinking = false;
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+
+  // 🚀 5. TẠO 4 MỞ
+  for(let i=0;i<SIZE;i++){
+    for(let j=0;j<SIZE;j++){
+      if(board[i][j] !== "") continue;
+      board[i][j] = ai;
+      if(isOpenFour(i,j,ai)){
+        board[i][j] = "";
+        place(i,j,ai);
+        currentTurn = human;
+        statusTop.textContent = "Lượt của bạn ("+human+")";
+        playerStartTime = Date.now();
+        aiThinking = false;
+        boardDiv.classList.remove("disabled");
+        return;
+      }
+      board[i][j] = "";
+    }
+  }
+
+  // 🚀 6. AI CHÍNH (minimax)
+  let move = smartAI(ai);
+
+  if(!move){
+    let empty = getEmptyCells().filter(([r,c]) => hasNeighbor2(r,c));
+    if(empty.length === 0){ aiThinking = false; return; }
+    move = empty[0];
+  }
+
+  let [r,c] = move;
+  place(r,c,ai);
+
+  // 🚀 7. CHECK WIN
+  if(checkWin(r,c,ai)){
+    statusTop.textContent = "🤖 AI.GiaBao thắng!";
+    resetBtn.textContent = "Chơi lại";
+    statusTop.classList.add("win");
+    launchConfetti();
+    gameOver = true;
+    aiThinking = false;
+    return;
+  }
+
+  // 🚀 8. TRẢ LƯỢT
+  currentTurn = human;
+  statusTop.textContent = "Lượt của bạn ("+human+")";
+  playerStartTime = Date.now();
+  aiThinking = false;
+  boardDiv.classList.remove("disabled");
+}
+
+  // ===== SMART MOVES (mở rộng vùng tìm kiếm) =====
+  function getSmartMoves(){
+  let moves = [];
+
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") continue;
+      // Mở rộng vùng lân cận lên 2 ô thay vì 1
+      if(hasNeighbor2(r,c)) moves.push([r,c]);
+    }
+  }
+
+  let scored = moves.map(([r,c]) => {
+    let atk = scoreCell(r, c, ai);
+    let def = scoreCell(r, c, human);
+    return { r, c, score: Math.max(atk, def) + atk * 0.5 };
+  });
+
+  scored.sort((a,b) => b.score - a.score);
+  return scored.slice(0, 15).map(m => [m.r, m.c]);
+}
+
+// Lân cận 2 ô (tìm nước xa hơn)
+function hasNeighbor2(r,c){
+  for(let dr=-2; dr<=2; dr++){
+    for(let dc=-2; dc<=2; dc++){
+      if(dr===0 && dc===0) continue;
+      let nr=r+dr, nc=c+dc;
+      if(nr>=0 && nr<SIZE && nc>=0 && nc<SIZE && board[nr][nc] !== "")
+        return true;
+    }
+  }
+  return false;
+}
+
+// Tính điểm tổng hợp cho 1 ô (không cần đặt quân)
+function scoreCell(r, c, player){
+  board[r][c] = player;
+  let s = scoreDirection(r,c,1,0,player)
+         + scoreDirection(r,c,0,1,player)
+         + scoreDirection(r,c,1,1,player)
+         + scoreDirection(r,c,1,-1,player);
+  board[r][c] = "";
+  return s;
+}
+
+// ===== PHÁT HIỆN DOUBLE THREAT =====
+function countThreats(r, c, player){
+  board[r][c] = player;
+  let threats = 0;
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+
+  for(let [dr,dc] of dirs){
+    let val = scoreDirection(r,c,dr,dc,player);
+    if(val >= 5000) threats++; // 3 mở hoặc 4 mở
+  }
+
+  board[r][c] = "";
+  return threats;
+}
+
+// Tìm nước tạo double threat cho player
+function findDoubleThreat(player){
+  let best = null;
+  let bestScore = 0;
+
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] !== "") continue;
+      if(!hasNeighbor2(r,c)) continue;
+
+      let t = countThreats(r, c, player);
+      if(t >= 2 && t > bestScore){
+        bestScore = t;
+        best = [r,c];
+      }
+    }
+  }
+  return best;
+}
+
+// ===== SMART AI =====
+const MAX_DEPTH = 5;
+
+function smartAI(player){
+  let bestScore = -Infinity;
+  let bestMove = null;
+
+  let moves = getSmartMoves();
+
+  for(let [r,c] of moves){
+    board[r][c] = player;
+    let score = minimax(MAX_DEPTH - 1, false, player, -Infinity, Infinity);
+    board[r][c] = "";
+
+    if(score > bestScore){
+      bestScore = score;
+      bestMove = [r,c];
+    }
+  }
+
+  if(!bestMove){
+    let empty = getEmptyCells().filter(([r,c]) => hasNeighbor2(r,c));
+    return empty.length > 0 ? empty[0] : getEmptyCells()[0];
+  }
+
+  return bestMove;
+}
+
+// ===== MINIMAX (cache bằng hash nhanh) =====
+let boardHash = 0;
+const hashTable = new Map();
+
+// Zobrist hashing — nhanh hơn JSON.stringify rất nhiều
+const zobristTable = (() => {
+  const t = [];
+  for(let r=0; r<SIZE; r++){
+    t[r] = [];
+    for(let c=0; c<SIZE; c++){
+      t[r][c] = { X: Math.floor(Math.random()*2**30), O: Math.floor(Math.random()*2**30) };
+    }
+  }
+  return t;
+})();
+
+function minimax(depth, isMaximizing, aiPlayer, alpha, beta){
+  let humanPlayer = (aiPlayer === "X") ? "O" : "X";
+
+  let winner = checkWinnerGlobal();
+  if(winner === aiPlayer)   return 900000 + depth * 1000;
+  if(winner === humanPlayer) return -900000 - depth * 1000;
+  if(depth === 0) return evaluateBoard(aiPlayer);
+
+  // Cache key gọn
+  let key = boardHash + "|" + depth + "|" + (isMaximizing?1:0);
+  if(hashTable.has(key)) return hashTable.get(key);
+
+  let moves = getSmartMoves();
+  if(moves.length === 0) return evaluateBoard(aiPlayer);
+
+  let result;
+
+  if(isMaximizing){
+    let maxEval = -Infinity;
+    for(let [r,c] of moves){
+      board[r][c] = aiPlayer;
+      boardHash ^= zobristTable[r][c][aiPlayer];
+
+      let val = minimax(depth-1, false, aiPlayer, alpha, beta);
+
+      board[r][c] = "";
+boardHash ^= zobristTable[r][c][aiPlayer];
+
+      maxEval = Math.max(maxEval, val);
+      alpha = Math.max(alpha, val);
+      if(beta <= alpha) break;
+    }
+    result = maxEval;
+  } else {
+    let minEval = Infinity;
+    for(let [r,c] of moves){
+      board[r][c] = humanPlayer;
+      boardHash ^= zobristTable[r][c][humanPlayer];
+
+      let val = minimax(depth-1, true, aiPlayer, alpha, beta);
+
+      board[r][c] = "";
+      boardHash ^= zobristTable[r][c][humanPlayer];
+
+      minEval = Math.min(minEval, val);
+      beta = Math.min(beta, val);
+      if(beta <= alpha) break;
+    }
+    result = minEval;
+  }
+
+  hashTable.set(key, result);
+  return result;
+}
+
+//HAM NAY BAT BUOC CO...
+function isOpenFour(r,c,player){
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+  for(let [dr,dc] of dirs){
+    let cnt = 1, openEnds = 0;
+    let i=r+dr, j=c+dc;
+    while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){ cnt++; i+=dr; j+=dc; }
+    if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") openEnds++;
+    i=r-dr; j=c-dc;
+    while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){ cnt++; i-=dr; j-=dc; }
+    if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") openEnds++;
+    if(cnt === 4 && openEnds === 2) return true;
+  }
+  return false;
+}
+
+// #KHONG THE XOA
+function evaluateBoard(player){
+  let score = 0;
+  let enemy = (player === "X") ? "O" : "X";
+
+  for(let r=0; r<SIZE; r++){
+    for(let c=0; c<SIZE; c++){
+      if(board[r][c] === player)  score += scoreCell(r,c,player) * 1.3;
+      if(board[r][c] === enemy)   score -= scoreCell(r,c,enemy)  * 1.2;
+    }
+  }
+  return score;
+}
+
+function checkWinnerGlobal(){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] !== "" && checkWin(r,c,board[r][c])){
+        return board[r][c];
+      }
+    }
+  }
+  return null;
+}
+
+// ===== EVALUATE =====
+// HAM NAY BAT BUOC PHAI CO
+function evaluate(r,c,player){
+  let score =
+    scoreDirection(r,c,1,0,player)+
+    scoreDirection(r,c,0,1,player)+
+    scoreDirection(r,c,1,1,player)+
+    scoreDirection(r,c,1,-1,player);
+
+  if(r === 0 || c === 0 || r === SIZE-1 || c === SIZE-1) score -= 100;
+  return score;
+}
+
+function scoreDirection(r,c,dr,dc,player){
+  let count=1, open=0;
+
+  let i=r+dr,j=c+dc;
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){ count++; i+=dr; j+=dc; }
+  if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") open++;
+
+  i=r-dr; j=c-dc;
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){ count++; i-=dr; j-=dc; }
+  if(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]==="") open++;
+
+  if(count>=5)              return 100000;
+  if(count===4 && open===2) return 50000;  // 4 mở — thắng gần như chắc
+  if(count===4 && open===1) return 1000;
+  if(count===4 && open===0) return 0;
+  if(count===3 && open===2) return 8000;   // 3 mở — cực nguy hiểm
+  if(count===3 && open===1) return 300;
+  if(count===2 && open===2) return 100;
+  if(count===2 && open===1) return 15;
+  return 1;
+}
+
+// ===== WIN =====
+function checkWin(r,c,player){
+  return (
+    count(r,c,1,0,player)+count(r,c,-1,0,player)>=4 ||
+    count(r,c,0,1,player)+count(r,c,0,-1,player)>=4 ||
+    count(r,c,1,1,player)+count(r,c,-1,-1,player)>=4 ||
+    count(r,c,1,-1,player)+count(r,c,-1,1,player)>=4
+  );
+}
+
+function count(r,c,dr,dc,player){
+  let i=r+dr,j=c+dc,cnt=0;
+  while(i>=0&&i<SIZE&&j>=0&&j<SIZE&&board[i][j]===player){
+    cnt++; i+=dr; j+=dc;
+  }
+  return cnt;
+}
+
+function findWin(player){
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c]!=="") continue;
+
+      board[r][c]=player;
+      if(checkWin(r,c,player)){
+        board[r][c]="";
+        return [r,c];
+      }
+      board[r][c]="";
+    }
+  }
+  return null;
+}
+
+
+
+  function updateScore(){
+  let scoreX = 0;
+  let scoreO = 0;
+
+  for(let r=0;r<SIZE;r++){
+    for(let c=0;c<SIZE;c++){
+      if(board[r][c] === "X"){
+        scoreX += evaluate(r,c,"X");
+      }
+      if(board[r][c] === "O"){
+        scoreO += evaluate(r,c,"O");
+      }
+    }
+  }
+
+  let total = scoreX + scoreO;
+
+  let percentX = 50;
+  let percentO = 50;
+
+  if(total > 0){
+    percentX = Math.round(scoreX / total * 100);
+    percentO = 100 - percentX;
+  }
+
+  // 👉 chiều dài thanh vẫn theo %
+  document.getElementById("scoreX").style.width = percentX + "%";
+  document.getElementById("scoreO").style.width = percentO + "%";
+
+  // 🔥 hiển thị ĐIỂM THẬT
+  document.getElementById("textX").textContent = scoreX;
+document.getElementById("textO").textContent = scoreO;
+}
+
+  let showScore = false;
+
+const toggleBtn = document.getElementById("toggleScore");
+const scoreBar = document.getElementById("scoreBar");
+
+// trạng thái ban đầu
+toggleBtn.classList.add("off");
+
+toggleBtn.onclick = () => {
+  showScore = !showScore;
+
+  if(showScore){
+    scoreBar.style.display = "flex";
+    toggleBtn.classList.remove("off");
+
+
+  }else{
+    scoreBar.style.display = "none";
+    toggleBtn.classList.add("off");
+
+  }
+};
+  function showComment(r, c, player){
+
+  if(player !== ai) return;
+  if(!commentaryDiv) return;
+  if(playerStartTime === 0) return;
+
+  let time = Math.floor((Date.now() - playerStartTime) / 1000);
+  let { open3, open4 } = analyzeMoveLite(r, c, player);
+
+  let o4ai = [
+    "💀 Thua rồi đánh đấm gì nữa?",
+    "Còn ngơ ra đó??? Chống cự sao được!",
+    "Nhìn thấy sự thua cuộc chưa?",
+    "GG 😎"
+  ];
+    
+  let winai = [
+    "Thất bại là mẹ đập con",
+    "Nước mắt anh rơi, trò chơi kết thúc!",
+    "See you again? Làm lại ván mới không?",
+    "Nút chơi lại ở dưới cùng màn hình..."
+  ];
+
+  let text = "";
+
+  // 🔥 CHUỖI ƯU TIÊN (QUAN TRỌNG)
+  if (checkWin(r, c, ai)) {
+  text = winai[Math.floor(Math.random() * winai.length)];
+}
+else if (open4 >= 1) {
+  text = o4ai[Math.floor(Math.random() * o4ai.length)];
+}
+else if (open3 >= 2) {
+  text = "Tôi thách bạn chặn được đó!";
+}
+else if (open3 === 1) {
+  text = "Hãy tập trung quan sát...";
+}
+else {
+  if (time < 1) {
+    text = "Đánh gì nhanh thế! Có suy nghĩ gì chưa?";
+  }
+  else if (time < 2) {
+    text = "😮 WOW!! Tốc độ bàn thờ.";
+  }
+  else if (time < 3) {
+    text = "Đánh cờ như đánh trận vậy";
+  }
+  else if (time < 4) {
+    text = "Để xem ai thắng ai thua?!";
+  }
+  else if (time < 5) {
+    text = "💤 Hãy thư giãn...";
+  }
+  else if (time < 8) {
+    text = "Chỉ chờ có thế";
+  }
+  else if (time < 12) {
+    text = "Hmm... cũng tạm 😐";
+  }
+  else {
+    text = `Quá chậm. Tốn tận ${time} giây chỉ có thế thôi sao???`;
+  }
+}
+    
+  commentaryDiv.textContent = text;
+  updateComment(text);
+  }
+  
+  function analyzeMoveLite(r, c, player){
+  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
+
+  let open3 = 0;
+  let open4 = 0;
+
+  for(let [dr,dc] of dirs){
+    let count = 1;
+    let openEnds = 0;
+
+    // 👉 tiến
+    let i = r + dr, j = c + dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
+      count++; i+=dr; j+=dc;
+    }
+    if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === ""){
+      openEnds++;
+    }
+
+    // 👉 lùi
+    i = r - dr; j = c - dc;
+    while(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === player){
+      count++; i-=dr; j-=dc;
+    }
+    if(i>=0 && i<SIZE && j>=0 && j<SIZE && board[i][j] === ""){
+      openEnds++;
+    }
+
+    // 🔥 nhận diện
+    if(count === 4 && openEnds === 2){
+      open4++;
+    }
+    else if(count === 3 && openEnds === 2){
+      open3++;
+    }
+  }
+
+  return { open3, open4 };
+}
+
+  // ===== RESET =====
+function resetGame(){
+  gameOver=false;
+  lastCell=null;
+  human="X";
+  ai="O";
+  currentTurn="X";
+  playerStartTime = 0;
+
+createBoard();
+  statusTop.textContent="Đang chờ...";
+  statusOverlay.textContent="Tung xúc xắc để xem ai đi trước";
+  document.getElementById("dice").textContent="";
+  overlay.style.display="flex";
+  document.getElementById("startBtn").style.display = "inline-block";
+  commentary.textContent="Bạn đã ấn chơi lại";
+  statusTop.classList.remove("win");
+  resetBtn.textContent = "Chơi lại";
+  undoLeft = maxUndo;
+  updateUndoUI();
+  updateScore();
+}
+
+createBoard();
+updateUndoButton();
+  
+function updateComment(text){
+
+  // 🔥 1. thu lại
+  commentaryDiv.classList.add("shrink");
+
+  setTimeout(() => {
+
+    // 🔥 2. đổi text khi đang co
+    commentaryDiv.textContent = text;
+
+    // 🔥 3. giãn ra
+    commentaryDiv.classList.remove("shrink");
+
+  }, 500);
+}
+  
+const canvas = document.getElementById("confettiCanvas");
+const ctx = canvas.getContext("2d");
+
+canvas.width = window.innerWidth;
+canvas.height = window.innerHeight;
+
+let confetti = [];
+
+function randomColor(){
+  const colors = ["#ff4d4d", // đỏ
+  "#00d4ff", // xanh dương
+  "#00ff88", // xanh lá
+  "#ffd700", // vàng
+  "#ff00ff", // hồng tím
+  "#ff8800", // cam
+  "#ffffff", // trắng
+  "#a855f7", // tím
+  "#22c55e", // xanh neon
+  "#f43f5e"  // đỏ
+  ];
+  return colors[Math.floor(Math.random()*colors.length)];
+}
+
+function launchConfetti(){
+  confetti = [];
+
+  for(let i=0;i<200;i++){
+    let fromLeft = Math.random() < 0.5;
+
+    confetti.push({
+      x: fromLeft ? 0 : canvas.width,
+      y: canvas.height,
+
+      vx: (Math.random()*6 + 2) * (fromLeft ? 1 : -1), // bắn ngang
+      vy: -(Math.random()*7 + 3), // bắn lên
+
+      gravity: 0.05,
+      size: Math.random()*9 + 2,
+
+      color: randomColor(),
+
+      angle: Math.random()*360,
+      spin: Math.random()*15 - 5,
+
+      shape: Math.random() < 0.5 ? "rect" : "line"
+    });
+  }
+
+  animateConfetti();
+}
+
+function animateConfetti(){
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+
+  confetti.forEach(p=>{
+    // physics
+    p.vx *= 0.985;
+    p.vy += p.gravity;
+    p.x += p.vx;
+    p.y += p.vy;
+    p.angle += p.spin;
+
+    ctx.save();
+    ctx.translate(p.x, p.y);
+    ctx.rotate(p.angle * Math.PI/180);
+
+    ctx.fillStyle = p.color;
+
+    if(p.shape === "rect"){
+      ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+    }else{
+      ctx.fillRect(-p.size/2, -p.size/2, p.size * 0.2, p.size * 1.5);
+    }
+
+    ctx.restore();
+  });
+
+  // lọc hạt còn trên màn hình
+  confetti = confetti.filter(p => p.y < canvas.height + 20);
+
+  if(confetti.length > 0){
+    requestAnimationFrame(animateConfetti);
+  }
+}
+</script>
+
+</body>
+</html>
+ 
