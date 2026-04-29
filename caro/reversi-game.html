@@ -184,6 +184,16 @@
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+  footer{
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+  z-index:999999;
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: monospace; /* 🔥 kiểu version code */
+}
 </style>
 </head>
 <body>
@@ -260,6 +270,7 @@
     <strong>Chế độ AI:</strong> Đánh với người máy do Gia Bảo huấn luyện.
   </div>
 </div>
+    <footer> Version:D20260429-H19M15T2350    »»»   developed by Tran Gia Bao</footer>
 
 <script>
 const SIZE = 10;
@@ -472,6 +483,16 @@ function aiChooseMove(b, aiPlayer) {
   const cands = getCandidates(b, human);
   if (!cands.length) return null;
 
+  // ── PHASE 1: CORNER ABSOLUTE PRIORITY ────────────────────────────────────────
+  // If ANY corner is empty, AI grabs it immediately — no further evaluation.
+  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
+  for (const [cr, cc] of CORNERS) {
+    if (b[cr][cc] === 0) return [cr, cc];
+  }
+
+  // ── PHASE 2: FORCE CORNER IF AVAILABLE IN LOOKAHEAD ──────────────────────────
+  // Check if playing any candidate immediately opens a corner for human next turn.
+  // Also weight candidates that set up a corner grab on AI's NEXT turn.
   const scored = cands.map(([r,c]) => ({r, c, score: evalMove(b,r,c,aiPlayer,human)}));
   scored.sort((a,z) => z.score - a.score);
 
@@ -540,31 +561,55 @@ function evalMove(b, r, c, aiPlayer, human) {
   // Bonus scales quadratically: run of 3 gives 9×base, run of 4 gives 16×base
   const chainInterruptScore = chainRun * chainRun * 3.5;
 
-  // H) Corner-awareness: cells directly beside an ENEMY corner are traps.
-  //    Placing there cannot flip the corner (immune) but can be sandwiched.
-  //    Penalize AI from playing those cells; bonus for blocking human from them.
+  // H) Corner strategy — ultra-aggressive corner scoring
   let cornerTrapScore = 0;
   const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
   for (const [cr,cc] of CORNERS) {
     const dist = Math.abs(r-cr) + Math.abs(c-cc);
+
+    if (dist === 0 && b[cr][cc] === 0) {
+      // THIS IS A CORNER CELL — absolute top priority (handled above in aiChooseMove,
+      // but keep here as safety net for evalMove scoring)
+      cornerTrapScore += 500;
+    }
+
     if (dist === 1) { // directly adjacent (orthogonal) to a corner
       if (b[cr][cc] === human) {
         // Enemy owns this corner (immune). Playing next to it is a trap for AI.
-        cornerTrapScore -= 18;
+        cornerTrapScore -= 30;
       } else if (b[cr][cc] === 0) {
-        // Corner is still empty — race to secure it first
-        cornerTrapScore += 5;
+        // Corner is empty — adjacent cells are DANGEROUS: they let the human grab
+        // the corner next turn. Heavily penalise these "X-squares".
+        cornerTrapScore -= 50;
       }
       // If AI owns the corner, nearby cells are safe/good — no penalty
     }
-    if (dist === 0 && b[cr][cc] === 0) {
-      // This IS the corner cell and it's empty — strong incentive to claim it
-      cornerTrapScore += 20;
+
+    if (dist === 2) { // diagonal to a corner (the "C-squares")
+      if (b[cr][cc] === 0) {
+        // Slightly avoid C-squares too — they can open X-squares for opponent
+        cornerTrapScore -= 10;
+      }
+    }
+  }
+
+  // H2) Penalise moves that would let the human take a corner NEXT turn.
+  //     Simulate the move, then check if any corner becomes available to human.
+  let givenCornerPenalty = 0;
+  {
+    const tmp2 = cloneBoard(b);
+    tmp2[r][c] = aiPlayer;
+    applyCapturesFrom(r, c, tmp2);
+    for (const [cr, cc] of CORNERS) {
+      if (tmp2[cr][cc] === 0) {
+        // Corner is still empty after AI plays — human might grab it
+        givenCornerPenalty -= 80;
+      }
     }
   }
 
   return gainAI*10 + gainHuman*8 + posScore + clusterScore + future
-       + edgeScore + chainInterruptScore + cornerTrapScore;
+       + edgeScore + chainInterruptScore + cornerTrapScore + givenCornerPenalty;
 }
 
 function simCaptures(b, r, c, player) {
@@ -609,6 +654,12 @@ function getCandidates(b, oppPlayer) {
   const total = count(b,1)+count(b,2);
   const radius = total < 20 ? 3 : 2;
   const seen = new Set();
+
+  // ALWAYS include all 4 corners if empty — AI must always consider them
+  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
+  for (const [cr,cc] of CORNERS) {
+    if (b[cr][cc] === 0) seen.add(cr*SIZE+cc);
+  }
 
   // Standard: expand around existing pieces
   for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
@@ -722,25 +773,25 @@ function endGame() {
     statusBar.className='status-bar win-red';
     if (mode==='pve') {
       statusBar.textContent = playerColor===1
-        ? `🏆 BẠN THẮNG! ${red} vs ${blue} (+${red-blue})`
-        : `🤖 AI THẮNG! ${red} vs ${blue} (+${red-blue})`;
+        ? `🏆 BẠN GIÀNH CHIẾN THẮNG!` 
+        : `🤖 AI.GiaBao GIÀNH CHIẾN THẮNG!`;
     } else {
-      statusBar.textContent=`🏆 ĐỎ THẮNG! ${red} vs ${blue} (+${red-blue})`;
+      statusBar.textContent=`🏆 ĐỎ THẮNG!`;
     }
     cardRed.className='score-card active-red';
   } else if (blue>red) {
     statusBar.className='status-bar win-blue';
     if (mode==='pve') {
       statusBar.textContent = playerColor===2
-        ? `🏆 BẠN THẮNG! ${blue} vs ${red} (+${blue-red})`
-        : `🤖 AI THẮNG! ${blue} vs ${red} (+${blue-red})`;
+        ? `🏆 BẠN GIÀNH CHIẾN THẮNG!`
+        : `🤖 AI.GiaBao GIÀNH CHIẾN THẮNG!`;
     } else {
-      statusBar.textContent=`🏆 XANH THẮNG! ${blue} vs ${red} (+${blue-red})`;
+      statusBar.textContent=`🏆 XANH THẮNG!`;
     }
     cardBlue.className='score-card active-blue';
   } else {
     statusBar.className='status-bar draw';
-    statusBar.textContent=`🤝 HÒA! Cả hai ${red} quân`;
+    statusBar.textContent=`🤝 HÒA CỜ!`;
   }
 }
 
