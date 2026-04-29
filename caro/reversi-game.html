@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cờ Bao Vây</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;600;700&family=Saira+Condensed:wght@300;400;700&display=swap');
+  :root {
+    --bg:#0a0c10;--surface:#111418;--border:#1e2530;
+    --red:#e8354a;--red-glow:rgba(232,53,74,0.4);
+    --blue:#2d8cf0;--blue-glow:rgba(45,140,240,0.4);
+    --gold:#f0b429;--green:#2ecc71;--green-glow:rgba(46,204,113,0.35);
+    --text:#c8d0e0;--muted:#4a5568;--cell:28px;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{background:var(--bg);color:var(--text);font-family:'Saira Condensed',sans-serif;
+    min-height:100vh;display:flex;flex-direction:column;align-items:center;padding:16px;overflow-x:hidden;}
+  body::before{content:'';position:fixed;inset:0;
+    background:radial-gradient(ellipse 60% 40% at 20% 20%,rgba(232,53,74,.06) 0%,transparent 60%),
+               radial-gradient(ellipse 60% 40% at 80% 80%,rgba(45,140,240,.06) 0%,transparent 60%);
+    pointer-events:none;z-index:0;}
+  .wrapper{position:relative;z-index:1;width:100%;max-width:720px;}
+
+  header{text-align:center;margin-bottom:14px;}
+  header h1{font-family:'Chakra Petch',sans-serif;font-size:clamp(20px,4vw,30px);font-weight:700;
+    letter-spacing:4px;text-transform:uppercase;
+    background:linear-gradient(90deg,var(--red),#ff8c99,var(--blue));
+    -webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;}
+  header p{font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;margin-top:3px;}
+
+  /* MODE BAR */
+  .mode-bar{display:flex;gap:8px;margin-bottom:12px;background:var(--surface);
+    border:1px solid var(--border);border-radius:8px;padding:6px;}
+  .mode-btn{flex:1;font-family:'Chakra Petch',sans-serif;font-size:11px;font-weight:600;
+    letter-spacing:1.5px;text-transform:uppercase;padding:7px 10px;border-radius:5px;
+    cursor:pointer;border:1px solid transparent;background:transparent;color:var(--muted);transition:all .2s;}
+  .mode-btn:hover{color:var(--text);}
+  .mode-btn.active-pvp{background:rgba(240,180,41,.1);border-color:var(--gold);color:var(--gold);box-shadow:0 0 10px rgba(240,180,41,.2);}
+  .mode-btn.active-pve{background:rgba(46,204,113,.1);border-color:var(--green);color:var(--green);box-shadow:0 0 10px var(--green-glow);}
+
+  /* COLOR PICKER — only in PVE */
+  .color-pick-wrap{
+    height:44px;
+    margin-bottom:10px;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    transition:height .25s, margin .25s, opacity .25s;
+  }
+  .color-pick-wrap.hidden{
+    height:0;
+    margin-bottom:0;
+    opacity:0;
+    pointer-events:none;
+  }
+  .color-pick{
+    display:flex;gap:8px;align-items:center;
+    opacity:0;pointer-events:none;
+    transition:opacity .25s;
+  }
+  .color-pick.visible{opacity:1;pointer-events:auto;}
+  .color-pick-label{font-size:11px;color:var(--muted);letter-spacing:1.5px;text-transform:uppercase;}
+  .color-opt{
+    font-family:'Chakra Petch',sans-serif;font-size:10px;font-weight:600;letter-spacing:1px;
+    padding:5px 14px;border-radius:5px;cursor:pointer;border:1px solid var(--border);
+    background:transparent;color:var(--muted);transition:all .2s;text-transform:uppercase;
+  }
+  .color-opt:hover{color:var(--text);}
+  .color-opt.sel-red{border-color:var(--red);color:var(--red);background:rgba(232,53,74,.1);}
+  .color-opt.sel-blue{border-color:var(--blue);color:var(--blue);background:rgba(45,140,240,.1);}
+
+  /* AI THINKING — collapses in PVP */
+  .ai-thinking-wrap{
+    height:30px;
+    margin-bottom:10px;
+    display:flex;align-items:center;justify-content:center;
+    overflow:hidden;
+    transition:height .25s, margin .25s, opacity .25s;
+  }
+  .ai-thinking-wrap.hidden{
+    height:0;
+    margin-bottom:0;
+    opacity:0;
+    pointer-events:none;
+  }
+  .ai-thinking{
+    display:flex;align-items:center;gap:8px;
+    font-size:12px;color:var(--green);letter-spacing:1px;
+    opacity:0;transition:opacity .2s;
+    pointer-events:none;
+  }
+  .ai-thinking.show{opacity:1;}
+  .dots span{display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--green);
+    margin:0 2px;animation:dot-pulse 1.2s infinite ease-in-out;}
+  .dots span:nth-child(2){animation-delay:.2s;}
+  .dots span:nth-child(3){animation-delay:.4s;}
+  @keyframes dot-pulse{0%,80%,100%{transform:scale(.6);opacity:.4;}40%{transform:scale(1);opacity:1;}}
+
+  /* SCOREBOARD */
+  .scoreboard{display:flex;gap:12px;margin-bottom:10px;}
+  .score-card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:10px 14px;display:flex;align-items:center;gap:10px;transition:border-color .3s,box-shadow .3s;}
+  .score-card.active-red{border-color:var(--red);box-shadow:0 0 16px var(--red-glow);}
+  .score-card.active-blue{border-color:var(--blue);box-shadow:0 0 16px var(--blue-glow);}
+  .score-dot{width:16px;height:16px;border-radius:50%;flex-shrink:0;}
+  .score-dot.red{background:var(--red);box-shadow:0 0 8px var(--red);}
+  .score-dot.blue{background:var(--blue);box-shadow:0 0 8px var(--blue);}
+  .score-info{flex:1;}
+  .score-label{font-size:10px;color:var(--muted);letter-spacing:2px;text-transform:uppercase;}
+  .score-val{font-family:'Chakra Petch',sans-serif;font-size:22px;font-weight:700;line-height:1;}
+  .score-val.red{color:var(--red);}
+  .score-val.blue{color:var(--blue);}
+  .turn-badge{font-size:10px;padding:2px 7px;border-radius:4px;letter-spacing:1px;text-transform:uppercase;font-weight:600;}
+  .turn-badge.red{background:var(--red-glow);color:var(--red);border:1px solid var(--red);}
+  .turn-badge.blue{background:var(--blue-glow);color:var(--blue);border:1px solid var(--blue);}
+
+  .progress-bar{height:4px;background:var(--border);border-radius:2px;margin-bottom:10px;overflow:hidden;}
+  .progress-fill{height:100%;transition:width .4s ease;background:linear-gradient(90deg,var(--red),var(--blue));}
+
+  /* BOARD */
+  .board-wrap{background:var(--surface);border:1px solid var(--border);border-radius:10px;
+    padding:10px;overflow:auto;margin-bottom:12px;}
+  #board{display:grid;grid-template-columns:repeat(10,var(--cell));
+    grid-template-rows:repeat(10,var(--cell));gap:2px;width:fit-content;margin:0 auto;}
+  .cell{width:var(--cell);height:var(--cell);border-radius:4px;background:#141820;
+    border:1px solid #1a2030;display:flex;align-items:center;justify-content:center;
+    cursor:pointer;transition:background .15s,transform .1s;position:relative;}
+  .cell:hover:not(.occupied){background:#1e2535;border-color:#2a3550;transform:scale(1.1);}
+  .cell.red{background:rgba(232,53,74,.15);border-color:rgba(232,53,74,.3);}
+  .cell.blue{background:rgba(45,140,240,.15);border-color:rgba(45,140,240,.3);}
+  .cell.ai-move{animation:ai-drop .35s ease-out;}
+  @keyframes ai-drop{0%{transform:scale(0);opacity:0;}60%{transform:scale(1.25);}100%{transform:scale(1);opacity:1;}}
+  .piece{width:18px;height:18px;border-radius:50%;}
+  .piece.red{background:radial-gradient(circle at 35% 35%,#ff6b7a,var(--red));
+    box-shadow:0 0 6px var(--red-glow),inset 0 1px 2px rgba(255,255,255,.3);}
+  .piece.blue{background:radial-gradient(circle at 35% 35%,#6db8ff,var(--blue));
+    box-shadow:0 0 6px var(--blue-glow),inset 0 1px 2px rgba(255,255,255,.3);}
+
+  /* CORNER SHIELD */
+  .cell.corner-immune{
+    border-color:var(--gold) !important;
+    box-shadow:0 0 10px rgba(240,180,41,.5), inset 0 0 6px rgba(240,180,41,.15);
+  }
+  .shield{
+    position:absolute;inset:0;border-radius:4px;pointer-events:none;
+    background:radial-gradient(ellipse at 50% 30%, rgba(240,180,41,.18) 0%, transparent 70%);
+    border:1.5px solid rgba(240,180,41,.6);
+    animation:shield-pulse 2s ease-in-out infinite;
+  }
+  .shield::after{
+    content:'🛡';font-size:9px;
+    position:absolute;top:0px;right:1px;line-height:1;
+    filter:drop-shadow(0 0 3px var(--gold));
+  }
+  @keyframes shield-pulse{
+    0%,100%{box-shadow:0 0 4px rgba(240,180,41,.4), inset 0 0 4px rgba(240,180,41,.1);}
+    50%{box-shadow:0 0 12px rgba(240,180,41,.7), inset 0 0 8px rgba(240,180,41,.25);}
+  }
+
+  /* CONTROLS */
+  .controls{display:flex;gap:8px;margin-bottom:10px;}
+  button{font-family:'Chakra Petch',sans-serif;font-size:12px;font-weight:600;
+    letter-spacing:2px;text-transform:uppercase;padding:8px 14px;border-radius:6px;
+    cursor:pointer;border:1px solid;transition:all .2s;}
+  #btnNew{flex:1;background:transparent;border-color:var(--gold);color:var(--gold);}
+  #btnNew:hover{background:rgba(240,180,41,.1);box-shadow:0 0 12px rgba(240,180,41,.3);}
+  #btnUndo{background:transparent;border-color:var(--muted);color:var(--muted);}
+  #btnUndo:hover{border-color:var(--text);color:var(--text);}
+
+  .status-bar{background:var(--surface);border:1px solid var(--border);border-radius:6px;
+    padding:8px 14px;font-size:13px;color:var(--text);text-align:center;min-height:36px;
+    display:flex;align-items:center;justify-content:center;letter-spacing:1px;}
+  .status-bar.win-red{border-color:var(--red);color:var(--red);box-shadow:0 0 20px var(--red-glow);}
+  .status-bar.win-blue{border-color:var(--blue);color:var(--blue);box-shadow:0 0 20px var(--blue-glow);}
+  .status-bar.draw{border-color:var(--gold);color:var(--gold);}
+
+  .rules-toggle{margin-top:10px;text-align:center;}
+  .rules-toggle button{background:transparent;border-color:var(--border);color:var(--muted);font-size:11px;padding:5px 14px;}
+  .rules-toggle button:hover{border-color:var(--muted);color:var(--text);}
+  .rules-panel{display:none;background:var(--surface);border:1px solid var(--border);border-radius:8px;
+    padding:14px 16px;margin-top:8px;font-size:12px;line-height:1.8;color:var(--muted);}
+  .rules-panel.open{display:block;}
+  .rules-panel strong{color:var(--text);}
+  ::-webkit-scrollbar{width:6px;height:6px;}
+  ::-webkit-scrollbar-track{background:var(--bg);}
+  ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header>
+    <h1> Cờ Bao Vây</h1>
+  </header>
+
+  <!-- MODE -->
+  <div class="mode-bar">
+    <button class="mode-btn active-pvp" id="btnPVP">👥 Người vs Người</button>
+    <button class="mode-btn" id="btnPVE">🤖 Người vs AI</button>
+  </div>
+
+  <!-- COLOR PICKER (reserved space always, visible only in PVE) -->
+  <div class="color-pick-wrap">
+    <div class="color-pick" id="colorPick">
+      <span class="color-pick-label">Bạn chơi màu:</span>
+      <button class="color-opt sel-red" data-color="red" id="optRed">🔴 Đỏ (đi trước)</button>
+      <button class="color-opt" data-color="blue" id="optBlue">🔵 Xanh (đi sau)</button>
+    </div>
+  </div>
+
+  <!-- AI THINKING (reserved space always, fades in/out) -->
+  <div class="ai-thinking-wrap">
+    <div class="ai-thinking" id="aiThinking">
+      🤖 AI.GiaBao đang suy nghĩ
+      <div class="dots"><span></span><span></span><span></span></div>
+    </div>
+  </div>
+
+  <!-- SCOREBOARD -->
+  <div class="scoreboard">
+    <div class="score-card active-red" id="cardRed">
+      <div class="score-dot red"></div>
+      <div class="score-info">
+        <div class="score-label" id="labelRed">Đỏ</div>
+        <div class="score-val red" id="scoreRed">0</div>
+      </div>
+      <div class="turn-badge red" id="badgeRed">Lượt</div>
+    </div>
+    <div class="score-card" id="cardBlue">
+      <div class="score-dot blue"></div>
+      <div class="score-info">
+        <div class="score-label" id="labelBlue">Xanh</div>
+        <div class="score-val blue" id="scoreBlue">0</div>
+      </div>
+      <div class="turn-badge blue" id="badgeBlue" style="display:none">Lượt</div>
+    </div>
+  </div>
+
+  <div class="progress-bar">
+    <div class="progress-fill" id="progressFill" style="width:50%"></div>
+  </div>
+
+  <div class="board-wrap"><div id="board"></div></div>
+
+  <div class="controls">
+    <button id="btnUndo">↩ Hoàn tác</button>
+    <button id="btnNew">🔄 Ván mới</button>
+  </div>
+
+  <div class="status-bar" id="statusBar">🔴 Lượt Đỏ đi trước</div>
+
+  <div class="rules-toggle">
+    <button id="btnRules">📖 Luật chơi</button>
+  </div>
+  <div class="rules-panel" id="rulesPanel">
+    <strong>Luật bao vây:</strong><br>
+    Khi quân của bạn <strong>kẹp</strong> một chuỗi quân đối phương ở hai đầu (ngang, dọc, chéo), toàn bộ chuỗi bị chuyển màu của bạn.<br><br>
+    Ví dụ: 🔴🟢🟢🟢🔴 → 🔴🔴🔴🔴🔴<br><br>
+    <strong>🛡 Góc bất khả xâm phạm:</strong> Quân đặt tại 4 góc bàn cờ được bảo vệ bởi khiên vàng — không thể bị lật màu dù đối phương kẹp từ hai phía.<br><br>
+    <strong>Kết thúc:</strong> Khi bàn đầy, bên nào nhiều quân hơn thắng.<br><br>
+    <strong>Chế độ AI:</strong> Đánh với người máy do Gia Bảo huấn luyện.
+  </div>
+</div>
+
+<script>
+const SIZE = 10;
+const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
+
+let board, currentPlayer, gameOver, history, cells;
+let mode = 'pvp';
+// playerColor: which piece number (1=red, 2=blue) belongs to the human in PVE
+let playerColor = 1;
+let aiLock = false;
+
+const boardEl      = document.getElementById('board');
+const statusBar    = document.getElementById('statusBar');
+const scoreRed     = document.getElementById('scoreRed');
+const scoreBlue    = document.getElementById('scoreBlue');
+const cardRed      = document.getElementById('cardRed');
+const cardBlue     = document.getElementById('cardBlue');
+const badgeRed     = document.getElementById('badgeRed');
+const badgeBlue    = document.getElementById('badgeBlue');
+const progressFill = document.getElementById('progressFill');
+const aiThinking   = document.getElementById('aiThinking');
+const colorPick    = document.getElementById('colorPick');
+const labelRed     = document.getElementById('labelRed');
+const labelBlue    = document.getElementById('labelBlue');
+
+const colorPickWrap  = document.getElementById('colorPick').parentElement;
+const aiThinkingWrap = document.getElementById('aiThinking').parentElement;
+
+function updateWrapVisibility() {
+  if (mode === 'pve') {
+    colorPickWrap.classList.remove('hidden');
+    aiThinkingWrap.classList.remove('hidden');
+  } else {
+    colorPickWrap.classList.add('hidden');
+    aiThinkingWrap.classList.add('hidden');
+  }
+}
+function initBoard() {
+  board = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
+  currentPlayer = 1; // red always goes first
+  gameOver = false;
+  aiLock = false;
+  history = [];
+  cells = [];
+  boardEl.innerHTML = '';
+  aiThinking.classList.remove('show');
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.addEventListener('click', () => handleClick(r, c));
+      boardEl.appendChild(cell);
+      cells.push(cell);
+    }
+  }
+  updateLabels();
+  updateUI();
+
+  // If PVE and human plays blue (goes 2nd), AI goes first immediately
+  if (mode === 'pve' && playerColor === 2) {
+    scheduleAI();
+  }
+}
+
+function getCell(r, c) { return cells[r * SIZE + c]; }
+
+// ── INPUT ─────────────────────────────────────────────────────────────────────
+function handleClick(r, c) {
+  if (gameOver || aiLock || board[r][c] !== 0) return;
+  // In PVE, only allow click when it's the human's turn
+  if (mode === 'pve' && currentPlayer !== playerColor) return;
+
+  history.push(board.map(row => [...row]));
+  board[r][c] = currentPlayer;
+  applyCapturesFrom(r, c, board);
+  renderBoard();
+  updateScores();
+
+  if (isBoardFull()) { endGame(); return; }
+
+  currentPlayer = 3 - currentPlayer;
+  updateTurnUI();
+
+  if (mode === 'pve' && currentPlayer !== playerColor) {
+    scheduleAI();
+  }
+}
+
+// ── CAPTURE ───────────────────────────────────────────────────────────────────
+// Corner pieces are IMMUNE — they can never be flipped.
+function applyCapturesFrom(r, c, b) {
+  const player = b[r][c], opp = 3 - player;
+  for (const [dr, dc] of DIRS) {
+    for (const sign of [1, -1]) {
+      const run = [];
+      let nr = r + sign*dr, nc = c + sign*dc;
+      while (inBounds(nr,nc) && b[nr][nc] === opp) {
+        // A corner piece in the run makes the whole run unflippable
+        if (isCorner(nr, nc)) { run.length = 0; break; }
+        run.push([nr, nc]); nr += sign*dr; nc += sign*dc;
+      }
+      if (run.length > 0 && inBounds(nr,nc) && b[nr][nc] === player)
+        run.forEach(([cr,cc]) => {
+          if (!isCorner(cr, cc)) b[cr][cc] = player; // extra safety
+        });
+    }
+  }
+}
+
+// ── AI ENGINE ─────────────────────────────────────────────────────────────────
+function scheduleAI() {
+  aiLock = true;
+  aiThinking.classList.add('show');
+  setTimeout(() => {
+    const aiPlayer = 3 - playerColor;
+    const move = aiChooseMove(board, aiPlayer);
+    aiThinking.classList.remove('show');
+
+    if (move) {
+      history.push(board.map(r => [...r]));
+      board[move[0]][move[1]] = aiPlayer;
+      applyCapturesFrom(move[0], move[1], board);
+      renderBoard();
+      updateScores();
+      const cell = getCell(move[0], move[1]);
+      cell.classList.add('ai-move');
+      setTimeout(() => cell.classList.remove('ai-move'), 400);
+      if (isBoardFull()) { endGame(); aiLock = false; return; }
+    }
+
+    aiLock = false;
+    currentPlayer = playerColor;
+    updateTurnUI();
+  }, 700);
+}
+
+/**
+ * AI — Expert + Edge-Aware Defense
+ *
+ * Extra heuristics vs old version:
+ *  F) Edge threat detection: count how many edge cells the human owns → boosts
+ *     score for ALL edge cells proportionally to stop border encirclement.
+ *  G) Edge chain interrupt: if human has a run of ≥2 along an edge, adjacent
+ *     empty edge cells get a heavy bonus to break the chain early.
+ *  H) Corner control: corners are uniquely valuable (anchor for edge runs)
+ *     so they get an extra bonus when empty.
+ *  I) getCandidates always includes border cells when human edge pressure is high,
+ *     even if no friendly piece is nearby — AI will no longer ignore the rim.
+ */
+
+// ── EDGE ANALYSIS HELPERS ─────────────────────────────────────────────────────
+function isEdge(r, c) {
+  return r === 0 || r === SIZE-1 || c === 0 || c === SIZE-1;
+}
+function isCorner(r, c) {
+  return (r === 0 || r === SIZE-1) && (c === 0 || c === SIZE-1);
+}
+
+/** Count how many edge cells belong to `player` */
+function edgeCount(b, player) {
+  let n = 0;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++)
+    if (isEdge(r,c) && b[r][c] === player) n++;
+  return n;
+}
+
+/**
+ * For each empty edge cell, compute the longest run of `player` pieces
+ * immediately adjacent along the same edge line, in either direction.
+ * Returns a map: key = r*SIZE+c → longest flanking run length
+ */
+function edgeChainPressure(b, player) {
+  const pressure = new Map();
+  // Scan four edge lines: top row, bottom row, left col, right col
+  const edgeLines = [
+    Array.from({length:SIZE}, (_,i) => [0, i]),
+    Array.from({length:SIZE}, (_,i) => [SIZE-1, i]),
+    Array.from({length:SIZE}, (_,i) => [i, 0]),
+    Array.from({length:SIZE}, (_,i) => [i, SIZE-1]),
+  ];
+  for (const line of edgeLines) {
+    for (let i = 0; i < line.length; i++) {
+      const [r, c] = line[i];
+      if (b[r][c] !== 0) continue; // only empty cells
+      let maxRun = 0;
+      // look left along line
+      let run = 0;
+      for (let j = i-1; j >= 0; j--) {
+        if (b[line[j][0]][line[j][1]] === player) run++; else break;
+      }
+      maxRun = Math.max(maxRun, run);
+      // look right along line
+      run = 0;
+      for (let j = i+1; j < line.length; j++) {
+        if (b[line[j][0]][line[j][1]] === player) run++; else break;
+      }
+      maxRun = Math.max(maxRun, run);
+      if (maxRun > 0) {
+        const key = r*SIZE+c;
+        pressure.set(key, Math.max(pressure.get(key) || 0, maxRun));
+      }
+    }
+  }
+  return pressure;
+}
+
+function aiChooseMove(b, aiPlayer) {
+  const human = 3 - aiPlayer;
+  const cands = getCandidates(b, human);
+  if (!cands.length) return null;
+
+  const scored = cands.map(([r,c]) => ({r, c, score: evalMove(b,r,c,aiPlayer,human)}));
+  scored.sort((a,z) => z.score - a.score);
+
+  // Expert: full lookahead on top 14 candidates
+  const pool = scored.slice(0, Math.min(14, scored.length));
+  let bestMove = pool[0], bestVal = -Infinity;
+  for (const cand of pool) {
+    const val = lookahead(b, cand.r, cand.c, aiPlayer, human);
+    if (val > bestVal) { bestVal = val; bestMove = cand; }
+  }
+  return [bestMove.r, bestMove.c];
+}
+
+function evalMove(b, r, c, aiPlayer, human) {
+  if (b[r][c] !== 0) return -Infinity;
+
+  // A) Immediate flips
+  const gainAI    = simCaptures(b, r, c, aiPlayer);
+  // B) Block human immediate flips
+  const gainHuman = simCaptures(b, r, c, human);
+
+  // C) Center preference (mild — edge play is now also valued)
+  const half = (SIZE-1) / 2;
+  const centerD = Math.abs(r - half) + Math.abs(c - half);
+  const posScore = (SIZE*1.4 - centerD) * 0.2;
+
+  // D) Cluster with own pieces
+  let nearOwn = 0, nearOpp = 0;
+  for (const [dr,dc] of [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]) {
+    const nr=r+dr, nc=c+dc;
+    if (inBounds(nr,nc)) {
+      if (b[nr][nc]===aiPlayer) nearOwn++;
+      else if (b[nr][nc]===human) nearOpp++;
+    }
+  }
+  const clusterScore = nearOwn * 1.0 - nearOpp * 0.3;
+
+  // E) Future setup (open flanks)
+  let future = 0;
+  const tmp = cloneBoard(b);
+  tmp[r][c] = aiPlayer;
+  applyCapturesFrom(r, c, tmp);
+  for (const [dr,dc] of DIRS) {
+    for (const sign of [1,-1]) {
+      let chain=0, nr=r+sign*dr, nc=c+sign*dc;
+      while (inBounds(nr,nc) && tmp[nr][nc]===human) { chain++; nr+=sign*dr; nc+=sign*dc; }
+      if (chain>0 && inBounds(nr,nc) && tmp[nr][nc]===0) future += chain * 0.7;
+    }
+  }
+
+  // F) Edge threat — if human has many edge cells, value ALL edge cells more
+  const humanEdge = edgeCount(b, human);
+  const totalEdge = 4*(SIZE-1); // total perimeter cells
+  const edgeThreatRatio = humanEdge / totalEdge; // 0..1
+  let edgeScore = 0;
+  if (isEdge(r, c)) {
+    // Base value for edge cells scales with how much human already owns the rim
+    edgeScore += edgeThreatRatio * 12;
+    // Extra for corners (both axes of potential encirclement meet here)
+    if (isCorner(r, c)) edgeScore += edgeThreatRatio * 8;
+  }
+
+  // G) Edge chain interrupt — heavy bonus to break human runs along rim
+  const pressure = edgeChainPressure(b, human);
+  const chainRun = pressure.get(r*SIZE+c) || 0;
+  // Bonus scales quadratically: run of 3 gives 9×base, run of 4 gives 16×base
+  const chainInterruptScore = chainRun * chainRun * 3.5;
+
+  // H) Corner-awareness: cells directly beside an ENEMY corner are traps.
+  //    Placing there cannot flip the corner (immune) but can be sandwiched.
+  //    Penalize AI from playing those cells; bonus for blocking human from them.
+  let cornerTrapScore = 0;
+  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
+  for (const [cr,cc] of CORNERS) {
+    const dist = Math.abs(r-cr) + Math.abs(c-cc);
+    if (dist === 1) { // directly adjacent (orthogonal) to a corner
+      if (b[cr][cc] === human) {
+        // Enemy owns this corner (immune). Playing next to it is a trap for AI.
+        cornerTrapScore -= 18;
+      } else if (b[cr][cc] === 0) {
+        // Corner is still empty — race to secure it first
+        cornerTrapScore += 5;
+      }
+      // If AI owns the corner, nearby cells are safe/good — no penalty
+    }
+    if (dist === 0 && b[cr][cc] === 0) {
+      // This IS the corner cell and it's empty — strong incentive to claim it
+      cornerTrapScore += 20;
+    }
+  }
+
+  return gainAI*10 + gainHuman*8 + posScore + clusterScore + future
+       + edgeScore + chainInterruptScore + cornerTrapScore;
+}
+
+function simCaptures(b, r, c, player) {
+  if (b[r][c] !== 0) return -999;
+  const opp = 3 - player;
+  let captured = 0;
+  for (const [dr,dc] of DIRS) {
+    for (const sign of [1,-1]) {
+      let run=[], nr=r+sign*dr, nc=c+sign*dc;
+      let blocked = false;
+      while (inBounds(nr,nc) && b[nr][nc]===opp) {
+        if (isCorner(nr,nc)) { blocked=true; break; } // immune corner blocks run
+        run.push([nr,nc]); nr+=sign*dr; nc+=sign*dc;
+      }
+      if (!blocked && run.length>0 && inBounds(nr,nc) && b[nr][nc]===player)
+        captured+=run.length;
+    }
+  }
+  return captured;
+}
+
+function lookahead(b, r, c, aiPlayer, human) {
+  const b2 = cloneBoard(b);
+  b2[r][c] = aiPlayer;
+  applyCapturesFrom(r, c, b2);
+  const baseScore = count(b2,aiPlayer) - count(b2,human);
+
+  const replies = getCandidates(b2, aiPlayer).slice(0, 14);
+  if (!replies.length) return baseScore;
+  let worst = Infinity;
+  for (const [hr,hc] of replies) {
+    const b3 = cloneBoard(b2);
+    b3[hr][hc] = human;
+    applyCapturesFrom(hr, hc, b3);
+    const s = count(b3,aiPlayer) - count(b3,human);
+    if (s < worst) worst = s;
+  }
+  return worst;
+}
+
+function getCandidates(b, oppPlayer) {
+  const total = count(b,1)+count(b,2);
+  const radius = total < 20 ? 3 : 2;
+  const seen = new Set();
+
+  // Standard: expand around existing pieces
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
+    if (b[r][c]!==0) {
+      for (let dr=-radius;dr<=radius;dr++) for (let dc=-radius;dc<=radius;dc++) {
+        const nr=r+dr, nc=c+dc;
+        if (inBounds(nr,nc) && b[nr][nc]===0) seen.add(nr*SIZE+nc);
+      }
+    }
+  }
+
+  // Always include ALL empty edge cells when opponent has ≥2 edge pieces
+  // (ensures AI can always contest the border, even from far away)
+  if (oppPlayer !== undefined) {
+    const oppEdge = edgeCount(b, oppPlayer);
+    if (oppEdge >= 2) {
+      for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
+        if (isEdge(r,c) && b[r][c]===0) seen.add(r*SIZE+c);
+      }
+    }
+  }
+
+  // Fallback: if board is empty, seed center zone
+  if (seen.size===0) {
+    const m = Math.floor(SIZE/2);
+    for (let r=m-2;r<=m+2;r++) for (let c=m-2;c<=m+2;c++)
+      if (inBounds(r,c) && b[r][c]===0) seen.add(r*SIZE+c);
+  }
+
+  return [...seen].map(k=>[Math.floor(k/SIZE), k%SIZE]);
+}
+
+// ── HELPERS ───────────────────────────────────────────────────────────────────
+const inBounds   = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
+const cloneBoard = b => b.map(row=>[...row]);
+function count(b,p){let n=0;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(b[r][c]===p)n++;return n;}
+function isBoardFull(){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(board[r][c]===0)return false;return true;}
+
+// ── RENDER ────────────────────────────────────────────────────────────────────
+function renderBoard() {
+  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
+    const cell=getCell(r,c), val=board[r][c];
+    cell.innerHTML=''; cell.className='cell';
+    if (val!==0) {
+      cell.classList.add('occupied', val===1?'red':'blue');
+      const p=document.createElement('div');
+      p.className='piece '+(val===1?'red':'blue');
+      cell.appendChild(p);
+      // Corner pieces get the gold shield overlay
+      if (isCorner(r,c)) {
+        cell.classList.add('corner-immune');
+        const shield=document.createElement('div');
+        shield.className='shield';
+        cell.appendChild(shield);
+      }
+    }
+  }
+}
+
+function updateScores() {
+  let red=0,blue=0;
+  for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++){if(board[r][c]===1)red++;else if(board[r][c]===2)blue++;}
+  scoreRed.textContent=red; scoreBlue.textContent=blue;
+  const tot=red+blue;
+  if(tot>0) progressFill.style.width=(red/tot*100)+'%';
+}
+
+function updateTurnUI() {
+  if (gameOver) return;
+  if (currentPlayer===1) {
+    cardRed.className='score-card active-red'; cardBlue.className='score-card';
+    badgeRed.style.display=''; badgeBlue.style.display='none';
+    statusBar.className='status-bar';
+    if (mode==='pve') {
+      statusBar.textContent = playerColor===1 ? '🔴 Lượt của bạn' : '🔴 AI đang chuẩn bị...';
+    } else {
+      statusBar.textContent = '🔴 Lượt của Đỏ';
+    }
+  } else {
+    cardRed.className='score-card'; cardBlue.className='score-card active-blue';
+    badgeRed.style.display='none'; badgeBlue.style.display='';
+    statusBar.className='status-bar';
+    if (mode==='pve') {
+      statusBar.textContent = playerColor===2 ? '🔵 Lượt của bạn' : '🔵 AI đang chuẩn bị...';
+    } else {
+      statusBar.textContent = '🔵 Lượt của Xanh';
+    }
+  }
+}
+
+function updateLabels() {
+  if (mode==='pve') {
+    if (playerColor===1) {
+      labelRed.textContent='Người chơi'; labelBlue.textContent='AI.GiaBao';
+    } else {
+      labelRed.textContent='AI.GiaBao'; labelBlue.textContent='Người chơi';
+    }
+  } else {
+    labelRed.textContent='Đỏ'; labelBlue.textContent='Xanh';
+  }
+}
+
+function updateUI() { renderBoard(); updateScores(); updateTurnUI(); }
+
+function endGame() {
+  gameOver=true; aiLock=false; aiThinking.classList.remove('show');
+  const red=count(board,1), blue=count(board,2);
+  badgeRed.style.display='none'; badgeBlue.style.display='none';
+  cardRed.className='score-card'; cardBlue.className='score-card';
+  if (red>blue) {
+    statusBar.className='status-bar win-red';
+    if (mode==='pve') {
+      statusBar.textContent = playerColor===1
+        ? `🏆 BẠN THẮNG! ${red} vs ${blue} (+${red-blue})`
+        : `🤖 AI THẮNG! ${red} vs ${blue} (+${red-blue})`;
+    } else {
+      statusBar.textContent=`🏆 ĐỎ THẮNG! ${red} vs ${blue} (+${red-blue})`;
+    }
+    cardRed.className='score-card active-red';
+  } else if (blue>red) {
+    statusBar.className='status-bar win-blue';
+    if (mode==='pve') {
+      statusBar.textContent = playerColor===2
+        ? `🏆 BẠN THẮNG! ${blue} vs ${red} (+${blue-red})`
+        : `🤖 AI THẮNG! ${blue} vs ${red} (+${blue-red})`;
+    } else {
+      statusBar.textContent=`🏆 XANH THẮNG! ${blue} vs ${red} (+${blue-red})`;
+    }
+    cardBlue.className='score-card active-blue';
+  } else {
+    statusBar.className='status-bar draw';
+    statusBar.textContent=`🤝 HÒA! Cả hai ${red} quân`;
+  }
+}
+
+// ── CONTROLS ──────────────────────────────────────────────────────────────────
+document.getElementById('btnNew').addEventListener('click', () => {
+  statusBar.className='status-bar'; initBoard();
+});
+
+document.getElementById('btnUndo').addEventListener('click', () => {
+  if (aiLock || gameOver) return;
+  if (mode==='pve') {
+    // Undo 2 moves (player + AI) so it's back to player's turn
+    if (history.length >= 2) { history.pop(); board = history.pop(); }
+    else if (history.length === 1) { board = history.pop(); }
+    else return;
+    currentPlayer = playerColor;
+  } else {
+    if (!history.length) return;
+    board = history.pop();
+    currentPlayer = 3 - currentPlayer;
+  }
+  gameOver = false;
+  updateUI();
+});
+
+// MODE TOGGLE
+document.getElementById('btnPVP').addEventListener('click', () => {
+  mode='pvp';
+  document.getElementById('btnPVP').className='mode-btn active-pvp';
+  document.getElementById('btnPVE').className='mode-btn';
+  colorPick.classList.remove('visible');
+  updateWrapVisibility();
+  initBoard();
+});
+document.getElementById('btnPVE').addEventListener('click', () => {
+  mode='pve';
+  document.getElementById('btnPVP').className='mode-btn';
+  document.getElementById('btnPVE').className='mode-btn active-pve';
+  colorPick.classList.add('visible');
+  updateWrapVisibility();
+  initBoard();
+});
+
+// COLOR PICKER
+document.getElementById('optRed').addEventListener('click', () => {
+  if (playerColor===1) return;
+  playerColor=1;
+  document.getElementById('optRed').className='color-opt sel-red';
+  document.getElementById('optBlue').className='color-opt';
+  initBoard();
+});
+document.getElementById('optBlue').addEventListener('click', () => {
+  if (playerColor===2) return;
+  playerColor=2;
+  document.getElementById('optRed').className='color-opt';
+  document.getElementById('optBlue').className='color-opt sel-blue';
+  initBoard();
+});
+
+document.getElementById('btnRules').addEventListener('click', () => {
+  document.getElementById('rulesPanel').classList.toggle('open');
+});
+
+updateWrapVisibility();
+initBoard();
+</script>
+</body>
+</html>
