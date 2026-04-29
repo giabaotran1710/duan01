@@ -54,7 +54,7 @@ body{
   font-weight:1000;
   animation: blink 0.9s infinite;
 }
-  
+
   @keyframes blink{
   0%   { opacity: 0.7; }
   25%  { opacity: 0.3;}
@@ -77,9 +77,7 @@ body{
 #dice{ font-size:150px; margin-top:1px; }
 
 button{
-  width: 100px;
-  height: 35px;
-  padding:10px 5px;
+  padding:10px 16px;
   background: linear-gradient(200deg, #4facfe, #00f2fe);
   border:none;
   color:black;
@@ -89,6 +87,9 @@ button{
   margin-top: 5px;
   transition: all 0.25s ease;
   align-items: center;
+  font-size: 14px;
+  font-weight: 600;
+  white-space: nowrap;
 }
  .win{
   position: relative; /* 🔥 bắt buộc để ::after hoạt động */
@@ -107,7 +108,7 @@ button{
 
   pointer-events:none;
 }
-  
+
 #status{
   font-size:20px;
   margin-top:10px;
@@ -185,7 +186,7 @@ button{
   color:black;
   text-align: left;
   flex: none;
-  
+
 }
 
 #textO{
@@ -212,7 +213,7 @@ button{
   min-width:1%;
   z-index:1;
 }
-  
+
   #toggleScore{
   z-index:20;
 
@@ -263,8 +264,8 @@ button{
   transform: scaleX(0.9); /* 🔥 co ngang */
   opacity: 0.6;
 }
-  
-  
+
+
  #blub{
   font-size:10px;
   color: yellow;
@@ -288,7 +289,7 @@ button{
   opacity: 1;
   cursor: pointer;
 }
-  
+
    #confettiCanvas{
   position: fixed;
   top: 0;
@@ -298,7 +299,7 @@ button{
   pointer-events: none;
   z-index: 99999;
 }
-  
+
  #statusTop {
   transition: all 0.5s ease;
   position: relative;
@@ -385,7 +386,7 @@ button{
   opacity: 0.8;
   transform: translateY(-6px);
 }
- 
+
 footer{
   position: fixed;
   bottom: 5px;
@@ -396,7 +397,7 @@ footer{
   opacity: 0.7;
   font-family: monospace; /* 🔥 kiểu version code */
 }
-  
+
   .win-cell {
   background: rgba(255, 215, 0, 0.35);
   border-color: gold;
@@ -407,7 +408,13 @@ footer{
   from { background: rgba(255, 215, 0, 0.2); }
   to   { background: rgba(255, 215, 0, 0.55); }
 }
-  
+
+/* 🔥 Nút PVP riêng — gradient khác để phân biệt */
+#pvpBtn {
+  background: linear-gradient(200deg, #f9a826, #ff6b6b);
+  color: black;
+}
+
 </style>
 </head>
 
@@ -443,7 +450,8 @@ footer{
 <div id="board-wrapper" style="position:relative;">
 </div>
 <div id="overlay">
-<button id="startBtn" onclick="startGame()">🎲 BẮT ĐẦU</button>
+  <button id="pvpBtn" onclick="startPVP()">👥 2 NGƯỜI CHƠI</button>
+  <button id="startBtn" onclick="startGame()">🎲 ĐÁNH VỚI MÁY</button>
   <div id="dice"></div>
   <div id="status">Tung xúc xắc để xem ai đi trước</div>
   <div id="blub">Gợi ý: Ấn vào biểu tượng bóng đèn để xem đánh giá nước đi</div>
@@ -451,8 +459,8 @@ footer{
   <canvas id="confettiCanvas"></canvas>
   <footer> Version:D20260428-H09M06T0050    »»»   developed by Tran Gia Bao</footer>
 <script>
-  
- 
+
+
 const SIZE = 15;
 
 let board = [];
@@ -464,6 +472,7 @@ let human = "X";
 let ai = "O";
 let currentTurn = "X";
 let aiThinking = false;
+let pvpMode = false; // 🔥 chế độ 2 người chơi
 
 let rawX = scoreX;
 let rawO = scoreO;
@@ -492,7 +501,7 @@ if(total > 0){
   percentX = Math.round(rawX / total * 100);
   percentO = 100 - percentX;
 }
-  
+
 const boardDiv = document.getElementById("board");
 const statusOverlay = document.getElementById("status");
 const statusTop = document.getElementById("statusTop");
@@ -500,7 +509,7 @@ const overlay = document.getElementById("overlay");
 const commentaryDiv = document.getElementById("commentary");
 const resetBtn = document.getElementById("btnReset");
 const btnUndo = document.getElementById("btnUndo");
-  
+
   function setStatus(type){
     statusTop.classList.remove("win");
   const map = {
@@ -513,6 +522,16 @@ const btnUndo = document.getElementById("btnUndo");
   cls: "badge-" + ai,
   symbol: ai,
   text: "AI.GiaBao đang suy nghĩ..."
+},
+"pvp-X": {
+  cls: "badge-X",
+  symbol: "X",
+  text: "Lượt của người chơi X"
+},
+"pvp-O": {
+  cls: "badge-O",
+  symbol: "O",
+  text: "Lượt của người chơi O"
 }
   };
 
@@ -533,7 +552,7 @@ const btnUndo = document.getElementById("btnUndo");
   statusTop.appendChild(badge);
 }
 
-  
+
   function handleClick(r, c){
 
   if(currentTurn !== "human") return;
@@ -549,7 +568,7 @@ const btnUndo = document.getElementById("btnUndo");
     aiMove();
   }, 500);
 }
-  
+
   function undoMove(){
     if(undoLeft <= 0){
     document.getElementById("undolimit").textContent = "Bạn đã sử dụng hết lượt";
@@ -597,7 +616,7 @@ if(getTotalPieces() <= 9) return;
   updateScore();
   updateUndoButton();
 }
-  
+
   function highlightWin(r, c, player){
   const dirs = [[1,0],[0,1],[1,1],[1,-1]];
 
@@ -628,7 +647,7 @@ if(getTotalPieces() <= 9) return;
   document.getElementById("undolimit").textContent =
     `Số lần còn: ${undoLeft}/${maxUndo}`;
 }
-  
+
 function showStatus(text){
   statusOverlay.textContent = text;
   statusOverlay.classList.remove("show");
@@ -684,10 +703,32 @@ function hasNeighbor(r,c){
   return false;
 }
 
-// ===== START =====
-function startGame(){
-  
+// ===== START PVP =====
+function startPVP(){
+  pvpMode = true;
+  human = "X";
+  ai = "O";
+  currentTurn = "X";
+  playerStartTime = Date.now();
+
+  document.getElementById("pvpBtn").style.display = "none";
   document.getElementById("startBtn").style.display = "none";
+  document.getElementById("dice").textContent = "👥";
+  showStatus("2 người chơi — X đi trước");
+
+  setTimeout(()=>{
+    overlay.style.display = "none";
+    setStatus("pvp-X");
+    commentary.textContent = "Chế độ 2 người chơi. X đi trước!";
+  }, 800);
+}
+
+// ===== START vs AI =====
+function startGame(){
+
+  pvpMode = false;
+  document.getElementById("startBtn").style.display = "none";
+  document.getElementById("pvpBtn").style.display = "none";
 
   let faces=["X","X","X","O","O","O"];
   let dice=document.getElementById("dice");
@@ -733,7 +774,7 @@ function startGame(){
 function place(r,c,player){
   board[r][c] = player;
   moveHistory.push([r,c,player]);
-  
+
   const cell = cells[r][c];
   cell.textContent = player;
   cell.classList.add(player);
@@ -748,7 +789,7 @@ function place(r,c,player){
 }
   updateScore();
 }
-  
+
 function updateUndoButton(){
 
   let isActive = (
@@ -763,7 +804,7 @@ function updateUndoButton(){
 
   btnUndo.classList.toggle("active", isActive);
 }
-  
+
   function getTotalPieces(){
   let count = 0;
 
@@ -775,8 +816,8 @@ function updateUndoButton(){
 
   return count;
 }
-  
-  
+
+
 function getOccupiedCount(){
   let count = 0;
   for(let r=0; r<SIZE; r++){
@@ -788,7 +829,35 @@ function getOccupiedCount(){
 }
 // ===== PLAYER =====
 function playerMove(r,c){
-  if(gameOver || board[r][c]!=="" || currentTurn!==human) return;
+  if(gameOver || board[r][c]!=="") return;
+
+  // PVP mode
+  if(pvpMode){
+    if(currentTurn !== "X" && currentTurn !== "O") return;
+    let player = currentTurn;
+    place(r, c, player);
+    canUndo = true;
+    undoUsed = false;
+    updateUndoButton();
+
+    if(checkWin(r, c, player)){
+      highlightWin(r, c, player);
+      statusTop.textContent = `🎉 Người chơi ${player} thắng!`;
+      statusTop.classList.add("win");
+      resetBtn.textContent = "Ván mới";
+      launchConfetti();
+      gameOver = true;
+      updateUndoButton();
+      return;
+    }
+
+    currentTurn = (player === "X") ? "O" : "X";
+    setStatus("pvp-" + currentTurn);
+    return;
+  }
+
+  // vs AI mode
+  if(currentTurn!==human) return;
 
   place(r,c,human);
   canUndo = true;
@@ -991,13 +1060,13 @@ function findDoubleThreat(player){
   }
   return best;
 }
-  
-  
+
+
 
 // ===== SMART AI =====
 const MAX_DEPTH = 6;
-  
- 
+
+
 function smartAI(player){
   let bestScore = -Infinity;
   let bestMove = null;
@@ -1286,6 +1355,7 @@ toggleBtn.onclick = () => {
 };
   function showComment(r, c, player){
 
+  if(pvpMode) return; // không bình luận trong chế độ PVP
   if(player !== ai) return;
   if(!commentaryDiv) return;
   if(playerStartTime === 0) return;
@@ -1299,7 +1369,7 @@ toggleBtn.onclick = () => {
     "Nhìn thấy sự thua cuộc chưa?",
     "GG 😎"
   ];
-    
+
   let winai = [
     "Thất bại là mẹ đập con",
     "Nước mắt anh rơi, trò chơi kết thúc!",
@@ -1348,11 +1418,11 @@ else {
     text = `Quá chậm. Tốn tận ${time} giây chỉ có thế thôi sao???`;
   }
 }
-    
+
   commentaryDiv.textContent = text;
   updateComment(text);
   }
-  
+
   function analyzeMoveLite(r, c, player){
   const dirs = [[1,0],[0,1],[1,1],[1,-1]];
 
@@ -1406,6 +1476,7 @@ function resetGame(){
   moveHistory = [];
   canUndo = false;
   undoUsed = false;
+  pvpMode = false;
 
 createBoard();
   statusTop.textContent="Đang chờ...";
@@ -1413,6 +1484,7 @@ createBoard();
   document.getElementById("dice").textContent="";
   overlay.style.display="flex";
   document.getElementById("startBtn").style.display = "inline-block";
+  document.getElementById("pvpBtn").style.display = "inline-block";
   commentary.textContent="Bạn đã ấn chơi lại";
   setStatus("your-turn");
   resetBtn.textContent = "Chơi lại";
@@ -1423,7 +1495,7 @@ createBoard();
 
 createBoard();
 updateUndoButton();
-  
+
 function updateComment(text){
 
   // 🔥 1. thu lại
@@ -1439,7 +1511,7 @@ function updateComment(text){
 
   }, 500);
 }
-  
+
 const canvas = document.getElementById("confettiCanvas");
 const ctx = canvas.getContext("2d");
 
