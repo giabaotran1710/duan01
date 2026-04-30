@@ -1,0 +1,1185 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Ghép Từ</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+<script src="question.js"></script>
+
+<style>
+:root {
+  --bg: #080c14;
+  --surface: #0e1623;
+  --surface2: #141f30;
+  --border: rgba(255,255,255,0.07);
+  --border-bright: rgba(255,255,255,0.15);
+
+  --easy: #00d4ff;
+  --easy-glow: rgba(0,212,255,0.25);
+  --hard: #ff3e6c;
+  --hard-glow: rgba(255,62,108,0.25);
+  --super: #b45cff;
+  --super-glow: rgba(180,92,255,0.25);
+  --pro: #f5c400;
+  --pro-glow: rgba(245,196,0,0.28);
+  --pro-dark: #c99a00;
+
+  --text: #e8edf5;
+  --text-muted: rgba(232,237,245,0.45);
+
+  --accent: var(--easy);
+  --accent-glow: var(--easy-glow);
+
+  --font-display: 'Syne', sans-serif;
+  --font-mono: 'Space Mono', monospace;
+}
+
+body.hardMode      { --accent: var(--hard);  --accent-glow: var(--hard-glow); }
+body.superHardMode { --accent: var(--super); --accent-glow: var(--super-glow); }
+body.proMode       { --accent: var(--pro);   --accent-glow: var(--pro-glow); }
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: var(--font-display);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 24px 16px 40px;
+  user-select: none;
+  overflow-x: hidden;
+}
+
+/* ─── BG EFFECTS ─── */
+.bg-grid {
+  position: fixed; inset: 0; z-index: 0; pointer-events: none;
+  background-image:
+    linear-gradient(rgba(255,255,255,0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255,255,255,0.03) 1px, transparent 1px);
+  background-size: 48px 48px;
+}
+
+/* PRO mode: golden shimmer overlay on grid */
+body.proMode .bg-grid {
+  background-image:
+    linear-gradient(rgba(245,196,0,0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245,196,0,0.04) 1px, transparent 1px);
+}
+
+.bg-orb {
+  position: fixed; border-radius: 50%; filter: blur(90px);
+  pointer-events: none; z-index: 0; transition: background 1s ease;
+}
+.bg-orb-1 {
+  width: 500px; height: 500px;
+  top: -150px; left: -150px;
+  background: var(--accent-glow);
+  animation: orbFloat1 14s ease-in-out infinite;
+}
+.bg-orb-2 {
+  width: 400px; height: 400px;
+  bottom: -100px; right: -100px;
+  background: rgba(255,255,255,0.03);
+  animation: orbFloat2 18s ease-in-out infinite;
+}
+
+/* PRO mode extra orb for drama */
+.bg-orb-pro {
+  position: fixed;
+  width: 300px; height: 300px;
+  top: 40%; left: 50%;
+  transform: translate(-50%,-50%);
+  border-radius: 50%;
+  filter: blur(110px);
+  pointer-events: none; z-index: 0;
+  background: rgba(245,196,0,0.07);
+  animation: orbFloat1 20s ease-in-out infinite reverse;
+  opacity: 0;
+  transition: opacity 0.8s ease;
+}
+body.proMode .bg-orb-pro { opacity: 1; }
+
+@keyframes orbFloat1 {
+  0%,100% { transform: translate(0,0) scale(1); }
+  50% { transform: translate(40px, 30px) scale(1.1); }
+}
+@keyframes orbFloat2 {
+  0%,100% { transform: translate(0,0); }
+  50% { transform: translate(-30px,-20px); }
+}
+
+/* ─── LAYOUT ─── */
+.container {
+  position: relative; z-index: 1;
+  width: 100%; max-width: 640px;
+  display: flex; flex-direction: column; align-items: center;
+  gap: 0;
+}
+
+/* ─── ADMIN BTN ─── */
+#admin {
+  position: fixed; top: 18px; right: 18px; z-index: 100;
+  width: 40px; height: 40px;
+  background: var(--surface2);
+  border: 1px solid var(--border-bright);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+#admin:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ─── HEADER ─── */
+.header {
+  width: 100%;
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 12px 0 28px;
+}
+
+.logo {
+  display: flex; align-items: center; gap: 10px;
+}
+
+.logo-icon {
+  width: 38px; height: 38px;
+  background: var(--accent);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px;
+  box-shadow: 0 0 20px var(--accent-glow);
+  transition: background 0.5s, box-shadow 0.5s;
+}
+
+.logo-text {
+  font-size: 22px; font-weight: 800;
+  letter-spacing: 2px; text-transform: uppercase;
+  font-family: Arial, sans-serif;
+}
+
+.logo-sub {
+  font-size: 10px; font-weight: 400;
+  letter-spacing: 4px; text-transform: uppercase;
+  color: var(--text-muted); margin-top: 1px;
+}
+
+#infoBtn {
+  width: 38px; height: 38px;
+  background: var(--surface2);
+  border: 1px solid var(--border-bright);
+  border-radius: 10px;
+  color: var(--text-muted);
+  font-size: 15px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.2s;
+}
+#infoBtn:hover {
+  color: var(--text);
+  border-color: var(--accent);
+  box-shadow: 0 0 12px var(--accent-glow);
+}
+
+/* ─── MODE TOGGLE ─── */
+.mode-section { width: 100%; margin-bottom: 20px; }
+
+.mode-label {
+  font-size: 10px; letter-spacing: 3px; text-transform: uppercase;
+  color: var(--text-muted); margin-bottom: 8px;
+  font-family: var(--font-mono);
+}
+
+#modeToggle {
+  position: relative;
+  display: flex;
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 4px;
+  gap: 4px;
+}
+
+#slider {
+  position: absolute;
+  height: calc(100% - 8px);
+  top: 4px;
+  background: var(--accent);
+  border-radius: 10px;
+  transition: left 0.35s cubic-bezier(0.4,0,0.2,1),
+              width 0.35s cubic-bezier(0.4,0,0.2,1),
+              background 0.4s ease;
+  z-index: 0;
+  box-shadow: 0 0 16px var(--accent-glow);
+}
+
+.easyMode #slider      { left: 4px; background: var(--easy); box-shadow: 0 0 20px var(--easy-glow); }
+.hardMode #slider      { background: var(--hard); box-shadow: 0 0 20px var(--hard-glow); }
+.superHardMode #slider { background: var(--super); box-shadow: 0 0 20px var(--super-glow); }
+.proMode #slider       {
+  background: linear-gradient(90deg, #f5c400, #ffe066, #f5c400);
+  background-size: 200% 100%;
+  box-shadow: 0 0 24px var(--pro-glow), 0 0 8px rgba(245,196,0,0.5);
+  animation: goldShimmer 2s linear infinite;
+}
+
+@keyframes goldShimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+
+#modeToggle span {
+  position: relative; z-index: 1;
+  flex: 1; text-align: center;
+  padding: 10px 0;
+  cursor: pointer;
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  color: var(--text-muted);
+  border-radius: 10px;
+  transition: color 0.3s;
+}
+
+.easyMode #easyBtn,
+.hardMode #hardBtn,
+.superHardMode #superHardBtn { color: #fff; }
+.proMode #proBtn { color: #1a1000; }
+
+/* PRO badge on button */
+#proBtn {
+  display: flex; align-items: center; justify-content: center; gap: 4px;
+}
+#proBtn::before {
+  content: '★';
+  font-size: 10px;
+  color: inherit;
+  opacity: 0.85;
+}
+
+#modeToggle.locked span { pointer-events: none; }
+
+/* ─── STATS BAR ─── */
+.stats-bar {
+  width: 100%;
+  display: grid; grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 20px;
+}
+
+.stat-card {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 14px 18px;
+  display: flex; align-items: center; gap: 12px;
+  transition: border-color 0.3s;
+}
+.stat-card:hover { border-color: var(--border-bright); }
+
+/* PRO mode stat card: golden border */
+body.proMode .stat-card {
+  border-color: rgba(245,196,0,0.18);
+}
+
+.stat-icon {
+  width: 36px; height: 36px;
+  background: var(--surface2);
+  border-radius: 10px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 25px;
+  flex-shrink: 0;
+}
+
+.stat-info { display: flex; flex-direction: column; }
+.stat-label {
+  font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--text-muted);
+  font-family: var(--font-mono);
+}
+.stat-value {
+  font-size: 26px; font-weight: 800;
+  font-family: var(--font-mono);
+  color: var(--text);
+  line-height: 1.1;
+  transition: color 0.3s;
+}
+
+/* timer thấp → đổi màu */
+.stat-value.timer-warn { color: var(--hard) !important; }
+.stat-value.timer-critical { color: #ff1744 !important; animation: pulse 0.5s ease infinite alternate; }
+
+@keyframes pulse { from { opacity: 1; } to { opacity: 0.5; } }
+
+/* ─── GAME CARD ─── */
+.game-card {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  padding: 28px 24px;
+  margin-bottom: 12px;
+  transition: border-color 0.5s;
+}
+
+body.proMode .game-card {
+  border-color: rgba(245,196,0,0.18);
+  box-shadow: 0 0 40px rgba(245,196,0,0.05);
+}
+
+/* ─── LETTERS ─── */
+#letters {
+  display: flex; flex-wrap: wrap;
+  justify-content: center; gap: 8px;
+  min-height: 56px;
+}
+
+#letters span {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 44px; height: 48px;
+  padding: 0 10px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border-bright);
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 24px; font-weight: 700;
+  font-family: Tahoma, sans-serif;
+  color: var(--text);
+  transition: transform 0.15s, background 0.15s, border-color 0.15s, box-shadow 0.15s, opacity 0.2s;
+  position: relative;
+}
+
+#letters span:hover:not(.used) {
+  transform: translateY(-4px) scale(1.08);
+  background: var(--accent);
+  border-color: var(--accent);
+  box-shadow: 0 8px 20px var(--accent-glow);
+  color: #fff;
+}
+
+#letters span.used {
+  opacity: 0.2;
+  pointer-events: none;
+  transform: scale(0.9);
+}
+
+body.hardMode #letters span { border-color: rgba(255,62,108,0.3); }
+body.hardMode #letters span:hover:not(.used) {
+  background: var(--hard);
+  border-color: var(--hard);
+  box-shadow: 0 8px 20px var(--hard-glow);
+}
+
+body.superHardMode #letters span { border-color: rgba(180,92,255,0.3); }
+body.superHardMode #letters span:hover:not(.used) {
+  background: var(--super);
+  border-color: var(--super);
+  box-shadow: 0 8px 20px var(--super-glow);
+}
+
+/* PRO mode letters */
+body.proMode #letters span {
+  border-color: rgba(245,196,0,0.25);
+  background: #14180a;
+}
+body.proMode #letters span:hover:not(.used) {
+  background: var(--pro);
+  border-color: var(--pro);
+  box-shadow: 0 8px 24px var(--pro-glow), 0 0 8px rgba(245,196,0,0.4);
+  color: #1a1000;
+}
+
+/* PRO shuffle animation */
+@keyframes proShuffle {
+  0%   { transform: scale(1) rotate(0deg); opacity: 1; }
+  30%  { transform: scale(0.7) rotate(-8deg); opacity: 0.4; }
+  60%  { transform: scale(1.15) rotate(5deg); opacity: 0.8; }
+  100% { transform: scale(1) rotate(0deg); opacity: 1; }
+}
+.pro-shuffle-anim {
+  animation: proShuffle 0.35s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ─── DIVIDER ─── */
+.divider {
+  width: 100%; height: 1px;
+  background: var(--border);
+  margin: 20px 0;
+}
+
+/* ─── ANSWER AREA ─── */
+.answer-row {
+  display: flex; align-items: center; gap: 10px;
+}
+
+#answer {
+  flex: 1;
+  min-height: 52px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border-bright);
+  border-radius: 12px;
+  padding: 0 18px;
+  font-size: 22px; font-weight: 700;
+  font-family: Tahoma, sans-serif;
+  letter-spacing: 4px;
+  display: flex; align-items: center;
+  color: var(--text);
+  transition: border-color 0.3s, box-shadow 0.3s;
+}
+
+body.proMode #answer {
+  border-color: rgba(245,196,0,0.2);
+}
+
+#clearBtn {
+  width: 52px; height: 52px;
+  background: var(--surface2);
+  border: 1.5px solid var(--border-bright);
+  border-radius: 12px;
+  color: var(--text-muted);
+  font-size: 18px;
+  cursor: pointer;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.2s;
+}
+#clearBtn:hover {
+  color: var(--hard);
+  border-color: var(--hard);
+  box-shadow: 0 0 12px var(--hard-glow);
+}
+
+body.superHardMode #clearBtn {
+  opacity: 0.3;
+  pointer-events: none;
+  cursor: not-allowed;
+}
+
+/* PRO clear btn - enabled */
+body.proMode #clearBtn {
+  opacity: 1;
+  pointer-events: auto;
+  cursor: pointer;
+  border-color: rgba(245,196,0,0.3);
+}
+body.proMode #clearBtn:hover {
+  color: var(--pro);
+  border-color: var(--pro);
+  box-shadow: 0 0 12px var(--pro-glow);
+}
+
+/* ─── RESULT ─── */
+#result {
+  text-align: center;
+  font-size: 15px; font-weight: 700;
+  letter-spacing: 1px;
+  min-height: 24px;
+  margin-top: 16px;
+  color: var(--text-muted);
+  font-family: var(--font-mono);
+  transition: color 0.3s;
+}
+
+/* ─── PRO MODE HINT BADGE ─── */
+.pro-hint {
+  display: none;
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px 16px;
+  background: rgba(245,196,0,0.08);
+  border: 1px solid rgba(245,196,0,0.2);
+  border-radius: 12px;
+  font-size: 11px;
+  font-family: var(--font-mono);
+  color: rgba(245,196,0,0.7);
+  letter-spacing: 1px;
+  text-align: center;
+}
+body.proMode .pro-hint { display: block; }
+
+/* ─── EFFECTS ─── */
+@keyframes blinkRedBorder {
+  0%,100% { border-color: var(--hard); color: var(--hard); box-shadow: 0 0 16px var(--hard-glow); }
+  50% { border-color: var(--border-bright); color: var(--text); box-shadow: none; }
+}
+.wrongEffect { animation: blinkRedBorder 0.6s linear 2; }
+
+@keyframes blinkGreen {
+  0%,100% { border-color: #00e676; color: #00e676; box-shadow: 0 0 16px rgba(0,230,118,0.35); }
+  50% { border-color: var(--border-bright); color: var(--text); box-shadow: none; }
+}
+.correctEffect { animation: blinkGreen 0.6s linear 2; }
+
+/* +1 fly */
+.floating-score {
+  position: fixed;
+  font-size: 24px; font-weight: 800;
+  font-family: var(--font-mono);
+  color: #00e676;
+  pointer-events: none;
+  animation: flyToScore 0.75s ease forwards;
+  z-index: 999;
+  text-shadow: 0 0 12px rgba(0,230,118,0.7);
+}
+body.proMode .floating-score {
+  color: var(--pro);
+  text-shadow: 0 0 12px var(--pro-glow);
+}
+@keyframes flyToScore {
+  0%   { opacity:1; transform: translate(0,0) scale(1); }
+  100% { opacity:0; transform: translate(var(--dx), var(--dy)) scale(1.4); }
+}
+
+.score-pop { animation: popScore 0.3s ease; }
+@keyframes popScore {
+  0%   { transform: scale(1); }
+  50%  { transform: scale(1.5); }
+  100% { transform: scale(1); }
+}
+
+/* shake */
+@keyframes shakeOne {
+  0%,100% { transform: translate(0,0) rotate(0deg); }
+  25% { transform: translate(2px,-2px) rotate(-3deg); }
+  50% { transform: translate(-2px,2px) rotate(3deg); }
+  75% { transform: translate(1px,1px) rotate(-2deg); }
+}
+.shake-once { animation: shakeOne 0.4s; }
+
+@keyframes shake {
+  0%,100% { transform: translate(0,0); }
+  25% { transform: translate(1px,-1px); }
+  75% { transform: translate(-1px,1px); }
+}
+.shake { animation: shake 0.25s infinite; }
+
+/* frozen */
+.frozenAll {
+  background: #1a1a2e !important;
+  border-color: rgba(255,255,255,0.05) !important;
+  color: rgba(255,255,255,0.2) !important;
+  pointer-events: none !important;
+  box-shadow: none !important;
+}
+
+/* ─── POPUP ─── */
+#infoPopup {
+  position: fixed; inset: 0;
+  background: rgba(8,12,20,0.85);
+  backdrop-filter: blur(12px);
+  display: none; justify-content: center; align-items: center;
+  z-index: 999;
+}
+
+#infoBox {
+  background: var(--surface);
+  border: 1px solid var(--border-bright);
+  border-radius: 20px;
+  padding: 28px;
+  width: min(360px, 90vw);
+  animation: popIn 0.3s cubic-bezier(0.34,1.56,0.64,1);
+  box-shadow: 0 24px 80px rgba(0,0,0,0.6);
+}
+@keyframes popIn {
+  from { transform: scale(0.85); opacity: 0; }
+  to   { transform: scale(1);    opacity: 1; }
+}
+
+#infoBox h3 {
+  font-size: 15px; letter-spacing: 2px;
+  text-transform: uppercase; margin-bottom: 20px;
+  font-family: var(--font-mono);
+  color: var(--accent);
+}
+
+.rule-block {
+  background: var(--surface2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-bottom: 10px;
+}
+
+.rule-title {
+  font-size: 12px; font-weight: 700;
+  letter-spacing: 1px; text-transform: uppercase;
+  margin-bottom: 6px;
+}
+.rule-title.easy  { color: var(--easy); }
+.rule-title.hard  { color: var(--hard); }
+.rule-title.super { color: var(--super); }
+.rule-title.pro   { color: var(--pro); }
+
+.rule-block p {
+  font-size: 13px; line-height: 1.6;
+  color: var(--text-muted);
+}
+
+.rule-note {
+  font-size: 12px; color: var(--text-muted);
+  font-family: var(--font-mono);
+  margin-top: 14px; text-align: center;
+}
+
+#closeInfo {
+  display: block; width: 100%; margin-top: 16px;
+  padding: 12px;
+  background: var(--surface2);
+  border: 1px solid var(--border-bright);
+  border-radius: 12px;
+  color: var(--text);
+  font-size: 13px; font-weight: 700;
+  letter-spacing: 2px; text-transform: uppercase;
+  cursor: pointer;
+  font-family: var(--font-display);
+  transition: all 0.2s;
+}
+#closeInfo:hover {
+  background: var(--hard);
+  border-color: var(--hard);
+  color: #fff;
+}
+
+footer {
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: monospace;
+}
+</style>
+</head>
+
+<body>
+
+<div class="bg-grid"></div>
+<div class="bg-orb bg-orb-1"></div>
+<div class="bg-orb bg-orb-2"></div>
+<div class="bg-orb-pro"></div>
+
+<button id="admin"><i class="fa-solid fa-screwdriver-wrench"></i></button>
+<button id="infoBtn"><i class="fa-solid fa-circle-info"></i></button>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="header">
+    <div class="logo">
+      <div class="logo-icon">🔤</div>
+      <div>
+        <div class="logo-text">Ghép Từ</div>
+        <div class="logo-sub">Word Puzzle</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODE -->
+  <div class="mode-section">
+    <div class="mode-label">Chế độ chơi</div>
+    <div id="modeToggle">
+      <div id="slider"></div>
+      <span id="easyBtn">Dễ</span>
+      <span id="hardBtn">Khó</span>
+      <span id="superHardBtn">Siêu Khó</span>
+      <span id="proBtn">PRO</span>
+    </div>
+  </div>
+
+  <!-- PRO HINT -->
+  <div class="pro-hint">⚡ Mỗi lần chọn chữ · vị trí các chữ sẽ xáo trộn lại</div>
+
+  <!-- STATS -->
+  <div class="stats-bar">
+    <div class="stat-card">
+      <div class="stat-icon">⭐</div>
+      <div class="stat-info">
+        <span class="stat-label">Điểm</span>
+        <span class="stat-value" id="score">0</span>
+      </div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-icon">⏱</div>
+      <div class="stat-info">
+        <span class="stat-label">Thời gian</span>
+        <span class="stat-value" id="time">25</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- GAME CARD -->
+  <div class="game-card">
+    <div id="letters"></div>
+
+    <div class="divider"></div>
+
+    <div class="answer-row">
+      <div id="answer"></div>
+      <button id="clearBtn"><i class="fa-solid fa-rotate-left"></i></button>
+    </div>
+
+    <div id="result"></div>
+  </div>
+
+</div>
+
+<!-- POPUP -->
+<div id="infoPopup">
+  <div id="infoBox">
+    <h3>📜 Quy Tắc Chơi</h3>
+
+    <div class="rule-block">
+      <div class="rule-title easy">🔵 Chế độ dễ</div>
+      <p>Từ mức dễ đến trung bình · 25 giây mỗi câu</p>
+    </div>
+
+    <div class="rule-block">
+      <div class="rule-title hard">🔴 Chế độ khó</div>
+      <p>Chữ cái đầu không viết hoa · Nhiều từ khó hơn · 20 giây mỗi câu</p>
+    </div>
+
+    <div class="rule-block">
+      <div class="rule-title super">🟣 Chế độ siêu khó</div>
+      <p>Phải chọn đúng thứ tự chữ · Sai 1 chữ là thua · 25 giây mỗi câu</p>
+    </div>
+
+    <div class="rule-block">
+      <div class="rule-title pro">★ Chế độ PRO</div>
+      <p>Mỗi khi chọn một chữ · toàn bộ chữ còn lại sẽ xáo trộn vị trí · 40 giây mỗi câu</p>
+    </div>
+
+    <div class="rule-note">⚠️ Đổi chế độ sẽ mất toàn bộ điểm</div>
+    <button id="closeInfo">Đóng</button>
+  </div>
+</div>
+
+<footer> Version:D20260327-H23M30T1055    »»»   developed by Tran Gia Bao</footer>
+
+<script>
+document.getElementById("admin").onclick = () => {
+  window.location.href = "checkduplicate.html";
+};
+
+// ─── UPDATE TIMER COLOR ───
+function updateTimerColor(t) {
+  const el = document.getElementById("time");
+  el.classList.remove("timer-warn","timer-critical");
+  if(t <= 5) el.classList.add("timer-critical");
+  else if(t <= 10) el.classList.add("timer-warn");
+}
+
+// ─── UPDATE SLIDER POSITION (4 modes) ───
+function updateSlider() {
+  const slider = document.getElementById("slider");
+  const toggle = document.getElementById("modeToggle");
+  let activeSpan;
+  if(currentMode === "easy")           activeSpan = document.getElementById("easyBtn");
+  else if(currentMode === "hard")      activeSpan = document.getElementById("hardBtn");
+  else if(currentMode === "superHard") activeSpan = document.getElementById("superHardBtn");
+  else                                  activeSpan = document.getElementById("proBtn");
+
+  const toggleRect = toggle.getBoundingClientRect();
+  const spanRect   = activeSpan.getBoundingClientRect();
+  slider.style.left  = (spanRect.left - toggleRect.left + 4) + "px";
+  slider.style.width = (spanRect.width - 8) + "px";
+}
+
+let currentWord = "";
+let originalWord = "";
+let answer = "";
+let score = 0;
+let timeLeft = 10;
+let timer = null;
+let currentMode = "easy";
+let usedWords = [];
+let isTransitioning = false;
+let isFrozen = false;
+let isSwithingMode = false;
+let shakeInterval = null;
+let questionStartTime = 0;
+
+// ─── PRO shuffle remaining letters ───
+function proShuffleRemaining() {
+  const spans = Array.from(document.querySelectorAll("#letters span:not(.used)"));
+  if(spans.length < 2) return;
+
+  // collect current positions
+  const positions = spans.map(s => {
+    const r = s.getBoundingClientRect();
+    return { x: r.left, y: r.top };
+  });
+
+  // add animation
+  spans.forEach(s => {
+    s.classList.remove("pro-shuffle-anim");
+    void s.offsetWidth; // reflow
+    s.classList.add("pro-shuffle-anim");
+  });
+
+  // shuffle DOM order
+  const container = document.getElementById("letters");
+  const allSpans = Array.from(container.querySelectorAll("span"));
+  const usedSpans = allSpans.filter(s => s.classList.contains("used"));
+  let freeSpans = allSpans.filter(s => !s.classList.contains("used"));
+
+  // Fisher-Yates on freeSpans
+  for(let i = freeSpans.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [freeSpans[i], freeSpans[j]] = [freeSpans[j], freeSpans[i]];
+  }
+
+  // rebuild container preserving used spans in place
+  container.innerHTML = "";
+  let fi = 0;
+  allSpans.forEach(orig => {
+    if(orig.classList.contains("used")) {
+      container.appendChild(orig);
+    } else {
+      container.appendChild(freeSpans[fi++]);
+    }
+  });
+
+  // cleanup animation after done
+  setTimeout(() => {
+    document.querySelectorAll("#letters span").forEach(s =>
+      s.classList.remove("pro-shuffle-anim")
+    );
+  }, 400);
+}
+
+function startRandomShake() {
+  if(shakeInterval) clearInterval(shakeInterval);
+  if(currentMode !== "hard") return;
+  shakeInterval = setInterval(() => {
+    const letters = document.querySelectorAll("#letters span");
+    if(!letters.length) return;
+    const target = letters[Math.floor(Math.random() * letters.length)];
+    target.classList.add("shake-once");
+    setTimeout(() => target.classList.remove("shake-once"), 400);
+  }, 1500);
+}
+
+const infoBtn   = document.getElementById("infoBtn");
+const infoPopup = document.getElementById("infoPopup");
+const closeInfo = document.getElementById("closeInfo");
+infoBtn.onclick  = () => infoPopup.style.display = "flex";
+closeInfo.onclick = () => infoPopup.style.display = "none";
+infoPopup.onclick = (e) => { if(e.target === infoPopup) infoPopup.style.display = "none"; };
+
+function formatWord(word) {
+  if(currentMode === "hard" || currentMode === "superHard" || currentMode === "pro") return word.toLowerCase();
+  word = word.toLowerCase();
+  return word.charAt(0).toUpperCase() + word.slice(1);
+}
+
+function shuffleWord(word) {
+  if(currentMode === "superHard") return superHardShuffle(word);
+  if(currentMode === "hard")      return hardShuffle(word);
+  // easy & pro use the same initial shuffle
+  return easyShuffle(word);
+}
+
+function easyShuffle(word) {
+  let l = word.replaceAll(" ","").split("");
+  for(let i = l.length-1; i > 0; i--) {
+    const j = Math.floor(Math.random()*(i+1));
+    [l[i],l[j]] = [l[j],l[i]];
+  }
+  return l;
+}
+
+function hardShuffle(word) {
+  const orig = word.replaceAll(" ","").split("");
+  let sh;
+  do {
+    sh = [...orig];
+    for(let i = sh.length-1; i > 0; i--) {
+      const j = Math.floor(Math.random()*(i+1));
+      [sh[i],sh[j]] = [sh[j],sh[i]];
+    }
+  } while(isTooEasy(orig, sh));
+  return sh;
+}
+
+function isTooEasy(orig, sh) {
+  let sp = 0, sa = 0;
+  for(let i = 0; i < orig.length; i++) if(orig[i]===sh[i]) sp++;
+  for(let i = 0; i < orig.length-1; i++) if(orig[i]===sh[i] && orig[i+1]===sh[i+1]) sa++;
+  return sp > 1 || sa > 0;
+}
+
+function superHardShuffle(word) {
+  const letters = word.replaceAll(" ","").split("");
+  const vowels = "aăâeêioôơuưáàảãạắằẳẵặấầẩẫậéèẻẽẹếềểễệíìỉĩịóòỏõọốồổỗộớờởỡợúùủũụứừửữựýỳỷỹỵ";
+  let v=[], c=[];
+  letters.forEach(l => (vowels.includes(l.toLowerCase()) ? v : c).push(l));
+  for(let i=v.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[v[i],v[j]]=[v[j],v[i]];}
+  for(let i=c.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[c[i],c[j]]=[c[j],c[i]];}
+  return [...v,...c];
+}
+
+function renderLetters(letters) {
+  const box = document.getElementById("letters");
+  box.innerHTML = "";
+  letters.forEach(letter => {
+    const span = document.createElement("span");
+    span.textContent = letter;
+    span.dataset.letter = letter;
+    if(currentMode === "superHard") {
+      span.classList.add("shake");
+      span.style.animationDuration = (0.2 + Math.random()*0.2) + "s";
+      span.style.animationDelay = (Math.random()*0.3) + "s";
+    }
+    span.onclick = () => {
+      if(isFrozen || span.classList.contains("used")) return;
+
+      if(currentMode === "superHard") {
+        if(isTransitioning) return;
+        const originalLetters = originalWord.replaceAll(" ","").split("");
+        const nextIndex = answer.length;
+        const expected = originalLetters[nextIndex].toLowerCase();
+        if(letter.toLowerCase() !== expected) {
+          isFrozen = true;
+          freezeAllLetters();
+          document.getElementById("result").textContent = "❌ Bạn đã chọn sai!";
+          const ans = document.getElementById("answer");
+          ans.classList.add("wrongEffect");
+          ans.textContent = currentWord;
+          setTimeout(newQuestion, 1700);
+          return;
+        }
+        answer += letter;
+        document.getElementById("answer").textContent = answer;
+        span.classList.add("used");
+        if(answer.length === originalLetters.length) {
+          clearInterval(timer); timer = null;
+          if(checkCheat()) {
+            setTimeout(() => {
+              alert("⚠️ Phát hiện hành vi bất thường!\nĐiểm sẽ bị reset.");
+              score = 0; usedWords = [];
+              document.getElementById("score").textContent = score;
+            }, 200);
+          } else {
+            score++;
+            document.getElementById("score").textContent = score;
+          }
+          usedWords.push(originalWord);
+          animateScore();
+          document.getElementById("result").textContent = "🎉 Chính xác!";
+          const ans = document.getElementById("answer");
+          ans.textContent = currentWord;
+          ans.classList.add("correctEffect");
+          setTimeout(newQuestion, 1700);
+        }
+
+      } else if(currentMode === "pro") {
+        // PRO: like easy/hard (no order required), but shuffle remaining after each pick
+        answer += letter;
+        document.getElementById("answer").textContent = answer;
+        span.classList.add("used");
+        // Shuffle remaining letters AFTER marking used
+        setTimeout(proShuffleRemaining, 80);
+        checkAnswer();
+
+      } else {
+        answer += letter;
+        document.getElementById("answer").textContent = answer;
+        span.classList.add("used");
+        checkAnswer();
+      }
+    };
+    box.appendChild(span);
+  });
+}
+
+function startTimer() {
+  if(timer) { clearInterval(timer); timer = null; }
+  if(currentMode === "easy")           timeLeft = 25;
+  else if(currentMode === "hard")      timeLeft = 20;
+  else if(currentMode === "superHard") timeLeft = 25;
+  else if(currentMode === "pro")       timeLeft = 40;
+  document.getElementById("time").textContent = timeLeft;
+  updateTimerColor(timeLeft);
+  timer = setInterval(() => {
+    timeLeft--;
+    document.getElementById("time").textContent = timeLeft;
+    updateTimerColor(timeLeft);
+    if(timeLeft <= 0) {
+      clearInterval(timer); timer = null;
+      const ans = document.getElementById("answer");
+      ans.textContent = currentWord;
+      ans.classList.add("wrongEffect");
+      document.getElementById("result").textContent = "⏰ Hết giờ!";
+      setTimeout(newQuestion, 1700);
+    }
+  }, 1000);
+}
+
+function freezeAllLetters() {
+  document.querySelectorAll("#letters span").forEach(s => s.classList.add("frozenAll"));
+}
+
+function newQuestion() {
+  isFrozen = false;
+  if(isTransitioning) return;
+  isTransitioning = true;
+  questionStartTime = Date.now();
+  clearInterval(timer); timer = null;
+
+  const ans = document.getElementById("answer");
+  ans.classList.remove("wrongEffect","correctEffect");
+  ans.style.color = "";
+  answer = "";
+  ans.textContent = "";
+  document.getElementById("result").textContent = "";
+
+  let available = words.filter(w => {
+    if(usedWords.includes(w)) return false;
+    if(currentMode === "hard" || currentMode === "superHard" || currentMode === "pro")
+      return w.replaceAll(" ","").length >= 6;
+    return true;
+  });
+
+  if(!available.length) {
+    usedWords = [];
+    available = words.filter(w => {
+      if(currentMode === "hard" || currentMode === "superHard" || currentMode === "pro")
+        return w.replaceAll(" ","").length >= 6;
+      return true;
+    });
+  }
+
+  const rawWord = available[Math.floor(Math.random()*available.length)];
+  originalWord = rawWord;
+  currentWord = formatWord(rawWord);
+  renderLetters(shuffleWord(currentWord));
+  startTimer();
+  startRandomShake();
+  setTimeout(() => { isTransitioning = false; }, 300);
+}
+
+function checkAnswer() {
+  const ans = document.getElementById("answer");
+  const correct = originalWord.replaceAll(" ","");
+  if(answer.length === correct.length) {
+    clearInterval(timer); timer = null;
+    if(answer.toLowerCase() === correct.toLowerCase()) {
+      if(checkCheat()) {
+        setTimeout(() => {
+          alert("⚠️ Phát hiện hành vi bất thường!\nĐiểm sẽ bị reset.");
+          score = 0; usedWords = [];
+          document.getElementById("score").textContent = score;
+        }, 200);
+      } else {
+        score++;
+        document.getElementById("score").textContent = score;
+      }
+      usedWords.push(originalWord);
+      animateScore();
+      document.getElementById("result").textContent = "🎉 Chính xác!";
+      ans.textContent = currentWord;
+      ans.classList.add("correctEffect");
+    } else {
+      document.getElementById("result").textContent = "❌ Không chính xác!";
+      ans.textContent = currentWord;
+      ans.classList.add("wrongEffect");
+    }
+    setTimeout(newQuestion, 1700);
+  }
+}
+
+function checkCheat() {
+  if(currentMode !== "hard" && currentMode !== "superHard" && currentMode !== "pro") return false;
+  if(originalWord.replaceAll(" ","").length < 6) return false;
+  const t = (Date.now() - questionStartTime) / 1000;
+  if(currentMode === "hard")      return t < 2;
+  if(currentMode === "superHard") return t < 3;
+  if(currentMode === "pro")       return t < 2;
+  return false;
+}
+
+document.getElementById("clearBtn").onclick = function() {
+  if(currentMode === "superHard") return;
+  answer = "";
+  document.getElementById("answer").textContent = "";
+  document.querySelectorAll("#letters span").forEach(span => {
+    span.classList.remove("used","frozen","frozenAll");
+    span.style.pointerEvents = "auto";
+  });
+};
+
+function animateScore() {
+  const answerArea = document.getElementById("answer");
+  const scoreEl = document.getElementById("score");
+  const r1 = answerArea.getBoundingClientRect();
+  const r2 = scoreEl.getBoundingClientRect();
+  const float = document.createElement("div");
+  float.textContent = "+1";
+  float.className = "floating-score";
+  document.body.appendChild(float);
+  float.style.left = (r1.left + r1.width/2) + "px";
+  float.style.top  = (r1.top  + r1.height/2) + "px";
+  float.style.setProperty("--dx", (r2.left - r1.left) + "px");
+  float.style.setProperty("--dy", (r2.top  - r1.top)  + "px");
+  setTimeout(() => float.remove(), 800);
+  scoreEl.classList.add("score-pop");
+  setTimeout(() => scoreEl.classList.remove("score-pop"), 300);
+}
+
+// ─── MODE TOGGLE ───
+const modeToggle    = document.getElementById("modeToggle");
+const easyBtn       = document.getElementById("easyBtn");
+const hardBtn       = document.getElementById("hardBtn");
+const superHardBtn  = document.getElementById("superHardBtn");
+const proBtn        = document.getElementById("proBtn");
+
+function updateUI() {
+  modeToggle.classList.remove("easyMode","hardMode","superHardMode","proMode");
+  document.body.classList.remove("easyMode","hardMode","superHardMode","proMode");
+  let cls;
+  if(currentMode === "easy")           cls = "easyMode";
+  else if(currentMode === "hard")      cls = "hardMode";
+  else if(currentMode === "superHard") cls = "superHardMode";
+  else                                  cls = "proMode";
+  modeToggle.classList.add(cls);
+  document.body.classList.add(cls);
+  requestAnimationFrame(updateSlider);
+}
+
+function switchMode(mode) {
+  if(isSwithingMode || currentMode === mode) return;
+  if(score > 0 && !confirm("Bạn sẽ mất toàn bộ điểm hiện tại. Tiếp tục?")) return;
+  isSwithingMode = true;
+  modeToggle.classList.add("locked");
+  score = 0; usedWords = [];
+  document.getElementById("score").textContent = 0;
+  currentMode = mode;
+  updateUI();
+  newQuestion();
+  setTimeout(() => { isSwithingMode = false; modeToggle.classList.remove("locked"); }, 3000);
+}
+
+easyBtn.onclick      = () => switchMode("easy");
+hardBtn.onclick      = () => switchMode("hard");
+superHardBtn.onclick = () => switchMode("superHard");
+proBtn.onclick       = () => switchMode("pro");
+
+window.addEventListener("resize", updateSlider);
+
+updateUI();
+newQuestion();
+</script>
+</body>
+</html>
