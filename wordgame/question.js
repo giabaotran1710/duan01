@@ -1,6 +1,8 @@
 const words = [
 
 "Trưởng thành","Trẻ con",
+"Quang gánh","Uớc nguyện",
+"Xâu chuỗi","Chim chóc",
 "Hoả tốc",
 "Công văn","Chủ tịch",
 "Lạnh lẽo","Lạnh cóng",
