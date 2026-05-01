@@ -570,57 +570,20 @@ const btnUndo = document.getElementById("btnUndo");
 }
 
   function undoMove(){
-  if(!pvpMode){
-    if(undoLeft <= 0){
-      document.getElementById("undolimit").textContent = "Bạn đã sử dụng hết lượt";
-      updateUndoButton();
-      return;
-    }
-    if(undoUsed || gameOver) return;
-    if(moveHistory.length < 2) return; // cần ít nhất 2 nước (người + AI)
+  if(gameOver) return;
 
-    // Xóa nước AI
-    let lastAI = moveHistory.pop();
-    board[lastAI[0]][lastAI[1]] = "";
-    let cellAI = cells[lastAI[0]][lastAI[1]];
-    cellAI.textContent = "";
-    cellAI.classList.remove("X","O","last","win-cell");
-
-    // Xóa nước người chơi
-    let lastHuman = moveHistory.pop();
-    board[lastHuman[0]][lastHuman[1]] = "";
-    let cellHuman = cells[lastHuman[0]][lastHuman[1]];
-    cellHuman.textContent = "";
-    cellHuman.classList.remove("X","O","last","win-cell");
-
-    // Cập nhật lastCell
-    if(moveHistory.length > 0){
-      let prev = moveHistory[moveHistory.length - 1];
-      lastCell = cells[prev[0]][prev[1]];
-      lastCell.classList.add("last");
-    } else {
-      lastCell = null;
-    }
-
-    undoUsed = true;
-    undoLeft--;
-    currentTurn = human;
-    setStatus("your-turn");
-    commentaryDiv.textContent = "↩️ Bạn vừa hoàn tác";
-    updateUndoUI();
-    updateScore();
-    updateUndoButton();
-
-  } else {
-    // PVP mode: xóa 1 nước
-    if(gameOver || moveHistory.length === 0) return;
+  if(pvpMode){
+    // PVP: hoàn lại đúng 1 nước vừa đánh
+    if(moveHistory.length === 0) return;
 
     let last = moveHistory.pop();
-    board[last[0]][last[1]] = "";
-    let cell = cells[last[0]][last[1]];
+    let [r, c] = last;
+    board[r][c] = "";
+    let cell = cells[r][c];
     cell.textContent = "";
     cell.classList.remove("X","O","last","win-cell");
 
+    // cập nhật lastCell
     if(moveHistory.length > 0){
       let prev = moveHistory[moveHistory.length - 1];
       lastCell = cells[prev[0]][prev[1]];
@@ -633,8 +596,48 @@ const btnUndo = document.getElementById("btnUndo");
     setStatus("pvp-" + currentTurn);
     updateScore();
     updateUndoButton();
+
+  } else {
+    // PvE: hoàn lại 2 nước (nước AI + nước người chơi)
+    if(undoLeft <= 0){
+      document.getElementById("undolimit").textContent = "Bạn đã sử dụng hết lượt";
+      updateUndoButton();
+      return;
+    }
+    if(moveHistory.length < 2) return;
+
+    // Xoá nước AI (nước cuối)
+    let lastAI = moveHistory.pop();
+    board[lastAI[0]][lastAI[1]] = "";
+    cells[lastAI[0]][lastAI[1]].textContent = "";
+    cells[lastAI[0]][lastAI[1]].classList.remove("X","O","last","win-cell");
+
+    // Xoá nước người chơi (nước trước AI)
+    let lastHuman = moveHistory.pop();
+    board[lastHuman[0]][lastHuman[1]] = "";
+    cells[lastHuman[0]][lastHuman[1]].textContent = "";
+    cells[lastHuman[0]][lastHuman[1]].classList.remove("X","O","last","win-cell");
+
+    // cập nhật lastCell
+    if(moveHistory.length > 0){
+      let prev = moveHistory[moveHistory.length - 1];
+      lastCell = cells[prev[0]][prev[1]];
+      lastCell.classList.add("last");
+    } else {
+      lastCell = null;
+    }
+
+    undoLeft--;
+    currentTurn = human;
+    boardDiv.classList.remove("disabled"); // mở lại bàn cờ
+    setStatus("your-turn");
+    commentaryDiv.textContent = "↩️ Bạn vừa hoàn tác";
+    updateUndoUI();
+    updateScore();
+    updateUndoButton();
   }
 }
+
 
   function highlightWin(r, c, player){
   const dirs = [[1,0],[0,1],[1,1],[1,-1]];
