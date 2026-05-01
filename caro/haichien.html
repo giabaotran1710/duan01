@@ -1,0 +1,993 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hải Chiến</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
+
+  :root {
+    --ocean-deep: #020c18;
+    --ocean-mid: #041628;
+    --ocean-surface: #062040;
+    --water-glow: #0a4a7a;
+    --radar-green: #00ff88;
+    --radar-dim: #00994d;
+    --danger-red: #ff2244;
+    --fire-orange: #ff6600;
+    --torpedo-cyan: #00e5ff;
+    --missile-yellow: #ffdd00;
+    --stone-gray: #aabbcc;
+    --hit-flame: #ff4400;
+    --text-bright: #e0f4ff;
+    --text-dim: #4a7a9b;
+    --grid-line: #0d3a5c;
+    --ship-color: #1a4a6e;
+    --ship-head: #0077aa;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--ocean-deep);
+    font-family: 'Share Tech Mono', monospace;
+    color: var(--text-bright);
+    min-height: 100vh;
+    overflow-x: hidden;
+    position: relative;
+  }
+
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: 
+      radial-gradient(ellipse at 20% 80%, rgba(0,100,160,0.15) 0%, transparent 50%),
+      radial-gradient(ellipse at 80% 20%, rgba(0,50,100,0.1) 0%, transparent 40%),
+      radial-gradient(ellipse at 50% 50%, rgba(2,40,80,0.3) 0%, transparent 70%);
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  body::after {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background: repeating-linear-gradient(
+      0deg,
+      transparent,
+      transparent 2px,
+      rgba(0,0,0,0.08) 2px,
+      rgba(0,0,0,0.08) 4px
+    );
+    pointer-events: none;
+    z-index: 999;
+  }
+
+  .container {
+    position: relative;
+    z-index: 1;
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 20px 16px;
+  }
+
+  header { text-align: center; margin-bottom: 20px; }
+
+  .title {
+    font-family: 'Orbitron', monospace;
+    font-weight: 900;
+    font-size: clamp(22px, 5vw, 40px);
+    letter-spacing: 4px;
+    color: var(--torpedo-cyan);
+    text-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 60px rgba(0,229,255,0.2);
+    animation: titlePulse 3s ease-in-out infinite;
+  }
+
+  @keyframes titlePulse {
+    0%, 100% { text-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 60px rgba(0,229,255,0.2); }
+    50% { text-shadow: 0 0 30px rgba(0,229,255,0.9), 0 0 80px rgba(0,229,255,0.4); }
+  }
+
+  .weapon-panel {
+    background: rgba(4,22,40,0.8);
+    border: 1px solid var(--grid-line);
+    border-radius: 4px;
+    padding: 12px 16px;
+    margin-bottom: 16px;
+  }
+
+  .weapon-panel-title {
+    font-size: 9px;
+    letter-spacing: 3px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 10px;
+  }
+
+  .weapons { display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* ── WEAPON BUTTON BASE ─────────────────────────────────────────── */
+  /*
+   * Dashed border dùng SVG <rect> inject bằng JS vào mỗi button,
+   * cho phép kiểm soát chính xác stroke-dasharray (độ dài nét + khoảng cách).
+   * border: none — toàn bộ viền do SVG đảm nhiệm.
+   */
+  .weapon-btn {
+    flex: 1;
+    min-width: 120px;
+    background: rgba(6,32,64,0.6);
+    border: none;           /* SVG border thay thế */
+    border-radius: 6px;
+    padding: 10px;
+    cursor: pointer;
+    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    color: var(--text-bright);
+    font-family: 'Share Tech Mono', monospace;
+    position: relative;
+    overflow: visible;      /* SVG cần visible để không bị clip */
+  }
+
+  /* SVG border element (injected by JS) */
+  .weapon-btn .btn-svg-border {
+    position: absolute;
+    inset: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    overflow: visible;
+    border-radius: inherit;
+  }
+  .weapon-btn .btn-svg-border rect {
+    fill: none;
+    stroke-width: 2;
+    rx: 6; ry: 6;
+    transition: stroke 0.2s, stroke-opacity 0.2s;
+  }
+
+  /* Shimmer overlay */
+  .weapon-btn .btn-bg {
+    position: absolute;
+    inset: 0;
+    border-radius: 6px;
+    opacity: 0;
+    transition: opacity 0.2s;
+    pointer-events: none;
+  }
+
+  /* ── TORPEDO ── */
+  .weapon-btn.torpedo .btn-bg       { background: rgba(0,229,255,0.06); }
+  .weapon-btn.torpedo:hover:not(:disabled) .btn-bg { opacity: 1; }
+  .weapon-btn.torpedo:hover:not(:disabled) { background: rgba(0,229,255,0.07); }
+  .weapon-btn.torpedo.active {
+    background: rgba(0,229,255,0.13);
+    box-shadow: 0 0 18px rgba(0,229,255,0.35), inset 0 0 12px rgba(0,229,255,0.08);
+    transform: translateY(-1px);
+  }
+  .weapon-btn.torpedo.active .btn-bg { opacity: 1; }
+
+  /* ── MISSILE ── */
+  .weapon-btn.missile .btn-bg       { background: rgba(255,221,0,0.06); }
+  .weapon-btn.missile:hover:not(:disabled) .btn-bg { opacity: 1; }
+  .weapon-btn.missile:hover:not(:disabled) { background: rgba(255,221,0,0.07); }
+  .weapon-btn.missile.active {
+    background: rgba(255,221,0,0.12);
+    box-shadow: 0 0 18px rgba(255,221,0,0.32), inset 0 0 12px rgba(255,221,0,0.07);
+    transform: translateY(-1px);
+  }
+  .weapon-btn.missile.active .btn-bg { opacity: 1; }
+
+  /* ── STONE ── */
+  .weapon-btn.stone .btn-bg         { background: rgba(170,187,204,0.05); }
+  .weapon-btn.stone:hover:not(:disabled) .btn-bg { opacity: 1; }
+  .weapon-btn.stone:hover:not(:disabled) { background: rgba(170,187,204,0.06); }
+  .weapon-btn.stone.active {
+    background: rgba(170,187,204,0.11);
+    box-shadow: 0 0 16px rgba(170,187,204,0.22), inset 0 0 10px rgba(170,187,204,0.06);
+    transform: translateY(-1px);
+  }
+  .weapon-btn.stone.active .btn-bg { opacity: 1; }
+
+  /* ── ACTIVE indicator dot — dùng <span class="active-dot">
+     KHÔNG dùng ::after vì ::after đã bị chiếm bởi stamp "HẾT ĐẠN" khi disabled ── */
+  .weapon-btn .active-dot {
+    position: absolute;
+    top: 7px; right: 7px;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    pointer-events: none;
+    z-index: 5;
+    display: none;
+    animation: activeDot 1.2s ease-in-out infinite alternate;
+  }
+  .weapon-btn.active      .active-dot { display: block; }
+  .weapon-btn:disabled    .active-dot { display: none; }
+  .weapon-btn.torpedo     .active-dot { background: var(--torpedo-cyan);   box-shadow: 0 0 6px var(--torpedo-cyan); }
+  .weapon-btn.missile     .active-dot { background: var(--missile-yellow); box-shadow: 0 0 6px var(--missile-yellow); }
+  .weapon-btn.stone       .active-dot { background: var(--stone-gray);     box-shadow: 0 0 6px var(--stone-gray); }
+  @keyframes activeDot {
+    from { opacity: 0.5; transform: scale(0.8); }
+    to   { opacity: 1;   transform: scale(1.2); }
+  }
+
+  /* ── DISABLED (hết đạn) ── */
+  .weapon-btn:disabled {
+    opacity: 0.38;
+    cursor: not-allowed;
+    filter: grayscale(0.8);
+    transform: none;
+    box-shadow: none;
+    animation: buttonShake 0.3s linear;
+  }
+
+  .weapon-btn:disabled::after {
+    content: "HẾT ĐẠN";
+    position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%, -50%) rotate(-15deg) scale(1);
+    background: rgba(220,20,60,0.9); color: white;
+    font-family: 'Orbitron', sans-serif; font-weight: 700; font-size: 11px;
+    padding: 3px 10px; border: 1.5px solid rgba(255,255,255,0.8);
+    border-radius: 2px; white-space: nowrap; z-index: 10;
+    pointer-events: none; box-shadow: 0 0 10px rgba(0,0,0,0.5);
+    letter-spacing: 1px;
+    animation: stampEffect 0.3s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+  }
+
+  @keyframes stampEffect {
+    0%   { transform: translate(-50%,-50%) rotate(-15deg) scale(5); opacity: 0; }
+    80%  { transform: translate(-50%,-50%) rotate(-15deg) scale(0.9); opacity: 1; }
+    100% { transform: translate(-50%,-50%) rotate(-15deg) scale(1); opacity: 1; }
+  }
+  @keyframes buttonShake {
+    0%   { transform: translateX(0); }
+    25%  { transform: translateX(-2px); }
+    50%  { transform: translateX(2px); }
+    75%  { transform: translateX(-1px); }
+    100% { transform: translateX(0); }
+  }
+
+  /* ── WEAPON CONTENT ── */
+  .weapon-icon  { font-size: 20px; display: block; margin-bottom: 4px; }
+  .weapon-name  { font-size: 11px; letter-spacing: 1px; font-weight: bold; display: block; }
+  .weapon-count { font-size: 13px; font-family: 'Orbitron', monospace; font-weight: 700; display: block; margin-top: 4px; letter-spacing: 1px; }
+  .weapon-btn.torpedo .weapon-count { color: var(--torpedo-cyan); }
+  .weapon-btn.missile .weapon-count { color: var(--missile-yellow); }
+  .weapon-btn.stone   .weapon-count { color: var(--stone-gray); }
+  .weapon-desc  { font-size: 9px; color: var(--text-dim); margin-top: 4px; line-height: 1.4; display: block; }
+
+  /* ── FX LAYER ── */
+  #fx-layer    { position: fixed; inset: 0; pointer-events: none; z-index: 500; overflow: hidden; }
+  #beam-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 499; width: 100%; height: 100%; }
+
+  .ripple-ring {
+    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%);
+    animation: rippleGrow var(--rr-dur, 0.65s) ease-out var(--rr-delay, 0s) forwards;
+    border: var(--rr-w, 2px) solid var(--rr-color, rgba(0,229,255,0.8)); width: 0; height: 0;
+  }
+  @keyframes rippleGrow { 0% { width:4px; height:4px; opacity:1; } 100% { width:var(--rr-size,80px); height:var(--rr-size,80px); opacity:0; } }
+
+  .ripple-ellipse {
+    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%) scaleY(0.4);
+    animation: rippleEllipse var(--re-dur, 0.7s) ease-out var(--re-delay, 0s) forwards;
+    border: 1.5px solid var(--re-color, rgba(0,229,255,0.5)); width: 0; height: 0;
+  }
+  @keyframes rippleEllipse {
+    0%   { width:4px; height:4px; opacity:0.8; transform:translate(-50%,-50%) scaleY(0.4); }
+    100% { width:var(--re-size,100px); height:var(--re-size,100px); opacity:0; transform:translate(-50%,-50%) scaleY(0.35); }
+  }
+
+  .drop {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%; pointer-events: none;
+    animation: dropFly var(--d-dur, 0.45s) ease-out forwards;
+    background: var(--d-color, rgba(100,220,255,0.9));
+  }
+  @keyframes dropFly {
+    0%   { transform: translate(-50%,-50%) translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) translate(var(--d-x,0px),var(--d-y,0px)) scale(0); opacity: 0; }
+  }
+
+  .detect-bang {
+    pointer-events: none; font-family: 'Orbitron', monospace; font-weight: 900;
+    color: #ffdd00; text-shadow: 0 0 8px rgba(255,221,0,0.9), 0 0 20px rgba(255,200,0,0.5);
+    display: flex; align-items: center; justify-content: center;
+    animation: bangAnim 2s cubic-bezier(0.34,1.56,0.64,1) forwards;
+    z-index: 600; transform-origin: center center;
+  }
+  @keyframes bangAnim {
+    0%   { transform: scale(0); opacity: 0; }
+    15%  { transform: scale(1.5); opacity: 1; }
+    80%  { transform: scale(1.2); opacity: 1; }
+    100% { transform: scale(0); opacity: 0; }
+  }
+
+  body.firing-lock .cell:not(.revealed):not(.disabled) { cursor: wait !important; }
+
+  /* ── GRID ── */
+  .grid-wrapper { position: relative; margin-bottom: 16px; }
+  .grid-main    { display: grid; grid-template-columns: 1fr; gap: 2px; }
+  .grid         { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; }
+
+  .cell {
+    aspect-ratio: 1; background: var(--ocean-surface); border: 1px solid var(--grid-line);
+    border-radius: 2px; cursor: pointer; position: relative; transition: all 0.15s; overflow: hidden;
+  }
+  .cell::before {
+    content: ''; position: absolute; inset: 0;
+    background: linear-gradient(135deg, rgba(255,255,255,0.03) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  .cell:hover:not(.revealed):not(.disabled) {
+    background: var(--water-glow); border-color: var(--torpedo-cyan);
+    box-shadow: 0 0 8px rgba(0,229,255,0.4); transform: scale(1.05); z-index: 2;
+  }
+  .cell.revealed { cursor: default; }
+  .cell.disabled { cursor: default; pointer-events: none; }
+
+  .cell.miss { background: rgba(0,20,40,0.8); }
+  .cell.miss::after { content: '·'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: var(--text-dim); font-size: 14px; }
+
+  .cell.hit { background: var(--ocean-surface); border-color: var(--grid-line); }
+  .cell.hit::after {
+    content: '🔥'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(14px, 2.5vw, 20px); filter: drop-shadow(0 0 4px #ff4400);
+    animation: burnFlicker 0.4s ease-in-out infinite alternate;
+  }
+
+  .cell.sunk { background: rgba(20,20,25,0.9); border-color: #444; box-shadow: inset 0 0 10px rgba(0,0,0,0.8); }
+  .cell.sunk::after {
+    content: '🔥'; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+    font-size: clamp(14px, 2vw, 18px); filter: grayscale(0.5) brightness(0.7);
+    animation: burnFlicker 0.8s ease-in-out infinite alternate;
+  }
+
+  @keyframes burnFlicker { from { opacity: 0.7; transform: scale(0.9); } to { opacity: 1; transform: scale(1.1); } }
+  .cell.detected::after { content: none; }
+  .cell.ship-reveal      { background: rgba(26,74,110,0.6); border-color: var(--ship-color); }
+  .cell.ship-head-reveal { background: rgba(0,119,170,0.6); border-color: var(--ship-head); }
+
+  /* ── LOG ── */
+  .log {
+    background: rgba(2,12,24,0.9); border: 1px solid var(--grid-line); border-radius: 4px;
+    padding: 10px 14px; height: 100px; overflow-y: auto; margin-bottom: 16px;
+    scrollbar-width: thin; scrollbar-color: var(--grid-line) transparent;
+  }
+  .log-entry         { font-size: 11px; line-height: 1.8; color: var(--text-dim); transition: color 0.5s; }
+  .log-entry.new     { color: var(--text-bright); }
+  .log-entry.hit     { color: var(--fire-orange); }
+  .log-entry.sunk    { color: var(--danger-red); font-weight: bold; }
+  .log-entry.detect  { color: var(--missile-yellow); }
+  .log-entry.miss    { color: var(--text-dim); }
+  .log-entry.system  { color: var(--torpedo-cyan); }
+
+  .ship-item      { display: flex; align-items: center; gap: 4px; font-size: 10px; }
+  .ship-blocks    { display: flex; gap: 2px; }
+  .ship-block     { width: 10px; height: 10px; border-radius: 1px; border: 1px solid; }
+  .ship-item.alive .ship-block               { background: rgba(0,119,170,0.6); border-color: #0077aa; }
+  .ship-item.alive .ship-block:first-child   { background: rgba(0,150,200,0.8); }
+  .ship-item.dead  { opacity: 0.3; }
+  .ship-item.dead  .ship-block               { background: rgba(255,20,20,0.3); border-color: #ff2244; }
+  .ship-item-label { color: var(--text-dim); letter-spacing: 1px; }
+
+  /* ── OVERLAY ── */
+  .overlay {
+    position: fixed; inset: 0; background: rgba(2,8,16,0.92);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 100; backdrop-filter: blur(4px);
+  }
+  .overlay.hidden { display: none !important; }
+  .hidden { display: none !important; }
+
+  .overlay-box {
+    background: var(--ocean-mid); border: 1px solid var(--torpedo-cyan); border-radius: 8px;
+    padding: 40px; text-align: center; max-width: 400px;
+    box-shadow: 0 0 60px rgba(0,229,255,0.2);
+    animation: overlayIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
+    display: flex; flex-direction: column; gap: 10px;
+  }
+  @keyframes overlayIn { from { transform: scale(0.8); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  .overlay-title     { font-family: 'Tahoma', Sans-serif; font-size: 28px; font-weight: 900; margin-bottom: 12px; }
+  .overlay-title.win { color: var(--radar-green); text-shadow: 0 0 20px rgba(0,255,136,0.6); }
+  .overlay-title.lose{ color: var(--danger-red);  text-shadow: 0 0 20px rgba(255,34,68,0.6); }
+  .overlay-msg       { color: var(--text-dim); font-size: 13px; line-height: 1.8; margin-bottom: 14px; }
+  .overlay-msg p     { margin-bottom: 8px; line-height: 1.5; }
+
+  .btn-restart {
+    background: transparent; border: 1px solid var(--torpedo-cyan); color: var(--torpedo-cyan);
+    font-family: 'Orbitron', monospace; font-size: 12px; letter-spacing: 3px;
+    padding: 12px 32px; cursor: pointer; border-radius: 4px; transition: all 0.2s; text-transform: uppercase;
+  }
+  .btn-restart:hover { background: rgba(0,229,255,0.15); box-shadow: 0 0 20px rgba(0,229,255,0.3); }
+
+  #floating-restart {
+    position: fixed; bottom: 20px; right: 20px; z-index: 1000;
+    background: var(--ocean-surface); box-shadow: 0 4px 10px rgba(0,0,0,0.5);
+  }
+
+  #btn-info {
+    background: transparent; border: 1px solid var(--torpedo-cyan); color: var(--torpedo-cyan);
+    width: 28px; height: 28px; border-radius: 50%; cursor: pointer;
+    font-family: 'Orbitron', sans-serif; font-weight: bold; font-size: 16px;
+    transition: all 0.3s; vertical-align: middle;
+  }
+  #btn-info:hover { background: rgba(0,229,255,0.2); box-shadow: 0 0 10px var(--torpedo-cyan); }
+
+  .ship-part {
+    position: absolute; inset: 0;
+    background: linear-gradient(145deg, #556677, #223344); z-index: 1;
+  }
+  .cell.sunk .ship-part {
+    background: linear-gradient(145deg, #2d3748, #1a202c);
+    filter: grayscale(0.7) brightness(0.5);
+    border: 1px solid rgba(255,0,0,0.2);
+  }
+
+  @media (max-width: 500px) {
+    .weapons { gap: 6px; }
+    .weapon-btn { min-width: 90px; padding: 8px 6px; }
+    .weapon-desc { display: none; }
+    .overlay-box { padding: 24px 16px; margin: 16px; }
+  }
+</style>
+</head>
+<body>
+
+<svg id="beam-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="fx-layer"></div>
+<div class="container">
+  <header>
+    <div class="title">⚓ HẢI CHIẾN <button id="btn-info" onclick="toggleInfo()">?</button></div>
+  </header>
+
+  <div id="info-modal" class="overlay hidden" onclick="toggleInfo()">
+    <div class="overlay-box" style="max-width:500px; text-align:left;" onclick="event.stopPropagation()">
+      <div class="overlay-title" style="color:var(--torpedo-cyan); font-size:20px; border-bottom:1px solid var(--grid-line); padding-bottom:10px;">HƯỚNG DẪN TÁC CHIẾN</div>
+      <div class="overlay-msg" style="margin-top:15px;">
+        <p>• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 6 tàu địch trước khi hết đạn.</p>
+        <p>• <b>Đầu Tàu:</b> Mỗi tàu có 1 ô đầu não. Bắn trúng ô này sẽ <b>đánh chìm toàn bộ tàu</b> ngay lập tức!</p>
+        <hr style="border:0; border-top:1px solid var(--grid-line); margin:10px 0;">
+        <p style="color:var(--torpedo-cyan);">🚀 <b>NGƯ LÔI:</b> Quét radar sang <b>Trái &amp; Phải</b> ô vừa bắn.</p>
+        <p style="color:var(--missile-yellow);">🎯 <b>TÊN LỬA:</b> Quét radar lên <b>Trên &amp; Dưới</b> ô vừa bắn.</p>
+        <p style="color:var(--stone-gray);">💣 <b>ĐẠN ĐÁ:</b> Sát thương cơ bản, không có khả năng radar.</p>
+        <p style="margin-top:10px; font-size:11px; color:#888;">* Nếu Radar phát hiện tàu, dấu <b>"!"</b> sẽ hiện lên tại vị trí đó.</p>
+      </div>
+      <button class="btn-restart" onclick="toggleInfo()">TÔI HIỂU</button>
+    </div>
+  </div>
+
+  <div class="weapon-panel">
+    <div class="weapon-panel-title">▶ Chọn Vũ Khí</div>
+    <div class="weapons">
+      <button class="weapon-btn torpedo active" id="btn-torpedo" onclick="selectWeapon('torpedo')">
+        <span class="btn-bg"></span>
+        <span class="active-dot"></span>
+        <span class="weapon-icon">🚀</span>
+        <span class="weapon-name" style="color:var(--torpedo-cyan)">NGƯ LÔI</span>
+        <span class="weapon-count" id="count-torpedo">×5</span>
+        <span class="weapon-desc">Phát hiện tàu TRÁI + PHẢI</span>
+      </button>
+      <button class="weapon-btn missile" id="btn-missile" onclick="selectWeapon('missile')">
+        <span class="btn-bg"></span>
+        <span class="active-dot"></span>
+        <span class="weapon-icon">🎯</span>
+        <span class="weapon-name" style="color:var(--missile-yellow)">TÊN LỬA</span>
+        <span class="weapon-count" id="count-missile">×5</span>
+        <span class="weapon-desc">Phát hiện tàu TRÊN + DƯỚI</span>
+      </button>
+      <button class="weapon-btn stone" id="btn-stone" onclick="selectWeapon('stone')">
+        <span class="btn-bg"></span>
+        <span class="active-dot"></span>
+        <span class="weapon-icon">💣</span>
+        <span class="weapon-name" style="color:var(--stone-gray)">ĐẠN ĐÁ</span>
+        <span class="weapon-count" id="count-stone">×30</span>
+        <span class="weapon-desc">Tấn công trực tiếp</span>
+      </button>
+    </div>
+  </div>
+
+  <div class="grid-wrapper">
+    <div class="grid-main">
+      <div class="grid" id="game-grid"></div>
+    </div>
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<div class="overlay hidden" id="overlay">
+  <div class="overlay-box">
+    <div class="overlay-title" id="overlay-title">CHIẾN THẮNG!</div>
+    <div class="overlay-msg" id="overlay-msg"></div>
+    <button class="btn-restart" onclick="initGame()">CHƠI LẠI</button>
+    <button class="btn-restart" style="border-color:var(--text-dim); color:var(--text-dim);" onclick="viewMap()">XEM BẢN ĐỒ</button>
+  </div>
+</div>
+
+<button id="floating-restart" class="btn-restart hidden" onclick="initGame()">🔄 CHƠI LẠI</button>
+
+<script>
+const GRID = 12;
+const SHIP_SIZES = [5, 4, 3, 3, 2, 2];
+const SHIP_NAMES = ['Thiết Giáp Hạm', 'Tuần Dương Hạm', 'Khu Trục Hạm 1', 'Khu Trục Hạm 2', 'Tàu Hộ Tống 1', 'Tàu Hộ Tống 2'];
+
+let board = [];
+let revealed = [];
+let ships = [];
+let ammo = { torpedo: 5, missile: 5, stone: 30 };
+let selectedWeapon = 'torpedo';
+let shotsCount = 0;
+let shipsAlive = 6;
+let gameOver = false;
+let firingLocked = false;
+
+function getTotalAmmo() { return ammo.torpedo + ammo.missile + ammo.stone; }
+
+function lockFiring()   { firingLocked = true;  document.body.classList.add('firing-lock'); }
+function unlockFiring() { firingLocked = false; document.body.classList.remove('firing-lock'); }
+
+function toggleInfo() { document.getElementById('info-modal').classList.toggle('hidden'); }
+
+function initGame() {
+  board    = Array.from({length: GRID}, () => Array(GRID).fill(null));
+  revealed = Array.from({length: GRID}, () => Array(GRID).fill(''));
+  ships    = [];
+  ammo     = { torpedo: 5, missile: 5, stone: 30 };
+  selectedWeapon = 'torpedo';
+  shotsCount = 0;
+  shipsAlive = 6;
+  gameOver   = false;
+  unlockFiring();
+
+  placeShips();
+  renderGrid();
+  updateAmmoButtons();
+  clearLog();
+  // Inject / refresh SVG borders (cần sau khi DOM sẵn sàng)
+  injectSvgBorders();
+  updateSvgBorders();
+  addLog('⚓ Trận hải chiến bắt đầu! Hãy tiêu diệt toàn bộ hạm đội địch.', 'system');
+  addLog('💡 Bắn trúng ĐẦU TÀU sẽ đánh chìm toàn bộ tàu đó!', 'system');
+
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('floating-restart').classList.add('hidden');
+
+  // Reset weapon button states explicitly
+  ['torpedo','missile','stone'].forEach(n => {
+    const btn = document.getElementById(`btn-${n}`);
+    btn.disabled = false;
+    btn.classList.remove('active');
+  });
+  selectWeapon('torpedo');
+}
+
+function placeShips() {
+  SHIP_SIZES.forEach((size, idx) => {
+    let placed = false, attempts = 0;
+    while (!placed && attempts < 1000) {
+      attempts++;
+      const horizontal = Math.random() < 0.5;
+      const maxR = horizontal ? GRID : GRID - size;
+      const maxC = horizontal ? GRID - size : GRID;
+      const r = Math.floor(Math.random() * maxR);
+      const c = Math.floor(Math.random() * maxC);
+
+      let fits = true;
+      const cells = [];
+      for (let i = 0; i < size; i++) {
+        const nr = horizontal ? r : r + i;
+        const nc = horizontal ? c + i : c;
+        if (board[nr][nc] !== null) { fits = false; break; }
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const br = nr + dr, bc = nc + dc;
+            if (br >= 0 && br < GRID && bc >= 0 && bc < GRID && board[br][bc] !== null) { fits = false; break; }
+          }
+          if (!fits) break;
+        }
+        if (!fits) break;
+        cells.push({r: nr, c: nc});
+      }
+
+      if (fits) {
+        const isReverse = Math.random() < 0.5;
+        const headCell  = isReverse ? cells[cells.length - 1] : cells[0];
+        const ship = { id: idx, name: SHIP_NAMES[idx], size, cells, alive: true, headCell, hit: new Set(), isHorizontal: horizontal };
+        ships.push(ship);
+        cells.forEach(({r, c}) => { board[r][c] = { shipId: idx, isHead: (r === headCell.r && c === headCell.c) }; });
+        placed = true;
+      }
+    }
+  });
+}
+
+function renderGrid() {
+  const grid = document.getElementById('game-grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.onclick = () => fire(r, c);
+      grid.appendChild(cell);
+    }
+  }
+}
+
+function updateCell(r, c) {
+  const cell = document.getElementById(`cell-${r}-${c}`);
+  if (!cell) return;
+  cell.className = 'cell';
+  const state = revealed[r][c];
+  if (state) {
+    cell.classList.add('revealed', state);
+    if (state !== '') cell.classList.add('disabled');
+  }
+}
+
+// ── EFFECTS ──────────────────────────────────────────────────────────
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function getCellCenter(r, c) {
+  const el = document.getElementById(`cell-${r}-${c}`);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width/2, y: rect.top + rect.height/2, w: rect.width, h: rect.height };
+}
+
+function launchBeam(r, c, weapon, onImpact) {
+  const target = getCellCenter(r, c);
+  if (!target) { onImpact(); return; }
+  const svg = document.getElementById('beam-canvas');
+  const palette = { torpedo:{head:'#00e5ff',glow:'#00b8d4'}, missile:{head:'#ffdd00',glow:'#ffaa00'}, stone:{head:'#c8dff0',glow:'#7ab0cc'} };
+  const p = palette[weapon];
+  const fromLeft = Math.random() < 0.5;
+  const startX = fromLeft ? -30 : window.innerWidth + 30;
+  const startY = target.y - 70 - Math.random() * 50;
+  const endX = target.x, endY = target.y;
+  const dur = weapon === 'stone' ? 540 : 430;
+
+  const head = document.createElement('div');
+  head.style.cssText = `position:fixed;pointer-events:none;z-index:502;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#fff 0%,${p.head} 50%,transparent 100%);box-shadow:0 0 16px 6px ${p.head},0 0 35px 12px ${p.glow};transform:translate(-50%,-50%);left:${startX}px;top:${startY}px;`;
+  document.body.appendChild(head);
+
+  const defs = document.createElementNS(SVG_NS,'defs');
+  const grad = document.createElementNS(SVG_NS,'linearGradient');
+  const gid = 'bg'+Date.now()+Math.random().toString(36).slice(2);
+  grad.setAttribute('id',gid); grad.setAttribute('gradientUnits','userSpaceOnUse');
+  const s1=document.createElementNS(SVG_NS,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color',p.head); s1.setAttribute('stop-opacity','0');
+  const s2=document.createElementNS(SVG_NS,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color',p.head); s2.setAttribute('stop-opacity','0.85');
+  grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad); svg.appendChild(defs);
+
+  const line=document.createElementNS(SVG_NS,'line');
+  line.setAttribute('x1',startX); line.setAttribute('y1',startY); line.setAttribute('x2',startX); line.setAttribute('y2',startY);
+  line.setAttribute('stroke',`url(#${gid})`); line.setAttribute('stroke-width',weapon==='stone'?'2':'3'); line.setAttribute('stroke-linecap','round');
+  svg.appendChild(line);
+
+  const t0=performance.now();
+  function easeOut(t){return 1-Math.pow(1-t,3);}
+  let impactFired=false;
+
+  function step(now){
+    const prog=Math.min((now-t0)/dur,1), e=easeOut(prog);
+    const cx=startX+(endX-startX)*e, cy=startY+(endY-startY)*e;
+    const trailProg=Math.max(0,e-0.28);
+    const tx=startX+(endX-startX)*trailProg, ty=startY+(endY-startY)*trailProg;
+    head.style.left=cx+'px'; head.style.top=cy+'px';
+    line.setAttribute('x1',tx); line.setAttribute('y1',ty); line.setAttribute('x2',cx); line.setAttribute('y2',cy);
+    grad.setAttribute('x1',tx); grad.setAttribute('y1',ty); grad.setAttribute('x2',cx); grad.setAttribute('y2',cy);
+    if(prog>=0.86&&!impactFired){ impactFired=true; spawnWaterRipple(endX,endY,weapon); onImpact(); }
+    if(prog<1) requestAnimationFrame(step);
+    else{ head.style.opacity='0'; setTimeout(()=>{head.remove();line.remove();defs.remove();},200); }
+  }
+  requestAnimationFrame(step);
+}
+
+function spawnWaterRipple(cx,cy,weapon){
+  const fx=document.getElementById('fx-layer');
+  const c={torpedo:'rgba(0,229,255,',missile:'rgba(255,221,0,',stone:'rgba(180,210,240,'}[weapon];
+  [[55,0,2],[80,0.09,1.5],[115,0.2,1]].forEach(([size,delay,w])=>{
+    const r=document.createElement('div'); r.className='ripple-ring'; r.style.left=cx+'px'; r.style.top=cy+'px';
+    r.style.setProperty('--rr-size',size+'px'); r.style.setProperty('--rr-dur','0.72s'); r.style.setProperty('--rr-delay',delay+'s'); r.style.setProperty('--rr-color',c+'0.75)'); r.style.setProperty('--rr-w',w+'px');
+    fx.appendChild(r); setTimeout(()=>r.remove(),1000);
+  });
+  [[70,0.05],[105,0.16]].forEach(([size,delay])=>{
+    const e=document.createElement('div'); e.className='ripple-ellipse'; e.style.left=cx+'px'; e.style.top=cy+'px';
+    e.style.setProperty('--re-size',size+'px'); e.style.setProperty('--re-dur','0.65s'); e.style.setProperty('--re-delay',delay+'s'); e.style.setProperty('--re-color',c+'0.4)');
+    fx.appendChild(e); setTimeout(()=>e.remove(),900);
+  });
+  for(let i=0;i<8;i++){
+    const angle=(Math.PI*2*i/8)+(Math.random()-0.5)*0.6, dist=14+Math.random()*20;
+    const d=document.createElement('div'); d.className='drop'; d.style.left=cx+'px'; d.style.top=cy+'px';
+    d.style.setProperty('--d-x',Math.cos(angle)*dist+'px'); d.style.setProperty('--d-y',(Math.sin(angle)*dist-18)+'px'); d.style.setProperty('--d-dur',(0.3+Math.random()*0.2)+'s'); d.style.setProperty('--d-color',c+'0.9)');
+    fx.appendChild(d); setTimeout(()=>d.remove(),600);
+  }
+}
+
+function spawnWifiShockwave(r,c,dir){
+  const origin=getCellCenter(r,c); if(!origin) return;
+  const svg=document.getElementById('beam-canvas');
+  const color=dir==='horizontal'?'#00e5ff':'#ffdd00';
+  const maxRadius=origin.w*2.0;
+  for(let side=-1;side<=1;side+=2){
+    for(let i=0;i<3;i++){
+      const delay=i*100, radius=(i+1)*(maxRadius/3);
+      setTimeout(()=>{
+        const path=document.createElementNS(SVG_NS,'path');
+        path.setAttribute('fill','none'); path.setAttribute('stroke',color);
+        path.setAttribute('stroke-width',(2.2-i*0.6).toString()); path.setAttribute('stroke-linecap','round');
+        const ox=origin.x, oy=origin.y; let d;
+        if(dir==='horizontal'){
+          const sx=ox+side*(radius*0.3), sy1=oy-radius*0.5, sy2=oy+radius*0.5, cpx=ox+side*radius;
+          d=`M ${sx} ${sy1} Q ${cpx} ${oy} ${sx} ${sy2}`;
+        } else {
+          const sy=oy+side*(radius*0.3), sx1=ox-radius*0.5, sx2=ox+radius*0.5, cpy=oy+side*radius;
+          d=`M ${sx1} ${sy} Q ${ox} ${cpy} ${sx2} ${sy}`;
+        }
+        path.setAttribute('d',d); path.setAttribute('opacity','0'); svg.appendChild(path);
+        const fadeDur=500, t0=performance.now();
+        function animArc(now){
+          const p=Math.min((now-t0)/fadeDur,1);
+          const opacity=p<0.2?(p/0.2):(1-(p-0.2)/0.8);
+          path.setAttribute('opacity',(opacity*(0.7-i*0.15)).toString());
+          if(p<1) requestAnimationFrame(animArc); else path.remove();
+        }
+        requestAnimationFrame(animArc);
+      },delay);
+    }
+  }
+}
+
+function spawnDetectBang(r,c){
+  const center=getCellCenter(r,c); if(!center) return;
+  const fx=document.getElementById('fx-layer');
+  const bang=document.createElement('div'); bang.className='detect-bang'; bang.textContent='!';
+  const sz=Math.max(center.w*0.9,20);
+  bang.style.cssText=`position:fixed;pointer-events:none;z-index:600;font-size:${sz}px;width:${center.w}px;height:${center.h}px;left:${center.x-center.w/2}px;top:${center.y-center.h/2}px;display:flex;align-items:center;justify-content:center;`;
+  fx.appendChild(bang); setTimeout(()=>bang.remove(),2500);
+}
+
+// ── SVG DASHED BORDER INJECTION ──────────────────────────────────────
+// CSS border:dashed không kiểm soát được độ dài nét.
+// Ta dùng SVG <rect> với stroke-dasharray để có nét đứt dài đẹp hơn.
+const WEAPON_COLORS = {
+  torpedo: { idle: 'rgba(0,229,255,0.45)', active: '#00e5ff' },
+  missile: { idle: 'rgba(255,221,0,0.4)',  active: '#ffdd00' },
+  stone:   { idle: 'rgba(170,187,204,0.35)', active: '#aabbcc' }
+};
+
+// dasharray: [dash length, gap] — ~7-8 dashes trên một cạnh ~130px
+// dash=14, gap=6 → pitch=20 → 130/20 ≈ 6.5 dashes ✓
+const DASH = '14 6';
+const DASH_ACTIVE = '0 0'; // solid khi active (gap=0)
+
+function injectSvgBorders() {
+  ['torpedo','missile','stone'].forEach(w => {
+    const btn = document.getElementById(`btn-${w}`);
+    if (!btn) return;
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('class', 'btn-svg-border');
+    svg.setAttribute('xmlns', ns);
+    svg.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
+
+    const rect = document.createElementNS(ns, 'rect');
+    rect.setAttribute('x', '1'); rect.setAttribute('y', '1');
+    // width/height = 100%-2 (1px inset mỗi bên để nét không bị clip)
+    rect.setAttribute('width', 'calc(100% - 2px)');
+    rect.setAttribute('height', 'calc(100% - 2px)');
+    rect.setAttribute('rx', '5'); rect.setAttribute('ry', '5');
+    rect.setAttribute('fill', 'none');
+    rect.setAttribute('stroke-width', '2');
+    rect.setAttribute('stroke', WEAPON_COLORS[w].idle);
+    rect.setAttribute('stroke-dasharray', DASH);
+    rect.setAttribute('stroke-linecap', 'round');
+    rect.style.transition = 'stroke 0.2s, stroke-dasharray 0.15s, stroke-width 0.15s';
+    svg.appendChild(rect);
+    btn.appendChild(svg);
+    btn._svgRect = rect;
+    btn._weaponKey = w;
+  });
+}
+
+function updateSvgBorders() {
+  ['torpedo','missile','stone'].forEach(w => {
+    const btn = document.getElementById(`btn-${w}`);
+    if (!btn || !btn._svgRect) return;
+    const rect = btn._svgRect;
+    const isActive = btn.classList.contains('active');
+    const color = isActive ? WEAPON_COLORS[w].active : WEAPON_COLORS[w].idle;
+    rect.setAttribute('stroke', color);
+    rect.setAttribute('stroke-dasharray', isActive ? DASH_ACTIVE : DASH);
+    rect.setAttribute('stroke-width', isActive ? '2.5' : '2');
+  });
+}
+function fire(r,c){
+  if(gameOver || firingLocked) return;
+  if(revealed[r][c]!==''&&revealed[r][c]!=='detected') return;
+
+  const weapon=selectedWeapon;
+  if(ammo[weapon]<=0){
+    addLog(`⚠ Hết ${weaponName(weapon).toUpperCase()}!`,'system');
+    const alt=['stone','torpedo','missile'].find(w=>ammo[w]>0);
+    if(alt){ addLog(`💡 Chuyển sang: ${weaponName(alt).toUpperCase()}`,'system'); selectWeapon(alt); }
+    return;
+  }
+
+  lockFiring();
+  ammo[weapon]--;
+  shotsCount++;
+  updateAmmoButtons();
+
+  const wName = weaponName(weapon);
+  const logs={
+    sunk:[
+      `💥 Tuyệt đỉnh! ${wName} trúng ngay đầu não! Tiễn biệt đối thủ!`,
+      `💥 Cú bắn thần sầu! Một chiếc tàu địch đã chìm sâu dưới đáy biển!`,
+      `💥 Tuyệt vời chỉ huy! Chúng ta đã đánh chìm hoàn toàn tàu địch!`,
+      `💥 Bùm! Đầu tàu nổ tung, mục tiêu đã bị xóa sổ!`,
+      `💥 Xác nhận tiêu diệt! Đã loại bỏ một tàu chiến địch khỏi bản đồ!`
+    ],
+    hit:[
+      `🔥 Trúng đích! ${wName} đã khiến chúng bốc cháy!`,
+      `🔥 Khá lắm! Tàu địch đã trúng đạn, chúng không thoát được đâu!`,
+      `🔥 Một cú va chạm mạnh! Thân tàu địch đang hư hỏng nặng!`,
+      `🔥 Tốt! Chúng ta đã gây thiệt hại cho hạm đội địch!`,
+      `🔥 Kim loại rách nát! ${wName} đã xuyên thủng lớp giáp của chúng!`
+    ],
+    miss:[
+      `❓ Chệch mục tiêu! ${wName} chỉ tạo ra một cột nước khổng lồ.`,
+      `❓ Trượt rồi! Chúng ta cần căn chỉnh lại thước ngắm!`,
+      `❓ Đạn rơi xuống biển! Một sự lãng phí tài nguyên, thưa chỉ huy.`,
+      `❓ Không có gì cả! Chỉ là một đàn cá vừa bơi qua.`,
+      `❓ Có vẻ như dòng hải lưu đã làm lệch đường đi của ${wName}.`
+    ],
+    radar_none:[
+      `📡 [RADAR]: Vùng biển xung quanh hoàn toàn yên tĩnh.`,
+      `📡 [RADAR]: Không có tín hiệu kim loại nào trong phạm vi quét.`,
+      `📡 [RADAR]: Sóng âm không phản hồi, không thấy mục tiêu lân cận.`,
+      `📡 [RADAR]: Khu vực này có vẻ sạch bóng quân thù.`,
+      `📡 [RADAR]: Tín hiệu phẳng lặng, không có dấu hiệu chuyển động.`
+    ]
+  };
+  const rnd=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+
+  launchBeam(r,c,weapon,()=>{
+    if(weapon==='torpedo') spawnWifiShockwave(r,c,'horizontal');
+    if(weapon==='missile') spawnWifiShockwave(r,c,'vertical');
+
+    const result=attackCell(r,c);
+
+    if(result==='sunk') addLog(rnd(logs.sunk),'sunk');
+    else if(result==='hit') addLog(rnd(logs.hit),'hit');
+    else addLog(rnd(logs.miss),'miss');
+
+    if(weapon==='torpedo'||weapon==='missile'){
+      const dirs=(weapon==='torpedo')?[[0,-1],[0,1]]:[[-1,0],[1,0]];
+      let found=false;
+      dirs.forEach(([dr,dc])=>{ const nr=r+dr,nc=c+dc; if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&(revealed[nr][nc]===''||revealed[nr][nc]==='detected')) found=true; });
+      if(found) detectCells(r,c,dirs);
+      else addLog(rnd(logs.radar_none),'detect');
+    }
+
+    checkEndGame();
+    unlockFiring();
+  });
+}
+
+function attackCell(r,c){
+  if(board[r][c]!==null){
+    const{shipId,isHead}=board[r][c], ship=ships[shipId];
+    if(isHead&&ship.alive){
+      ship.alive=false; shipsAlive--;
+      ship.cells.forEach(({r:sr,c:sc})=>{ revealed[sr][sc]='sunk'; updateCell(sr,sc); addShipPartVisual(sr,sc); });
+      return 'sunk';
+    } else if(ship.alive){
+      revealed[r][c]='hit'; ship.hit.add(`${r},${c}`); updateCell(r,c); return 'hit';
+    }
+  }
+  if(!revealed[r][c]||revealed[r][c]==='detected'){ revealed[r][c]='miss'; updateCell(r,c); }
+  return 'miss';
+}
+
+function addShipPartVisual(r,c){
+  const cell=document.getElementById(`cell-${r}-${c}`); if(!cell) return;
+  cell.innerHTML='';
+  const part=document.createElement('div'); part.className='ship-part'; cell.appendChild(part);
+  const fire=document.createElement('div');
+  fire.textContent='🔥';
+  fire.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0.6;';
+  cell.appendChild(fire);
+}
+
+function detectCells(r,c,dirs){
+  dirs.forEach(([dr,dc])=>{
+    const nr=r+dr,nc=c+dc;
+    if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&revealed[nr][nc]===''){
+      revealed[nr][nc]='detected'; spawnDetectBang(nr,nc);
+      addLog(`  ❗ Phát hiện tàu tại ${String.fromCharCode(65+nc)}${nr+1}!`,'detect');
+    }
+  });
+}
+
+function weaponName(w){ return{torpedo:'Ngư Lôi',missile:'Tên Lửa',stone:'Đạn Đá'}[w]; }
+
+function selectWeapon(w){
+  if(ammo[w]<=0) return;
+  selectedWeapon=w;
+  ['torpedo','missile','stone'].forEach(n=>{ document.getElementById(`btn-${n}`).classList.toggle('active',n===w); });
+  updateSvgBorders();
+}
+
+function updateAmmoButtons(){
+  ['torpedo','missile','stone'].forEach(w=>{
+    const btn=document.getElementById(`btn-${w}`);
+    if(!btn) return;
+    const count=ammo[w];
+    document.getElementById(`count-${w}`).textContent=`×${count}`;
+    btn.disabled=count<=0;
+    // auto-switch if current weapon exhausted
+    if(count<=0&&selectedWeapon===w){
+      const next=['torpedo','missile','stone'].find(x=>ammo[x]>0);
+      if(next) selectWeapon(next);
+    }
+  });
+}
+
+function checkEndGame(){
+  if(shipsAlive===0){
+    gameOver=true;
+    setTimeout(()=>{
+      document.getElementById('overlay-title').textContent='🏆 CHIẾN THẮNG!';
+      document.getElementById('overlay-title').className='overlay-title win';
+      document.getElementById('overlay-msg').innerHTML=`Bạn đã tiêu diệt toàn bộ hạm đội địch!<br>Số phát đã bắn: <strong>${shotsCount}</strong><br>Đạn còn lại: <strong>${getTotalAmmo()}</strong>`;
+      document.getElementById('overlay').classList.remove('hidden');
+    },600);
+    return;
+  }
+  // Lose only when ALL ammo is gone
+  if(getTotalAmmo()<=0){
+    gameOver=true;
+    revealAllShips();
+    setTimeout(()=>{
+      document.getElementById('overlay-title').textContent='THẤT BẠI';
+      document.getElementById('overlay-title').className='overlay-title lose';
+      document.getElementById('overlay-msg').innerHTML=`Hết đạn! Còn <strong>${shipsAlive}</strong> tàu địch chưa bị tiêu diệt.<br>Vị trí tàu đã được hiển thị bên dưới.`;
+      document.getElementById('overlay').classList.remove('hidden');
+    },400);
+  }
+}
+
+function viewMap(){
+  document.getElementById('overlay').classList.add('hidden');
+  document.getElementById('floating-restart').classList.remove('hidden');
+}
+
+function revealAllShips(){
+  for(let r=0;r<GRID;r++){
+    for(let c=0;c<GRID;c++){
+      if(board[r][c]&&(revealed[r][c]===''||revealed[r][c]==='detected')){
+        addShipPartVisual(r,c);
+        const cell=document.getElementById(`cell-${r}-${c}`);
+        if(cell){ cell.classList.add('revealed','disabled'); }
+      }
+    }
+  }
+}
+
+function addLog(msg,type=''){
+  const log=document.getElementById('log');
+  log.querySelectorAll('.log-entry.new').forEach(e=>e.classList.remove('new'));
+  const entry=document.createElement('div');
+  entry.className=`log-entry new ${type}`; entry.textContent=msg;
+  log.appendChild(entry); log.scrollTop=log.scrollHeight;
+  while(log.children.length>50) log.removeChild(log.firstChild);
+}
+
+function clearLog(){ document.getElementById('log').innerHTML=''; }
+
+initGame();
+</script>
+</body>
+</html>
