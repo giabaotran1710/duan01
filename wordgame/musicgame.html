@@ -1,0 +1,1050 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Nhịp Điệu Âm Nhạc</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Rajdhani:wght@400;600;700&display=swap');
+
+  :root {
+    --blue: #00d4ff;
+    --blue2: #0077ff;
+    --red: #ff3366;
+    --yellow: #ffcc00;
+    --gold: #ffd700;
+    --bg: #050a1a;
+    --panel: rgba(0,20,60,0.85);
+    --glow: 0 0 16px #00d4ff88, 0 0 32px #0077ff44;
+    --glow-red: 0 0 16px #ff336688;
+    --glow-gold: 0 0 16px #ffcc0088;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; touch-action: manipulation; }
+
+  body {
+    background: var(--bg);
+    font-family: 'Rajdhani', sans-serif;
+    color: #fff;
+    min-height: 100vh;
+    overflow: hidden;
+    position: relative;
+  }
+
+  /* ===== BG EFFECTS ===== */
+  .bg-music {
+    position: fixed; inset: 0; pointer-events: none; z-index: 0;
+    background:
+      radial-gradient(ellipse 80% 40% at 50% 0%, #001a4488 0%, transparent 70%),
+      radial-gradient(ellipse 60% 60% at 80% 100%, #00d4ff11 0%, transparent 60%),
+      radial-gradient(ellipse 40% 40% at 10% 80%, #0077ff0d 0%, transparent 60%);
+  }
+  .bars {
+    position: fixed; bottom: 0; left: 0; right: 0; height: 120px;
+    display: flex; align-items: flex-end; justify-content: center; gap: 4px;
+    pointer-events: none; z-index: 0; opacity: 0.18;
+  }
+  .bar {
+    width: 6px; background: linear-gradient(to top, #00d4ff, #0077ff);
+    border-radius: 3px 3px 0 0;
+    animation: barAnim var(--d) ease-in-out infinite alternate;
+  }
+  @keyframes barAnim { from { height: 8px; } to { height: var(--h); } }
+
+  .note {
+    position: fixed; pointer-events: none; z-index: 0; font-size: 22px; opacity: 0;
+    animation: floatNote 4s ease-in forwards;
+  }
+  @keyframes floatNote {
+    0% { opacity: 0.6; transform: translateY(0) rotate(0deg); }
+    100% { opacity: 0; transform: translateY(-180px) rotate(30deg); }
+  }
+
+  /* ===== SCREENS ===== */
+  .screen { position: fixed; inset: 0; z-index: 10; display: flex; flex-direction: column; align-items: center; justify-content: center; }
+  .screen.hidden { display: none; }
+
+  /* ===== START SCREEN ===== */
+  #startScreen {
+  background: radial-gradient(ellipse 100% 100% at 50% 50%, #001540cc 0%, #050a1acc 80%);
+}
+  .logo {
+    font-family: 'Orbitron', sans-serif; font-size: 2.8rem; font-weight: 900;
+    background: linear-gradient(135deg, #00d4ff, #0077ff, #00d4ff);
+    -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    text-shadow: none; letter-spacing: 7px;
+    animation: logoPulse 2s ease-in-out infinite alternate;
+    margin-bottom: 6px;
+    text-align: center;
+    width: 50%;
+  }
+  @keyframes logoPulse {
+    from { filter: drop-shadow(0 0 8px #00d4ff88); }
+    to { filter: drop-shadow(0 0 24px #00d4ffcc); }
+  }
+  .logo-sub {
+    font-size: 1rem; letter-spacing: 2px; color: #00d4ffaa; margin-bottom: 50px;
+    font-family: 'Orbitron', sans-serif;
+    text-align: center;
+  }
+  .music-icon { font-size: 3rem; margin-bottom: 20px; animation: spin 4s linear infinite; display: inline-block; }
+  @keyframes spin { from { transform: rotate(0); } to { transform: rotate(360deg); } }
+
+  .btn-start {
+    background: linear-gradient(135deg, #0077ff, #00d4ff);
+    border: none; color: #fff; font-family: 'Orbitron', sans-serif;
+    font-size: 1.1rem; font-weight: 700; letter-spacing: 3px;
+    padding: 16px 48px; border-radius: 50px; cursor: pointer;
+    box-shadow: var(--glow); transition: transform 0.1s;
+    margin-top: 10px;
+  }
+  .btn-start:active { transform: scale(0.96); }
+
+  /* ===== HUD TOP ===== */
+#gameScreen { background: transparent; }
+
+  .hud-top {
+    position: fixed; top: 0; left: 0; right: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 10px 18px 6px;
+    background: linear-gradient(180deg, #050a1aee 0%, transparent 100%);
+  }
+  .hud-score {
+    font-family: 'Orbitron', sans-serif; font-size: 1.5rem; font-weight: 900;
+    color: var(--blue); text-shadow: var(--glow);
+  }
+  .hud-level {
+    font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700;
+    color: #fff; text-align: center;
+  }
+  .hud-level span { color: var(--gold); }
+  .hud-combo {
+    font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700;
+    color: var(--blue); text-align: right;
+  }
+  .hud-timer {
+    position: fixed; top: 46px; left: 30px; z-index: 21;
+    font-family: 'Orbitron', sans-serif; font-size: 1rem; font-weight: 700;
+    color: #fff;
+  }
+  .hud-timer.urgent { color: var(--red); animation: timerUrgent 0.5s ease-in-out infinite alternate; }
+  @keyframes timerUrgent { from { opacity:1; } to { opacity:0.4; } }
+
+  /* ===== SPEED BAR ===== */
+  .speed-bar-wrap {
+    position: fixed; top: 54px; left: 50%; transform: translateX(-50%);
+    width: 86%; max-width: 440px; z-index: 20;
+  }
+  .speed-bar-label {
+    font-size: 0.72rem; letter-spacing: 2px; color: #aac8ff; margin-bottom: 4px;
+    font-family: 'Orbitron', sans-serif; text-align: center;
+  }
+  .speed-bar-outer {
+    height: 14px; background: rgba(0,80,180,0.25); border-radius: 7px;
+    border: 1px solid #00d4ff44; position: relative; overflow: visible;
+  }
+  .speed-bar-inner {
+    height: 100%; border-radius: 7px;
+    background: linear-gradient(90deg, #0077ff, #00d4ff, #00ffb3);
+    transition: width 0.06s linear;
+    box-shadow: 0 0 10px #00d4ff88;
+    position: relative;
+  }
+  .speed-bar-inner::after {
+    content: ''; position: absolute; right: -2px; top: -2px;
+    width: 10px; height: 18px; background: #fff; border-radius: 5px;
+    box-shadow: 0 0 8px #00d4ff;
+  }
+  /* ĐIỂM NHẤN marker */
+  .emphasis-marker {
+    position: absolute; top: -6px; width: 4px; height: 26px;
+    background: var(--gold); border-radius: 2px;
+    box-shadow: 0 0 10px var(--gold);
+    left: 80%; transform: translateX(-50%);
+    z-index: 1;
+  }
+  .emphasis-marker::after {
+    content: '★'; position: absolute; top: -18px; left: 50%; transform: translateX(-50%);
+    color: var(--gold); font-size: 12px;
+  }
+
+  /* ===== D-PAD: SQUARE BUTTONS ===== */
+  .dpad-btn {
+    position: fixed;
+    width: 52px; height: 52px;
+    border-radius: 10px;
+    background: rgba(0,40,120,0.82);
+    border: 2px solid #00d4ff88;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 2rem; cursor: pointer; user-select: none;
+    transition: background 0.1s, box-shadow 0.1s;
+    box-shadow: 0 0 10px #0077ff44, inset 0 1px 0 #00d4ff33;
+    -webkit-tap-highlight-color: transparent;
+    color: #fff;
+    z-index: 20;
+    font-weight: 900;
+    line-height: 1;
+    text-shadow: 0 0 8px #00d4ff;
+  }
+  .dpad-btn:active, .dpad-btn.active {
+    background: rgba(0,120,255,0.95);
+    box-shadow: 0 0 22px #00d4ff, inset 0 1px 0 #ffffff44;
+    transform: scale(0.93);
+  }
+
+  /* Positions — centered around a 52px grid */
+  /* Center point: left=26px, bottom=90px → adjust per original layout */
+  .dpad-up    { left: 75px;  bottom: 168px; }
+  .dpad-down  { left: 75px;  bottom: 82px; }
+  .dpad-left  { left: 15px;  bottom: 82px; }
+  .dpad-right { left: 135px; bottom: 82px; }
+  
+  .dpad-left, .dpad-right { height: 166px; }
+  .dpad-up, .dpad-down { height: 80px; }
+
+  /* ===== BIG ACTION BUTTON RIGHT ===== */
+  .action-btn-wrap {
+    position: fixed; right: 22px; bottom: 60px; z-index: 20;
+  }
+  .action-btn {
+    width: 110px; height: 110px; border-radius: 50%;
+    background: radial-gradient(circle, #00aaff 0%, #0044cc 60%, #001a66 100%);
+    border: 3px solid #00d4ffaa;
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Orbitron', sans-serif; font-weight: 900; font-size: 0.85rem;
+    color: #fff; letter-spacing: 1px; cursor: pointer;
+    box-shadow: 0 0 30px #00d4ff66, 0 0 60px #0077ff33;
+    transition: transform 0.08s, box-shadow 0.1s;
+    user-select: none; -webkit-tap-highlight-color: transparent;
+    text-align: center; line-height: 1.2;
+  }
+  .action-btn.emphasis { animation: emphasisPulse 0.5s ease-in-out infinite alternate; }
+  @keyframes emphasisPulse {
+    from { box-shadow: 0 0 30px #ffd70099, 0 0 60px #ffd70044; border-color: var(--gold); }
+    to { box-shadow: 0 0 60px #ffd700cc, 0 0 100px #ffd70066; border-color: #fff; }
+  }
+  .action-btn:active { transform: scale(0.9); }
+
+  /* ===== RHYTHM BOARD ===== */
+  .board-wrap {
+    position: fixed; left: 50%; transform: translateX(-50%);
+    top: 108px; z-index: 20;
+    display: flex; flex-direction: column; align-items: center;
+    gap: 4px;
+    width: 86%; max-width: 440px;
+  }
+  .board-title {
+    font-size: 0.62rem; letter-spacing: 3px; color: #aac8ff;
+    font-family: 'Orbitron', sans-serif; margin-bottom: 2px;
+    align-self: flex-start;
+  }
+  .board {
+    display: flex; gap: 6px; flex-wrap: nowrap;
+    justify-content: center;
+    background: rgba(0,20,60,0.7); border: 1.5px solid #00d4ff33;
+    border-radius: 12px; padding: 7px 10px;
+    backdrop-filter: blur(6px);
+    width: 100%; overflow-x: auto;
+  }
+  .board-note {
+    width: 36px; height: 36px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 1.4rem; font-weight: 900; cursor: default;
+    position: relative; transition: transform 0.15s, box-shadow 0.15s, opacity 0.2s;
+    border: 2px solid transparent;
+    user-select: none; flex-shrink: 0;
+    text-shadow: 0 1px 4px rgba(0,0,0,0.7);
+    line-height: 1;
+  }
+  /* blue note */
+  .board-note.blue {
+    background: radial-gradient(circle, #00c8ff 0%, #0055cc 60%, #001a66 100%);
+    border-color: #00d4ff88;
+    box-shadow: 0 0 14px #00d4ff66;
+  }
+  /* red (reverse) note */
+  .board-note.red {
+    background: radial-gradient(circle, #ff6699 0%, #cc0044 60%, #440011 100%);
+    border-color: #ff336688;
+    box-shadow: var(--glow-red);
+  }
+  /* yellow (?) note */
+  .board-note.question {
+    background: radial-gradient(circle, #ffe066 0%, #cc8800 60%, #442200 100%);
+    border-color: #ffcc0088;
+    box-shadow: var(--glow-gold);
+    animation: questionPulse 1s ease-in-out infinite alternate;
+  }
+  @keyframes questionPulse {
+    from { box-shadow: 0 0 10px #ffcc0066; }
+    to { box-shadow: 0 0 22px #ffcc00cc; }
+  }
+
+  /* Current note: green border only, no scale */
+  .board-note.current {
+    border-color: #00ff88 !important;
+    box-shadow: 0 0 10px #00ff8899 !important;
+  }
+
+  /* missShake: no scale since we removed scale from current */
+    /* Done (hit correctly): dim out */
+  .board-note.done {
+    opacity: 0.22;
+    box-shadow: none !important;
+    border-color: transparent !important;
+    animation: none !important;
+    transform: scale(0.9);
+  }
+
+  .board-note.hit { animation: hitFlash 0.3s forwards; }
+  @keyframes hitFlash {
+    0% { opacity: 1; transform: scale(1.3); }
+    50% { opacity: 0.5; transform: scale(0.9); }
+    100% { opacity: 0.22; transform: scale(0.9); }
+  }
+  .board-note.miss-shake { animation: missShake 0.3s forwards; border-color: #ff0000 !important; box-shadow: 0 0 10px #ff000099 !important; }
+  @keyframes missShake {
+    0%,100% { transform: translateX(0); }
+    25% { transform: translateX(-5px); }
+    75% { transform: translateX(5px); }
+  }
+
+  /* ===== FEEDBACK TEXT ===== */
+  .feedback {
+    position: fixed; top: 38%; left: 50%; transform: translateX(-50%);
+    font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 900;
+    pointer-events: none; z-index: 30; opacity: 0;
+    transition: opacity 0.1s;
+    text-shadow: 0 0 20px currentColor;
+  }
+  .feedback.show { opacity: 1; animation: feedbackAnim 0.8s forwards; }
+  @keyframes feedbackAnim {
+    0%   { opacity: 1; transform: translateX(-50%) scale(1.4); }
+    50%  { opacity: 1; transform: translateX(-50%) scale(1.05); }
+    100% { opacity: 0; transform: translateX(-50%) scale(0.85); }
+  }
+  .feedback.perfect { color: var(--gold); }
+  .feedback.good    { color: #00ffb3; }
+  .feedback.bad     { color: #ff9900; }
+  .feedback.miss    { color: var(--red); }
+
+  /* ===== OVER SCREEN ===== */
+  #overScreen {
+    background: rgba(5,10,26,0.96);
+    flex-direction: column; gap: 18px;
+  }
+  .over-title {
+    font-family: 'Orbitron', sans-serif; font-size: 2rem; font-weight: 900;
+    color: var(--blue); text-shadow: var(--glow); letter-spacing: 4px;
+  }
+  .over-stats { text-align: center; line-height: 2; font-size: 1.1rem; color: #aac8ff; }
+  .over-stats b { color: var(--gold); font-family: 'Orbitron', sans-serif; }
+
+  /* ===== COUNTDOWN OVERLAY ===== */
+  #countdownOverlay {
+    position: fixed; inset: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: center;
+    background: rgba(5,10,26,0.75);
+    pointer-events: none;
+  }
+  #countdownOverlay.hidden { display: none; }
+  #countdownNum {
+    font-family: 'Orbitron', sans-serif; font-weight: 900;
+    font-size: 6rem; color: #fff;
+    text-shadow: 0 0 40px #00d4ff, 0 0 80px #0077ff;
+    animation: countPop 0.85s ease-out forwards;
+  }
+  @keyframes countPop {
+    0%   { transform: scale(1.8); opacity: 0; }
+    30%  { transform: scale(1);   opacity: 1; }
+    70%  { transform: scale(1);   opacity: 1; }
+    100% { transform: scale(0.6); opacity: 0; }
+  }
+
+
+  .q-reveal {
+    position: fixed; top: 30%; left: 50%; transform: translate(-50%,-50%);
+    background: rgba(80,50,0,0.97); border: 2px solid var(--gold);
+    border-radius: 18px; padding: 18px 32px; z-index: 40;
+    font-family: 'Orbitron', sans-serif; font-size: 1.3rem;
+    color: var(--gold); text-align: center; display: none;
+    box-shadow: 0 0 40px #ffcc0055;
+  }
+  
+  #bgCanvas {
+  position: fixed; inset: 0; z-index: 1;
+  pointer-events: none; width: 100%; height: 100%;
+}
+  
+</style>
+</head>
+<body>
+
+<!-- BG Decoration -->
+<div class="bg-music"></div>
+<canvas id="bgCanvas"></canvas>
+<div class="bars" id="bars"></div>
+
+<!-- ===== START SCREEN ===== -->
+<div class="screen" id="startScreen">
+  <div class="music-icon">🎵</div>
+  <div class="logo">NHỊP ĐIỆU ÂM NHẠC</div>
+  <div class="logo-sub">RHYTHM CHALLENGE</div>
+  <button class="btn-start" id="btnStart">▶ BẮT ĐẦU</button>
+</div>
+
+<!-- ===== GAME SCREEN ===== -->
+<div class="screen hidden" id="gameScreen">
+
+  <!-- HUD Top -->
+  <div class="hud-top">
+    <div class="hud-score" id="scoreDisplay">0</div>
+    <div class="hud-level">CẤP ĐỘ <span id="levelDisplay">1</span></div>
+    <div class="hud-combo" id="comboDisplay">COMBO x0</div>
+  </div>
+  <div class="hud-timer" id="timerDisplay">⏱ 2:00</div>
+
+  <!-- Speed Bar -->
+  <div class="speed-bar-wrap">
+    <div class="speed-bar-label">TỐC ĐỘ<style>font-family:'Tahoma',Sans-serif;</style></div>
+    <div class="speed-bar-outer">
+      <div class="speed-bar-inner" id="speedBar" style="width:0%"></div>
+      <div class="emphasis-marker" id="emphasisMarker"></div>
+    </div>
+  </div>
+
+  <!-- Rhythm Board -->
+  <div class="board-wrap">
+    <div class="board-title">NHỊP ĐIỆU &nbsp;<span id="specialBadge" style="color:var(--gold);font-size:0.6rem;"></span></div>
+    <div class="board" id="rhythmBoard"></div>
+  </div>
+
+  <!-- D-Pad: square buttons, fixed positions -->
+  <button class="dpad-btn dpad-up"    id="dpUp">↑</button>
+  <button class="dpad-btn dpad-down"  id="dpDown">↓</button>
+  <button class="dpad-btn dpad-left"  id="dpLeft">←</button>
+  <button class="dpad-btn dpad-right" id="dpRight">→</button>
+
+  <!-- Action Button right -->
+  <div class="action-btn-wrap">
+    <div class="action-btn" id="actionBtn">ĐIỂM<br>NHẤN</div>
+  </div>
+
+  <!-- Feedback -->
+  <div class="feedback" id="feedbackEl"></div>
+
+  <!-- Question reveal popup -->
+  <div class="q-reveal" id="qReveal"></div>
+
+</div>
+
+<!-- ===== COUNTDOWN OVERLAY ===== -->
+<div id="countdownOverlay" class="hidden">
+  <div id="countdownNum">3</div>
+</div>
+
+<!-- ===== GAME OVER SCREEN ===== -->
+<div class="screen hidden" id="overScreen">
+  <div class="over-title">KẾT THÚC</div>
+  <div class="over-stats" id="overStats"></div>
+  <button class="btn-start" id="btnRestart" style="margin-top:10px">↩ CHƠI LẠI</button>
+</div>
+
+<script>
+  
+  
+  // ===== BG CANVAS: NOTES + WAVES =====
+(function(){
+  const canvas = document.getElementById('bgCanvas');
+  const ctx = canvas.getContext('2d');
+  let W, H;
+
+  function resize(){ W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // --- Floating music notes ---
+  const NOTE_CHARS = ['♩','♪','♫','♬','𝄞'];
+  const notes = Array.from({length: 6}, () => ({
+    x: Math.random() * window.innerWidth,
+    y: window.innerHeight + Math.random() * 200,
+    size: 14 + Math.random() * 22,
+    speed: 0.4 + Math.random() * 0.8,
+    drift: (Math.random() - 0.5) * 0.4,
+    opacity: 0.1 + Math.random() * 0.35,
+    char: NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)],
+    color: ['#00d4ff','#0077ff','#ffd700','#00ffb3','#ffffff'][Math.floor(Math.random()*5)]
+  }));
+
+  // --- Wave config ---
+  const waves = [
+    { amp: 28, freq: 0.012, speed: 0.018, offset: 0,   color: 'rgba(0,212,255,0.07)',  y: 0.72 },
+    { amp: 18, freq: 0.018, speed: 0.026, offset: 2,   color: 'rgba(0,119,255,0.06)',  y: 0.80 },
+    { amp: 12, freq: 0.025, speed: 0.034, offset: 4,   color: 'rgba(0,255,179,0.05)',  y: 0.88 },
+  ];
+  let tick = 0;
+
+  function drawWaves(){
+    waves.forEach(w => {
+      const baseY = H * w.y;
+      ctx.beginPath();
+      ctx.moveTo(0, baseY);
+      for(let x = 0; x <= W; x += 3){
+        const y = baseY + Math.sin(x * w.freq + tick * w.speed + w.offset) * w.amp;
+        ctx.lineTo(x, y);
+      }
+      ctx.lineTo(W, H); ctx.lineTo(0, H); ctx.closePath();
+      ctx.fillStyle = w.color;
+      ctx.fill();
+    });
+  }
+
+  function drawNotes(){
+    notes.forEach(n => {
+      ctx.save();
+      ctx.globalAlpha = n.opacity;
+      ctx.fillStyle = n.color;
+      ctx.font = `${n.size}px serif`;
+      ctx.fillText(n.char, n.x, n.y);
+      ctx.restore();
+
+      n.y -= n.speed;
+      n.x += n.drift;
+      n.opacity = Math.min(n.opacity + 0.002, 0.45);
+
+      // Reset when off screen
+      if(n.y < -40){
+        n.y = H + 20;
+        n.x = Math.random() * W;
+        n.opacity = 0.05;
+        n.speed = 0.4 + Math.random() * 0.8;
+        n.char = NOTE_CHARS[Math.floor(Math.random() * NOTE_CHARS.length)];
+      }
+    });
+  }
+
+  function loop(){
+    ctx.clearRect(0, 0, W, H);
+    drawWaves();
+    drawNotes();
+    tick++;
+    requestAnimationFrame(loop);
+  }
+  loop();
+})();
+// ===== MUSIC BARS BG =====
+(function(){
+  const bars = document.getElementById('bars');
+  for(let i=0;i<60;i++){
+    const b = document.createElement('div');
+    b.className='bar';
+    const h = 20+Math.random()*80;
+    const d = (0.4+Math.random()*1.2).toFixed(2);
+    b.style.cssText=`--h:${h}px;--d:${d}s;height:${8+Math.random()*20}px`;
+    bars.appendChild(b);
+  }
+})();
+
+function spawnNote(){
+  const notes = ['🎵','🎶','♪','♫','🎼'];
+  const n = document.createElement('div');
+  n.className='note';
+  n.textContent=notes[Math.floor(Math.random()*notes.length)];
+  n.style.left=Math.random()*90+'%';
+  n.style.bottom='10%';
+  n.style.color=['#00d4ff','#0077ff','#ffd700','#00ffb3'][Math.floor(Math.random()*4)];
+  document.body.appendChild(n);
+  setTimeout(()=>n.remove(),4200);
+}
+setInterval(spawnNote, 800);
+
+// ===== GAME STATE =====
+const DIRS = ['up','down','left','right'];
+// Use proper arrow characters for display
+const DIR_ICON = { up:'⬆', down:'⬇', left:'⬅', right:'⮕' };
+const DIR_OPPOSITE = { up:'down', down:'up', left:'right', right:'left' };
+
+let state = {
+  score: 0, level: 1, combo: 0, maxCombo: 0,
+  totalHit: 0, totalMiss: 0,
+  sequence: [],
+  currentIdx: 0,
+  barProgress: 0,
+  barSpeed: 8,
+  barWaitTime: 0,
+  raf: null,
+  emphasisTriggered: false,
+  gameTimeLeft: 120
+};
+
+function notesForLevel(lvl){ 
+  return Math.min(4 + Math.floor((lvl-1)/3), 7); 
+}
+  function speedForLevel(lvl){ 
+  const base = Math.min(20 + (lvl-1)*2.08, 40);
+  const extra = Math.max(0, lvl - 9) * 0.76; // cấp 9 đạt 40%, sau đó +1%/cấp
+  return base + extra;
+}
+function hasSpecial(lvl){ return lvl > 1 && (lvl % 5 === 0); }
+
+const GAME_DURATION = 120;
+
+function generateSequence(lvl){
+  const count = notesForLevel(lvl);
+  const seq = [];
+  const special = hasSpecial(lvl);
+  let specialIdx = (special && count >= 4) ? (3 + Math.floor(Math.random()*(count-3))) : -1;
+
+  // Build dirs with no direction repeated more than 2 times consecutively or 3 times total in a row
+  const dirs = [];
+  for(let i=0;i<count;i++){
+    let pick;
+    let attempts = 0;
+    do {
+      pick = DIRS[Math.floor(Math.random()*4)];
+      attempts++;
+      // Count how many times this dir appears in last 2 slots
+      const last2 = dirs.slice(-2);
+      const consec = last2.filter(d=>d===pick).length;
+      // Also count total occurrences so far
+      const totalSame = dirs.filter(d=>d===pick).length;
+      // Allow if: not 2 consecutive AND not already 3 of same
+      if(consec < 2 && totalSame < Math.ceil(count/2)) break;
+    } while(attempts < 20);
+    dirs.push(pick);
+  }
+
+  for(let i=0;i<count;i++){
+    if(i===specialIdx){
+      const t = Math.random()<0.5?'red':'question';
+      seq.push({dir: dirs[i], type:t, revealedDir:null});
+    } else {
+      seq.push({dir: dirs[i], type:'blue', revealedDir:null});
+    }
+  }
+  return seq;
+}
+
+function renderBoard(){
+  const board = document.getElementById('rhythmBoard');
+  board.innerHTML='';
+  state.sequence.forEach((note,i)=>{
+    const el = document.createElement('div');
+    el.className='board-note '+note.type;
+    el.id='note'+i;
+
+    let icon = '';
+    if(note.type==='question'){
+      icon = note.revealedDir ? DIR_ICON[note.revealedDir] : '?';
+    } else {
+      icon = DIR_ICON[note.dir];
+    }
+
+    if(i < state.currentIdx){
+      el.classList.add('done');
+    }
+    if(i === state.currentIdx && state.currentIdx < state.sequence.length){
+      el.classList.add('current');
+    }
+
+    el.textContent = icon;
+    board.appendChild(el);
+  });
+
+  const badge = document.getElementById('specialBadge');
+  badge.textContent = '';
+}
+
+function updateHUD(){
+  document.getElementById('scoreDisplay').textContent = state.score.toLocaleString();
+  document.getElementById('levelDisplay').textContent = state.level;
+  document.getElementById('comboDisplay').textContent = 'COMBO x'+state.combo;
+}
+
+function updateTimerDisplay(){
+  const t = state.gameTimeLeft;
+  const m = Math.floor(t/60);
+  const s = Math.floor(t%60);
+  const el = document.getElementById('timerDisplay');
+  el.textContent = '⏱ '+m+':'+(s<10?'0':'')+s;
+  el.className = 'hud-timer' + (t<=10?' urgent':'');
+}
+
+// Speed bar + game timer tick
+let lastTs = null;
+function barTick(ts){
+  if(lastTs===null) lastTs=ts;
+  const dt = (ts-lastTs)/1000;
+  lastTs=ts;
+
+  // 1. Giảm thời gian tổng của game
+  state.gameTimeLeft -= dt;
+  if(state.gameTimeLeft<=0){
+    state.gameTimeLeft=0;
+    updateTimerDisplay();
+    gameOver();
+    return;
+  }
+  updateTimerDisplay();
+  if (state.barProgress < 100) {
+    state.barProgress += state.barSpeed * dt;
+    if (state.barProgress >= 100) {
+      state.barProgress = 100;
+      state.barWaitTime = 0.2288; 
+    }
+  } else {
+    // Thanh đã đạt 100%, đang trong trạng thái chờ
+    state.barWaitTime -= dt;
+    if (state.barWaitTime <= 0) {
+      onBarFull(); // Hết thời gian chờ mà không bấm -> MISS
+      return;
+    }
+  }
+
+  // Cập nhật giao diện thanh tốc độ
+  document.getElementById('speedBar').style.width = state.barProgress + '%';
+  state.raf = requestAnimationFrame(barTick);
+}
+
+function startBar(){
+  state.actionUsed = false;
+  state.barProgress=0;
+  state.emphasisTriggered=false;
+  document.getElementById('actionBtn').classList.remove('emphasis');
+  document.getElementById('speedBar').style.width='0%';
+  lastTs=null;
+  state.raf = requestAnimationFrame(barTick);
+}
+function stopBar(){
+  if(state.raf) cancelAnimationFrame(state.raf);
+  state.raf=null;
+}
+
+function onBarFull(){
+  state.actionUsed = false;
+  // Bar completed without pressing action btn → MISS, generate fresh sequence
+  state.sequence = generateSequence(state.level);
+  state.currentIdx=0;
+  state.combo=0;
+  state.totalMiss++;
+  SFX.miss();
+  updateHUD();
+  showFeedback('MISS','miss');
+  document.getElementById('actionBtn').classList.remove('emphasis');
+  revealCurrentQuestionIfNeeded();
+  renderBoard();
+  lastTs=null;
+  state.barProgress=0;
+  state.emphasisTriggered=false;
+  document.getElementById('speedBar').style.width='0%';
+  state.raf = requestAnimationFrame(barTick);
+}
+
+function showFeedback(text, cls){
+  const el=document.getElementById('feedbackEl');
+  el.textContent=text;
+  el.className='feedback '+cls+' show';
+  setTimeout(()=>{ el.className='feedback'; },800);
+}
+
+function resetSequenceOnMiss(){
+  // Wrong direction: restart same sequence from beginning, no new sequence
+  state.sequence.forEach(n=>{ if(n.type==='question') n.revealedDir=null; });
+  state.currentIdx=0;
+  state.combo=0;
+  revealCurrentQuestionIfNeeded();
+  updateHUD();
+  renderBoard();
+}
+
+function revealCurrentQuestionIfNeeded(){
+  // Reveal ? note that is 1 ahead of current (so player sees it before they reach it)
+  const previewIdx = state.currentIdx + 1;
+  if(previewIdx < state.sequence.length){
+    const next = state.sequence[previewIdx];
+    if(next.type==='question' && !next.revealedDir){
+      next.revealedDir = DIRS[Math.floor(Math.random()*4)];
+    }
+  }
+  // Also reveal if current itself is a ? (fallback for first note)
+  if(state.currentIdx < state.sequence.length){
+    const cur = state.sequence[state.currentIdx];
+    if(cur.type==='question' && !cur.revealedDir){
+      cur.revealedDir = DIRS[Math.floor(Math.random()*4)];
+    }
+  }
+}
+
+function handleDirection(dir){
+  if(!state.raf) return;
+  if(state.currentIdx>=state.sequence.length) return;
+
+  const note = state.sequence[state.currentIdx];
+
+  let requiredDir = note.dir;
+  if(note.type==='red')      requiredDir = DIR_OPPOSITE[note.dir];
+  if(note.type==='question') requiredDir = note.revealedDir;
+
+  const el=document.getElementById('note'+state.currentIdx);
+
+  if(dir===requiredDir){
+    SFX.hit();
+    el.classList.add('hit');
+    state.currentIdx++;
+    state.combo++;
+    if(state.combo>state.maxCombo) state.maxCombo=state.combo;
+    state.totalHit++;
+    // NO score here — score only on action btn press
+    updateHUD();
+
+    // Reveal ? 1 note ahead
+    revealCurrentQuestionIfNeeded();
+    renderBoard();
+
+  } else {
+    el.classList.add('miss-shake');
+    state.totalMiss++;
+    setTimeout(()=>{ resetSequenceOnMiss(); }, 350);
+  }
+}
+
+function handleActionBtn(){
+  if(state.currentIdx < state.sequence.length) return;
+  if(state.actionUsed) return;
+  state.actionUsed = true;
+  // Must finish all notes first
+  if(state.currentIdx < state.sequence.length) return;
+
+  const dist = Math.abs(state.barProgress - 80);
+  let bonus=0, msg='', cls='';
+  if(dist<=2){
+  bonus=500; msg='PERFECT'; cls='perfect'; SFX.result('perfect');
+} else if(dist<=10){
+  bonus=300; msg='GOOD'; cls='good'; SFX.result('good');
+} else {
+  bonus=80; msg='BAD'; cls='bad'; SFX.result('bad');
+}
+
+  state.score += bonus * state.level * Math.max(1, state.combo);
+  document.getElementById('actionBtn').classList.remove('emphasis');
+  document.getElementById('actionBtn').style.borderColor='';
+  showFeedback(msg, cls);
+  updateHUD();
+
+  stopBar();
+  setTimeout(nextLevel, 600);
+}
+
+function nextLevel(){
+  state.level++;
+  state.actionUsed = false;
+  state.sequence = generateSequence(state.level);
+  state.currentIdx=0;
+  state.barSpeed = speedForLevel(state.level);
+  revealCurrentQuestionIfNeeded();
+  renderBoard();
+  updateHUD();
+  startBar();
+}
+
+function startGame(){
+  // Đánh thức AudioContext ngay khi click nút Bắt đầu/Chơi lại
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  
+  stopBar();
+  state = {
+    score:0, level:1, combo:0, maxCombo:0,
+    totalHit:0, totalMiss:0,
+    sequence: generateSequence(1),
+    currentIdx:0,
+    barProgress:0, barSpeed: speedForLevel(1),
+    raf:null,
+    emphasisTriggered:false,
+    gameTimeLeft: GAME_DURATION,
+    actionUsed: false
+  };
+  
+  document.getElementById('startScreen').classList.add('hidden');
+  document.getElementById('overScreen').classList.add('hidden');
+  document.getElementById('gameScreen').classList.remove('hidden');
+  document.getElementById('actionBtn').classList.remove('emphasis');
+  document.getElementById('actionBtn').style.borderColor='';
+  
+  revealCurrentQuestionIfNeeded();
+  renderBoard();
+  updateHUD();
+  updateTimerDisplay();
+  startCountdown(); // Hàm startCountdown sẽ lo việc phát tiếng bíp
+}
+
+
+function startCountdown(){
+  const overlay = document.getElementById('countdownOverlay');
+  const numEl   = document.getElementById('countdownNum');
+  let count = 3;
+
+  // Kích hoạt âm thanh ngay lập tức cho giây thứ 3
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+  SFX.beep(440); 
+
+  overlay.classList.remove('hidden');
+  numEl.textContent = count;
+  numEl.style.animation = 'none';
+  void numEl.offsetWidth;
+  numEl.style.animation = '';
+
+  const tick = setInterval(()=>{
+    count--;
+    if(count <= 0){
+      clearInterval(tick);
+      SFX.beep(880); // Tiếng bíp cao khi bắt đầu vào game
+      overlay.classList.add('hidden');
+      startBar();
+    } else {
+      SFX.beep(440); // Tiếng bíp cho giây 2 và 1
+      numEl.textContent = count;
+      numEl.style.animation = 'none';
+      void numEl.offsetWidth;
+      numEl.style.animation = '';
+    }
+  }, 900);
+}
+
+
+function gameOver(){
+  stopBar();
+  SFX.gameOver();
+  document.getElementById('gameScreen').classList.add('hidden');
+  document.getElementById('overScreen').classList.remove('hidden');
+  document.getElementById('overStats').innerHTML=`
+    <b>ĐIỂM:</b> ${state.score.toLocaleString()}<br>
+    <b>CẤP ĐỘ ĐẠT:</b> ${state.level}<br>
+    <b>COMBO CAO NHẤT:</b> ${state.maxCombo}<br>
+    <b>ĐÁNH ĐÚNG:</b> ${state.totalHit} &nbsp;|&nbsp; <b>HỤT:</b> ${state.totalMiss}
+  `;
+}
+
+// ===== EVENTS =====
+document.getElementById('btnStart').addEventListener('click', startGame);
+document.getElementById('btnRestart').addEventListener('click', startGame);
+document.getElementById('actionBtn').addEventListener('click', handleActionBtn);
+
+// D-Pad: touchstart only to avoid ghost click double-fire, with per-button debounce
+const dpadLastTime = {};
+['up','down','left','right'].forEach(dir=>{
+  const id = 'dp'+dir.charAt(0).toUpperCase()+dir.slice(1);
+  const btn = document.getElementById(id);
+  const DEBOUNCE = 120; // ms — prevents double-tap ghost fires
+
+  function fire(e){
+    e.preventDefault();
+    const now = Date.now();
+    if(dpadLastTime[dir] && now - dpadLastTime[dir] < DEBOUNCE) return;
+    dpadLastTime[dir] = now;
+    handleDirection(dir);
+  }
+
+  btn.addEventListener('touchstart', fire, {passive:false});
+  // Fallback for non-touch (desktop)
+  btn.addEventListener('mousedown', fire);
+});
+
+// Keyboard support
+document.addEventListener('keydown', e=>{
+  const map={ArrowUp:'up',ArrowDown:'down',ArrowLeft:'left',ArrowRight:'right',' ':'action',w:'up',s:'down',a:'left',d:'right'};
+  const act=map[e.key];
+  if(act==='action') handleActionBtn();
+  else if(act) handleDirection(act);
+});
+  
+// ===== INSTANT & SURPRISE AUDIO ENGINE =====
+const AudioCtx = window.AudioContext || window.webkitAudioContext;
+const audioCtx = new AudioCtx();
+
+const SFX = {
+  // Hàm cốt lõi tạo âm thanh siêu nhanh
+  burst(freq, duration, type = 'square', glide = true) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+    if (glide) {
+      // Nhảy vọt cao độ lên gấp đôi trong thời gian cực ngắn
+      osc.frequency.exponentialRampToValueAtTime(freq * 4, audioCtx.currentTime + duration);
+    }
+
+    gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  },
+
+  beep(freq = 440) {
+    this.burst(freq, 0.1, 'square', false);
+  },
+
+  hit() {
+    // Tiếng Click cơ học đanh gọn
+    this.burst(800 + (state.currentIdx * 100), 0.04, 'triangle', true);
+  },
+
+  result(type) {
+    if (type === 'perfect') {
+      // "Chíu chíu" - 2 luồng âm thanh cực nhanh chồng lên nhau
+      this.burst(1200, 0.15, 'square', true);
+      setTimeout(() => this.burst(1600, 0.1, 'square', true), 50);
+    } else if (type === 'good') {
+      // 1 âm thanh dứt khoát
+      this.burst(900, 0.1, 'square', true);
+    } else { // bad
+      // Âm thanh trầm đục, rơi xuống
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(400, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(50, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.0001, audioCtx.currentTime + 0.15);
+      osc.connect(gain); gain.connect(audioCtx.destination);
+      osc.start(); osc.stop(audioCtx.currentTime + 0.15);
+    }
+  },
+
+  miss() {
+    // Tiếng "Zap" điện tử bị lỗi
+    const duration = 0.2;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.type = 'sawtooth';
+    // Tần số chạy loạn xạ (FM synthesis cơ bản)
+    osc.frequency.setValueAtTime(100, audioCtx.currentTime);
+    osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.05);
+    osc.frequency.linearRampToValueAtTime(10, audioCtx.currentTime + duration);
+    
+    gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+    gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
+    
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+    osc.start();
+    osc.stop(audioCtx.currentTime + duration);
+  },
+
+  gameOver() {
+    this.burst(200, 0.5, 'sawtooth', false);
+  }
+};
+
+
+</script>
+</body>
+</html>
