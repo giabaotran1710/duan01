@@ -447,6 +447,26 @@
 
 <script>
 
+// Thêm biến này ở trên cùng của <script>
+let musicUnlocked = false;
+
+function unlockAudio() {
+  if (musicUnlocked) return;
+  
+  // Phát và dừng ngay lập tức để "xin phép" trình duyệt
+  bgMusic.play().then(() => {
+    bgMusic.pause();
+    bgMusic.currentTime = 0;
+    musicUnlocked = true;
+    console.log("Audio Unlocked!");
+  }).catch(err => console.error("Unlock failed:", err));
+  
+  if (audioCtx.state === 'suspended') {
+    audioCtx.resume();
+  }
+}
+
+
   // ===== BG CANVAS: NOTES + WAVES =====
 (function(){
   const canvas = document.getElementById('bgCanvas');
@@ -550,19 +570,7 @@ function spawnNote(){
 }
 setInterval(spawnNote, 800);
 
-// ===== BACKGROUND MUSIC =====
-const bgMusic = document.getElementById('bgMusic');
 
-function playBgMusic() {
-  bgMusic.volume = 0.55;
-  let playPromise = bgMusic.play();
-
-  if (playPromise !== undefined) {
-    playPromise.catch(err => {
-      console.warn('Nhạc nền bị chặn hoặc lỗi file:', err);
-    });
-  }
-}
 
 function stopBgMusic() {
   bgMusic.pause();
@@ -929,7 +937,11 @@ function gameOver(){
 }
 
 // ===== EVENTS =====
-document.getElementById('btnStart').addEventListener('click', startGame);
+document.getElementById('btnStart').addEventListener('click', () => {
+  unlockAudio(); // Mở khóa âm thanh ngay lập tức khi click
+  startGame();
+});
+
 document.getElementById('btnRestart').addEventListener('click', startGame);
 document.getElementById('actionBtn').addEventListener('click', handleActionBtn);
 
@@ -1009,6 +1021,21 @@ const SFX = {
       osc.start(); osc.stop(audioCtx.currentTime + 0.15);
     }
   },
+
+
+function playBgMusic() {
+  bgMusic.volume = 0.55;
+  console.log("Đang thử phát nhạc...");
+  
+  bgMusic.play()
+    .then(() => console.log("Nhạc đang phát thành công!"))
+    .catch(error => {
+      console.error("Lỗi phát nhạc chi tiết:", error.message);
+      // Nếu lỗi là 'The element has no supported sources', nghĩa là đường dẫn file sai
+    });
+}
+
+
 
   miss() {
     const duration = 0.2;
