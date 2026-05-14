@@ -1,26 +1,37 @@
-document.addEventListener("DOMContentLoaded", () => {
-
+/* =============================================
+   UTILITY BAR
+============================================= */
+(function () {
   const toggleBtn  = document.getElementById("toggleBar");
   const utilityBar = document.getElementById("utilityBar");
   const content    = document.querySelector(".content");
 
-  let autoCloseTimer;
+  if (!toggleBtn || !utilityBar || !content) {
+    console.error("Không tìm thấy toggleBar / utilityBar / content");
+    return;
+  }
+
+  let autoCloseTimer = null;
 
   function closeBar() {
     utilityBar.classList.remove("show");
     content.classList.remove("hide");
-    clearTimeout(autoCloseTimer);
+
+    if (autoCloseTimer) {
+      clearTimeout(autoCloseTimer);
+      autoCloseTimer = null;
+    }
   }
 
   function openBar() {
     utilityBar.classList.add("show");
     content.classList.add("hide");
 
-    clearTimeout(autoCloseTimer);
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
     autoCloseTimer = setTimeout(closeBar, 30000);
   }
 
-  function toggleBar(e) {
+  toggleBtn.addEventListener("click", function (e) {
     e.preventDefault();
     e.stopPropagation();
 
@@ -29,35 +40,41 @@ document.addEventListener("DOMContentLoaded", () => {
     } else {
       openBar();
     }
-  }
-
-  toggleBtn.addEventListener("click", toggleBar);
-
-  utilityBar.addEventListener("click", () => {
-    clearTimeout(autoCloseTimer);
-    autoCloseTimer = setTimeout(closeBar, 30000);
   });
 
-});
+  utilityBar.addEventListener("click", function () {
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    autoCloseTimer = setTimeout(closeBar, 30000);
+  });
+})();
 
 
 /* =============================================
    CANVAS BACKGROUND
 ============================================= */
 (function () {
-  var canvas = document.getElementById("bg");
-  var ctx = canvas.getContext("2d");
-  var W, H, t = 0;
+  const canvas = document.getElementById("bg");
+
+  if (!canvas) {
+    console.error("Không tìm thấy canvas #bg");
+    return;
+  }
+
+  const ctx = canvas.getContext("2d");
+
+  let W;
+  let H;
+  let t = 0;
 
   function resize() {
     W = canvas.width = window.innerWidth;
     H = canvas.height = window.innerHeight;
+    initStars();
   }
 
   window.addEventListener("resize", resize);
-  resize();
 
-  var waves = [
+  const waves = [
     { a:0.055, wl:0.012, sp:0.018, yo:0.62, alpha:0.18, r:100, g:200, b:255 },
     { a:0.040, wl:0.018, sp:0.012, yo:0.68, alpha:0.14, r:60,  g:160, b:230 },
     { a:0.030, wl:0.025, sp:0.022, yo:0.73, alpha:0.22, r:30,  g:120, b:200 },
@@ -65,20 +82,22 @@ document.addEventListener("DOMContentLoaded", () => {
     { a:0.015, wl:0.050, sp:0.030, yo:0.82, alpha:0.35, r:5,   g:50,  b:130 },
   ];
 
-  var stars = [];
+  let stars = [];
 
   function initStars() {
     stars = [];
-    var rng = 1;
 
-    for (var s = 0; s < 80; s++) {
-      rng = (rng * 16807) % 2147483647;
-      var sx = rng % W;
+    let rng = 1;
 
+    for (let s = 0; s < 80; s++) {
       rng = (rng * 16807) % 2147483647;
-      var sy = rng % Math.floor(H * 0.45);
+      const sx = rng % W;
 
       rng = (rng * 16807) % 2147483647;
+      const sy = rng % Math.floor(H * 0.45);
+
+      rng = (rng * 16807) % 2147483647;
+
       stars.push({
         x: sx,
         y: sy,
@@ -88,7 +107,7 @@ document.addEventListener("DOMContentLoaded", () => {
   }
 
   function draw() {
-    var sky = ctx.createLinearGradient(0, 0, 0, H);
+    const sky = ctx.createLinearGradient(0, 0, 0, H);
     sky.addColorStop(0, "#050d1a");
     sky.addColorStop(0.4, "#0a1a30");
     sky.addColorStop(0.7, "#0d2540");
@@ -97,7 +116,11 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, W, H);
 
-    var glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 0, W * 0.5, H * 0.22, W * 0.45);
+    const glow = ctx.createRadialGradient(
+      W * 0.5, H * 0.22, 0,
+      W * 0.5, H * 0.22, W * 0.45
+    );
+
     glow.addColorStop(0, "rgba(120,190,255,0.07)");
     glow.addColorStop(0.5, "rgba(60,130,200,0.03)");
     glow.addColorStop(1, "rgba(0,0,0,0)");
@@ -105,23 +128,24 @@ document.addEventListener("DOMContentLoaded", () => {
     ctx.fillStyle = glow;
     ctx.fillRect(0, 0, W, H);
 
-    stars.forEach(function(st) {
-      var tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.2 + st.x));
+    stars.forEach(function (st) {
+      const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.2 + st.x));
+
       ctx.beginPath();
       ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
       ctx.fillStyle = "rgba(200,230,255," + (tw * 0.8) + ")";
       ctx.fill();
     });
 
-    waves.forEach(function(w) {
-      var baseY = H * w.yo;
-      var amp = H * w.a;
+    waves.forEach(function (w) {
+      const baseY = H * w.yo;
+      const amp = H * w.a;
 
       ctx.beginPath();
       ctx.moveTo(0, H);
 
-      for (var x = 0; x <= W; x += 3) {
-        var y = baseY
+      for (let x = 0; x <= W; x += 3) {
+        const y = baseY
           + Math.sin(x * w.wl + t * w.sp * 60) * amp
           + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
 
@@ -131,7 +155,7 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.lineTo(W, H);
       ctx.closePath();
 
-      var wg = ctx.createLinearGradient(0, baseY - amp, 0, H);
+      const wg = ctx.createLinearGradient(0, baseY - amp, 0, H);
       wg.addColorStop(0, "rgba(" + w.r + "," + w.g + "," + w.b + "," + w.alpha + ")");
       wg.addColorStop(1, "rgba(5,15,30,0.6)");
 
@@ -139,14 +163,14 @@ document.addEventListener("DOMContentLoaded", () => {
       ctx.fill();
     });
 
-    waves.slice(0, 3).forEach(function(w) {
-      var baseY = H * w.yo;
-      var amp = H * w.a;
+    waves.slice(0, 3).forEach(function (w) {
+      const baseY = H * w.yo;
+      const amp = H * w.a;
 
       ctx.beginPath();
 
-      for (var x = 0; x <= W; x += 3) {
-        var y = baseY
+      for (let x = 0; x <= W; x += 3) {
+        const y = baseY
           + Math.sin(x * w.wl + t * w.sp * 60) * amp
           + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
 
@@ -163,7 +187,6 @@ document.addEventListener("DOMContentLoaded", () => {
     requestAnimationFrame(draw);
   }
 
-  initStars();
+  resize();
   draw();
-
 })();
