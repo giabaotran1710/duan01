@@ -1,0 +1,390 @@
+<!DOCTYPE html><html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>NEON REFLEX</title>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@600;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --cyan:#00ffcc;
+  --orange:#ff7a00;
+  --bg:#020713;
+  --panel:rgba(3,14,32,.72);
+  --line:rgba(0,255,204,.28);
+}
+body{
+  min-height:100vh;
+  overflow:hidden;
+  background:radial-gradient(circle at 50% 25%,#071b38 0%,#020713 52%,#000 100%);
+  color:white;
+  font-family:'Share Tech Mono',monospace;
+  touch-action:none;
+  user-select:none;
+  -webkit-user-select:none;
+}
+#fx{
+  position:fixed;inset:0;width:100%;height:100%;z-index:0;display:block;
+}
+.screen{
+  position:fixed;inset:0;z-index:10;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  padding:22px;background:rgba(0,0,0,.72);backdrop-filter:blur(5px);
+}
+.hidden{display:none!important}
+.logo{
+  font-family:'Orbitron',sans-serif;font-weight:900;font-size:clamp(38px,10vw,76px);letter-spacing:5px;text-align:center;
+  color:var(--cyan);text-shadow:0 0 16px #00ffcc,0 0 42px #00ffcc66,0 0 80px #00ffcc33;
+}
+.sub{
+  margin-top:8px;margin-bottom:30px;color:var(--orange);font-family:'Orbitron';letter-spacing:4px;font-size:clamp(11px,3vw,16px);
+  text-shadow:0 0 12px #ff7a00aa;text-align:center;
+}
+.note{
+  max-width:560px;text-align:center;color:#b8cce8;line-height:1.6;font-size:14px;margin-bottom:22px;
+}
+.btn{
+  border:2px solid var(--cyan);background:rgba(0,255,204,.05);color:var(--cyan);
+  font-family:'Orbitron';font-size:15px;font-weight:800;letter-spacing:2px;padding:14px 28px;margin:8px;
+  min-width:190px;text-transform:uppercase;border-radius:10px;box-shadow:0 0 18px #00ffcc33;cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:.15s;
+}
+.btn:active,.btn:hover{background:rgba(0,255,204,.18);transform:translateY(-1px);box-shadow:0 0 28px #00ffcc77}
+#game{
+  position:fixed;inset:0;z-index:2;display:flex;flex-direction:column;padding:12px;gap:12px;
+}
+#topbar{
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:start;gap:10px;pointer-events:none;
+}
+.hudBox{
+  background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:9px 11px;box-shadow:0 0 22px rgba(0,255,204,.08);
+}
+.label{font-size:10px;color:#7fa9c8;letter-spacing:1px;font-family:'Orbitron'}
+.value{font-family:'Orbitron';font-weight:900;color:var(--cyan);font-size:20px;text-shadow:0 0 10px #00ffcc88;letter-spacing:1px;margin-top:2px}
+#modeBox{text-align:center;min-width:138px}
+#modeText{font-family:'Orbitron';font-size:12px;letter-spacing:1px;color:#ffae42;text-shadow:0 0 9px #ff7a00aa}
+#lives{text-align:right}
+#playArea{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:0;padding-bottom:4px;
+}
+#roundCard{
+  width:min(92vw,560px);min-height:300px;background:linear-gradient(180deg,rgba(6,24,52,.72),rgba(2,7,19,.9));
+  border:1.5px solid rgba(0,255,204,.28);border-radius:28px;box-shadow:0 0 35px rgba(0,255,204,.12),inset 0 0 38px rgba(0,255,204,.04);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;position:relative;overflow:hidden;
+}
+#roundCard::before{
+  content:"";position:absolute;inset:-2px;background:linear-gradient(120deg,transparent,rgba(0,255,204,.15),transparent);transform:translateX(-100%);
+  animation:sweep 3s infinite;pointer-events:none;
+}
+@keyframes sweep{0%{transform:translateX(-120%)}55%,100%{transform:translateX(120%)}}
+#taskTitle{
+  position:absolute;top:18px;left:18px;right:18px;text-align:center;font-family:'Orbitron';font-weight:700;font-size:13px;letter-spacing:1px;color:#b8d8ff;
+}
+#word{
+  font-family:'Orbitron';font-size:clamp(58px,18vw,118px);font-weight:900;letter-spacing:6px;line-height:1;text-shadow:0 0 16px currentColor,0 0 42px currentColor;
+  margin-top:28px;text-align:center;filter:drop-shadow(0 0 10px currentColor);
+}
+#hint{
+  margin-top:20px;color:#6f8eae;font-size:13px;text-align:center;min-height:20px;
+}
+#timerShell{
+  position:absolute;left:18px;right:18px;bottom:18px;height:9px;border:1px solid rgba(255,255,255,.14);border-radius:999px;background:rgba(0,0,0,.42);overflow:hidden;
+}
+#timerBar{height:100%;width:100%;background:linear-gradient(90deg,#00ffcc,#ffcc00,#ff3300);box-shadow:0 0 15px #00ffccaa;transform-origin:left center}
+#buttons{
+  width:min(92vw,560px);display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:16px;
+}
+.colorBtn{
+  height:76px;border:0;border-radius:20px;color:white;font-family:'Orbitron';font-size:17px;font-weight:900;letter-spacing:2px;
+  text-shadow:0 2px 6px rgba(0,0,0,.75);box-shadow:0 10px 0 rgba(0,0,0,.32),0 0 24px rgba(255,255,255,.08);cursor:pointer;
+  -webkit-tap-highlight-color:transparent;transition:transform .06s,filter .1s;position:relative;overflow:hidden;
+}
+.colorBtn::after{content:"";position:absolute;inset:0;background:linear-gradient(180deg,rgba(255,255,255,.22),transparent 45%,rgba(0,0,0,.2));pointer-events:none}
+.colorBtn:active{transform:translateY(7px);box-shadow:0 3px 0 rgba(0,0,0,.32);filter:brightness(1.2)}
+#red{background:#ff2d45}#blue{background:#1688ff}#green{background:#12c86b}#yellow{background:#ffc400;color:#261b00;text-shadow:0 1px 3px rgba(255,255,255,.35)}
+#toast{
+  position:fixed;left:50%;top:53%;transform:translate(-50%,-50%) scale(.9);z-index:5;pointer-events:none;
+  font-family:'Orbitron';font-weight:900;font-size:clamp(24px,8vw,52px);letter-spacing:3px;opacity:0;text-align:center;
+  text-shadow:0 0 18px currentColor,0 0 42px currentColor;
+}
+#toast.show{animation:pop .55s ease-out}
+@keyframes pop{0%{opacity:0;transform:translate(-50%,-50%) scale(.65)}20%{opacity:1;transform:translate(-50%,-50%) scale(1.08)}100%{opacity:0;transform:translate(-50%,-62%) scale(1)}}
+.shake{animation:shake .25s linear}
+#roundCard.blackout #word{opacity:.08;filter:blur(4px);text-shadow:none;transition:.18s}
+#roundCard.blackout #hint{color:#ff7a00;text-shadow:0 0 10px #ff7a00aa}
+#buttons.chaos .colorBtn{animation:btnPulse .22s ease-out}
+@keyframes btnPulse{0%{transform:scale(.92)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translate(0,0)}20%{transform:translate(-8px,4px)}40%{transform:translate(7px,-5px)}60%{transform:translate(-5px,-3px)}80%{transform:translate(5px,4px)}}
+footer{position:fixed;left:10px;bottom:6px;z-index:20;color:#8fa0ae;font-size:10px;opacity:.85}
+#finalScore{font-family:'Orbitron';font-size:22px;color:#ffae42;margin:18px 0 4px;text-shadow:0 0 12px #ff7a00}
+#bestScore{color:#91a7bd;margin-bottom:20px;font-size:13px}
+@media (max-height:650px){
+  #roundCard{min-height:240px;padding:18px}#buttons{gap:10px;margin-top:10px}.colorBtn{height:60px;font-size:15px}.value{font-size:17px}.hudBox{padding:7px 9px}.logo{font-size:38px}.sub{margin-bottom:16px}
+}
+</style>
+</head>
+<body>
+<canvas id="fx"></canvas><section class="screen" id="startScreen">
+  <div class="logo">NEON<br>REFLEX</div>
+  <div class="sub">BẤM NHANH — ĐỪNG BỊ LỪA</div>
+  <p class="note">
+    Game sẽ liên tục đổi luật: bấm theo màu chữ, bấm theo nội dung chữ, hoặc bấm màu đối nghịch. Càng combo cao, thời gian càng ngắn.
+  </p>
+  <button class="btn" id="startBtn">BẮT ĐẦU</button>
+</section><section id="game" class="hidden">
+  <div id="topbar">
+    <div class="hudBox">
+      <div class="label">ĐIỂM</div>
+      <div class="value" id="scoreText">0</div>
+      <div class="label" id="comboText">COMBO x0</div>
+    </div>
+    <div class="hudBox" id="modeBox">
+      <div class="label">LUẬT</div>
+      <div id="modeText">MÀU CHỮ</div>
+    </div>
+    <div class="hudBox" id="lives">
+      <div class="label">MẠNG</div>
+      <div class="value" id="lifeText">❤ ❤ ❤</div>
+    </div>
+  </div>  <main id="playArea">
+    <div id="roundCard">
+      <div id="taskTitle">BẤM THEO MÀU CHỮ</div>
+      <div id="word">ĐỎ</div>
+      <div id="hint">Mẹo: nhìn luật trước, đừng nhìn theo thói quen.</div>
+      <div id="timerShell"><div id="timerBar"></div></div>
+    </div>
+    <div id="buttons">
+      <button class="colorBtn" id="red" data-color="red">ĐỎ</button>
+      <button class="colorBtn" id="blue" data-color="blue">XANH</button>
+      <button class="colorBtn" id="green" data-color="green">LÁ</button>
+      <button class="colorBtn" id="yellow" data-color="yellow">VÀNG</button>
+    </div>
+  </main>
+</section><section class="screen hidden" id="gameoverScreen">
+  <div class="logo">GAME<br>OVER</div>
+  <div id="finalScore">ĐIỂM: 0</div>
+  <div id="bestScore">CAO NHẤT: 0</div>
+  <button class="btn" id="restartBtn">CHƠI LẠI</button>
+</section><div id="toast">PERFECT</div>
+<footer>Version:D20260515-H02M050032 »»» developed by Tran Gia Bao</footer><script>
+// ═══════════════════════════════════════════════════════════
+// CANVAS FX
+// ═══════════════════════════════════════════════════════════
+const cvs=document.getElementById('fx');
+const ctx=cvs.getContext('2d');
+let W,H,stars=[],particles=[];
+function resize(){W=cvs.width=innerWidth;H=cvs.height=innerHeight;makeStars();}
+function makeStars(){
+  stars=[];
+  const n=Math.min(170,Math.floor(W*H/5200));
+  for(let i=0;i<n;i++)stars.push({x:Math.random()*W,y:Math.random()*H,r:.4+Math.random()*1.4,a:.15+Math.random()*.6,s:.2+Math.random()*.8});
+}
+resize();addEventListener('resize',resize);
+function burst(x,y,color,n=18){
+  for(let i=0;i<n;i++){
+    const a=Math.random()*Math.PI*2,s=1.5+Math.random()*5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,life:1,decay:.025+Math.random()*.035,r:2+Math.random()*5,color});
+  }
+}
+function drawFx(){
+  ctx.clearRect(0,0,W,H);
+  ctx.save();
+  for(const s of stars){
+    s.y+=s.s;if(s.y>H+3){s.y=-3;s.x=Math.random()*W;}
+    ctx.globalAlpha=s.a;ctx.fillStyle='#b7d8ff';
+    ctx.beginPath();ctx.arc(s.x,s.y,s.r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=.18;ctx.strokeStyle='#00ffcc';ctx.lineWidth=1;
+  for(let x=0;x<W;x+=70){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+  for(let y=0;y<H;y+=70){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];p.x+=p.vx;p.y+=p.vy;p.vx*=.98;p.vy*=.98;p.life-=p.decay;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.globalAlpha=p.life;ctx.fillStyle=p.color;ctx.beginPath();ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2);ctx.fill();
+  }
+  ctx.restore();
+  requestAnimationFrame(drawFx);
+}
+drawFx();
+
+// ═══════════════════════════════════════════════════════════
+// GAME DATA
+// ═══════════════════════════════════════════════════════════
+const COLORS={
+  red:{name:'ĐỎ',hex:'#ff2d45',op:'green'},
+  blue:{name:'XANH',hex:'#1688ff',op:'yellow'},
+  green:{name:'LÁ',hex:'#12c86b',op:'red'},
+  yellow:{name:'VÀNG',hex:'#ffc400',op:'blue'}
+};
+const colorKeys=Object.keys(COLORS);
+const MODES=[
+  {id:'ink',label:'MÀU CHỮ',task:'BẤM THEO MÀU CHỮ',hint:'Nhìn màu đang tô trên chữ.'},
+  {id:'word',label:'NỘI DUNG',task:'BẤM THEO NỘI DUNG CHỮ',hint:'Đọc chữ, bỏ qua màu đang tô.'},
+  {id:'opposite',label:'ĐỐI NGHỊCH',task:'BẤM MÀU ĐỐI NGHỊCH',hint:'Đỏ ↔ Lá, Xanh ↔ Vàng.'}
+];
+
+const startScreen=document.getElementById('startScreen');
+const game=document.getElementById('game');
+const gameoverScreen=document.getElementById('gameoverScreen');
+const scoreText=document.getElementById('scoreText');
+const comboText=document.getElementById('comboText');
+const lifeText=document.getElementById('lifeText');
+const modeText=document.getElementById('modeText');
+const taskTitle=document.getElementById('taskTitle');
+const wordEl=document.getElementById('word');
+const hintEl=document.getElementById('hint');
+const timerBar=document.getElementById('timerBar');
+const roundCard=document.getElementById('roundCard');
+const toast=document.getElementById('toast');
+
+let running=false,score=0,combo=0,lives=3,best=Number(localStorage.getItem('nr_best')||0);
+let round=null,roundStart=0,roundLimit=1500,raf=null,locked=false;
+let blackoutTimer=null;
+const buttonsBox=document.getElementById('buttons');
+
+function rand(arr){return arr[Math.floor(Math.random()*arr.length)]}
+function now(){return performance.now()}
+function difficulty(){return Math.min(1,score/4500)}
+function currentLimit(){
+  const d=difficulty();
+  const comboPressure=Math.min(260,combo*14);
+  return Math.max(500,2000-d*520-comboPressure);
+}
+function pickMode(){
+  const d=difficulty();
+  if(score<500)return MODES[0];
+  if(score<1300)return Math.random()<.65?MODES[0]:MODES[1];
+  if(Math.random()<.24+d*.16)return MODES[2];
+  return Math.random()<.5?MODES[0]:MODES[1];
+}
+function shuffleButtons(){
+  const btns=[...buttonsBox.children];
+  for(let i=btns.length-1;i>0;i--){
+    const j=Math.floor(Math.random()*(i+1));
+    buttonsBox.appendChild(btns[j]);
+    btns.splice(j,1);
+  }
+  buttonsBox.classList.remove('chaos');
+  void buttonsBox.offsetWidth;
+  buttonsBox.classList.add('chaos');
+}
+function newRound(){
+  locked=false;
+  roundCard.classList.remove('blackout');
+  if(blackoutTimer)clearTimeout(blackoutTimer);
+  const mode=pickMode();
+  const wordKey=rand(colorKeys);
+  let inkKey=rand(colorKeys);
+  if(Math.random()<.72+difficulty()*.18){
+    const others=colorKeys.filter(c=>c!==wordKey);
+    inkKey=rand(others);
+  }
+  let target=inkKey;
+  if(mode.id==='word')target=wordKey;
+  if(mode.id==='opposite')target=COLORS[inkKey].op;
+
+  round={mode,wordKey,inkKey,target};
+  roundLimit=currentLimit();
+  roundStart=now();
+  modeText.textContent=mode.label;
+  taskTitle.textContent=mode.task;
+  hintEl.textContent=mode.hint;
+  wordEl.textContent=COLORS[wordKey].name;
+  wordEl.style.color=COLORS[inkKey].hex;
+  timerBar.style.transform='scaleX(1)';
+  roundCard.classList.remove('shake');
+
+  // YẾU TỐ KHÓ 1: sau một mức điểm, vị trí các nút sẽ đảo ngẫu nhiên
+  if(score>1200 || combo>=6) shuffleButtons();
+
+  // YẾU TỐ KHÓ 2: blackout — chữ chỉ hiện rõ trong khoảnh khắc đầu
+  if(score>2200 || combo>=10){
+    const delay=Math.max(260,620-difficulty()*220-combo*8);
+    blackoutTimer=setTimeout(()=>{
+      if(running && !locked){
+        roundCard.classList.add('blackout');
+        hintEl.textContent='BLACKOUT: nhớ nhanh rồi bấm!';
+      }
+    },delay);
+  }
+}
+function updateHud(){
+  scoreText.textContent=Math.floor(score);
+  comboText.textContent='COMBO x'+combo;
+  lifeText.textContent='❤ '.repeat(lives).trim();
+}
+function showToast(text,color){
+  toast.textContent=text;
+  toast.style.color=color;
+  toast.classList.remove('show');
+  void toast.offsetWidth;
+  toast.classList.add('show');
+}
+function good(btnColor){
+  if(locked)return;locked=true;
+  combo++;
+  const gain=100+combo*12+Math.floor((1-(now()-roundStart)/roundLimit)*80);
+  score+=gain;
+  showToast('+'+gain, COLORS[btnColor].hex);
+  const r=wordEl.getBoundingClientRect();
+  burst(r.left+r.width/2,r.top+r.height/2,COLORS[btnColor].hex,22);
+  updateHud();
+  setTimeout(newRound,130);
+}
+function bad(reason='SAI'){
+  if(locked)return;locked=true;
+  lives--;combo=0;
+  updateHud();
+  showToast(reason,'#ff2d45');
+  roundCard.classList.remove('shake');void roundCard.offsetWidth;roundCard.classList.add('shake');
+  burst(innerWidth/2,innerHeight/2,'#ff2d45',28);
+  if(lives<=0){setTimeout(endGame,450);return;}
+  setTimeout(newRound,520);
+}
+function pressColor(c){
+  if(!running||!round||locked)return;
+  if(c===round.target)good(c);else bad('SAI');
+}
+function loop(){
+  if(!running)return;
+  const t=now()-roundStart;
+  const left=Math.max(0,1-t/roundLimit);
+  timerBar.style.transform='scaleX('+left+')';
+  if(left<.25)timerBar.style.filter='brightness(1.5)';else timerBar.style.filter='none';
+  if(t>=roundLimit)bad('CHẬM');
+  raf=requestAnimationFrame(loop);
+}
+function startGame(){
+  running=true;score=0;combo=0;lives=3;locked=false;
+  roundCard.classList.remove('blackout');
+  buttonsBox.classList.remove('chaos');
+  if(blackoutTimer)clearTimeout(blackoutTimer);
+  startScreen.classList.add('hidden');gameoverScreen.classList.add('hidden');game.classList.remove('hidden');
+  updateHud();newRound();
+  if(raf)cancelAnimationFrame(raf);
+  raf=requestAnimationFrame(loop);
+}
+function endGame(){
+  running=false;
+  if(blackoutTimer)clearTimeout(blackoutTimer);
+  roundCard.classList.remove('blackout');
+  if(raf)cancelAnimationFrame(raf);
+  best=Math.max(best,Math.floor(score));
+  localStorage.setItem('nr_best',best);
+  game.classList.add('hidden');
+  document.getElementById('finalScore').textContent='ĐIỂM: '+Math.floor(score);
+  document.getElementById('bestScore').textContent='CAO NHẤT: '+best;
+  gameoverScreen.classList.remove('hidden');
+}
+
+document.getElementById('startBtn').addEventListener('click',startGame);
+document.getElementById('restartBtn').addEventListener('click',startGame);
+document.querySelectorAll('.colorBtn').forEach(btn=>{
+  btn.addEventListener('pointerdown',e=>{e.preventDefault();pressColor(btn.dataset.color);});
+});
+window.addEventListener('keydown',e=>{
+  if(!running)return;
+  const map={Digit1:'red',Numpad1:'red',Digit2:'blue',Numpad2:'blue',Digit3:'green',Numpad3:'green',Digit4:'yellow',Numpad4:'yellow'};
+  if(map[e.code])pressColor(map[e.code]);
+});
+</script></body>
+</html>
