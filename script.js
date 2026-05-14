@@ -1,35 +1,46 @@
 document.addEventListener("DOMContentLoaded", () => {
 
-  /* =============================================
-     UTILITY BAR
-  ============================================= */
+  document.addEventListener("DOMContentLoaded", () => {
+
   const toggleBtn  = document.getElementById("toggleBar");
   const utilityBar = document.getElementById("utilityBar");
+  const content    = document.querySelector(".content");
 
   let autoCloseTimer;
 
-  function startAutoClose() {
+  function closeBar() {
+    utilityBar.classList.remove("show");
+    content.classList.remove("hide");
     clearTimeout(autoCloseTimer);
-    autoCloseTimer = setTimeout(() => {
-      utilityBar.classList.remove("show");
-    }, 9000);
   }
 
-  function toggleBar() {
-    utilityBar.classList.toggle("show");
+  function openBar() {
+    utilityBar.classList.add("show");
+    content.classList.add("hide");
+
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = setTimeout(closeBar, 30000);
+  }
+
+  function toggleBar(e) {
+    e.preventDefault();
+    e.stopPropagation();
+
     if (utilityBar.classList.contains("show")) {
-      startAutoClose();
+      closeBar();
     } else {
-      clearTimeout(autoCloseTimer);
+      openBar();
     }
   }
 
-  toggleBtn.addEventListener("pointerdown", toggleBar);
-  utilityBar.addEventListener("pointerdown", startAutoClose);
+  toggleBtn.addEventListener("click", toggleBar);
 
-}); // đóng DOMContentLoaded
+  utilityBar.addEventListener("click", () => {
+    clearTimeout(autoCloseTimer);
+    autoCloseTimer = setTimeout(closeBar, 30000);
+  });
 
-
+});
 /* =============================================
    CANVAS — để ngoài DOMContentLoaded
    vì <script src="script.js"> nằm cuối <body>
