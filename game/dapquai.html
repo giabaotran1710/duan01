@@ -1,0 +1,1275 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<title>Đập Quái Rừng Sâu</title>
+<style>
+  :root{
+    --bg1:#0b2417;
+    --bg2:#163b23;
+    --leaf:#2e6b35;
+    --leaf2:#1d4e2b;
+    --wood:#6b3f1d;
+    --gold:#ffd36b;
+    --danger:#ff5f57;
+    --soft:#fff7df;
+    --panel:rgba(14,34,22,.78);
+    --panel2:rgba(255,255,255,.11);
+    --shadow:0 18px 45px rgba(0,0,0,.35);
+  }
+
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{
+    width:100%;height:100%;overflow:hidden;
+    font-family:system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;
+    background:#07150f;color:#fff;touch-action:none;user-select:none;
+  }
+
+  #gameCanvas{
+    position:fixed;inset:0;width:100vw;height:100vh;display:block;background:#0d2116;
+  }
+
+  .screen{
+    position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+    z-index:20;padding:18px;background:radial-gradient(circle at 50% 35%,rgba(255,211,107,.12),rgba(0,0,0,.52) 48%,rgba(0,0,0,.72));
+    transition:.25s ease;backdrop-filter:blur(3px);
+  }
+  .screen.hidden{opacity:0;pointer-events:none;transform:scale(1.02)}
+
+  .card{
+    width:min(760px,92vw);border:1px solid rgba(255,255,255,.16);border-radius:28px;
+    background:linear-gradient(145deg,rgba(21,58,34,.92),rgba(10,28,18,.92));
+    box-shadow:var(--shadow);padding:24px;text-align:center;position:relative;overflow:hidden;
+  }
+  .card::before{
+    content:"";position:absolute;inset:-80px;background:
+      radial-gradient(circle at 20% 15%,rgba(255,211,107,.18),transparent 26%),
+      radial-gradient(circle at 80% 0%,rgba(100,255,140,.11),transparent 24%);
+    pointer-events:none;
+  }
+  .card>*{position:relative;z-index:1}
+  .title{font-size:clamp(34px,5.4vw,68px);line-height:1;font-weight:1000;letter-spacing:-1.5px;color:var(--soft);text-shadow:0 5px 0 rgba(0,0,0,.2)}
+  .subtitle{margin:12px auto 18px;max-width:650px;font-size:clamp(14px,2vw,18px);line-height:1.45;color:rgba(255,247,223,.84)}
+
+  .mode-grid{
+  display:grid;
+  grid-template-columns:repeat(2,1fr);
+  gap:12px;
+  margin:18px 0;
+}
+  .mode{
+    border:1px solid rgba(255,255,255,.16);background:rgba(255,255,255,.08);color:#fff;
+    border-radius:20px;padding:15px 12px;cursor:pointer;transition:.18s ease;text-align:left;min-height:118px;
+  }
+  .mode:hover,.mode.active{transform:translateY(-2px);background:rgba(255,211,107,.18);border-color:rgba(255,211,107,.55)}
+  .mode b{display:block;font-size:21px;margin-bottom:5px;color:var(--gold)}
+  .mode span{display:block;font-size:13px;color:rgba(255,255,255,.78);line-height:1.35}
+
+  .btn-row{display:flex;justify-content:center;gap:12px;flex-wrap:wrap;margin-top:12px}
+  button.main-btn{
+    border:0;border-radius:999px;padding:14px 26px;font-weight:900;font-size:17px;cursor:pointer;color:#1d1704;
+    background:linear-gradient(180deg,#ffe38d,#ffc743);box-shadow:0 8px 0 #9e6b13,0 16px 25px rgba(0,0,0,.28);
+    transition:.12s ease;
+  }
+  button.main-btn:active{transform:translateY(6px);box-shadow:0 2px 0 #9e6b13,0 8px 16px rgba(0,0,0,.22)}
+  button.ghost-btn{
+    border:1px solid rgba(255,255,255,.18);border-radius:999px;padding:12px 18px;background:rgba(255,255,255,.08);color:#fff;font-weight:800;cursor:pointer;
+  }
+
+  #hud{
+    position:fixed;left:12px;right:12px;top:10px;z-index:10;display:flex;align-items:center;justify-content:space-between;gap:10px;pointer-events:none;
+  }
+  .hud-left,.hud-right{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+  .pill{
+    min-width:94px;text-align:center;padding:8px 11px;border-radius:999px;background:rgba(8,22,14,.67);
+    border:1px solid rgba(255,255,255,.14);box-shadow:0 8px 20px rgba(0,0,0,.23);font-weight:900;font-size:14px;
+    backdrop-filter:blur(5px);
+  }
+  .pill small{font-size:11px;color:rgba(255,255,255,.65);font-weight:800;margin-right:3px}
+  .hearts{letter-spacing:2px;color:#ff6961}
+  #pauseBtn{
+    pointer-events:auto;border:1px solid rgba(255,255,255,.18);background:rgba(8,22,14,.7);color:#fff;border-radius:999px;
+    width:44px;height:44px;font-size:18px;font-weight:1000;box-shadow:0 8px 20px rgba(0,0,0,.25);
+  }
+
+  #guide{
+    display: block-inline;
+    white-space: nowrap;
+    position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:9;
+    background:rgba(8,22,14,.55);border:1px solid rgba(255,255,255,.12);
+    font-size:13px;font-weight:800;color:rgba(255,247,223,.82);pointer-events:none;
+  }
+
+  #toast{
+    position:fixed;left:50%;top:72px;transform:translateX(-50%) translateY(-12px);z-index:30;
+    background:rgba(0,0,0,.72);border:1px solid rgba(255,255,255,.15);border-radius:999px;padding:10px 16px;
+    font-weight:900;opacity:0;transition:.2s ease;pointer-events:none;box-shadow:0 10px 24px rgba(0,0,0,.3);
+  }
+  #toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+
+  #rotateOverlay{
+    position:fixed;inset:0;z-index:100;display:none;align-items:center;justify-content:center;text-align:center;padding:26px;
+    background:linear-gradient(160deg,#07150f,#183d25);color:#fff;
+  }
+  .rotate-box{
+    max-width:460px;border-radius:28px;padding:26px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.15);box-shadow:var(--shadow)
+  }
+  .rotate-icon{font-size:70px;margin-bottom:12px;animation:tilt 1.2s ease-in-out infinite alternate}
+  .rotate-box h2{font-size:20px;margin-bottom:8px;color:var(--gold)}
+  .rotate-box p{font-size: 15px;color:rgba(255,255,255,.82);line-height:1.45}
+  @keyframes tilt{from{transform:rotate(0deg)}to{transform:rotate(-90deg)}}
+
+  #gameOverStats{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin:16px 0}
+  .stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.12);border-radius:18px;padding:12px}
+  .stat b{display:block;font-size:24px;color:var(--gold)}
+  .stat span{font-size:12px;color:rgba(255,255,255,.72);font-weight:800}
+
+  @media (orientation:portrait){#rotateOverlay{display:flex}}
+  @media (max-width:760px){
+    .card{padding:18px;border-radius:24px}.mode-grid{gap:8px}.mode{padding:11px 9px;min-height:100px}.mode b{font-size:16px}.mode span{font-size:11px}
+    .pill{min-width:auto;font-size:12px;padding:7px 9px}.hud-right .pill:nth-child(2){display:none}
+    #gameOverStats{grid-template-columns:repeat(2,1fr)}
+  }
+</style>
+</head>
+<body>
+<canvas id="gameCanvas"></canvas>
+
+<div id="hud">
+  <div class="hud-left">
+    <div class="pill"><small>ĐIỂM</small><span id="scoreText">0</span></div>
+    <div class="pill"><small>COMBO</small><span id="comboText">x0</span></div>
+    <div class="pill hearts" id="lifeText">❤️❤️❤️</div>
+  </div>
+  <div class="hud-right">
+    <div class="pill"><small>CẤP</small><span id="levelText">1</span></div>
+    <div class="pill"><small>KỶ LỤC</small><span id="bestText">0</span></div>
+    <button id="pauseBtn" title="Tạm dừng">Ⅱ</button>
+  </div>
+</div>
+<div id="guide">Version:D20260516-H22M34T1134    »»»   developed by Tran Gia Bao</div>
+<div id="toast"></div>
+
+<section id="menuScreen" class="screen">
+  <div class="card">
+    <h1 class="title">Đập Quái Rừng Sâu</h1>
+    <p class="subtitle"></p>
+
+    <div class="mode-grid">
+  <button class="mode active" data-mode="master">
+    <b>Khó</b>
+    <span>Độ khó hiện tại. Quái xuất hiện nhanh, có bom, bẫy giả, quái giáp và boss định kỳ. Có 3 mạng.</span>
+  </button>
+
+  <button class="mode" data-mode="nightmare">
+    <b>Siêu Khó</b>
+    <span>Nói chung là khó hơn chế độ kia thôi.</span>
+  </button>
+</div>
+
+    <div class="btn-row">
+      <button class="main-btn" id="startBtn">Bắt đầu chơi</button>
+      <button class="ghost-btn" id="howBtn">Cách chơi</button>
+    </div>
+  </div>
+</section>
+
+<section id="gameOverScreen" class="screen hidden">
+  <div class="card">
+    <h1 class="title">Kết thúc!</h1>
+    <p class="subtitle" id="resultLine">Bạn đã bảo vệ khu rừng khá ổn đó.</p>
+    <div id="gameOverStats">
+      <div class="stat"><b id="finalScore">0</b><span>Điểm</span></div>
+      <div class="stat"><b id="finalLevel">1</b><span>Cấp</span></div>
+      <div class="stat"><b id="finalCombo">0</b><span>Combo cao nhất</span></div>
+      <div class="stat"><b id="finalBest">0</b><span>Kỷ lục</span></div>
+    </div>
+    <div class="btn-row">
+      <button class="main-btn" id="restartBtn">Chơi lại</button>
+      <button class="ghost-btn" id="backMenuBtn">Về menu</button>
+    </div>
+  </div>
+</section>
+
+<div id="rotateOverlay">
+  <div class="rotate-box">
+    <div class="rotate-icon">📱</div>
+    <h2>Có lỗi xảy ra!</h2>
+    <p>Vui lòng xoay màn hình ngang để chơi</p>
+  </div>
+</div>
+
+<script>
+(() => {
+  'use strict';
+
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const menuScreen = document.getElementById('menuScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const startBtn = document.getElementById('startBtn');
+  const restartBtn = document.getElementById('restartBtn');
+  const backMenuBtn = document.getElementById('backMenuBtn');
+  const howBtn = document.getElementById('howBtn');
+  const pauseBtn = document.getElementById('pauseBtn');
+  const modeBtns = [...document.querySelectorAll('.mode')];
+
+  const scoreText = document.getElementById('scoreText');
+  const comboText = document.getElementById('comboText');
+  const lifeText = document.getElementById('lifeText');
+  const levelText = document.getElementById('levelText');
+  const bestText = document.getElementById('bestText');
+  const toast = document.getElementById('toast');
+
+  const finalScore = document.getElementById('finalScore');
+  const finalLevel = document.getElementById('finalLevel');
+  const finalCombo = document.getElementById('finalCombo');
+  const finalBest = document.getElementById('finalBest');
+  const resultLine = document.getElementById('resultLine');
+
+  const MODES = {
+  master: {
+    name:'Cao Thủ',
+    lives:3,
+    spawn:560,
+    life:900,
+    bomb:0.11,
+    fake:0.08,
+    fast:0.18,
+    armor:0.16,
+    multi:0.18,
+    scoreMul:1.35
+  },
+
+  nightmare: {
+    name:'Siêu Khó',
+    lives:3,
+
+    // Quái xuất hiện nhanh hơn
+    spawn:430,
+
+    // Quái tồn tại ngắn hơn, người chơi phải bấm nhanh hơn
+    life:720,
+
+    // Nhiều bẫy hơn
+    bomb:0.16,
+    fake:0.12,
+
+    // Nhiều quái khó hơn
+    fast:0.25,
+    armor:0.24,
+
+    // Khả năng xuất hiện 2 quái cùng lúc cao hơn
+    multi:0.32,
+
+    // Điểm cao hơn để bù độ khó
+    scoreMul:1.55
+  }
+};
+
+  const TYPE = {
+    normal: { emoji:'👹', points:10, hp:1, label:'Quái', radius:46 },
+    fast:   { emoji:'🦇', points:18, hp:1, label:'Quái nhanh', radius:43 },
+    gold:   { emoji:'🐵', points:45, hp:1, label:'Quái vàng', radius:44 },
+    armor:  { emoji:'🛡️', points:30, hp:2, label:'Quái giáp', radius:47 },
+    bomb:   { emoji:'💣', points:0,  hp:1, label:'Bom', radius:45 },
+    fake:   { emoji:'🪵', points:0,  hp:1, label:'Bẫy giả', radius:46 },
+    boss:   { emoji:'🦍', points:220,hp:12,label:'Boss', radius:68 }
+  };
+
+  let W = 0, H = 0, DPR = 1;
+  let holes = [];
+  let last = performance.now();
+  let selectedMode = 'master';
+  let toastTimer = null;
+
+  const state = {
+    screen:'menu',
+    paused:false,
+    score:0,
+    best: Number(localStorage.getItem('dqrs_best') || 0),
+    lives:3,
+    combo:0,
+    maxCombo:0,
+    level:1,
+    hits:0,
+    misses:0,
+    spawnTimer:0,
+    bossNext:650,
+    bossActive:false,
+    monsters:[],
+    effects:[],
+    particles:[],
+    hammers:[],
+    leaves:[],
+    shake:0,
+    countdown:0,
+    mode:MODES.master
+  };
+
+  function resize(){
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    W = window.innerWidth;
+    H = window.innerHeight;
+    canvas.width = Math.floor(W * DPR);
+    canvas.height = Math.floor(H * DPR);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    buildHoles();
+    buildLeaves();
+  }
+
+  function buildHoles(){
+    holes = [];
+    const top = H * 0.30;
+    const bottom = H * 0.77;
+    const cols = W < 900 ? 4 : 5;
+    const rows = 2;
+    const startX = W * 0.13;
+    const endX = W * 0.87;
+    const gapX = (endX - startX) / (cols - 1);
+    const gapY = (bottom - top) / (rows - 1);
+    let id = 0;
+    for(let r=0;r<rows;r++){
+      for(let c=0;c<cols;c++){
+        const jitter = (r === 0 ? -1 : 1) * (c % 2 ? 8 : -5);
+        holes.push({
+          id:id++,
+          x:startX + c * gapX,
+          y:top + r * gapY + jitter,
+          rx:Math.max(54, Math.min(92, W * 0.062)),
+          ry:Math.max(18, Math.min(30, H * 0.036)),
+          row:r
+        });
+      }
+    }
+  }
+
+  function buildLeaves(){
+    state.leaves = [];
+    const count = Math.max(18, Math.floor(W / 45));
+    for(let i=0;i<count;i++){
+      state.leaves.push({
+        x:Math.random()*W,
+        y:Math.random()*H*.7,
+        s:8+Math.random()*16,
+        v:6+Math.random()*14,
+        a:Math.random()*Math.PI*2,
+        r:Math.random()*Math.PI
+      });
+    }
+  }
+
+  function resetGame(){
+    state.screen = 'countdown';
+state.countdown = 3.99;
+    state.paused = false;
+    state.score = 0;
+    state.lives = state.mode.lives;
+    state.combo = 0;
+    state.maxCombo = 0;
+    state.level = 1;
+    state.hits = 0;
+    state.misses = 0;
+    state.spawnTimer = 260;
+    state.bossNext = selectedMode === 'nightmare' ? 430 : 560;
+    state.bossActive = false;
+    state.monsters = [];
+    state.effects = [];
+    state.particles = [];
+    state.hammers = [];
+    state.shake = 0;
+    menuScreen.classList.add('hidden');
+    gameOverScreen.classList.add('hidden');
+    pauseBtn.textContent = 'Ⅱ';
+    updateHud();
+    showToast('Chuẩn bị vung búa!');
+  }
+
+function difficulty(){
+  const level = state.level;
+  const mode = state.mode;
+  const isNightmare = selectedMode === 'nightmare';
+
+  return {
+    spawn: Math.max(
+      isNightmare ? 210 : 280,
+      mode.spawn - level * (isNightmare ? 34 : 24)
+    ),
+
+    life: Math.max(
+      isNightmare ? 390 : 520,
+      mode.life - level * (isNightmare ? 38 : 26)
+    ),
+
+    bomb: Math.min(
+      isNightmare ? 0.30 : 0.21,
+      mode.bomb + level * (isNightmare ? 0.010 : 0.006)
+    ),
+
+    fake: Math.min(
+      isNightmare ? 0.24 : 0.16,
+      mode.fake + level * (isNightmare ? 0.008 : 0.004)
+    ),
+
+    multi: Math.min(
+      isNightmare ? 0.58 : 0.36,
+      mode.multi + level * (isNightmare ? 0.020 : 0.012)
+    ),
+
+    fast: Math.min(
+      isNightmare ? 0.42 : 0.29,
+      mode.fast + level * (isNightmare ? 0.012 : 0.007)
+    ),
+
+    armor: Math.min(
+      isNightmare ? 0.36 : 0.24,
+      mode.armor + level * (isNightmare ? 0.011 : 0.006)
+    )
+  };
+}
+
+  function updateHud(){
+    scoreText.textContent = Math.floor(state.score);
+    comboText.textContent = 'x' + state.combo;
+    levelText.textContent = state.level;
+    bestText.textContent = state.best;
+    lifeText.textContent = state.lives > 0 ? '❤️'.repeat(state.lives) : '💔';
+  }
+
+  function showToast(msg){
+    toast.textContent = msg;
+    toast.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(()=>toast.classList.remove('show'), 1500);
+  }
+
+  function pickHole(){
+    const occupied = new Set(state.monsters.map(m => m.holeIndex));
+    const free = holes.filter(h => !occupied.has(h.id));
+    if(!free.length) return null;
+    return free[Math.floor(Math.random()*free.length)];
+  }
+
+  function chooseType(){
+    const d = difficulty();
+    const r = Math.random();
+    if(r < d.bomb) return 'bomb';
+    if(r < d.bomb + d.fake) return 'fake';
+    if(r < d.bomb + d.fake + 0.07) return 'gold';
+    if(r < d.bomb + d.fake + 0.07 + d.armor) return 'armor';
+    if(r < d.bomb + d.fake + 0.07 + d.armor + d.fast) return 'fast';
+    return 'normal';
+  }
+
+  function spawnMonster(forcedType){
+    if(!holes.length) return;
+    const hole = pickHole();
+    if(!hole) return;
+    const type = forcedType || chooseType();
+    const base = TYPE[type];
+    const d = difficulty();
+    const lifeMod = type === 'fast' ? 0.72 : type === 'gold' ? 0.66 : type === 'armor' ? 1.12 : type === 'bomb' ? 1.05 : 1;
+    state.monsters.push({
+      id: cryptoRandom(),
+      type,
+      holeIndex: hole.id,
+      x:hole.x,
+      y:hole.y - 22,
+      born:performance.now(),
+      age:0,
+      life:d.life * lifeMod,
+      hp:base.hp,
+      maxHp:base.hp,
+      radius:base.radius,
+      hitFlash:0,
+      dead:false
+    });
+  }
+
+  function spawnBoss(){
+    const hole = pickHole() || holes[Math.floor(Math.random()*holes.length)];
+    if(!hole) return;
+    const hp = selectedMode === 'nightmare'
+  ? 18 + state.level * 4
+  : 15 + state.level * 3;
+    state.monsters.push({
+      id:cryptoRandom(),
+      type:'boss',
+      holeIndex:hole.id,
+      x:hole.x,
+      y:hole.y - 42,
+      born:performance.now(),
+      age:0,
+      life:selectedMode === 'master' ? 7600 : 9000,
+      hp,
+      maxHp:hp,
+      radius:TYPE.boss.radius,
+      hitFlash:0,
+      dead:false,
+      boss:true
+    });
+    state.bossActive = true;
+    showToast('Boss rừng sâu xuất hiện! Đập liên tục!');
+  }
+
+  function cryptoRandom(){
+    return Math.random().toString(36).slice(2) + Date.now().toString(36);
+  }
+
+  function addEffect(text, x, y, kind='good'){
+    state.effects.push({text,x,y,life:720,age:0,kind});
+  }
+
+  function addParticles(x,y,count,kind='good'){
+    for(let i=0;i<count;i++){
+      const a = Math.random()*Math.PI*2;
+      const sp = 80 + Math.random()*210;
+      state.particles.push({
+        x,y,
+        vx:Math.cos(a)*sp,
+        vy:Math.sin(a)*sp - 80,
+        life:480+Math.random()*260,
+        age:0,
+        size:3+Math.random()*6,
+        kind
+      });
+    }
+  }
+
+  function addHammer(x, y, kind='normal'){
+    state.hammers.push({
+      x,
+      y,
+      kind,
+      age:0,
+      life:kind === 'boss' ? 360 : 300,
+      spin:(Math.random()-.5)*0.10
+    });
+  }
+
+  function loseLife(reason){
+    state.lives--;
+    state.combo = 0;
+    state.shake = 13;
+    addEffect(reason, W/2, H*0.21, 'bad');
+    if(state.lives <= 0) endGame();
+    updateHud();
+  }
+
+  function endGame(){
+    state.screen = 'gameover';
+    state.paused = false;
+    state.monsters = [];
+    state.bossActive = false;
+    state.best = Math.max(state.best, Math.floor(state.score));
+    localStorage.setItem('dqrs_best', state.best);
+    finalScore.textContent = Math.floor(state.score);
+    finalLevel.textContent = state.level;
+    finalCombo.textContent = state.maxCombo;
+    finalBest.textContent = state.best;
+    resultLine.textContent = state.score >= state.best ? 'Kỷ lục mới! Rừng sâu ghi tên bạn rồi đó.' : 'Ổn áp rồi, chơi lại là lên tay nhanh thôi.';
+    gameOverScreen.classList.remove('hidden');
+    updateHud();
+  }
+
+  function pauseToggle(){
+    if(state.screen !== 'playing') return;
+    state.paused = !state.paused;
+    pauseBtn.textContent = state.paused ? '▶' : 'Ⅱ';
+    showToast(state.paused ? 'Đã tạm dừng' : 'Tiếp tục!');
+  }
+
+  function handlePointer(clientX, clientY){
+    if(state.screen !== 'playing' || state.paused || window.innerHeight > window.innerWidth) return;
+    const x = clientX;
+    const y = clientY;
+    let target = null;
+    let targetDist = Infinity;
+
+    for(let i=state.monsters.length-1;i>=0;i--){
+      const m = state.monsters[i];
+      const dx = x - m.x;
+      const dy = y - m.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      const hitRadius = m.radius + (m.type === 'boss' ? 18 : 10);
+      if(dist <= hitRadius && dist < targetDist){
+        target = m;
+        targetDist = dist;
+      }
+    }
+
+    if(!target){
+      addHammer(x, y, 'miss');
+      state.combo = 0;
+      state.misses++;
+      addEffect('Hụt!', x, y, 'bad');
+      updateHud();
+      return;
+    }
+
+    addHammer(target.x, target.y, target.type === 'boss' ? 'boss' : target.type);
+    target.hitFlash = 120;
+
+    if(target.type === 'bomb'){
+      removeMonster(target.id);
+      addParticles(target.x, target.y, 28, 'bad');
+      loseLife('Dính bom!');
+      return;
+    }
+
+    if(target.type === 'fake'){
+      removeMonster(target.id);
+      state.score = Math.max(0, state.score - 15);
+      state.combo = 0;
+      addParticles(target.x, target.y, 14, 'wood');
+      addEffect('-15 Bẫy giả!', target.x, target.y - 54, 'bad');
+      updateHud();
+      return;
+    }
+
+    target.hp--;
+    addParticles(target.x, target.y, target.type === 'boss' ? 12 : 7, 'good');
+
+    if(target.hp > 0){
+      addEffect('HP ' + target.hp, target.x, target.y - target.radius - 18, 'neutral');
+      return;
+    }
+
+    const typeInfo = TYPE[target.type];
+    const comboBonus = Math.min(35, state.combo * 2);
+    const gained = Math.floor((typeInfo.points + comboBonus) * state.mode.scoreMul);
+    state.score += gained;
+    state.combo++;
+    state.maxCombo = Math.max(state.maxCombo, state.combo);
+    state.hits++;
+    addEffect('+' + gained, target.x, target.y - 64, target.type === 'gold' || target.type === 'boss' ? 'gold' : 'good');
+
+    if(target.type === 'boss'){
+      state.bossActive = false;
+      state.bossNext = state.score + (selectedMode === 'nightmare' ? 480 : 620);
+      addEffect('Hạ Boss!', W/2, H*0.23, 'gold');
+      addParticles(target.x, target.y, 42, 'gold');
+    }
+
+    removeMonster(target.id);
+    updateHud();
+  }
+
+  function removeMonster(id){
+    state.monsters = state.monsters.filter(m => m.id !== id);
+  }
+
+  function update(dt){
+    const dtMs = dt * 1000;
+
+    if(state.shake > 0) state.shake = Math.max(0, state.shake - dtMs * 0.04);
+
+    for(const leaf of state.leaves){
+      leaf.x -= leaf.v * dt;
+      leaf.y += Math.sin(performance.now()/700 + leaf.a) * 8 * dt;
+      leaf.r += dt;
+      if(leaf.x < -30){
+        leaf.x = W + 40;
+        leaf.y = Math.random()*H*.65;
+      }
+    }
+
+    if(state.screen === 'countdown'){
+  state.countdown -= dt;
+
+  if(state.countdown <= 0){
+    state.countdown = 0;
+    state.screen = 'playing';
+    state.spawnTimer = 260;
+    showToast('Bắt đầu!');
+  }
+
+  updateEffects(dtMs);
+  updateHud();
+  return;
+}
+
+if(state.screen !== 'playing' || state.paused || window.innerHeight > window.innerWidth){
+  updateEffects(dtMs);
+  return;
+}
+
+    state.level = Math.max(1, Math.floor(state.score / 260) + 1);
+    const d = difficulty();
+    state.spawnTimer -= dtMs;
+    if(state.spawnTimer <= 0){
+      if(!state.bossActive && state.score >= state.bossNext){
+        spawnBoss();
+        state.spawnTimer = 800;
+      } else {
+        spawnMonster();
+        if(Math.random() < d.multi) spawnMonster();
+        state.spawnTimer = d.spawn * (0.72 + Math.random()*0.58);
+      }
+    }
+
+    for(let i=state.monsters.length-1;i>=0;i--){
+      const m = state.monsters[i];
+      m.age += dtMs;
+      if(m.hitFlash > 0) m.hitFlash -= dtMs;
+      if(m.age >= m.life){
+        state.monsters.splice(i,1);
+        if(m.type === 'boss'){
+          state.bossActive = false;
+          state.bossNext = state.score + 500;
+          loseLife('Boss thoát!');
+        } else if(m.type !== 'bomb' && m.type !== 'fake'){
+          state.combo = 0;
+          addEffect('Trượt quái!', m.x, m.y - 48, 'bad');
+        }
+      }
+    }
+
+    updateEffects(dtMs);
+    updateHud();
+  }
+
+  function updateEffects(dtMs){
+    for(let i=state.effects.length-1;i>=0;i--){
+      const e = state.effects[i];
+      e.age += dtMs;
+      e.y -= dtMs * 0.055;
+      if(e.age >= e.life) state.effects.splice(i,1);
+    }
+    for(let i=state.particles.length-1;i>=0;i--){
+      const p = state.particles[i];
+      p.age += dtMs;
+      p.vy += 390 * (dtMs/1000);
+      p.x += p.vx * (dtMs/1000);
+      p.y += p.vy * (dtMs/1000);
+      if(p.age >= p.life) state.particles.splice(i,1);
+    }
+    for(let i=state.hammers.length-1;i>=0;i--){
+      const h = state.hammers[i];
+      h.age += dtMs;
+      if(h.age >= h.life) state.hammers.splice(i,1);
+    }
+  }
+
+  function draw(){
+    const sx = state.shake ? (Math.random()-.5)*state.shake : 0;
+    const sy = state.shake ? (Math.random()-.5)*state.shake : 0;
+    ctx.save();
+    ctx.clearRect(0,0,W,H);
+    ctx.translate(sx,sy);
+    drawBackground();
+    drawHoles();
+    drawMonsters();
+    drawParticles();
+    drawHammers();
+    drawEffects();
+drawCountdown();
+
+if(state.screen === 'playing' && state.paused){
+  drawPauseShade();
+}
+
+    ctx.restore();
+  }
+
+  function drawBackground(){
+    const g = ctx.createLinearGradient(0,0,0,H);
+    g.addColorStop(0,'#0c2317');
+    g.addColorStop(.45,'#174329');
+    g.addColorStop(1,'#2d1d10');
+    ctx.fillStyle = g;
+    ctx.fillRect(0,0,W,H);
+
+    ctx.save();
+    ctx.globalAlpha = .35;
+    for(let i=0;i<9;i++){
+      const x = (i/8)*W;
+      ctx.fillStyle = i%2 ? '#14341f' : '#0a1d14';
+      ctx.beginPath();
+      ctx.moveTo(x-120,H);
+      ctx.lineTo(x-70,H*.18);
+      ctx.quadraticCurveTo(x,H*.08,x+70,H*.18);
+      ctx.lineTo(x+120,H);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+
+    drawTreeLayer(.18, '#0b1b13', 12, 100);
+    drawTreeLayer(.42, '#12311f', 9, 64);
+
+    const ground = ctx.createLinearGradient(0,H*.73,0,H);
+    ground.addColorStop(0,'#3a2714');
+    ground.addColorStop(1,'#151008');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0,H*.72,W,H*.28);
+
+    ctx.save();
+    ctx.globalAlpha = .18;
+    ctx.fillStyle = '#ffdc7b';
+    ctx.beginPath();
+    ctx.arc(W*.18,H*.16,Math.min(W,H)*.11,0,Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+
+    for(const leaf of state.leaves){
+      ctx.save();
+      ctx.translate(leaf.x,leaf.y);
+      ctx.rotate(leaf.r);
+      ctx.globalAlpha = .16;
+      ctx.fillStyle = leaf.s > 17 ? '#b7e26c' : '#7ec850';
+      ctx.beginPath();
+      ctx.ellipse(0,0,leaf.s*.75,leaf.s*.28,0,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    ctx.save();
+    ctx.globalAlpha = .12;
+    ctx.fillStyle = '#fff3c0';
+    for(let i=0;i<5;i++){
+      ctx.beginPath();
+      ctx.moveTo(W*(.08+i*.19),0);
+      ctx.lineTo(W*(.18+i*.16),H*.72);
+      ctx.lineTo(W*(.24+i*.16),H*.72);
+      ctx.lineTo(W*(.12+i*.19),0);
+      ctx.closePath();
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawTreeLayer(alpha, color, count, trunkW){
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = color;
+    for(let i=0;i<count;i++){
+      const x = (i/(count-1))*W + Math.sin(i*3.1)*28;
+      ctx.fillRect(x-trunkW*.16,0,trunkW*.32,H*.78);
+      ctx.beginPath();
+      ctx.arc(x,H*.08,trunkW*.7,0,Math.PI*2);
+      ctx.arc(x-trunkW*.45,H*.16,trunkW*.65,0,Math.PI*2);
+      ctx.arc(x+trunkW*.5,H*.15,trunkW*.7,0,Math.PI*2);
+      ctx.arc(x,H*.24,trunkW*.78,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawHoles(){
+    const sorted = [...holes].sort((a,b)=>a.y-b.y);
+    for(const h of sorted){
+      ctx.save();
+      ctx.translate(h.x,h.y);
+      ctx.fillStyle = 'rgba(0,0,0,.38)';
+      ctx.beginPath();
+      ctx.ellipse(8,8,h.rx*1.05,h.ry*1.25,0,0,Math.PI*2);
+      ctx.fill();
+
+      const g = ctx.createRadialGradient(0,0,6,0,0,h.rx);
+      g.addColorStop(0,'#0a0604');
+      g.addColorStop(.62,'#201108');
+      g.addColorStop(1,'#6b3f1d');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.ellipse(0,0,h.rx,h.ry,0,0,Math.PI*2);
+      ctx.fill();
+
+      ctx.strokeStyle = 'rgba(255,216,126,.18)';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.ellipse(0,-2,h.rx*.88,h.ry*.72,0,0,Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawMonsters(){
+    const list = [...state.monsters].sort((a,b)=>a.y-b.y);
+    for(const m of list){
+      const info = TYPE[m.type];
+      const appear = monsterAppearScale(m);
+      const bob = Math.sin((m.age || 0)/90) * 3;
+      ctx.save();
+      ctx.translate(m.x,m.y + bob + (1-appear)*42);
+      ctx.scale(appear,appear);
+
+      ctx.fillStyle = 'rgba(0,0,0,.27)';
+      ctx.beginPath();
+      ctx.ellipse(5, m.radius*.72, m.radius*.84, m.radius*.22, 0, 0, Math.PI*2);
+      ctx.fill();
+
+      if(m.type !== 'boss'){
+        drawMonsterBody(m, info);
+      } else {
+        drawBossBody(m, info);
+      }
+
+      if(m.maxHp > 1 || m.type === 'boss') drawHpBar(m);
+      ctx.restore();
+    }
+  }
+
+  function monsterAppearScale(m){
+    const inT = Math.min(1, m.age / 140);
+    const outT = Math.max(0, (m.life - m.age) / 180);
+    return Math.max(0, Math.min(inT, outT)) * (m.hitFlash > 0 ? 1.08 : 1);
+  }
+
+  function drawMonsterBody(m, info){
+    const r = m.radius;
+    let body = '#79522a';
+    let face = '#fff1c2';
+    if(m.type === 'normal'){ body = '#7b4631'; face = '#ffd8a8'; }
+    if(m.type === 'fast'){ body = '#3c2a55'; face = '#d7c8ff'; }
+    if(m.type === 'gold'){ body = '#c78921'; face = '#fff0a5'; }
+    if(m.type === 'armor'){ body = '#4d5965'; face = '#dbe6ee'; }
+    if(m.type === 'bomb'){ body = '#171717'; face = '#ff7474'; }
+    if(m.type === 'fake'){ body = '#8c5a2e'; face = '#c48a4f'; }
+
+    ctx.save();
+    if(m.hitFlash > 0){
+      ctx.shadowColor = '#fff5b7';
+      ctx.shadowBlur = 16;
+    }
+
+    if(m.type === 'bomb'){
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.arc(0,0,r*.82,0,Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#3d3d3d';ctx.lineWidth = 6;ctx.stroke();
+      ctx.strokeStyle = '#ffcb5c';ctx.lineWidth = 5;ctx.beginPath();ctx.moveTo(r*.25,-r*.66);ctx.quadraticCurveTo(r*.62,-r*.95,r*.38,-r*1.18);ctx.stroke();
+      ctx.fillStyle = '#ff5f57';ctx.beginPath();ctx.arc(r*.42,-r*1.15,5+Math.sin(m.age/80)*2,0,Math.PI*2);ctx.fill();
+      ctx.fillStyle = face;ctx.beginPath();ctx.arc(-r*.25,-r*.08,5,0,Math.PI*2);ctx.arc(r*.25,-r*.08,5,0,Math.PI*2);ctx.fill();
+      ctx.restore();
+      return;
+    }
+
+    if(m.type === 'fake'){
+      ctx.fillStyle = body;
+      ctx.beginPath();
+      ctx.roundRect(-r*.85,-r*.42,r*1.7,r*.84,18);
+      ctx.fill();
+      ctx.strokeStyle = '#5b371b';ctx.lineWidth = 5;ctx.stroke();
+      ctx.strokeStyle = 'rgba(255,230,168,.22)';ctx.lineWidth = 3;
+      for(let i=-1;i<=1;i++){
+        ctx.beginPath();ctx.moveTo(-r*.58,i*12);ctx.quadraticCurveTo(0,i*12+8,r*.58,i*12);ctx.stroke();
+      }
+      ctx.restore();
+      return;
+    }
+
+    ctx.fillStyle = body;
+    ctx.beginPath();
+    ctx.arc(0,0,r*.83,0,Math.PI*2);
+    ctx.fill();
+    ctx.fillStyle = body;
+    ctx.beginPath();ctx.arc(-r*.48,-r*.58,r*.25,0,Math.PI*2);ctx.arc(r*.48,-r*.58,r*.25,0,Math.PI*2);ctx.fill();
+
+    ctx.fillStyle = face;
+    ctx.beginPath();
+    ctx.ellipse(0,r*.08,r*.52,r*.38,0,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = '#111';
+    const eyeY = -r*.12;
+    ctx.beginPath();ctx.arc(-r*.23,eyeY,5.5,0,Math.PI*2);ctx.arc(r*.23,eyeY,5.5,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle = '#111';ctx.lineWidth = 4;ctx.lineCap='round';
+    ctx.beginPath();ctx.moveTo(-r*.17,r*.18);ctx.quadraticCurveTo(0,r*.28,r*.17,r*.18);ctx.stroke();
+
+    if(m.type === 'fast'){
+      ctx.fillStyle = 'rgba(0,0,0,.22)';
+      ctx.beginPath();ctx.ellipse(-r*.75,0,r*.35,r*.18,-.5,0,Math.PI*2);ctx.ellipse(r*.75,0,r*.35,r*.18,.5,0,Math.PI*2);ctx.fill();
+    }
+    if(m.type === 'gold'){
+      ctx.fillStyle = '#fff3a4';ctx.font = `900 ${r*.48}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('★',0,-r*.64);
+    }
+    if(m.type === 'armor'){
+      ctx.strokeStyle = '#dce7f0';ctx.lineWidth = 6;ctx.beginPath();ctx.arc(0,0,r*.92,Math.PI*.13,Math.PI*.87);ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawBossBody(m){
+    const r = m.radius;
+    ctx.save();
+    if(m.hitFlash > 0){ctx.shadowColor='#ffe28a';ctx.shadowBlur=22}
+    ctx.fillStyle = '#3d2923';
+    ctx.beginPath();ctx.arc(0,0,r*.95,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle = '#5a3a30';
+    ctx.beginPath();ctx.arc(-r*.55,-r*.48,r*.34,0,Math.PI*2);ctx.arc(r*.55,-r*.48,r*.34,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle = '#d2a47c';
+    ctx.beginPath();ctx.ellipse(0,r*.08,r*.58,r*.43,0,0,Math.PI*2);ctx.fill();
+    ctx.fillStyle='#15100d';
+    ctx.beginPath();ctx.arc(-r*.25,-r*.13,7,0,Math.PI*2);ctx.arc(r*.25,-r*.13,7,0,Math.PI*2);ctx.fill();
+    ctx.strokeStyle='#15100d';ctx.lineWidth=6;ctx.lineCap='round';ctx.beginPath();ctx.moveTo(-r*.24,r*.25);ctx.quadraticCurveTo(0,r*.42,r*.24,r*.25);ctx.stroke();
+    ctx.fillStyle='rgba(255,211,107,.95)';ctx.font=`900 ${r*.34}px system-ui`;ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('BOSS',0,-r*.82);
+    ctx.restore();
+  }
+
+  function drawHpBar(m){
+    const w = m.type === 'boss' ? 106 : 58;
+    const h = 8;
+    const y = -m.radius - 22;
+    ctx.fillStyle='rgba(0,0,0,.4)';
+    ctx.beginPath();ctx.roundRect(-w/2,y,w,h,999);ctx.fill();
+    const pct = Math.max(0,m.hp/m.maxHp);
+    const fill = m.type === 'boss' ? '#ff5f57' : '#ffd36b';
+    ctx.fillStyle=fill;
+    ctx.beginPath();ctx.roundRect(-w/2,y,w*pct,h,999);ctx.fill();
+  }
+
+  function drawParticles(){
+    for(const p of state.particles){
+      const t = 1 - p.age / p.life;
+      ctx.globalAlpha = Math.max(0,t);
+      ctx.fillStyle = p.kind === 'bad' ? '#ff5f57' : p.kind === 'gold' ? '#ffd36b' : p.kind === 'wood' ? '#b8793d' : '#d4ff9d';
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size*t,0,Math.PI*2);
+      ctx.fill();
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  function drawEffects(){
+    for(const e of state.effects){
+      const t = 1 - e.age / e.life;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0,t);
+      ctx.font = `900 ${Math.max(18, Math.min(34, W*.024))}px system-ui`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.lineWidth = 5;
+      ctx.strokeStyle = 'rgba(0,0,0,.5)';
+      ctx.fillStyle = e.kind === 'bad' ? '#ff807a' : e.kind === 'gold' ? '#ffd36b' : e.kind === 'neutral' ? '#dce7f0' : '#b6ff8d';
+      ctx.strokeText(e.text,e.x,e.y);
+      ctx.fillText(e.text,e.x,e.y);
+      ctx.restore();
+    }
+  }
+
+  function clamp01(v){
+    return Math.max(0, Math.min(1, v));
+  }
+
+  function easeOutBack(t){
+    const c1 = 1.70158;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  function drawHammers(){
+    for(const h of state.hammers){
+      const t = clamp01(h.age / h.life);
+      const slam = easeOutBack(clamp01(t / .48));
+      const fade = t < .72 ? 1 : 1 - clamp01((t - .72) / .28);
+      const recoil = clamp01((t - .50) / .50);
+      const bossScale = h.kind === 'boss' ? 1.28 : 1;
+      const size = Math.max(42, Math.min(70, W * .052)) * bossScale;
+      const startX = h.x + size * 1.45;
+      const startY = h.y - size * 1.75;
+      const endX = h.x + size * .16;
+      const endY = h.y - size * .28;
+      const x = startX + (endX - startX) * slam + recoil * size * .18;
+      const y = startY + (endY - startY) * slam - recoil * size * .36;
+      const rot = (-0.88 + slam * 1.62 - recoil * .45) + h.spin;
+
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, fade);
+
+      if(t < .48){
+        ctx.save();
+        ctx.globalAlpha *= .28;
+        ctx.strokeStyle = '#fff2aa';
+        ctx.lineWidth = Math.max(3, size * .055);
+        ctx.lineCap = 'round';
+        for(let i=0;i<3;i++){
+          ctx.beginPath();
+          ctx.moveTo(startX - i*size*.22, startY + i*size*.04);
+          ctx.lineTo(x - i*size*.12, y + i*size*.08);
+          ctx.stroke();
+        }
+        ctx.restore();
+      }
+
+      ctx.translate(x, y);
+      ctx.rotate(rot);
+
+      // Cán búa
+      ctx.fillStyle = '#7a451f';
+      ctx.strokeStyle = '#40230f';
+      ctx.lineWidth = size * .055;
+      ctx.beginPath();
+      ctx.roundRect(-size * .09, -size * .05, size * 1.28, size * .18, size * .09);
+      ctx.fill();
+      ctx.stroke();
+
+      // Vân gỗ trên cán
+      ctx.strokeStyle = 'rgba(255,224,155,.36)';
+      ctx.lineWidth = size * .025;
+      ctx.beginPath();
+      ctx.moveTo(size * .05, size * .01);
+      ctx.quadraticCurveTo(size * .38, -size * .05, size * .72, size * .03);
+      ctx.stroke();
+
+      // Đầu búa
+      const headX = -size * .30;
+      const headY = -size * .28;
+      const headW = size * .62;
+      const headH = size * .56;
+      const metal = ctx.createLinearGradient(headX, headY, headX, headY + headH);
+      metal.addColorStop(0, '#f6f0d5');
+      metal.addColorStop(.48, '#aeb4ad');
+      metal.addColorStop(1, '#69726c');
+      ctx.fillStyle = metal;
+      ctx.strokeStyle = '#3f4944';
+      ctx.lineWidth = size * .055;
+      ctx.beginPath();
+      ctx.roundRect(headX, headY, headW, headH, size * .12);
+      ctx.fill();
+      ctx.stroke();
+
+      // Chốt búa
+      ctx.fillStyle = 'rgba(255,255,255,.42)';
+      ctx.beginPath();
+      ctx.roundRect(headX + size*.12, headY + size*.09, headW*.42, headH*.18, size*.06);
+      ctx.fill();
+
+      ctx.restore();
+
+      // Sao va chạm đúng khoảnh khắc búa chạm xuống
+      if(t > .34 && t < .70){
+        const k = 1 - Math.abs(t - .50) / .20;
+        const burst = Math.max(0, k);
+        ctx.save();
+        ctx.translate(h.x, h.y - size * .18);
+        ctx.globalAlpha = fade * burst;
+        ctx.strokeStyle = h.kind === 'bad' || h.kind === 'bomb' ? '#ff8a80' : '#ffe46d';
+        ctx.lineWidth = Math.max(3, size * .05);
+        ctx.lineCap = 'round';
+        for(let i=0;i<8;i++){
+          const a = i * Math.PI / 4;
+          const inner = size * (.18 + .08 * burst);
+          const outer = size * (.36 + .18 * burst);
+          ctx.beginPath();
+          ctx.moveTo(Math.cos(a) * inner, Math.sin(a) * inner);
+          ctx.lineTo(Math.cos(a) * outer, Math.sin(a) * outer);
+          ctx.stroke();
+        }
+        ctx.fillStyle = 'rgba(255,242,166,.85)';
+        ctx.beginPath();
+        ctx.arc(0,0,size*.11*burst,0,Math.PI*2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
+  }
+
+  function drawPauseShade(){
+    ctx.save();
+    ctx.fillStyle = 'rgba(0,0,0,.36)';
+    ctx.fillRect(0,0,W,H);
+    ctx.fillStyle = '#fff7df';
+    ctx.font = `1000 ${Math.min(58,W*.065)}px system-ui`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('TẠM DỪNG', W/2, H/2);
+    ctx.restore();
+  }
+  
+  function drawCountdown(){
+  if(state.screen !== 'countdown') return;
+
+  let text;
+  const n = Math.ceil(state.countdown);
+
+  if(n >= 1){
+    text = String(n);
+  } else {
+    text = 'BẮT ĐẦU!';
+  }
+
+  const pulse = 1 + Math.sin(performance.now() / 90) * 0.045;
+
+  ctx.save();
+
+  ctx.fillStyle = 'rgba(0,0,0,.28)';
+  ctx.fillRect(0,0,W,H);
+
+  ctx.translate(W / 2, H / 2);
+  ctx.scale(pulse, pulse);
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  ctx.font = `1000 ${Math.min(130, W * 0.16)}px system-ui`;
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = 'rgba(0,0,0,.55)';
+  ctx.fillStyle = '#ffd36b';
+
+  ctx.strokeText(text, 0, -8);
+  ctx.fillText(text, 0, -8);
+
+  ctx.font = `900 ${Math.min(24, W * 0.028)}px system-ui`;
+  ctx.lineWidth = 5;
+  ctx.strokeStyle = 'rgba(0,0,0,.45)';
+  ctx.fillStyle = '#fff7df';
+
+  ctx.strokeText('Chuẩn bị đập quái!', 0, Math.min(90, H * 0.16));
+  ctx.fillText('Chuẩn bị đập quái!', 0, Math.min(90, H * 0.16));
+
+  ctx.restore();
+}
+
+  function loop(now){
+    const dt = Math.min(0.05, (now - last) / 1000 || 0);
+    last = now;
+    update(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  function selectMode(mode){
+    selectedMode = mode;
+    state.mode = MODES[mode];
+    modeBtns.forEach(btn => btn.classList.toggle('active', btn.dataset.mode === mode));
+  }
+
+  modeBtns.forEach(btn => btn.addEventListener('click', () => selectMode(btn.dataset.mode)));
+  startBtn.addEventListener('click', resetGame);
+  restartBtn.addEventListener('click', resetGame);
+  backMenuBtn.addEventListener('click', () => {
+    state.screen = 'menu';
+    gameOverScreen.classList.add('hidden');
+    menuScreen.classList.remove('hidden');
+  });
+  pauseBtn.addEventListener('click', pauseToggle);
+  howBtn.addEventListener('click', () => {
+    showToast('Chạm quái để ghi điểm. Đừng chạm 💣 và 🪵. Quái giáp cần 2 lần. Boss cần nhiều lần.');
+  });
+
+  canvas.addEventListener('pointerdown', e => {
+    e.preventDefault();
+    handlePointer(e.clientX, e.clientY);
+  }, {passive:false});
+
+  window.addEventListener('keydown', e => {
+    if(e.key.toLowerCase() === 'p' || e.key === 'Escape') pauseToggle();
+    if(e.key === 'Enter' && state.screen !== 'playing') resetGame();
+  });
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('orientationchange', () => setTimeout(resize, 250));
+
+  resize();
+  updateHud();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
