@@ -260,7 +260,7 @@ canvas{
 </div>
 
 <canvas id="game"></canvas>
-  <footer>Version:D20260517-H17M22T0810 »»» developed by Tran Gia Bao</footer>
+  <footer>Version:D20260518-H10M35T0810 »»» developed by Tran Gia Bao</footer>
 
 <script>
 const canvas = document.getElementById("game");
@@ -405,8 +405,10 @@ function init(){
   maxSpeed:currentMode.playerMaxSpeed,
   speed:4.2,
 
-    turnSpeed:0.045,
-    radius:18
+    turnSpeed:0.114,
+steerVelocity:0,
+avoidAssist:0,
+radius:18
   };
 
   camera = {x:0,y:0};
@@ -481,6 +483,51 @@ function loop(t){
   draw(t);
   requestAnimationFrame(loop);
 }
+  
+  function getRockAvoidTurn(){
+  let avoidTurn = 0;
+  let danger = 0;
+
+  const lookAhead = 170 + player.speed * 22;
+  const sideRange = 58;
+
+  const forwardX = Math.cos(player.angle);
+  const forwardY = Math.sin(player.angle);
+
+  const rightX = Math.cos(player.angle + Math.PI / 2);
+  const rightY = Math.sin(player.angle + Math.PI / 2);
+
+  for(const r of rocks){
+    const dx = r.x - player.x;
+    const dy = r.y - player.y;
+
+    const forwardDist = dx * forwardX + dy * forwardY;
+    const sideDist = dx * rightX + dy * rightY;
+
+    if(forwardDist <= 0 || forwardDist > lookAhead){
+      continue;
+    }
+
+    const dangerWidth = r.hitRadius + sideRange;
+
+    if(Math.abs(sideDist) < dangerWidth){
+      const frontPower = 1 - forwardDist / lookAhead;
+      const sidePower = 1 - Math.abs(sideDist) / dangerWidth;
+
+      const power = frontPower * sidePower;
+
+      const direction = sideDist > 0 ? -1 : 1;
+
+      avoidTurn += direction * power;
+      danger = Math.max(danger, power);
+    }
+  }
+
+  return {
+    turn: Math.max(-1, Math.min(1, avoidTurn)),
+    danger: Math.max(0, Math.min(1, danger))
+  };
+}
 function update(dt,t){
   waveOffset += 0.03 * dt;
 
@@ -491,16 +538,42 @@ function update(dt,t){
   difficulty = Math.min(surviveTime / currentMode.difficultySeconds, 1);
   updateNightCycle();
   // Càng sống lâu, tàu người chơi càng chạy nhanh
-player.speed = player.baseSpeed + (player.maxSpeed - player.baseSpeed) * difficulty;
+const avoid = getRockAvoidTurn();
 
-  if(keys.left){
-    player.angle -= player.turnSpeed * dt;
-  }
+const normalSpeed =
+  player.baseSpeed + (player.maxSpeed - player.baseSpeed) * difficulty;
 
-  if(keys.right){
-    player.angle += player.turnSpeed * dt;
-  }
+// Sát mõm đá thì giảm tốc nhẹ để kịp né
+player.speed = normalSpeed * (1 - avoid.danger * 0.22);
 
+  let inputTurn = 0;
+
+if(keys.left){
+  inputTurn -= 1;
+}
+
+if(keys.right){
+  inputTurn += 1;
+}
+
+
+// Khi càng sát đá, lực hỗ trợ càng mạnh
+const assistPower = 0.65 + avoid.danger * 0.75;
+
+// Khi nguy hiểm, phản hồi lái nhanh hơn
+const steerSmooth = 0.10 + avoid.danger * 0.18;
+
+// Khi nguy hiểm, cho phép bẻ lái gắt hơn
+const maxSteer = 1.2 + avoid.danger * 0.75;
+
+const targetTurn = inputTurn + avoid.turn * assistPower;
+
+player.steerVelocity += (targetTurn - player.steerVelocity) * steerSmooth * dt;
+player.steerVelocity *= 0.90 - avoid.danger * 0.08;
+
+player.steerVelocity = Math.max(-maxSteer, Math.min(maxSteer, player.steerVelocity));
+
+player.angle += player.steerVelocity * player.turnSpeed * dt;
   player.x += Math.cos(player.angle) * player.speed * dt;
   player.y += Math.sin(player.angle) * player.speed * dt;
 
