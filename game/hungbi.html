@@ -1,0 +1,958 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Game Hứng Bi</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+}
+
+body{
+  height:100vh;
+  overflow:hidden;
+  background:linear-gradient(#061b33,#020914);
+  font-family:Arial,sans-serif;
+  color:white;
+}
+
+#game{
+  position:relative;
+  width:100vw;
+  height:100vh;
+  overflow:hidden;
+}
+
+#ui{
+  position:fixed;
+  top:12px;
+  left:12px;
+  z-index:10;
+  font-weight:bold;
+  font-size:18px;
+  text-shadow:0 2px 6px black;
+}
+
+#title{
+  position:fixed;
+  top:12px;
+  right:12px;
+  z-index:10;
+  font-weight:900;
+  color:#00eaff;
+}
+
+.lane{
+  position:absolute;
+  top:0;
+  bottom:90px;
+  border-left:2px solid rgba(255,255,255,.18);
+  border-right:2px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.025);
+}
+
+.lane.locked{
+  opacity:.15;
+  filter:grayscale(1);
+}
+
+.laneLabel{
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:34px;
+  opacity:.25;
+  font-weight:900;
+}
+
+.ball{
+  position:absolute;
+  width:34px;
+  height:34px;
+  border-radius:50%;
+  box-shadow:0 0 16px currentColor;
+  z-index:3;
+}
+
+.ball.red{
+  background:#ff3131;
+  color:#ff3131;
+}
+
+.ball.green{
+  background:#26ff6a;
+  color:#26ff6a;
+}
+
+.gate{
+  position:absolute;
+  bottom:13%;
+  height:58px;
+  border-radius:16px;
+  border:3px solid white;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-weight:900;
+  font-size:15px;
+  cursor:pointer;
+  z-index:5;
+  transition:.18s;
+}
+
+.gate.red{
+  background:#c40022;
+  box-shadow:0 0 18px #ff3131;
+}
+
+.gate.green{
+  background:#00a83b;
+  box-shadow:0 0 18px #26ff6a;
+}
+
+.gate.locked{
+  opacity:.25;
+  pointer-events:none;
+}
+
+#gameOver{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.82);
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:99;
+  text-align:center;
+}
+
+#gameOver h1{
+  color:#ff3131;
+  font-size:46px;
+  margin-bottom:12px;
+}
+
+#gameOver button{
+  padding:14px 28px;
+  border:none;
+  border-radius:14px;
+  font-size:18px;
+  font-weight:bold;
+  background:#00eaff;
+  cursor:pointer;
+}
+  
+  .laneTimer{
+  position:absolute;
+  top:48%;
+  left:50%;
+  transform:translateX(-50%);
+  font-size:15px;
+  font-weight:900;
+  color:#ffd700;
+  text-shadow:0 2px 6px #000;
+  z-index:4;
+}
+  
+ .ball.purple{
+  background:#b14cff;
+  color:#b14cff;
+}
+
+.ball.yellow{
+  background:#ffd93d;
+  color:#ffd93d;
+}
+
+.ball.blue{
+  background:#2f80ff;
+  color:#2f80ff;
+}
+
+.ball.white{
+  background:#ffffff;
+  color:#ffffff;
+}
+  
+  .ball.brown{
+  background:#8b5a2b;
+  color:#8b5a2b;
+}
+
+#toast{
+  position:fixed;
+
+  top:20%;
+  left:50%;
+
+  background:rgba(0,0,0,.78);
+  color:white;
+
+  padding:3px 3px;
+  border-radius:5px;
+
+  font-weight:900;
+  z-index:50;
+
+  opacity:0;
+  pointer-events:none;
+
+  box-shadow:0 0 18px rgba(255,255,255,.25);
+
+  white-space:nowrap;
+}
+#toast.show{
+  animation:toastRun 5.8s forwards;
+}
+
+@keyframes toastRun{
+0%{
+  opacity:0;
+  transform:translateX(-180vw) translateY(-50%);
+}
+
+8%{
+  opacity:1;
+  transform:translateX(-50%) translateY(-50%);
+}
+
+14%{
+  transform:translateX(-56%) translateY(-50%);
+}
+
+18%{
+  transform:translateX(-50%) translateY(-50%);
+}
+
+84%{
+  opacity:1;
+  transform:translateX(-50%) translateY(-50%);
+}
+
+90%{
+  transform:translateX(-70%) translateY(-50%);
+}
+
+100%{
+  opacity:0;
+  transform:translateX(180vw) translateY(-50%);
+}}
+  
+  footer{
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: Tahoma; /* 🔥 kiểu version code */
+}
+  
+  #loadingScreen{
+  position:fixed;
+  inset:0;
+  background:#020914;
+  z-index:200;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  overflow:hidden;
+}
+
+#loadingScreen.hide{
+  display:none;
+}
+
+#loadingTrack{
+  position:relative;
+  width:100vw;
+  height:90px;
+}
+
+.loadBall{
+  position:absolute;
+  top:50%;
+  width:42px;
+  height:42px;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  box-shadow:0 0 18px currentColor;
+  overflow:hidden;
+}
+
+.loadBall::after{
+  content:"";
+  position:absolute;
+  width:14px;
+  height:14px;
+  border-radius:50%;
+  top:7px;
+  left:8px;
+  background:rgba(255,255,255,.55);
+}
+  
+  #loadingTrack::after{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:calc(50% + 24px);
+  height:4px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.35), transparent);
+}
+
+.fixedRed{
+  left:50%;
+}
+
+.redBall{
+  background:#ff3131;
+  color:#ff3131;
+}
+
+.greenBall{
+  background:#26ff6a;
+  color:#26ff6a;
+}
+
+.purpleBall{
+  background:#b14cff;
+  color:#b14cff;
+}
+
+.yellowBall{
+  background:#ffd93d;
+  color:#ffd93d;
+}
+
+.blueBall{
+  background:#2f80ff;
+  color:#2f80ff;
+}
+
+.brownBall{
+  background:#8b5a2b;
+  color:#8b5a2b;
+}
+
+.whiteBall{
+  background:#fff;
+  color:#fff;
+}
+
+.runner{
+  left:120vw;
+  animation:rollIn 1s linear forwards;
+}
+
+.rollOut{
+  animation:rollOutLeft 1s linear forwards;
+}
+
+@keyframes rollOutLeft{
+  to{
+    left:-120vw;
+    transform:translate(-50%,-50%) rotate(-900deg);
+  }
+}
+
+#loadingText{
+  margin-top:20px;
+  font-weight:900;
+  color:#00eaff;
+  letter-spacing:1px;
+}
+
+@keyframes rollIn{
+  from{
+    left:120vw;
+    transform:translate(-50%,-50%) rotate(0deg);
+  }
+  to{
+    left:50%;
+    transform:translate(-50%,-50%) rotate(-720deg);
+  }
+}
+
+
+</style>
+</head>
+
+<body>
+
+<div id="game">
+  <div id="ui">
+    Điểm: <span id="score">0</span><br>
+    Sai: <span id="wrong">0</span>/50<br>
+  </div>
+
+  <div id="title">HỨNG BI</div>
+  <div id="toast"></div>
+  <div id="loadingScreen">
+  <div id="loadingTrack">
+    <div class="loadBall redBall fixedRed"></div>
+    <div class="loadBall greenBall runner"></div>
+  </div>
+  <div id="loadingText">Đang chuẩn bị...</div>
+</div>
+
+  <div id="gameOver">
+    <h1>THUA RỒI!</h1>
+    <p id="finalScore"></p>
+    <br>
+    <button id="restartBtn">Chơi lại</button>
+  </div>
+</div>
+  <footer> Version:D20260518-H20M42T1298    »»»   developed by Tran Gia Bao</footer>
+  
+
+<script>
+const game = document.getElementById("game");
+const scoreEl = document.getElementById("score");
+const wrongEl = document.getElementById("wrong");
+const gameOverBox = document.getElementById("gameOver");
+const finalScore = document.getElementById("finalScore");
+  const loadingScreen = document.getElementById("loadingScreen");
+const loadingTrack = document.getElementById("loadingTrack");
+
+let gameStarted = false;
+
+const laneCount = 5;
+let openedLanes = 2;
+let score = 0;
+let wrong = 0;
+let running = true;
+ 
+  let whiteEventActive = true;
+
+const initialFallSpeed = 2.4;
+const maxFallSpeed = initialFallSpeed * 1.3;
+let fallSpeed = initialFallSpeed;
+
+let spawnDelay = 950;
+let minSpawnDelay = spawnDelay * 0.7;
+
+const lanes = [];
+const gates = [];
+  
+  const toast = document.getElementById("toast");
+
+const specialBalls = [
+  {
+    score: 25,
+    className: "purple",
+    name: "Bi Tím",
+    validGate: "green",
+    message: "Item mới: Bi Tím đi qua cổng Xanh"
+  },
+  {
+    score: 50,
+    className: "yellow",
+    name: "Bi Vàng",
+    validGate: "red",
+    message: "Item mới: Bi Vàng đi qua cổng Đỏ"
+  },
+  {
+    score: 100,
+    className: "blue",
+    name: "Bi Xanh Dương",
+    validGate: "red",
+    message: "Item mới: Bi Xanh Dương đi qua cổng Đỏ"
+  },
+  {
+    score: 150,
+    className: "brown",
+    name: "Bi Nâu",
+    validGate: "green",
+    message: "Item mới: Bi Nâu đi qua cổng Xanh"
+  }
+];
+
+const shownToast = new Set();
+  
+function playLoading(callback){
+  loadingScreen.classList.remove("hide");
+  loadingTrack.innerHTML = "";
+
+  const sequence = [
+    "redBall",
+    "greenBall",
+    "purpleBall",
+    "yellowBall",
+    "blueBall",
+    "brownBall",
+    "whiteBall"
+  ];
+
+  const ballSize = 42;
+  const spacing = 46;
+  const centerX = window.innerWidth / 2;
+  const balls = [];
+
+  function easeOut(t){
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function easeOutBack(t){
+    const c1 = 1.45;
+    const c3 = c1 + 1;
+    return 1 + c3 * Math.pow(t - 1, 3) + c1 * Math.pow(t - 1, 2);
+  }
+
+  function animate(duration, update, done){
+    const start = performance.now();
+
+    function frame(now){
+      const t = Math.min((now - start) / duration, 1);
+      update(t);
+
+      if(t < 1){
+        requestAnimationFrame(frame);
+      }else if(done){
+        done();
+      }
+    }
+
+    requestAnimationFrame(frame);
+  }
+
+  function applyBall(ball, x){
+    const rotate = x / ballSize * 360;
+    ball.style.left = `${x}px`;
+    ball.style.transform = `translate(-50%,-50%) rotate(${rotate}deg)`;
+  }
+
+  function targetX(i, total){
+    return centerX - (total - 1 - i) * spacing;
+  }
+
+  const firstBall = document.createElement("div");
+  firstBall.className = `loadBall ${sequence[0]}`;
+  loadingTrack.appendChild(firstBall);
+  balls.push(firstBall);
+  applyBall(firstBall, centerX);
+
+  let index = 1;
+
+  function nextBall(){
+    if(index >= sequence.length){
+      const startPositions = balls.map(ball => parseFloat(ball.style.left));
+
+      animate(900, t => {
+        const e = easeOut(t);
+
+        balls.forEach((ball, i) => {
+          const x = startPositions[i] + (-window.innerWidth * 1.5 - startPositions[i]) * e;
+          applyBall(ball, x);
+        });
+      }, () => {
+        loadingScreen.classList.add("hide");
+        callback();
+      });
+
+      return;
+    }
+
+    const runner = document.createElement("div");
+    runner.className = `loadBall ${sequence[index]}`;
+    loadingTrack.appendChild(runner);
+
+    const startX = window.innerWidth + 80;
+    const hitX = centerX + spacing;
+
+    applyBall(runner, startX);
+
+    animate(620, t => {
+      const e = easeOut(t);
+      const x = startX + (hitX - startX) * e;
+      applyBall(runner, x);
+    }, () => {
+      balls.push(runner);
+
+      const startPositions = balls.map(ball => parseFloat(ball.style.left));
+      const endPositions = balls.map((ball, i) => targetX(i, balls.length));
+
+      animate(240, t => {
+        const e = easeOutBack(t);
+
+        balls.forEach((ball, i) => {
+          const x = startPositions[i] + (endPositions[i] - startPositions[i]) * e;
+          applyBall(ball, x);
+        });
+      }, () => {
+        index++;
+        setTimeout(nextBall, 90);
+      });
+    });
+  }
+
+  setTimeout(nextBall, 300);
+}
+  
+ function spawnWhiteEventBall(){
+  if(!running) return;
+
+  const laneIndex = Math.floor(Math.random() * openedLanes);
+
+  const ball = document.createElement("div");
+  ball.className = "ball white";
+  ball.dataset.color = "white";
+  ball.dataset.validGate = "green";
+  ball.dataset.lane = laneIndex;
+  ball.dataset.specialWhite = "true";
+  ball.dataset.speedBonus = "1.8";
+
+  const w = laneWidth();
+  ball.style.left = `${laneIndex * w + w / 2 - 17}px`;
+  ball.style.top = `-40px`;
+
+  game.appendChild(ball);
+}
+
+function showToast(text){
+  toast.textContent = text;
+
+  toast.classList.remove("show");
+  void toast.offsetWidth;
+  toast.classList.add("show");
+
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
+    toast.classList.remove("show");
+  }, 5800);
+}
+
+function checkSpecialUnlock(){
+  specialBalls.forEach(item => {
+    if(score >= item.score && !shownToast.has(item.className)){
+      shownToast.add(item.className);
+      showToast(item.message);
+    }
+  });
+}
+
+function getBallData(){
+  const available = [
+    {
+      className: "red",
+      validGate: "red"
+    },
+    {
+      className: "green",
+      validGate: "green"
+    }
+  ];
+
+  specialBalls.forEach(item => {
+    if(score >= item.score){
+      available.push(item);
+    }
+  });
+
+  return available[Math.floor(Math.random() * available.length)];
+}
+
+function laneWidth(){
+  return window.innerWidth / laneCount;
+}
+
+function createLanes(){
+  for(let i = 0; i < laneCount; i++){
+    const lane = document.createElement("div");
+    lane.className = "lane";
+    lane.style.left = `${i * (100 / laneCount)}%`;
+lane.style.width = `${100 / laneCount}%`;
+
+    const label = document.createElement("div");
+label.className = "laneLabel";
+label.textContent = i + 1;
+lane.appendChild(label);
+
+const timer = document.createElement("div");
+timer.className = "laneTimer";
+timer.id = `timerLane${i}`;
+lane.appendChild(timer);
+
+    game.appendChild(lane);
+    lanes.push(lane);
+
+    const gate = document.createElement("div");
+    gate.className = "gate red";
+    gate.textContent = "ĐỎ";
+    gate.dataset.color = "red";
+    gate.dataset.index = i;
+
+    gate.onclick = () => {
+      if(gate.classList.contains("locked")) return;
+
+      if(gate.dataset.color === "red"){
+        gate.dataset.color = "green";
+        gate.className = "gate green";
+        gate.textContent = "XANH";
+      }else{
+        gate.dataset.color = "red";
+        gate.className = "gate red";
+        gate.textContent = "ĐỎ";
+      }
+
+      updateGateSize();
+    };
+
+    game.appendChild(gate);
+    gates.push(gate);
+  }
+
+  updateLaneLock();
+  updateGateSize();
+}
+
+function updateGateSize(){
+  const w = laneWidth();
+
+  gates.forEach((gate, i) => {
+    gate.style.left = `${i * w + w * 0.12}px`;
+    gate.style.width = `${w * 0.76}px`;
+  });
+}
+
+function updateLaneLock(){
+  lanes.forEach((lane, i) => {
+    lane.classList.toggle("locked", i >= openedLanes);
+  });
+
+  gates.forEach((gate, i) => {
+    gate.classList.toggle("locked", i >= openedLanes);
+  });
+
+}
+
+function openNewLane(){
+  if(openedLanes < laneCount){
+    openedLanes++;
+    updateLaneLock();
+  }
+}
+
+function spawnBall(forcedLane = null){
+  if(!running) return;
+
+  const laneIndex = forcedLane !== null
+    ? forcedLane
+    : Math.floor(Math.random() * openedLanes);
+
+  const ballData = getBallData();
+
+  const ball = document.createElement("div");
+  ball.className = `ball ${ballData.className}`;
+  ball.dataset.color = ballData.className;
+  ball.dataset.validGate = ballData.validGate;
+  ball.dataset.lane = laneIndex;
+
+  const w = laneWidth();
+  ball.style.left = `${laneIndex * w + w / 2 - 17}px`;
+  ball.style.top = `-40px`;
+
+  game.appendChild(ball);
+}
+  
+  
+function randomBallType(){
+  const types = [
+    { className:"red", validGate:"red" },
+    { className:"green", validGate:"green" }
+  ];
+
+  specialBalls.forEach(item => {
+    if(score >= item.score){
+      types.push({
+        className:item.className,
+        validGate:item.validGate
+      });
+    }
+  });
+
+  return types[Math.floor(Math.random() * types.length)];
+}
+  
+ function spawnWave(){
+  const gameTime = Math.floor(performance.now() / 1000);
+
+  if(gameTime < 50){
+    spawnBall();
+    return;
+  }
+
+  const doubleChance = 0.05;
+
+  if(Math.random() > doubleChance || openedLanes < 2){
+    spawnBall();
+    return;
+  }
+
+  const firstLane = Math.floor(Math.random() * openedLanes);
+  let secondLane = Math.floor(Math.random() * openedLanes);
+
+  while(secondLane === firstLane){
+    secondLane = Math.floor(Math.random() * openedLanes);
+  }
+
+  spawnBall(firstLane);
+  spawnBall(secondLane);
+}
+function transformAllBalls(){
+  document.querySelectorAll(".ball").forEach(ball => {
+    if(ball.dataset.specialWhite === "true") return;
+
+    const type = randomBallType();
+
+    ball.className = `ball ${type.className}`;
+    ball.dataset.color = type.className;
+    ball.dataset.validGate = type.validGate;
+  });
+
+  showToast("Bi Trắng đặc biệt: toàn bộ bi đã đổi màu!");
+}
+
+function checkBall(ball){
+
+  if(ball.dataset.specialWhite === "true"){
+    transformAllBalls();
+    return;
+  }
+
+  const laneIndex = Number(ball.dataset.lane);
+  const validGate = ball.dataset.validGate;
+  const gateColor = gates[laneIndex].dataset.color;
+
+  if(validGate === gateColor){
+    score++;
+    checkSpecialUnlock();
+  }else{
+    wrong++;
+  }
+
+  scoreEl.textContent = score;
+  wrongEl.textContent = wrong;
+
+  if(wrong >= 50){
+    endGame();
+  }
+}
+  
+  function whiteEventLoop(){
+  if(!running) return;
+
+  spawnWhiteEventBall();
+
+  setTimeout(whiteEventLoop, 21000);
+}
+
+setTimeout(whiteEventLoop, 21000);
+
+function endGame(){
+  running = false;
+  gameOverBox.style.display = "flex";
+  finalScore.textContent = `Điểm của bạn: ${score}`;
+}
+
+function spawnLoop(){
+  if(!running) return;
+  spawnWave();
+  setTimeout(spawnLoop, spawnDelay);
+}
+
+function difficultyLoop(){
+  if(!running) return;
+
+  fallSpeed = Math.min(maxFallSpeed, fallSpeed + 0.08);
+  spawnDelay = Math.max(minSpawnDelay, spawnDelay - 25);
+
+  setTimeout(difficultyLoop, 5000);
+}
+  
+  function moveBalls(){
+  if(!running) return;
+
+  const balls = document.querySelectorAll(".ball");
+
+  balls.forEach(ball => {
+    let y = parseFloat(ball.style.top);
+    const speedBonus = Number(ball.dataset.speedBonus || 1);
+
+    y += fallSpeed * speedBonus;
+    ball.style.top = `${y}px`;
+
+    if(y + 34 >= window.innerHeight - window.innerHeight * 0.08 - 58){
+      checkBall(ball);
+      ball.remove();
+    }
+  });
+
+  requestAnimationFrame(moveBalls);
+}
+
+createLanes();
+
+playLoading(() => {
+  gameStarted = true;
+  moveBalls();
+  spawnLoop();
+  difficultyLoop();
+});
+
+const unlockTimes = [
+  null,
+  null,
+  30,
+  70,
+  100
+];
+
+function updateUnlockTimers(){
+  const now = Math.floor(performance.now() / 1000);
+
+  for(let i = 0; i < laneCount; i++){
+    const timer = document.getElementById(`timerLane${i}`);
+    if(!timer) continue;
+
+    if(i < openedLanes){
+      timer.textContent = "";
+      continue;
+    }
+
+    const remain = unlockTimes[i] - now;
+
+    if(remain > 0){
+      timer.textContent = `${remain}s`;
+    }else{
+      timer.textContent = "";
+      if(i === openedLanes){
+        openNewLane();
+      }
+    }
+  }
+
+  if(running){
+    requestAnimationFrame(updateUnlockTimers);
+  }
+}
+
+updateUnlockTimers();
+
+window.addEventListener("resize", updateGateSize);
+  document.getElementById("restartBtn").addEventListener("click", () => {
+  location.reload();
+});
+</script>
+
+</body>
+</html>
