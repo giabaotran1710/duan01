@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Đua Xúc Xắc Bãi Biển</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+*{ margin:0; padding:0; box-sizing:border-box; user-select:none; -webkit-user-select:none; }
+html,body{ width:100%; height:100%; overflow:hidden; font-family:Arial,sans-serif; background:#7ed7ff; }
+canvas{ position:fixed; inset:0; width:100vw; height:100vh; z-index:0; display:block; touch-action:none; }
+
+#loadingScreen{
+  position:fixed; inset:0; z-index:30; display:flex; align-items:center; justify-content:center;
+  background:#83ddff; transition:.65s ease; overflow:hidden;
+}
+#loadingScreen.hide{ opacity:0; visibility:hidden; pointer-events:none; }
+.beachLoadingScene{
+  position:relative; width:100%; height:100%; overflow:hidden;
+  background:linear-gradient(to bottom,#56cfff 0%,#91e9ff 36%,#dff9ff 48%,#ffe6a2 70%,#f3bb63 100%);
+}
+.loadSun{
+  position:absolute; top:9%; right:13%; width:78px; height:78px; border-radius:50%;
+  background:radial-gradient(circle,#fff9a8 0%,#ffe066 58%,#ffbc3a 100%);
+  box-shadow:0 0 35px rgba(255,237,104,.75),0 0 90px rgba(255,197,64,.42);
+  animation:sunPulse 2.8s ease-in-out infinite;
+}
+@keyframes sunPulse{ 0%,100%{transform:scale(1)} 50%{transform:scale(1.06)} }
+.loadCloud{
+  position:absolute; width:120px; height:38px; border-radius:999px;
+  background:rgba(255,255,255,.72); filter:blur(.2px); animation:cloudMove 7s ease-in-out infinite alternate;
+}
+.loadCloud::before,.loadCloud::after{ content:""; position:absolute; border-radius:50%; background:rgba(255,255,255,.78); }
+.loadCloud::before{ width:54px; height:54px; left:18px; top:-24px; }
+.loadCloud::after{ width:68px; height:68px; right:14px; top:-34px; }
+.loadCloud.c1{ left:9%; top:13%; transform:scale(.82); }
+.loadCloud.c2{ left:58%; top:23%; transform:scale(.58); opacity:.8; animation-duration:8.5s; }
+@keyframes cloudMove{ from{margin-left:-12px} to{margin-left:18px} }
+.loadSea{
+  position:absolute; left:0; right:0; top:42%; height:25%; overflow:hidden;
+  background:linear-gradient(to bottom,#1096dc 0%,#12bbdf 50%,#6be4dd 100%);
+}
+.loadSea::after{
+  content:""; position:absolute; left:-5%; right:-5%; bottom:-14px; height:42px;
+  background:rgba(255,255,255,.78); border-radius:50% 50% 0 0;
+  animation:shoreFoam 2s ease-in-out infinite alternate;
+}
+@keyframes shoreFoam{ from{transform:translateX(-10px) translateY(0)} to{transform:translateX(12px) translateY(5px)} }
+.loadWave{
+  position:absolute; left:-10%; width:120%; height:22px; border-radius:50%;
+  border-top:3px solid rgba(255,255,255,.55); animation:waveSlide 2.6s linear infinite;
+}
+.loadWave.w1{ top:22%; animation-duration:2.4s; }
+.loadWave.w2{ top:47%; opacity:.75; animation-duration:3.2s; }
+.loadWave.w3{ top:68%; opacity:.55; animation-duration:3.8s; }
+@keyframes waveSlide{ from{transform:translateX(-40px)} to{transform:translateX(40px)} }
+.loadSand{
+  position:absolute; left:-8%; right:-8%; bottom:-8%; height:42%;
+  background:
+    radial-gradient(circle at 22% 48%,rgba(255,255,255,.28) 0 2px,transparent 3px),
+    radial-gradient(circle at 66% 62%,rgba(150,92,36,.22) 0 2px,transparent 3px),
+    radial-gradient(circle at 80% 34%,rgba(255,255,255,.22) 0 1.5px,transparent 3px),
+    linear-gradient(to bottom,#ffe5a1 0%,#f4c46f 55%,#dfa052 100%);
+  border-radius:48% 48% 0 0;
+}
+/* ── Loading animation mới: bóng biển + ván lướt ── */
+.beachLoaderIcon{
+  position:absolute;
+  left:50%;
+  bottom:15%;
+  width:min(82vw,360px);
+  height:230px;
+  transform:translateX(-50%);
+  pointer-events:none;
+}
+
+.surfBoard{
+  position:absolute;
+  left:50%;
+  bottom:54px;
+  width:230px;
+  height:46px;
+  transform:translateX(-50%) rotate(-4deg);
+  border-radius:70% 70% 55% 55%;
+  background:
+    linear-gradient(90deg,
+      #ff5f7e 0%,
+      #ffcc42 34%,
+      #36d6ff 68%,
+      #27d381 100%
+    );
+  box-shadow:
+    0 18px 26px rgba(101,58,20,.22),
+    inset 0 4px 0 rgba(255,255,255,.45),
+    inset 0 -8px 14px rgba(0,0,0,.12);
+  animation:boardFloat 2.2s ease-in-out infinite alternate;
+}
+
+.surfBoard::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:92%;
+  height:12px;
+  transform:translate(-50%,-50%);
+  border-radius:999px;
+  background:rgba(255,255,255,.42);
+}
+
+.surfBoard::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:34px;
+  height:34px;
+  transform:translate(-50%,-50%);
+  border-radius:50%;
+  background:rgba(255,255,255,.36);
+  box-shadow:0 0 0 8px rgba(255,255,255,.12);
+}
+
+.boardStripe{
+  position:absolute;
+  left:50%;
+  top:0;
+  width:8px;
+  height:100%;
+  transform:translateX(-50%);
+  background:rgba(255,255,255,.5);
+  border-radius:999px;
+}
+
+@keyframes boardFloat{
+  from{
+    transform:translateX(-50%) rotate(-5deg) translateY(0);
+  }
+  to{
+    transform:translateX(-50%) rotate(4deg) translateY(-8px);
+  }
+}
+
+.rollingBall{
+  position:absolute;
+  left:58px;
+  bottom:104px;
+  width:70px;
+  height:70px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at 30% 25%, rgba(255,255,255,.9) 0 9px, transparent 10px),
+    conic-gradient(
+      from 20deg,
+      #ffffff 0deg 42deg,
+      #ff4545 42deg 92deg,
+      #ffffff 92deg 138deg,
+      #28b8ff 138deg 190deg,
+      #ffffff 190deg 235deg,
+      #ffd43b 235deg 292deg,
+      #ffffff 292deg 330deg,
+      #35d26d 330deg 360deg
+    );
+  border:3px solid rgba(255,255,255,.85);
+  box-shadow:
+    0 14px 22px rgba(69,42,18,.24),
+    inset -10px -12px 18px rgba(0,0,0,.12);
+  animation:ballRoll 2.35s ease-in-out infinite;
+}
+
+.ballShine{
+  position:absolute;
+  left:18px;
+  top:13px;
+  width:15px;
+  height:15px;
+  border-radius:50%;
+  background:rgba(255,255,255,.82);
+}
+
+@keyframes ballRoll{
+  0%{
+    transform:translateX(0) translateY(0) rotate(0deg) scale(1);
+  }
+  22%{
+    transform:translateX(56px) translateY(-30px) rotate(145deg) scale(1.04);
+  }
+  50%{
+    transform:translateX(138px) translateY(0) rotate(310deg) scale(.98);
+  }
+  72%{
+    transform:translateX(58px) translateY(-24px) rotate(455deg) scale(1.03);
+  }
+  100%{
+    transform:translateX(0) translateY(0) rotate(620deg) scale(1);
+  }
+}
+
+.ballShadow{
+  position:absolute;
+  left:74px;
+  bottom:83px;
+  width:58px;
+  height:13px;
+  border-radius:50%;
+  background:rgba(80,47,16,.22);
+  filter:blur(2px);
+  animation:ballShadowMove 2.35s ease-in-out infinite;
+}
+
+@keyframes ballShadowMove{
+  0%,100%{
+    transform:translateX(0) scale(1);
+    opacity:.28;
+  }
+  22%,72%{
+    transform:translateX(58px) scale(.68);
+    opacity:.12;
+  }
+  50%{
+    transform:translateX(138px) scale(1.05);
+    opacity:.26;
+  }
+}
+
+.foamMini{
+  position:absolute;
+  height:10px;
+  border-radius:999px;
+  background:rgba(255,255,255,.75);
+  filter:blur(.2px);
+  animation:foamDrift 1.7s ease-in-out infinite alternate;
+}
+
+.foamMini::before,
+.foamMini::after{
+  content:"";
+  position:absolute;
+  top:-5px;
+  width:13px;
+  height:13px;
+  border-radius:50%;
+  background:rgba(255,255,255,.75);
+}
+
+.foamMini::before{
+  left:14px;
+}
+
+.foamMini::after{
+  right:16px;
+}
+
+.fm1{
+  left:14px;
+  bottom:48px;
+  width:86px;
+}
+
+.fm2{
+  right:20px;
+  bottom:35px;
+  width:112px;
+  animation-duration:2.1s;
+}
+
+.fm3{
+  left:50%;
+  bottom:21px;
+  width:72px;
+  transform:translateX(-50%);
+  opacity:.7;
+  animation-duration:1.9s;
+}
+
+@keyframes foamDrift{
+  from{
+    margin-left:-10px;
+    opacity:.55;
+  }
+  to{
+    margin-left:14px;
+    opacity:.9;
+  }
+}
+
+.loaderShell{
+  position:absolute;
+  bottom:22px;
+  width:30px;
+  height:22px;
+  border-radius:50% 50% 45% 45%;
+  background:#fff1cf;
+  box-shadow:
+    inset 0 -5px 0 rgba(199,130,64,.18),
+    0 7px 12px rgba(92,55,22,.12);
+}
+
+.loaderShell::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:2px;
+  width:2px;
+  height:17px;
+  transform:translateX(-50%);
+  background:rgba(170,96,46,.28);
+  box-shadow:
+    -7px 2px 0 rgba(170,96,46,.2),
+    7px 2px 0 rgba(170,96,46,.2);
+}
+
+.shellA{
+  left:36px;
+  transform:rotate(-14deg) scale(.9);
+}
+
+.shellB{
+  right:42px;
+  bottom:70px;
+  transform:rotate(18deg) scale(.72);
+  opacity:.82;
+}
+.loadingInfo{
+  position:absolute; left:50%; bottom:5.4%; transform:translateX(-50%);
+  width:min(88vw,390px); padding:14px 18px; border-radius:22px; text-align:center;
+  background:rgba(255,255,255,.24); border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 18px 50px rgba(91,56,18,.18); backdrop-filter:blur(10px);
+}
+.loadingTitle{ color:#07506d; font-size:24px; font-weight:900; letter-spacing:.3px; text-shadow:0 2px 0 rgba(255,255,255,.55); }
+.loadingText{ color:#0b6b82; margin-top:5px; font-weight:900; font-size:13px; }
+.loadingDots::after{ content:""; animation:dots 1.2s infinite; }
+@keyframes dots{ 0%{content:""} 33%{content:"."} 66%{content:".."} 100%{content:"..."} }
+
+@media(max-height:620px){
+  .beachLoaderIcon{
+    width:min(76vw,280px);
+    height:185px;
+    bottom:13%;
+  }
+
+  .rollingBall{
+    width:56px;
+    height:56px;
+    bottom:88px;
+  }
+
+  .surfBoard{
+    width:190px;
+    height:38px;
+    bottom:45px;
+  }
+
+  .loadingInfo{
+    bottom:4%;
+    padding:10px 14px;
+  }
+
+  .loadingTitle{
+    font-size:19px;
+  }
+
+  .loadingText{
+    font-size:12px;
+  }
+
+  .loadSun{
+    width:58px;
+    height:58px;
+  }
+}
+
+/* ── UI ── */
+#ui{ position:fixed; inset:0; z-index:5; pointer-events:none; }
+.topBar{
+  position:absolute; top:12px; left:50%; transform:translateX(-50%);
+  width:min(94vw,760px); display:flex; flex-direction:column; align-items:center; gap:8px;
+}
+.gameTitle{
+  padding:8px 18px; border-radius:999px;
+  background:linear-gradient(135deg,rgba(255,255,255,.92),rgba(255,255,255,.54));
+  border:1px solid rgba(255,255,255,.75); color:#07506d; font-size:20px; font-weight:900;
+  box-shadow:0 12px 30px rgba(5,82,120,.18); text-shadow:0 1px 0 white;
+}
+.statusRow{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+.chip{
+  min-width:104px; padding:7px 12px; border-radius:999px; color:white;
+  font-size:13px; font-weight:900; text-align:center;
+  border:1px solid rgba(255,255,255,.45); box-shadow:0 8px 20px rgba(0,0,0,.12); backdrop-filter:blur(8px);
+}
+.playerChip{ background:linear-gradient(135deg,#1087ff,#00d5ff); }
+.aiChip{ background:linear-gradient(135deg,#ff5a2e,#ffb347); }
+.turnChip{ background:linear-gradient(135deg,#133d66,#1ea5ba); }
+#message{
+  max-width:min(92vw,650px); padding:9px 16px; border-radius:16px;
+  background:rgba(0,42,64,.5); color:white; font-weight:800; font-size:14px;
+  text-align:center; box-shadow:0 10px 30px rgba(0,50,80,.2); backdrop-filter:blur(8px);
+}
+.bottomPanel{
+  position:absolute;
+  left:50%;
+  bottom:14px;
+  transform:translateX(-50%);
+  width:min(96vw,720px);
+  min-height:112px;
+  display:grid;
+  grid-template-columns:minmax(0,1fr) 104px minmax(0,1fr);
+  align-items:center;
+  gap:12px;
+  padding:12px;
+  border-radius:32px;
+  background:rgba(255,255,255,.22);
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:0 18px 50px rgba(20,100,130,.22);
+  backdrop-filter:blur(12px);
+  pointer-events:auto;
+}
+  .playerStat{
+  justify-self:stretch;
+  justify-content:flex-start;
+}
+
+.aiStat{
+  justify-self:stretch;
+  justify-content:flex-end;
+}
+
+.diceWrap{
+  justify-self:center;
+}
+  .statCard{
+  min-width:0;
+  min-height:84px;
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px;
+  border-radius:24px;
+  border:1px solid rgba(255,255,255,.52);
+  background:rgba(255,255,255,.28);
+  box-shadow:
+    0 10px 24px rgba(0,55,85,.16),
+    inset 0 1px 0 rgba(255,255,255,.46);
+  backdrop-filter:blur(10px);
+  overflow:visible;
+}
+
+.playerStat{
+  justify-content:flex-start;
+}
+
+.aiStat{
+  justify-content:flex-end;
+}
+
+.statAvatar{
+  flex:0 0 48px;
+  width:48px;
+  height:48px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  color:white;
+  font-size:15px;
+  font-weight:900;
+  border:2px solid rgba(255,255,255,.78);
+  box-shadow:
+    0 8px 16px rgba(0,0,0,.16),
+    inset 0 2px 0 rgba(255,255,255,.25);
+}
+
+.playerAvatar{
+  background:linear-gradient(135deg,#1087ff,#00d5ff);
+}
+
+.aiAvatar{
+  background:linear-gradient(135deg,#ff5a2e,#ffb347);
+}
+
+.statInfo{
+  min-width:0;
+  flex:1;
+  display:flex;
+  flex-direction:column;
+  gap:8px;
+}
+
+.aiInfo{
+  text-align:right;
+  align-items:flex-end;
+}
+
+.statName{
+  color:white;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:.6px;
+  text-shadow:0 2px 0 rgba(0,0,0,.16);
+}
+
+.itemSlots{
+  display:flex;
+  align-items:center;
+  gap:7px;
+  flex-wrap:wrap;
+}
+
+.aiItemSlots{
+  justify-content:flex-end;
+}
+
+.itemSlot{
+  min-height:32px;
+  min-width:72px;
+  padding:0 10px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:5px;
+  border-radius:999px;
+  font-size:13px;
+  font-weight:900;
+  color:white;
+  border:1px solid rgba(255,255,255,.55);
+  box-shadow:
+    0 6px 12px rgba(0,0,0,.14),
+    inset 0 1px 0 rgba(255,255,255,.32);
+  backdrop-filter:blur(8px);
+  white-space:nowrap;
+}
+
+.itemSlot span{
+  font-size:13px;
+  font-weight:900;
+}
+
+.cardSlot{
+  background:linear-gradient(135deg,#7b3cff,#ff4fd8);
+}
+
+.shieldSlot{
+  background:linear-gradient(135deg,#11a7ff,#22e0a0);
+}
+.diceWrap{
+  position:relative;
+  width:86px;
+  height:86px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  border-radius:24px;
+  transition:.16s ease;
+}
+
+.diceWrap:active{
+  transform:scale(.94);
+}
+
+.diceWrap.locked{
+  cursor:not-allowed;
+  opacity:.68;
+  filter:grayscale(.25);
+  transform:none;
+}
+  
+  .diceWrap.ready{
+  animation:diceInvitePulse 1.05s ease-in-out infinite;
+}
+
+.diceWrap.ready::before{
+  content:"";
+  position:absolute;
+  inset:2px;
+  border-radius:26px;
+  border:3px solid rgba(255,225,60,.85);
+  box-shadow:
+    0 0 14px rgba(255,225,60,.85),
+    0 0 34px rgba(255,166,0,.45);
+  animation:diceRing 1.05s ease-out infinite;
+  pointer-events:none;
+}
+
+.diceWrap.ready::after{
+  content:"CHẠM ĐỂ TUNG";
+  position:absolute;
+  left:50%;
+  top:-34px;
+  transform:translateX(-50%);
+  white-space:nowrap;
+  padding:6px 10px;
+  border-radius:999px;
+  color:#fff;
+  font-size:11px;
+  font-weight:900;
+  letter-spacing:.4px;
+  background:linear-gradient(135deg,#ff7a00,#ffcc33);
+  box-shadow:0 8px 18px rgba(185,89,0,.28);
+  text-shadow:0 1px 0 rgba(0,0,0,.22);
+  animation:diceHintFloat .9s ease-in-out infinite alternate;
+  pointer-events:none;
+}
+
+.diceWrap.ready #dice{
+  box-shadow:
+    0 0 0 5px rgba(255,220,60,.18),
+    0 0 26px rgba(255,193,7,.72),
+    0 12px 22px rgba(0,0,0,.22),
+    inset 0 3px 0 rgba(255,255,255,.85),
+    inset 0 -8px 14px rgba(0,92,145,.12);
+}
+
+.diceWrap.locked.ready{
+  animation:none;
+}
+
+.diceWrap.locked.ready::before,
+.diceWrap.locked.ready::after{
+  display:none;
+}
+
+@keyframes diceInvitePulse{
+  0%,100%{
+    transform:translateY(0) scale(1);
+  }
+  50%{
+    transform:translateY(-5px) scale(1.06);
+  }
+}
+
+@keyframes diceRing{
+  0%{
+    opacity:.95;
+    transform:scale(.92);
+  }
+  100%{
+    opacity:0;
+    transform:scale(1.35);
+  }
+}
+
+@keyframes diceHintFloat{
+  from{
+    transform:translateX(-50%) translateY(0);
+  }
+  to{
+    transform:translateX(-50%) translateY(-5px);
+  }
+}
+  #dice{
+  position:relative; width:70px; height:70px; border-radius:18px;
+  background:linear-gradient(145deg,#ffffff,#e8f7ff);
+  box-shadow:0 12px 22px rgba(0,0,0,.22),inset 0 3px 0 rgba(255,255,255,.85),inset 0 -8px 14px rgba(0,92,145,.12);
+  border:2px solid rgba(255,255,255,.95); transform-style:preserve-3d;
+}
+#dice.rolling{ animation:diceRoll .13s linear infinite; }
+#dice.pop{ animation:dicePop .42s cubic-bezier(.2,1.5,.35,1); }
+@keyframes diceRoll{
+  0%{transform:rotate(0deg) scale(1)} 25%{transform:rotate(18deg) scale(1.08)}
+  50%{transform:rotate(-16deg) scale(.97)} 75%{transform:rotate(22deg) scale(1.08)} 100%{transform:rotate(0deg) scale(1)}
+}
+@keyframes dicePop{
+  0%{transform:scale(.85) rotate(-8deg)} 65%{transform:scale(1.2) rotate(5deg)} 100%{transform:scale(1) rotate(0deg)}
+}
+.pip{ position:absolute; width:13px; height:13px; border-radius:50%; background:#143b62; box-shadow:inset 0 2px 2px rgba(255,255,255,.24); }
+.tl{left:14px;top:14px} .tr{right:14px;top:14px}
+.ml{left:14px;top:50%;transform:translateY(-50%)} .mr{right:14px;top:50%;transform:translateY(-50%)}
+.mid{left:50%;top:50%;transform:translate(-50%,-50%)}
+.bl{left:14px;bottom:14px} .br{right:14px;bottom:14px}
+.burst{
+  position:absolute; left:50%; top:50%; width:8px; height:8px; border-radius:50%;
+  background:#fff176; box-shadow:0 0 12px rgba(255,255,255,.9); pointer-events:none; animation:burst .7s ease-out forwards;
+}
+@keyframes burst{
+  from{ opacity:1; transform:translate(-50%,-50%) scale(1); }
+  to{ opacity:0; transform:translate(calc(-50% + var(--dx)),calc(-50% + var(--dy))) scale(.25); }
+}
+#endModal{
+  position:fixed; inset:0; z-index:25; display:flex; align-items:center; justify-content:center;
+  background:rgba(0,34,55,.55); backdrop-filter:blur(8px);
+}
+#endModal.hidden{ display:none; }
+.endCard{
+  width:min(88vw,380px); padding:26px 22px; border-radius:28px;
+  background:linear-gradient(145deg,rgba(255,255,255,.96),rgba(225,249,255,.9));
+  border:1px solid rgba(255,255,255,.8); box-shadow:0 30px 80px rgba(0,0,0,.35); text-align:center;
+}
+#endTitle{ color:#064c68; font-size:28px; font-weight:900; }
+#endText{ color:#176277; font-weight:800; margin:10px 0 20px; line-height:1.4; }
+#restartBtn{
+  border:none; border-radius:18px; padding:13px 22px; color:white; font-size:16px; font-weight:900;
+  background:linear-gradient(135deg,#05a9ff,#00d48c); box-shadow:0 12px 22px rgba(0,130,150,.26); cursor:pointer;
+}
+@media(max-height:620px){
+.bottomPanel{
+  bottom:8px;
+  width:min(97vw,560px);
+  min-height:92px;
+  grid-template-columns:minmax(0,1fr) 74px minmax(0,1fr);
+  gap:7px;
+  padding:8px;
+  border-radius:24px;
+}
+
+.statCard{
+  min-height:68px;
+  padding:7px;
+  gap:6px;
+  border-radius:18px;
+}
+
+.statAvatar{
+  flex-basis:34px;
+  width:34px;
+  height:34px;
+  font-size:11px;
+}
+
+.statInfo{
+  gap:5px;
+}
+
+.statName{
+  font-size:11px;
+}
+
+.itemSlots{
+  gap:4px;
+}
+
+.itemSlot{
+  min-height:24px;
+  min-width:48px;
+  padding:0 6px;
+  font-size:10px;
+}
+
+.itemSlot span{
+  font-size:10px;
+}
+
+.diceWrap{
+  width:62px;
+  height:62px;
+}
+  #dice{ width:58px; height:58px; border-radius:15px; }
+  .pip{ width:10px; height:10px; }
+  .tl{left:11px;top:11px} .tr{right:11px;top:11px}
+  .ml{left:11px} .mr{right:11px}
+  .bl{left:11px;bottom:11px} .br{right:11px;bottom:11px}
+  
+}
+</style>
+</head>
+<body>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="loadingScreen">
+  <div class="beachLoadingScene">
+    <div class="loadSun"></div>
+    <div class="loadCloud c1"></div>
+    <div class="loadCloud c2"></div>
+    <div class="loadSea">
+      <div class="loadWave w1"></div>
+      <div class="loadWave w2"></div>
+      <div class="loadWave w3"></div>
+    </div>
+    <div class="loadSand"></div>
+
+    <div class="beachLoaderIcon">
+  <div class="foamMini fm1"></div>
+  <div class="foamMini fm2"></div>
+  <div class="foamMini fm3"></div>
+
+  <div class="surfBoard">
+    <div class="boardStripe"></div>
+  </div>
+
+  <div class="rollingBall">
+    <span class="ballShine"></span>
+  </div>
+
+  <div class="ballShadow"></div>
+
+  <div class="loaderShell shellA"></div>
+  <div class="loaderShell shellB"></div>
+</div>
+
+    <div class="loadingInfo">
+      <div class="loadingTitle">Đua Xúc Xắc Bãi Biển</div>
+      <div class="loadingText">Đang mở đường đua<span class="loadingDots"></span></div>
+    </div>
+  </div>
+</div>
+
+<div id="ui">
+  <div class="topBar">
+    <div class="gameTitle">🏖️ ĐUA XÚC XẮC BÃI BIỂN</div>
+
+    <div class="statusRow">
+      <div class="chip turnChip" id="turnText">Lượt của bạn</div>
+    </div>
+
+    <div id="message">Chạm vào xúc xắc để bắt đầu cuộc đua trên bãi biển!</div>
+  </div>
+
+  <div class="bottomPanel">
+
+    <div class="statCard playerStat">
+      <div class="statAvatar playerAvatar">B</div>
+
+      <div class="statInfo">
+        <div class="statName">BẠN</div>
+
+        <div class="itemSlots">
+          <div class="itemSlot cardSlot" title="Thẻ vật phẩm">
+            Thẻ <span id="playerCardCount">0</span>
+          </div>
+
+          <div class="itemSlot shieldSlot" title="Khiên bảo vệ">
+            Khiên <span id="playerShieldCount">0</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="diceWrap" id="diceWrap" role="button" tabindex="0" aria-label="Tung xúc xắc">
+      <div id="dice"></div>
+    </div>
+
+    <div class="statCard aiStat">
+      <div class="statInfo aiInfo">
+        <div class="statName">AI</div>
+
+        <div class="itemSlots aiItemSlots">
+          <div class="itemSlot cardSlot" title="Thẻ vật phẩm">
+            Thẻ <span id="aiCardCount">0</span>
+          </div>
+
+          <div class="itemSlot shieldSlot" title="Khiên bảo vệ">
+            Khiên <span id="aiShieldCount">0</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="statAvatar aiAvatar">AI</div>
+    </div>
+
+  </div>
+</div>
+
+<div id="endModal" class="hidden">
+  <div class="endCard">
+    <h2 id="endTitle">Chiến thắng!</h2>
+    <p id="endText">Bạn đã về đích trước AI.</p>
+    <button id="restartBtn">🔁 Chơi lại</button>
+  </div>
+</div>
+<script src="item.js"></script>
+<script>
+const canvas=document.getElementById("gameCanvas"),ctx=canvas.getContext("2d");
+const loadingScreen=document.getElementById("loadingScreen");
+const diceClickArea=document.getElementById("diceWrap"),restartBtn=document.getElementById("restartBtn");
+const dice=document.getElementById("dice"),diceWrap=document.getElementById("diceWrap");
+const playerCardCount=document.getElementById("playerCardCount");
+const playerShieldCount=document.getElementById("playerShieldCount");
+const aiCardCount=document.getElementById("aiCardCount");
+const aiShieldCount=document.getElementById("aiShieldCount");
+const turnText=document.getElementById("turnText"),message=document.getElementById("message");
+const endModal=document.getElementById("endModal"),endTitle=document.getElementById("endTitle"),endText=document.getElementById("endText");
+
+let W=0,H=0,DPR=1;
+let board={x:0,y:0,size:0,cell:0};
+const state={turn:"player",busy:false,gameOver:false,particles:[],confetti:[]};
+const tokens={
+  player:{
+    name:"Bạn",
+    pos:0,
+    x:0,
+    y:0,
+    color:"#0998ff",
+    dark:"#045cae",
+    label:"BẠN",
+    phase:0,
+    animating:false
+  },
+  ai:{
+    name:"AI",
+    pos:0,
+    x:0,
+    y:0,
+    color:"#ff6b35",
+    dark:"#a83212",
+    label:"AI",
+    phase:1.5,
+    animating:false
+  }
+};
+
+const itemState={
+  player:{
+    inventory:[],
+    shields:0,
+    completedTurns:0
+  },
+  ai:{
+    inventory:[],
+    shields:0,
+    completedTurns:0
+  }
+};
+
+const cardDeckState={
+  availableIds:[],
+  usedIds:[]
+};
+const pipMap={1:["mid"],2:["tl","br"],3:["tl","mid","br"],4:["tl","tr","bl","br"],5:["tl","tr","mid","bl","br"],6:["tl","tr","ml","mr","bl","br"]};
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+function initCardDeck(){
+  if(!window.BeachItemDB){
+    console.error("Chưa tìm thấy BeachItemDB. Hãy nhúng items.js trước script game chính.");
+    cardDeckState.availableIds=[];
+    cardDeckState.usedIds=[];
+    return;
+  }
+
+  cardDeckState.availableIds=BeachItemDB
+    .getAllItems()
+    .map(item=>item.id);
+
+  cardDeckState.usedIds=[];
+}
+
+function drawUniqueCard(){
+  if(cardDeckState.availableIds.length<=0){
+    return null;
+  }
+
+  const randomIndex=Math.floor(Math.random()*cardDeckState.availableIds.length);
+  const itemId=cardDeckState.availableIds.splice(randomIndex,1)[0];
+
+  cardDeckState.usedIds.push(itemId);
+
+  return BeachItemDB.createInventoryItem(itemId);
+}
+
+function giveRandomCard(who){
+  const item=drawUniqueCard();
+
+  if(!item){
+    updateStatus(
+      "Kho thẻ đã hết",
+      "Tất cả 33 thẻ đã được rút hết. Không còn thẻ mới để nhận."
+    );
+    return null;
+  }
+
+  itemState[who].inventory.push(item);
+  updateStats();
+
+  return item;
+}
+
+async function registerCompletedTurn(who){
+  itemState[who].completedTurns++;
+
+  if(itemState[who].completedTurns%2!==0){
+    return;
+  }
+
+  const item=giveRandomCard(who);
+
+  if(item){
+    updateStatus(
+      who==="player" ? "Bạn nhận thẻ!" : "AI nhận thẻ!",
+      `${tokens[who].name} nhận được thẻ ${item.icon} ${item.name}! Kho còn ${cardDeckState.availableIds.length}/33 thẻ.`
+    );
+
+    await sleep(1100);
+  }
+}
+function resize(){
+  DPR=Math.max(1,Math.min(2,window.devicePixelRatio||1));
+  W=window.innerWidth;H=window.innerHeight;
+  canvas.width=Math.floor(W*DPR);canvas.height=Math.floor(H*DPR);
+  canvas.style.width=W+"px";canvas.style.height=H+"px";
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+  computeBoard();syncTokensToBoard();
+}
+window.addEventListener("resize",resize);
+
+function computeBoard(){
+  const topSafe=Math.max(98,Math.min(132,H*.18));
+  const bottomSafe=Math.max(130,Math.min(170,H*.23));
+  let available=H-topSafe-bottomSafe;
+  let size=Math.min(W*.92,available,640);
+  if(size<280)size=Math.min(W*.9,H*.56,360);
+  board.size=Math.floor(size);board.cell=board.size/10;
+  board.x=Math.floor((W-board.size)/2);
+  board.y=Math.floor(topSafe+Math.max(0,available-board.size)*.25);
+}
+
+function getCellCenter(pos){
+  pos=Math.max(1,Math.min(100,pos));
+  const n=pos-1,rowFromBottom=Math.floor(n/10),colInRow=n%10;
+  const col=rowFromBottom%2===0?colInRow:9-colInRow,row=9-rowFromBottom;
+  return{x:board.x+col*board.cell+board.cell/2,y:board.y+row*board.cell+board.cell/2};
+}
+
+function getTokenTarget(who,pos){
+  if(pos<=0){
+    const start=getCellCenter(1);
+
+    return {
+      x:start.x,
+      y:board.y+board.size+board.cell*.42
+    };
+  }
+
+  const c=getCellCenter(pos);
+
+  return {
+    x:c.x,
+    y:c.y
+  };
+}
+
+function syncTokensToBoard(){
+  for(const k of Object.keys(tokens)){const t=tokens[k];if(!t.animating){const p=getTokenTarget(k,t.pos);t.x=p.x;t.y=p.y;}}
+}
+
+function renderDice(v){
+  dice.innerHTML="";
+  (pipMap[v]||pipMap[1]).forEach(p=>{const s=document.createElement("span");s.className="pip "+p;dice.appendChild(s);});
+}
+function randomDice(){return Math.floor(Math.random()*6)+1;}
+
+function createDiceBurst(){
+  for(let i=0;i<18;i++){
+    const s=document.createElement("span");s.className="burst";
+    const angle=Math.random()*Math.PI*2,dist=34+Math.random()*38;
+    s.style.setProperty("--dx",Math.cos(angle)*dist+"px");
+    s.style.setProperty("--dy",Math.sin(angle)*dist+"px");
+    s.style.background=Math.random()>.45?"#fff176":"#ffffff";
+    diceWrap.appendChild(s);setTimeout(()=>s.remove(),750);
+  }
+}
+
+function rollDiceVisual(finalValue){
+  return new Promise(resolve=>{
+    dice.classList.remove("pop");dice.classList.add("rolling");
+    let elapsed=0;const duration=1050;
+    const timer=setInterval(()=>{
+      elapsed+=70;renderDice(randomDice());
+      if(elapsed>=duration){
+        clearInterval(timer);dice.classList.remove("rolling");
+        renderDice(finalValue);void dice.offsetWidth;dice.classList.add("pop");
+        createDiceBurst();
+        setTimeout(()=>{dice.classList.remove("pop");resolve();},420);
+      }
+    },70);
+  });
+}
+
+async function handlePlayerRoll(){
+  if(state.busy||state.gameOver||state.turn!=="player")return;
+  state.busy=true;
+setDiceEnabled(false);
+  await runTurn("player");
+  if(!state.gameOver){
+    state.turn="ai";updateStatus("Đến lượt AI","AI chuẩn bị tung xúc xắc...");
+    await sleep(800);await runTurn("ai");
+  }
+  if(!state.gameOver){
+  state.turn="player";
+  state.busy=false;
+  setDiceEnabled(true);
+  updateStatus("Lượt của bạn","Tới lượt bạn rồi. Chạm vào xúc xắc để tung!");
+}else{
+  state.busy=false;
+  setDiceEnabled(false);
+}}
+
+async function runTurn(who){
+  const token=tokens[who];
+  const isPlayer=who==="player";
+  const value=randomDice();
+
+  updateStatus(
+    isPlayer ? "Lượt của bạn" : "Lượt của AI",
+    isPlayer ? "Bạn đang tung xúc xắc..." : "AI đang tung xúc xắc..."
+  );
+
+  await rollDiceVisual(value);
+
+  const need=100-token.pos;
+
+  if(value>need){
+    updateStatus(
+      isPlayer ? "Lượt của bạn" : "Lượt của AI",
+      `${token.name} tung được ${value} điểm, nhưng chỉ cần ${need} điểm để về đích. Dư điểm nên mất lượt!`
+    );
+
+    await sleep(1200);
+    await registerCompletedTurn(who);
+    return;
+  }
+
+  updateStatus(
+    isPlayer ? "Lượt của bạn" : "Lượt của AI",
+    `${token.name} tung được ${value} điểm!`
+  );
+
+  await sleep(300);
+  await moveToken(who,value);
+
+  if(token.pos===100){
+    endGame(who);
+    return;
+  }
+
+  await checkKickOpponent(who,value);
+  await registerCompletedTurn(who);
+}
+  
+async function moveToken(who,steps){
+  const token=tokens[who];
+  for(let i=0;i<steps;i++){
+    if(token.pos>=100)break;token.pos++;updateStats();
+    const t=getTokenTarget(who,token.pos);await animateHop(token,t.x,t.y);
+    if(token.pos>=100)break;
+  }
+}
+  
+  async function checkKickOpponent(who,diceValue){
+  const attacker=tokens[who];
+  const opponentKey=who==="player" ? "ai" : "player";
+  const opponent=tokens[opponentKey];
+
+  if(attacker.pos<=0 || attacker.pos>=100) return;
+  if(opponent.pos<=0 || opponent.pos>=100) return;
+
+  if(attacker.pos===opponent.pos){
+    updateStatus(
+      who==="player" ? "Bạn đá AI!" : "AI đá bạn!",
+      `${attacker.name} đáp xuống đúng vị trí của ${opponent.name}. ${opponent.name} bị đá lùi ${diceValue} ô!`
+    );
+
+    await sleep(750);
+    await moveTokenBackward(opponentKey,diceValue);
+    await sleep(450);
+  }
+}
+
+async function moveTokenBackward(who,steps){
+  const token=tokens[who];
+
+  for(let i=0;i<steps;i++){
+    if(token.pos<=0) break;
+
+    token.pos--;
+    updateStats();
+
+    const target=getTokenTarget(who,token.pos);
+    await animateHop(token,target.x,target.y);
+  }
+}
+
+function animateHop(token,tx,ty){
+  return new Promise(resolve=>{
+    token.animating=true;const sx=token.x,sy=token.y,duration=230,start=performance.now();
+    const jump=Math.min(22,board.cell*.42);
+    function step(now){
+      const raw=Math.min(1,(now-start)/duration);
+      const ease=raw<.5?2*raw*raw:1-Math.pow(-2*raw+2,2)/2;
+      token.x=sx+(tx-sx)*ease;token.y=sy+(ty-sy)*ease-Math.sin(raw*Math.PI)*jump;
+      if(raw<1)requestAnimationFrame(step);
+      else{token.x=tx;token.y=ty;token.animating=false;resolve();}
+    }
+    requestAnimationFrame(step);
+  });
+}
+
+function updateStats(){
+  playerCardCount.textContent=itemState.player.inventory.length;
+  playerShieldCount.textContent=itemState.player.shields;
+
+  aiCardCount.textContent=itemState.ai.inventory.length;
+  aiShieldCount.textContent=itemState.ai.shields;
+}
+function updateStatus(turn,text){turnText.textContent=turn;message.textContent=text;}
+  
+  function setDiceEnabled(enabled){
+  diceClickArea.classList.toggle("locked", !enabled);
+  diceClickArea.classList.toggle("ready", enabled && !state.gameOver && state.turn==="player");
+  diceClickArea.setAttribute("aria-disabled", String(!enabled));
+}
+
+function endGame(who){
+  state.gameOver=true;
+  if(who==="player"){endTitle.textContent="🏆 Bạn thắng!";endText.textContent="Bạn đã về đích trước AI. Quá cháy!";}
+  else{endTitle.textContent="🤖 AI thắng!";endText.textContent="AI đã về đích trước. Chơi lại để phục thù nhé!";}
+  spawnConfetti();setTimeout(()=>endModal.classList.remove("hidden"),450);
+}
+
+function restartGame(){
+  tokens.player.pos=0;tokens.ai.pos=0;
+  itemState.player.inventory=[];
+itemState.player.shields=0;
+itemState.player.completedTurns=0;
+
+itemState.ai.inventory=[];
+itemState.ai.shields=0;
+itemState.ai.completedTurns=0;
+
+initCardDeck();
+  state.turn="player";state.busy=false;state.gameOver=false;
+  state.confetti.length=0;state.particles.length=0;
+  renderDice(1);computeBoard();syncTokensToBoard();updateStats();
+  updateStatus("Lượt của bạn","Chạm vào xúc xắc để bắt đầu cuộc đua trên bãi biển!");
+  setDiceEnabled(true);
+endModal.classList.add("hidden");
+}
+
+diceClickArea.addEventListener("click",handlePlayerRoll);
+
+diceClickArea.addEventListener("keydown",e=>{
+  if(e.key==="Enter"||e.key===" "){
+    e.preventDefault();
+    handlePlayerRoll();
+  }
+});
+restartBtn.addEventListener("click",restartGame);
+
+function roundedRect(x,y,w,h,r){
+  ctx.beginPath();ctx.moveTo(x+r,y);ctx.lineTo(x+w-r,y);ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);ctx.quadraticCurveTo(x,y,x+r,y);ctx.closePath();
+}
+
+function drawScene(t){drawSky();drawSun(t);drawClouds(t);drawSea(t);drawSand(t);drawBeachDecor(t);drawBoard();drawTokens(t);drawConfetti();}
+
+function drawSky(){
+  const g=ctx.createLinearGradient(0,0,0,H*.55);
+  g.addColorStop(0,"#69d7ff");g.addColorStop(.55,"#b7f0ff");g.addColorStop(1,"#fff1b8");
+  ctx.fillStyle=g;ctx.fillRect(0,0,W,H);
+}
+
+function drawSun(t){
+  const x=W*.82,y=H*.13,r=Math.max(28,Math.min(48,W*.055));
+  const glow=ctx.createRadialGradient(x,y,0,x,y,r*3);
+  glow.addColorStop(0,"rgba(255,245,140,.8)");glow.addColorStop(.45,"rgba(255,200,50,.23)");glow.addColorStop(1,"rgba(255,200,50,0)");
+  ctx.fillStyle=glow;ctx.beginPath();ctx.arc(x,y,r*3,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#ffe66d";ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.55)";ctx.lineWidth=3;
+  ctx.beginPath();ctx.arc(x,y,r+8+Math.sin(t*.003)*2,0,Math.PI*2);ctx.stroke();
+}
+
+function drawClouds(t){
+  drawCloud(W*.18+Math.sin(t*.00025)*20,H*.12,1.0);
+  drawCloud(W*.52+Math.sin(t*.0002+2)*24,H*.09,.75);
+  drawCloud(W*.72+Math.sin(t*.00023+1)*18,H*.22,.65);
+}
+
+function drawCloud(x,y,s){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+  ctx.fillStyle="rgba(255,255,255,.78)";ctx.beginPath();
+  ctx.arc(-36,6,22,0,Math.PI*2);ctx.arc(-12,-8,28,0,Math.PI*2);
+  ctx.arc(20,0,24,0,Math.PI*2);ctx.arc(44,8,18,0,Math.PI*2);ctx.fill();ctx.restore();
+}
+
+function drawSea(t){
+  const seaTop=H*.28,shore=H*.50;
+  const g=ctx.createLinearGradient(0,seaTop,0,shore+40);
+  g.addColorStop(0,"#118ce8");g.addColorStop(.45,"#13b9df");g.addColorStop(1,"#69e4dc");
+  ctx.fillStyle=g;ctx.fillRect(0,seaTop,W,shore-seaTop+60);
+  for(let i=0;i<7;i++){
+    const y=seaTop+18+i*26;ctx.beginPath();
+    for(let x=-40;x<=W+40;x+=16){const w=Math.sin((x*.024)+t*.002+i)*(5+i*.4)+Math.sin((x*.048)+t*.0014)*2;x===-40?ctx.moveTo(x,y+w):ctx.lineTo(x,y+w);}
+    ctx.strokeStyle=`rgba(255,255,255,${.18+i*.035})`;ctx.lineWidth=2;ctx.stroke();
+  }
+  const foamY=shore+Math.sin(t*.002)*5;
+  ctx.fillStyle="rgba(255,255,255,.72)";ctx.beginPath();ctx.moveTo(0,foamY);
+  for(let x=0;x<=W;x+=18)ctx.lineTo(x,foamY+Math.sin(x*.035+t*.003)*9);
+  ctx.lineTo(W,foamY+30);ctx.lineTo(0,foamY+38);ctx.closePath();ctx.fill();
+}
+
+function drawSand(t){
+  const sandTop=H*.49;
+  const g=ctx.createLinearGradient(0,sandTop,0,H);
+  g.addColorStop(0,"#ffe59a");g.addColorStop(.5,"#f7ca70");g.addColorStop(1,"#e8a94d");
+  ctx.fillStyle=g;ctx.fillRect(0,sandTop,W,H-sandTop);
+  ctx.globalAlpha=.22;
+  for(let i=0;i<170;i++){
+    const x=(i*97)%W,y=sandTop+((i*53)%Math.max(1,H-sandTop)),r=1+((i*11)%22)/20;
+    ctx.fillStyle=i%3===0?"#c78938":"#fff0b7";ctx.beginPath();ctx.arc(x,y,r,0,Math.PI*2);ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+function drawBeachDecor(t){
+  drawPalmCanvas(W*.08,H*.86,Math.max(.75,Math.min(1.1,W/900)),false,t);
+  drawPalmCanvas(W*.92,H*.84,Math.max(.7,Math.min(1.0,W/1000)),true,t);
+  drawUmbrella(W*.16,H*.56,.82,t);drawUmbrella(W*.83,H*.58,.72,t+900);
+  drawTowel(W*.12,H*.72,.75,"#ff5b8a");drawTowel(W*.86,H*.72,.68,"#2ec5ff");
+  drawShell(W*.24,H*.84,.8,t);drawShell(W*.74,H*.82,.65,t+200);
+  drawStarfish(W*.34,H*.90,.72,t);drawStarfish(W*.66,H*.91,.58,t);
+}
+
+function drawPalmCanvas(x,y,s,flip,t){
+  ctx.save();ctx.translate(x,y);ctx.scale(flip?-s:s,s);
+  const sway=Math.sin(t*.0015)*5;
+  ctx.strokeStyle="#8a5525";ctx.lineWidth=15;ctx.lineCap="round";
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(12,-70,4+sway,-138);ctx.stroke();
+  ctx.strokeStyle="rgba(90,42,12,.35)";ctx.lineWidth=2;
+  for(let i=0;i<7;i++){ctx.beginPath();ctx.moveTo(-6,-18-i*17);ctx.lineTo(8,-25-i*17);ctx.stroke();}
+  ctx.translate(4+sway,-142);
+  for(let i=0;i<8;i++)drawLeaf(-150+i*42+Math.sin(t*.0016+i)*5,i%2?"#17aa53":"#0e8b45");
+  ctx.fillStyle="#875019";ctx.beginPath();
+  ctx.arc(-8,8,7,0,Math.PI*2);ctx.arc(4,11,7,0,Math.PI*2);ctx.arc(0,0,6,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawLeaf(angle,color){
+  ctx.save();ctx.rotate(angle*Math.PI/180);ctx.fillStyle=color;
+  ctx.beginPath();ctx.moveTo(0,0);ctx.quadraticCurveTo(48,-16,92,0);ctx.quadraticCurveTo(48,18,0,0);ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.22)";ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(4,0);ctx.lineTo(80,0);ctx.stroke();
+  ctx.restore();
+}
+
+function drawUmbrella(x,y,s,t){
+  ctx.save();ctx.translate(x,y);ctx.scale(s,s);
+  ctx.strokeStyle="#7c4d24";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(0,8);ctx.lineTo(0,84);ctx.stroke();
+  ctx.rotate(Math.sin(t*.0013)*.03);
+  ctx.beginPath();ctx.moveTo(-58,10);ctx.quadraticCurveTo(0,-55,58,10);ctx.closePath();
+  ctx.fillStyle="#ff4d6d";ctx.fill();
+  ctx.beginPath();ctx.moveTo(-58,10);ctx.quadraticCurveTo(-30,-12,0,10);ctx.quadraticCurveTo(30,-12,58,10);ctx.lineTo(-58,10);
+  ctx.fillStyle="rgba(255,255,255,.22)";ctx.fill();
+  ctx.strokeStyle="rgba(255,255,255,.7)";ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(0,-43);ctx.lineTo(0,10);ctx.moveTo(0,-43);ctx.lineTo(-38,10);ctx.moveTo(0,-43);ctx.lineTo(38,10);ctx.stroke();
+  ctx.restore();
+}
+
+function drawTowel(x,y,s,color){
+  ctx.save();ctx.translate(x,y);ctx.rotate(-.18);ctx.scale(s,s);
+  ctx.fillStyle=color;roundedRect(-42,-18,84,36,7);ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.38)";
+  for(let i=-30;i<=30;i+=20)ctx.fillRect(i,-18,8,36);
+  ctx.restore();
+}
+
+function drawShell(x,y,s,t){
+  ctx.save();ctx.translate(x,y+Math.sin(t*.002)*1.5);ctx.scale(s,s);
+  ctx.fillStyle="#fff3d8";ctx.beginPath();ctx.arc(0,0,16,Math.PI,0);ctx.lineTo(16,10);ctx.quadraticCurveTo(0,22,-16,10);ctx.closePath();ctx.fill();
+  ctx.strokeStyle="rgba(175,105,54,.32)";ctx.lineWidth=2;
+  for(let i=-2;i<=2;i++){ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(i*7,11);ctx.stroke();}
+  ctx.restore();
+}
+
+function drawStarfish(x,y,s,t){
+  ctx.save();ctx.translate(x,y);ctx.rotate(Math.sin(t*.001)*.08);ctx.scale(s,s);
+  ctx.fillStyle="#ff8b4a";ctx.beginPath();
+  for(let i=0;i<10;i++){const r=i%2===0?20:8,a=-Math.PI/2+i*Math.PI/5;i===0?ctx.moveTo(Math.cos(a)*r,Math.sin(a)*r):ctx.lineTo(Math.cos(a)*r,Math.sin(a)*r);}
+  ctx.closePath();ctx.fill();
+  ctx.fillStyle="rgba(255,255,255,.45)";ctx.beginPath();ctx.arc(0,0,3,0,Math.PI*2);ctx.fill();
+  ctx.restore();
+}
+
+function drawBoard(){
+  ctx.save();
+  ctx.shadowColor="rgba(0,60,90,.25)";ctx.shadowBlur=28;ctx.shadowOffsetY=12;
+  roundedRect(board.x-10,board.y-10,board.size+20,board.size+20,26);
+  ctx.fillStyle="rgba(255,255,255,.28)";ctx.fill();
+  ctx.shadowColor="transparent";ctx.shadowBlur=0;ctx.shadowOffsetY=0;
+  for(let pos=1;pos<=100;pos++){
+    const c=getCellCenter(pos),x=c.x-board.cell/2,y=c.y-board.cell/2;
+    const row=Math.floor((pos-1)/10),alt=(row+pos)%2===0;
+    let fill=alt?"rgba(255,255,255,.76)":"rgba(255,246,202,.78)",stroke="rgba(20,90,120,.24)";
+    if(pos===1){fill="rgba(113,224,130,.88)";stroke="rgba(0,120,60,.45)";}
+    if(pos===100){fill="rgba(255,222,67,.92)";stroke="rgba(255,120,0,.55)";}
+    roundedRect(x+2,y+2,board.cell-4,board.cell-4,Math.max(7,board.cell*.18));
+    ctx.fillStyle=fill;ctx.fill();ctx.strokeStyle=stroke;ctx.lineWidth=1.3;ctx.stroke();
+    ctx.fillStyle=pos===100?"#9d3b00":"#17617c";
+    ctx.font=`900 ${Math.max(9,board.cell*.23)}px Arial`;ctx.textAlign="center";ctx.textBaseline="middle";
+    ctx.fillText(pos,c.x,c.y-board.cell*.22);
+    if(pos===1){ctx.font=`900 ${Math.max(7,board.cell*.16)}px Arial`;ctx.fillStyle="#08662e";ctx.fillText("START",c.x,c.y+board.cell*.18);}
+    if(pos===100){ctx.font=`${Math.max(14,board.cell*.34)}px Arial`;ctx.fillText("🏁",c.x,c.y+board.cell*.17);}
+  }
+  ctx.restore();
+}
+
+function drawTokens(t){drawCharacter(tokens.ai,t);drawCharacter(tokens.player,t);}
+
+function drawCharacter(t,time){
+  const bob=Math.sin(time*.004+t.phase)*2,r=Math.max(12,board.cell*.25);
+  ctx.save();ctx.translate(t.x,t.y+bob);
+  ctx.fillStyle="rgba(0,0,0,.20)";ctx.beginPath();ctx.ellipse(0,r*.95,r*1.05,r*.34,0,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle=t.color;ctx.beginPath();ctx.arc(0,0,r,0,Math.PI*2);ctx.fill();
+  ctx.lineWidth=Math.max(2,r*.16);ctx.strokeStyle="rgba(255,255,255,.85)";ctx.stroke();
+  ctx.fillStyle="rgba(255,255,255,.25)";ctx.beginPath();ctx.arc(-r*.32,-r*.35,r*.28,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#fff9df";ctx.beginPath();ctx.arc(-r*.27,-r*.08,r*.13,0,Math.PI*2);ctx.arc(r*.27,-r*.08,r*.13,0,Math.PI*2);ctx.fill();
+  ctx.fillStyle="#123";ctx.beginPath();ctx.arc(-r*.27,-r*.08,r*.055,0,Math.PI*2);ctx.arc(r*.27,-r*.08,r*.055,0,Math.PI*2);ctx.fill();
+  ctx.strokeStyle="#fff9df";ctx.lineWidth=Math.max(2,r*.11);ctx.lineCap="round";
+  ctx.beginPath();ctx.arc(0,r*.18,r*.32,.15,Math.PI-.15);ctx.stroke();
+  if(t.label==="AI"){
+    ctx.strokeStyle="rgba(20,20,20,.78)";ctx.lineWidth=Math.max(3,r*.16);
+    ctx.beginPath();ctx.moveTo(-r*.48,-r*.12);ctx.lineTo(r*.48,-r*.12);ctx.stroke();
+    ctx.fillStyle="rgba(10,10,10,.85)";ctx.beginPath();
+    ctx.ellipse(-r*.27,-r*.12,r*.22,r*.13,0,0,Math.PI*2);ctx.ellipse(r*.27,-r*.12,r*.22,r*.13,0,0,Math.PI*2);ctx.fill();
+  }else{
+    ctx.fillStyle="#ffe66d";ctx.beginPath();
+    ctx.moveTo(-r*.75,-r*.58);ctx.quadraticCurveTo(0,-r*1.18,r*.75,-r*.58);ctx.quadraticCurveTo(0,-r*.35,-r*.75,-r*.58);ctx.fill();
+    ctx.strokeStyle="rgba(255,255,255,.65)";ctx.lineWidth=1.5;ctx.stroke();
+  }
+  ctx.font=`900 ${Math.max(9,r*.5)}px Arial`;ctx.textAlign="center";ctx.textBaseline="middle";
+  ctx.lineWidth=4;ctx.strokeStyle="rgba(0,0,0,.32)";ctx.strokeText(t.label,0,r*1.85);
+  ctx.fillStyle="#ffffff";ctx.fillText(t.label,0,r*1.85);
+  ctx.restore();
+}
+
+function spawnConfetti(){
+  state.confetti.length=0;
+  for(let i=0;i<120;i++){
+    state.confetti.push({
+      x:Math.random()*W,y:-20-Math.random()*H*.4,
+      vx:-1.5+Math.random()*3,vy:2+Math.random()*4,
+      r:4+Math.random()*6,rot:Math.random()*Math.PI,vr:-.12+Math.random()*.24,
+      color:["#ff4d6d","#ffe66d","#00d5ff","#37e66c","#ffffff"][Math.floor(Math.random()*5)]
+    });
+  }
+}
+
+function drawConfetti(){
+  if(!state.confetti.length)return;
+  for(const p of state.confetti){
+    p.x+=p.vx;p.y+=p.vy;p.rot+=p.vr;
+    ctx.save();ctx.translate(p.x,p.y);ctx.rotate(p.rot);
+    ctx.fillStyle=p.color;ctx.fillRect(-p.r/2,-p.r/2,p.r,p.r*.65);ctx.restore();
+  }
+  state.confetti=state.confetti.filter(p=>p.y<H+40);
+}
+
+function loop(t){ctx.clearRect(0,0,W,H);drawScene(t);requestAnimationFrame(loop);}
+
+resize();
+renderDice(1);
+initCardDeck();
+updateStats();
+syncTokensToBoard();
+setDiceEnabled(true);
+updateStatus("Lượt của bạn","Chạm vào xúc xắc để bắt đầu cuộc đua trên bãi biển!");
+requestAnimationFrame(loop);
+setTimeout(()=>loadingScreen.classList.add("hide"),1900);
+</script>
+</body>
+</html>
