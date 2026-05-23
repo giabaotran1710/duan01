@@ -88,23 +88,22 @@
 
   // Thẻ 1-6: Tiến 1/2/3/4/5/6 bước
   for(let step = 1; step <= 6; step++){
-    addItem(createBaseItem({
-      no: step,
-      id: `adv_move_${step}`,
-      name: `Tiến ${step} Bước`,
-      icon: "👣",
-      group: ITEM_GROUP.ADVANTAGE,
-      rarity: step <= 3 ? ITEM_RARITY.COMMON : ITEM_RARITY.RARE,
-      timing: ITEM_TIMING.INSTANT,
-      target: ITEM_TARGET.SELF,
-      desc: `Tiến ngay ${step} bước.`,
-      effect: {
-        type: "move_self_steps",
-        steps
-      }
-    }));
-  }
-
+  addItem(createBaseItem({
+    no: step,
+    id: `adv_move_${step}`,
+    name: `Tiến ${step} Bước`,
+    icon: "👣",
+    group: ITEM_GROUP.ADVANTAGE,
+    rarity: step <= 3 ? ITEM_RARITY.COMMON : ITEM_RARITY.RARE,
+    timing: ITEM_TIMING.INSTANT,
+    target: ITEM_TARGET.SELF,
+    desc: `Tiến ngay ${step} bước.`,
+    effect: {
+      type: "move_self_steps",
+      steps: step
+    }
+  }));
+}
   // Thẻ 7: Lần đổ xúc xắc sau sẽ là số chẵn
   addItem(createBaseItem({
     no: 7,
@@ -543,6 +542,6 @@
     createInventoryItem,
     drawRandomItem
   };
-
+console.log("item.js đã tải xong:", getAllItems().length, "thẻ", window.BeachItemDB);
 })();
 
