@@ -1,0 +1,1249 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BLOCK JUMP 3D</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#07111f;
+  font-family:Arial,sans-serif;
+  touch-action:none;
+}
+
+canvas{
+  display:block;
+}
+
+#ui{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:10;
+  color:white;
+}
+
+#scoreBox{
+  position:absolute;
+  top:18px;
+  left:18px;
+  padding:12px 16px;
+  border-radius:16px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 24px rgba(0,0,0,.28);
+}
+
+#score{
+  font-size:26px;
+  font-weight:900;
+  color:#7dffb2;
+  text-shadow:0 0 16px rgba(125,255,178,.6);
+}
+
+#label{
+  margin-top:2px;
+  font-size:12px;
+  opacity:.75;
+  font-weight:bold;
+  letter-spacing:.5px;
+}
+
+
+
+#hint{
+  position:absolute;
+  top:18px;
+  right:18px;
+  max-width:210px;
+  padding:12px 14px;
+  border-radius:16px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.18);
+  backdrop-filter:blur(10px);
+  font-weight:800;
+  font-size:13px;
+  line-height:1.35;
+  text-align:right;
+  color:#f2fbff;
+}
+
+#toast{
+  position:absolute;
+  top:90px;
+  left:50%;
+  transform:translateX(-50%) scale(.92);
+  padding:10px 16px;
+  border-radius:999px;
+  background:rgba(0,0,0,.52);
+  border:1px solid rgba(255,255,255,.2);
+  color:#fff;
+  font-weight:900;
+  opacity:0;
+  transition:.22s;
+  white-space:nowrap;
+  backdrop-filter:blur(10px);
+}
+
+#toast.show{
+  opacity:1;
+  transform:translateX(-50%) scale(1);
+}
+
+#gameOver{
+  position:fixed;
+  inset:0;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  flex-direction:column;
+  z-index:20;
+  background:rgba(3,7,16,.68);
+  backdrop-filter:blur(8px);
+  color:white;
+  text-align:center;
+}
+
+#gameOver.show{
+  display:flex;
+}
+
+#gameOver h1{
+  font-size:42px;
+  margin-bottom:10px;
+  color:#ff6565;
+  text-shadow:0 0 22px rgba(255,70,70,.7);
+}
+
+#finalScore{
+  font-size:18px;
+  font-weight:800;
+  margin-bottom:22px;
+  color:#dffcff;
+}
+
+#restartBtn{
+  pointer-events:auto;
+  border:0;
+  padding:14px 24px;
+  border-radius:999px;
+  color:#05121c;
+  font-size:16px;
+  font-weight:900;
+  background:linear-gradient(135deg,#7dffb2,#60d8ff);
+  box-shadow:0 12px 30px rgba(0,0,0,.35),0 0 24px rgba(96,216,255,.35);
+}
+
+#restartBtn:active{
+  transform:scale(.96);
+}
+  
+#viewBtn{
+  position:absolute;
+  right:18px;
+  top:92px;
+  pointer-events:auto;
+  border:0;
+  padding:10px 14px;
+  border-radius:999px;
+  color:#dffcff;
+  font-size:12px;
+  font-weight:900;
+  letter-spacing:.4px;
+  background:rgba(0,0,0,.38);
+  border:1px solid rgba(255,255,255,.2);
+  backdrop-filter:blur(10px);
+  box-shadow:0 8px 22px rgba(0,0,0,.28);
+}
+
+#viewBtn.active{
+  color:#05121c;
+  background:linear-gradient(135deg,#7dffb2,#60d8ff);
+  box-shadow:0 0 22px rgba(96,216,255,.42);
+}
+
+#viewBtn:active{
+  transform:scale(.96);
+}
+</style>
+</head>
+
+<body>
+
+<div id="ui">
+  <div id="scoreBox">
+    <div id="score">0</div>
+    <div id="label">ĐIỂM</div>
+  </div>
+
+  <div id="hint">
+    Ấn giữ màn hình để dồn lực.<br>
+    Thả tay để nhảy.
+  </div>
+  <button id="viewBtn">XOAY</button>
+
+  <div id="toast">Perfect!</div>
+</div>
+
+<div id="gameOver">
+  <h1>RƠI RỒI!</h1>
+  <div id="finalScore">Điểm: 0</div>
+  <button id="restartBtn">CHƠI LẠI</button>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+
+<script>
+/* =========================================================
+   BLOCK JUMP 3D - Developed by Tran Gia Bao
+   Cơ chế:
+   - Giữ màn hình: block đang đứng bị nén xuống để báo lực.
+   - Thả tay: thú nhảy theo lực.
+   - Lực yếu/quá mạnh: rơi khỏi block và thua.
+========================================================= */
+
+let scene, camera, renderer, clock;
+let animal;
+let currentBlock, targetBlock;
+
+const blocks = [];
+const particles = [];
+
+let state = "idle";
+let score = 0;
+
+let charge = 0;
+let chargeMax = 1.25;
+
+const minJump = 1.5;
+const maxJump = 7.3;
+
+let jumpData = null;
+let fallData = null;
+let targetAnimalRotY = 0;
+let viewMode = false;
+let cameraDragging = false;
+
+let cameraYaw = Math.atan2(7.4, -6.4);
+let cameraDistance = 9.8;
+let cameraHeight = 6.3;
+
+let lastViewX = 0;
+let lastViewY = 0;
+
+const GRAVITY = 9.2;
+const BOUNCE_LOSS = 0.48;
+const MIN_BOUNCE = 1.15;
+const RABBIT_TOP_MARGIN = 0.34;
+const RABBIT_SIDE_RADIUS = 0.38;
+const RABBIT_BODY_CENTER_Y = 0.42;
+const SIDE_BOUNCE_LOSS = 0.42;
+
+const scoreEl = document.getElementById("score");
+
+const hintEl = document.getElementById("hint");
+const toastEl = document.getElementById("toast");
+const gameOverEl = document.getElementById("gameOver");
+const finalScoreEl = document.getElementById("finalScore");
+const restartBtn = document.getElementById("restartBtn");
+const viewBtn = document.getElementById("viewBtn");
+
+const blockColors = [
+  0x35c6ff,
+  0x7dffb2,
+  0xffd166,
+  0xff6b9a,
+  0xa78bfa,
+  0xff8c42
+];
+
+init();
+resetGame();
+animate();
+
+function init(){
+  scene = new THREE.Scene();
+  scene.background = new THREE.Color(0x07111f);
+  scene.fog = new THREE.Fog(0x07111f, 14, 42);
+
+  camera = new THREE.PerspectiveCamera(
+    52,
+    window.innerWidth / window.innerHeight,
+    0.1,
+    120
+  );
+
+  renderer = new THREE.WebGLRenderer({
+    antialias:true,
+    powerPreference:"high-performance"
+  });
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  document.body.appendChild(renderer.domElement);
+
+  clock = new THREE.Clock();
+
+  createLights();
+  createWorldDecor();
+
+  animal = createAnimal();
+  scene.add(animal);
+
+  window.addEventListener("resize", onResize);
+
+  window.addEventListener("pointerdown", startCharge, {passive:false});
+window.addEventListener("pointermove", dragCameraView, {passive:false});
+window.addEventListener("pointerup", releaseJump, {passive:false});
+window.addEventListener("pointercancel", releaseJump, {passive:false});
+window.addEventListener("contextmenu", e => e.preventDefault());
+
+restartBtn.addEventListener("click", resetGame);
+
+viewBtn.addEventListener("pointerdown", e => e.stopPropagation());
+viewBtn.addEventListener("pointerup", e => e.stopPropagation());
+viewBtn.addEventListener("click", toggleViewMode);
+}
+
+function createLights(){
+  const hemi = new THREE.HemisphereLight(0xcff7ff, 0x102030, 1.8);
+  scene.add(hemi);
+
+  const dir = new THREE.DirectionalLight(0xffffff, 2.2);
+  dir.position.set(-6, 12, 8);
+  dir.castShadow = true;
+  dir.shadow.mapSize.width = 2048;
+  dir.shadow.mapSize.height = 2048;
+  dir.shadow.camera.left = -25;
+  dir.shadow.camera.right = 25;
+  dir.shadow.camera.top = 25;
+  dir.shadow.camera.bottom = -25;
+  scene.add(dir);
+
+  const glow = new THREE.PointLight(0x60d8ff, 2.5, 18);
+  glow.position.set(0, 5, 0);
+  scene.add(glow);
+}
+
+function createWorldDecor(){
+  const groundGeo = new THREE.PlaneGeometry(120, 120);
+  const groundMat = new THREE.MeshStandardMaterial({
+    color:0x0a1a2d,
+    roughness:.95,
+    metalness:0
+  });
+
+  const ground = new THREE.Mesh(groundGeo, groundMat);
+  ground.rotation.x = -Math.PI / 2;
+  ground.position.y = -0.04;
+  ground.receiveShadow = true;
+  scene.add(ground);
+
+  const grid = new THREE.GridHelper(100, 50, 0x1f6b88, 0x143348);
+  grid.position.y = 0.01;
+  grid.material.transparent = true;
+  grid.material.opacity = .28;
+  scene.add(grid);
+}
+
+function createAnimal(){
+  const group = new THREE.Group();
+
+  const white = new THREE.MeshStandardMaterial({
+    color:0xf8fbff,
+    roughness:.5,
+    metalness:.04
+  });
+
+  const pink = new THREE.MeshStandardMaterial({
+    color:0xff9fc9,
+    roughness:.55
+  });
+
+  const black = new THREE.MeshStandardMaterial({
+    color:0x061018,
+    roughness:.35
+  });
+
+  const body = new THREE.Mesh(new THREE.SphereGeometry(.38, 32, 24), white);
+  body.scale.set(1.15, .82, .82);
+  body.position.set(-.08, .48, 0);
+  body.castShadow = true;
+  group.add(body);
+
+  const head = new THREE.Mesh(new THREE.SphereGeometry(.25, 32, 20), white);
+  head.position.set(.34, .75, 0);
+  head.castShadow = true;
+  group.add(head);
+
+  const tail = new THREE.Mesh(new THREE.SphereGeometry(.14, 20, 16), white);
+  tail.position.set(-.54, .55, 0);
+  tail.castShadow = true;
+  group.add(tail);
+
+  const earGeo = new THREE.CapsuleGeometry(.055, .38, 8, 16);
+
+  const ear1 = new THREE.Mesh(earGeo, white);
+  ear1.position.set(.32, 1.05, -.09);
+  ear1.rotation.z = -.25;
+  ear1.castShadow = true;
+  group.add(ear1);
+
+  const ear2 = new THREE.Mesh(earGeo, white);
+  ear2.position.set(.32, 1.05, .09);
+  ear2.rotation.z = -.25;
+  ear2.castShadow = true;
+  group.add(ear2);
+
+  const nose = new THREE.Mesh(new THREE.SphereGeometry(.045, 16, 12), pink);
+  nose.position.set(.58, .75, 0);
+  group.add(nose);
+
+  const eye1 = new THREE.Mesh(new THREE.SphereGeometry(.035, 16, 12), black);
+  eye1.position.set(.51, .83, -.095);
+  group.add(eye1);
+
+  const eye2 = new THREE.Mesh(new THREE.SphereGeometry(.035, 16, 12), black);
+  eye2.position.set(.51, .83, .095);
+  group.add(eye2);
+
+  const footGeo = new THREE.SphereGeometry(.11, 18, 12);
+
+  const foot1 = new THREE.Mesh(footGeo, white);
+  foot1.scale.set(1.4, .45, .8);
+  foot1.position.set(.15, .13, -.18);
+  foot1.castShadow = true;
+  group.add(foot1);
+
+  const foot2 = foot1.clone();
+  foot2.position.z = .18;
+  group.add(foot2);
+
+  const foot3 = foot1.clone();
+  foot3.position.x = -.28;
+  foot3.position.z = -.18;
+  group.add(foot3);
+
+  const foot4 = foot1.clone();
+  foot4.position.x = -.28;
+  foot4.position.z = .18;
+  group.add(foot4);
+
+  group.scale.set(1,1,1);
+  return group;
+}
+
+function createBlock(x, z, w, d){
+  const h = THREE.MathUtils.randFloat(7.2, 9.5);
+  const group = new THREE.Group();
+  group.position.set(x, 0, z);
+
+  const color = blockColors[Math.floor(Math.random() * blockColors.length)];
+
+  const mat = new THREE.MeshStandardMaterial({
+    color,
+    roughness:.42,
+    metalness:.16,
+    emissive:color,
+    emissiveIntensity:.09
+  });
+
+  const geo = new THREE.BoxGeometry(w, h, d);
+  const mesh = new THREE.Mesh(geo, mat);
+  mesh.position.y = h / 2;
+  mesh.castShadow = true;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+
+  const edge = new THREE.LineSegments(
+    new THREE.EdgesGeometry(geo),
+    new THREE.LineBasicMaterial({
+      color:0xffffff,
+      transparent:true,
+      opacity:.22
+    })
+  );
+  edge.position.y = h / 2;
+  group.add(edge);
+
+  const topGlow = new THREE.Mesh(
+    new THREE.BoxGeometry(w * .96, .025, d * .96),
+    new THREE.MeshBasicMaterial({
+      color:0xffffff,
+      transparent:true,
+      opacity:.08
+    })
+  );
+  topGlow.position.y = h + .018;
+  group.add(topGlow);
+
+  scene.add(group);
+
+  const block = {
+    group,
+    mesh,
+    edge,
+    topGlow,
+    x,
+    z,
+    w,
+    d,
+    h,
+    scaleY:1
+  };
+
+  blocks.push(block);
+  return block;
+}
+
+function setBlockCompression(block, scaleY){
+  block.scaleY = THREE.MathUtils.clamp(scaleY, .34, 1);
+
+  block.mesh.scale.y = block.scaleY;
+  block.mesh.position.y = block.h * block.scaleY / 2;
+
+  block.edge.scale.y = block.scaleY;
+  block.edge.position.y = block.h * block.scaleY / 2;
+
+  block.topGlow.position.y = block.h * block.scaleY + .018;
+}
+
+function getBlockTopY(block){
+  return block.h * block.scaleY;
+}
+
+function createNextBlock(from){
+  const forward = THREE.MathUtils.randFloat(2.05, 4.5);
+  const side = THREE.MathUtils.randFloat(-2.85, 2.85);
+
+  const x = from.x + forward;
+  const z = THREE.MathUtils.clamp(from.z + side, -4.2, 4.2);
+
+  const w = THREE.MathUtils.randFloat(0.78, 1.2);
+const d = THREE.MathUtils.randFloat(0.78, 1.2);
+
+  return createBlock(x, z, w, d);
+}
+
+function resetGame(){
+  for(const b of blocks){
+    scene.remove(b.group);
+  }
+  blocks.length = 0;
+
+  for(const p of particles){
+    scene.remove(p.mesh);
+  }
+  particles.length = 0;
+
+  score = 0;
+  charge = 0;
+  state = "idle";
+  jumpData = null;
+  fallData = null;
+
+  scoreEl.textContent = "0";
+  
+
+  gameOverEl.classList.remove("show");
+
+  currentBlock = createBlock(0, 0, 2.35, 2.35);
+  targetBlock = createNextBlock(currentBlock);
+
+  animal.position.set(
+    currentBlock.x,
+    getBlockTopY(currentBlock) + .03,
+    currentBlock.z
+  );
+
+  animal.rotation.set(0,0,0);
+  orientAnimalToTarget();
+
+  hintEl.innerHTML = "Ấn giữ màn hình để dồn lực.<br>Thả tay để nhảy.";
+}
+
+function startCharge(e){
+  e.preventDefault();
+
+  if(viewMode){
+    startCameraViewDrag(e);
+    return;
+  }
+
+  if(state !== "idle") return;
+
+  state = "charging";
+  charge = 0;
+
+  hintEl.innerHTML = "Đang dồn lực...<br>Thả tay để nhảy!";
+}
+
+function releaseJump(e){
+  if(e) e.preventDefault();
+
+  if(cameraDragging){
+    stopCameraViewDrag();
+    return;
+  }
+
+  if(viewMode){
+    return;
+  }
+
+  if(state !== "charging") return;
+
+  const power = THREE.MathUtils.clamp(charge / chargeMax, 0, 1);
+
+  const start = new THREE.Vector3(
+    animal.position.x,
+    animal.position.y,
+    animal.position.z
+  );
+
+  const dir = new THREE.Vector3(
+    targetBlock.x - currentBlock.x,
+    0,
+    targetBlock.z - currentBlock.z
+  ).normalize();
+
+  const jumpDistance = minJump + power * (maxJump - minJump);
+
+  const end = new THREE.Vector3(
+    currentBlock.x + dir.x * jumpDistance,
+    getBlockTopY(targetBlock) + .03,
+    currentBlock.z + dir.z * jumpDistance
+  );
+
+  const landOK =
+    Math.abs(end.x - targetBlock.x) <= targetBlock.w * .47 &&
+    Math.abs(end.z - targetBlock.z) <= targetBlock.d * .47;
+      
+      const targetVector = new THREE.Vector3(
+  targetBlock.x - currentBlock.x,
+  0,
+  targetBlock.z - currentBlock.z
+);
+
+const targetDistance = targetVector.length();
+
+const targetHalfAlongDir =
+  Math.abs(dir.x) * targetBlock.w * .5 +
+  Math.abs(dir.z) * targetBlock.d * .5;
+
+let missType = "side";
+
+if(jumpDistance < targetDistance - targetHalfAlongDir){
+  missType = "short"; // thiếu lực, chạm mép gần thì ngã lùi
+}else if(jumpDistance > targetDistance + targetHalfAlongDir){
+  missType = "long"; // dư lực, chạm mép xa thì chúi tới
+}
+
+  jumpData = {
+  time:0,
+  duration:.46 + jumpDistance * .055,
+  start,
+  end,
+  power,
+  landOK,
+  arc:1.15 + jumpDistance * .22,
+  dir,
+  missType,
+  targetDistance,
+  targetHalfAlongDir,
+  jumpDistance,
+
+  // Vị trí vừa qua mép xa targetBlock thì bắt đầu rơi ngay
+  longFallDistance: targetDistance + targetHalfAlongDir + 0.12
+};
+
+  state = "jumping";
+  hintEl.innerHTML = "Đang bay...";
+}
+
+function animate(){
+  requestAnimationFrame(animate);
+
+  const dt = Math.min(clock.getDelta(), .033);
+
+  updateGame(dt);
+  updateCamera(dt);
+
+  renderer.render(scene, camera);
+}
+
+function updateGame(dt){
+  if(state === "charging"){
+    charge += dt;
+
+    const power = THREE.MathUtils.clamp(charge / chargeMax, 0, 1);
+    const compression = 1 - power * .58;
+
+    setBlockCompression(currentBlock, compression);
+
+    animal.position.y = getBlockTopY(currentBlock) + .03;
+    animal.scale.y = 1 - power * .12;
+    animal.scale.x = 1 + power * .08;
+    animal.scale.z = 1 + power * .08;
+
+    
+  }
+
+ if(state === "jumping" && jumpData){
+  const prevJumpPos = animal.position.clone();
+
+  setBlockCompression(
+    currentBlock,
+    THREE.MathUtils.lerp(currentBlock.scaleY, 1, dt * 8)
+  );
+
+  animal.scale.x = THREE.MathUtils.lerp(animal.scale.x, 1, dt * 8);
+  animal.scale.y = THREE.MathUtils.lerp(animal.scale.y, 1, dt * 8);
+  animal.scale.z = THREE.MathUtils.lerp(animal.scale.z, 1, dt * 8);
+
+  jumpData.time += dt;
+
+  const t = THREE.MathUtils.clamp(jumpData.time / jumpData.duration, 0, 1);
+  const ease = easeInOutQuad(t);
+
+  animal.position.x = THREE.MathUtils.lerp(jumpData.start.x, jumpData.end.x, ease);
+  animal.position.z = THREE.MathUtils.lerp(jumpData.start.z, jumpData.end.z, ease);
+
+  const baseY = THREE.MathUtils.lerp(jumpData.start.y, jumpData.end.y, ease);
+  animal.position.y = baseY + Math.sin(Math.PI * t) * jumpData.arc;
+
+  animal.rotation.z = -Math.sin(Math.PI * t) * .42;
+
+  // Đo khoảng cách thỏ đã bay theo hướng nhảy
+  const traveled = new THREE.Vector3(
+    animal.position.x - currentBlock.x,
+    0,
+    animal.position.z - currentBlock.z
+  ).dot(jumpData.dir);
+
+  // QUAN TRỌNG:
+  // Nếu nhảy quá đà, vừa qua mép xa targetBlock là rơi ngay.
+  // Không chờ animation jumping chạy hết nữa.
+  if(
+    jumpData.missType === "long" &&
+    traveled >= jumpData.longFallDistance &&
+    t < 1
+  ){
+    const jumpVy = THREE.MathUtils.clamp(
+      (animal.position.y - prevJumpPos.y) / dt,
+      -4.2,
+      3.6
+    );
+
+    startRealFall(jumpVy);
+    return;
+  }
+
+  if(t >= 1){
+    if(jumpData.landOK){
+      landSuccess();
+    }else{
+      startRealFall(-1.6);
+    }
+  }
+}
+
+  if(state === "falling" && fallData){
+  const prevPos = animal.position.clone();
+
+  fallData.hitCooldown = Math.max(0, fallData.hitCooldown - dt);
+
+  // Trọng lực
+  fallData.vel.y -= GRAVITY * dt;
+
+  // Di chuyển theo vận tốc thật
+  animal.position.x += fallData.vel.x * dt;
+  animal.position.y += fallData.vel.y * dt;
+  animal.position.z += fallData.vel.z * dt;
+
+  // Xoay khi rơi
+  animal.rotation.x += fallData.spinX * dt;
+animal.rotation.z += fallData.spinZ * dt;
+
+  setBlockCompression(
+    currentBlock,
+    THREE.MathUtils.lerp(currentBlock.scaleY, 1, dt * 8)
+  );
+
+  // Collision mặt trên block bằng đường rơi prevPos -> animal.position
+  const topHit = getBlockTopCollision(prevPos, animal.position);
+
+  if(topHit && fallData.hitCooldown <= 0 && fallData.vel.y < 0){
+  animal.position.x = topHit.x;
+  animal.position.y = topHit.y;
+  animal.position.z = topHit.z;
+
+  // Không cho targetBlock bị nén khi thỏ cấn/va vào mép
+  if(topHit.block !== targetBlock){
+    setBlockCompression(topHit.block, .74);
+  }else{
+    setBlockCompression(targetBlock, 1);
+  }
+
+  applyRimImpact(topHit);
+
+  fallData.bounceCount++;
+  fallData.hitCooldown = .08;
+
+  burstParticles(
+    new THREE.Vector3(
+      animal.position.x,
+      animal.position.y + .08,
+      animal.position.z
+    )
+  );
+}
+    else{
+    // Collision thành block, tránh thỏ xuyên ngang qua thân block cao
+    handleBlockSideCollision();
+  }
+
+  if(fallData.bounceCount >= 3){
+    fallData.vel.x *= .985;
+    fallData.vel.z *= .985;
+  }
+
+  // Nếu rơi quá sâu thì thua
+  const deathY = getBlockTopY(currentBlock) - 9;
+
+if(animal.position.y < deathY){
+  showGameOver();
+}
+}
+
+  if(state === "idle"){
+    setBlockCompression(
+      currentBlock,
+      THREE.MathUtils.lerp(currentBlock.scaleY, 1, dt * 8)
+    );
+
+    animal.position.y = getBlockTopY(currentBlock) + .03;
+    animal.rotation.z = THREE.MathUtils.lerp(animal.rotation.z, 0, dt * 7);
+  }
+animal.rotation.y = THREE.MathUtils.lerp(
+  animal.rotation.y,
+  targetAnimalRotY,
+  dt * 7
+);
+  updateParticles(dt);
+}
+
+function landSuccess(){
+  const centerError = Math.hypot(
+    jumpData.end.x - targetBlock.x,
+    jumpData.end.z - targetBlock.z
+  );
+
+  score++;
+  scoreEl.textContent = score;
+
+  if(centerError < .32){
+    showToast("PERFECT +1 ✨");
+    score++;
+    scoreEl.textContent = score;
+  }else{
+    showToast("Khá lắm!");
+  }
+
+  burstParticles(
+    new THREE.Vector3(targetBlock.x, getBlockTopY(targetBlock) + .08, targetBlock.z)
+  );
+
+  currentBlock = targetBlock;
+
+  setBlockCompression(currentBlock, .78);
+
+  animal.position.set(
+    currentBlock.x,
+    getBlockTopY(currentBlock) + .03,
+    currentBlock.z
+  );
+
+  animal.rotation.z = 0;
+  animal.scale.set(1,1,1);
+
+  targetBlock = createNextBlock(currentBlock);
+
+  while(blocks.length > 7){
+    const old = blocks.shift();
+    if(old !== currentBlock && old !== targetBlock){
+      scene.remove(old.group);
+    }
+  }
+
+  charge = 0;
+  
+  state = "idle";
+  jumpData = null;
+
+  orientAnimalToTarget();
+
+  hintEl.innerHTML = "Ấn giữ để dồn lực.<br>Canh vừa đủ rồi thả!";
+}
+
+function orientAnimalToTarget(){
+  if(!currentBlock || !targetBlock) return;
+
+  const dx = targetBlock.x - currentBlock.x;
+  const dz = targetBlock.z - currentBlock.z;
+
+  targetAnimalRotY = Math.atan2(-dz, dx);
+}
+
+function showGameOver(){
+  state = "dead";
+  finalScoreEl.textContent = "Điểm: " + score;
+  gameOverEl.classList.add("show");
+  
+}
+
+function updateCamera(dt){
+  if(!animal) return;
+
+  const lookAt = new THREE.Vector3(
+    animal.position.x,
+    animal.position.y + .55,
+    animal.position.z
+  );
+
+  const desired = new THREE.Vector3(
+    lookAt.x + Math.cos(cameraYaw) * cameraDistance,
+    animal.position.y + cameraHeight,
+    lookAt.z + Math.sin(cameraYaw) * cameraDistance
+  );
+
+  camera.position.lerp(desired, 1 - Math.pow(.001, dt));
+  camera.lookAt(lookAt);
+}
+
+function burstParticles(pos){
+  for(let i = 0; i < 18; i++){
+    const geo = new THREE.SphereGeometry(THREE.MathUtils.randFloat(.035, .075), 10, 8);
+
+    const mat = new THREE.MeshBasicMaterial({
+      color:Math.random() > .5 ? 0x7dffb2 : 0x60d8ff,
+      transparent:true,
+      opacity:1
+    });
+
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.position.copy(pos);
+    scene.add(mesh);
+
+    particles.push({
+      mesh,
+      life:1,
+      vel:new THREE.Vector3(
+        THREE.MathUtils.randFloat(-1.4, 1.4),
+        THREE.MathUtils.randFloat(1.4, 3.4),
+        THREE.MathUtils.randFloat(-1.4, 1.4)
+      )
+    });
+  }
+}
+
+function updateParticles(dt){
+  for(let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+
+    p.life -= dt * 1.7;
+    p.vel.y -= dt * 4.2;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.mesh.material.opacity = Math.max(p.life, 0);
+
+    if(p.life <= 0){
+      scene.remove(p.mesh);
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function showToast(text){
+  toastEl.textContent = text;
+  toastEl.classList.add("show");
+
+  clearTimeout(showToast.timer);
+  showToast.timer = setTimeout(() => {
+    toastEl.classList.remove("show");
+  }, 720);
+}
+
+function easeInOutQuad(t){
+  return t < .5 ? 2 * t * t : 1 - Math.pow(-2 * t + 2, 2) / 2;
+}
+
+function onResize(){
+  camera.aspect = window.innerWidth / window.innerHeight;
+  camera.updateProjectionMatrix();
+
+  renderer.setSize(window.innerWidth, window.innerHeight);
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+}
+ 
+
+
+function getBlockTopCollision(prevPos, nextPos){
+  let bestHit = null;
+  let bestTopY = -Infinity;
+
+  for(const block of blocks){
+
+    // QUAN TRỌNG:
+    // Khi nhảy quá đà, không cho targetBlock bắt top-collision nữa.
+    // Nếu không, thỏ sẽ bị cấn như đụng vật vô hình ở mép xa.
+    if(block === targetBlock && fallData?.missType === "long"){
+      continue;
+    }
+
+    const topY = getBlockTopY(block) + .03;
+
+    const crossedTop =
+      prevPos.y >= topY &&
+      nextPos.y <= topY;
+
+    if(!crossedTop) continue;
+
+    const totalDrop = prevPos.y - nextPos.y;
+    if(totalDrop <= 0.0001) continue;
+
+    const t = (prevPos.y - topY) / totalDrop;
+
+    const hitX = THREE.MathUtils.lerp(prevPos.x, nextPos.x, t);
+    const hitZ = THREE.MathUtils.lerp(prevPos.z, nextPos.z, t);
+
+    const insideX =
+      Math.abs(hitX - block.x) <= block.w * .5 + RABBIT_TOP_MARGIN;
+
+    const insideZ =
+      Math.abs(hitZ - block.z) <= block.d * .5 + RABBIT_TOP_MARGIN;
+
+    if(!insideX || !insideZ) continue;
+
+    if(topY > bestTopY){
+      bestTopY = topY;
+
+      bestHit = {
+        block,
+        x:hitX,
+        y:topY,
+        z:hitZ
+      };
+    }
+  }
+
+  return bestHit;
+}
+function handleBlockSideCollision(){
+  if(!fallData) return;
+
+  for(const block of blocks){
+
+    // Khi nhảy quá đà, không cho targetBlock bắt cạnh quá sớm.
+    // Nếu không, thỏ sẽ bị cấn "vật vô hình" ở mép xa.
+    if(block === targetBlock && fallData.missType === "long"){
+      continue;
+    }
+
+    const topY = getBlockTopY(block);
+    const rabbitCenterY = animal.position.y + RABBIT_BODY_CENTER_Y;
+
+    // Chỉ xét va cạnh khi thỏ đã thật sự thấp hơn mặt trên block.
+    // Không xét khi còn đang bay ngang qua sát mặt trên.
+    if(animal.position.y > topY - 0.22){
+      continue;
+    }
+
+    if(rabbitCenterY < .15) continue;
+    if(rabbitCenterY > topY + RABBIT_SIDE_RADIUS) continue;
+
+    const dx = animal.position.x - block.x;
+    const dz = animal.position.z - block.z;
+
+    // Collider cạnh nhỏ hơn để tránh cấn trong không trung
+    const sideRadius = 0.18;
+
+    const halfW = block.w * .5 + sideRadius;
+    const halfD = block.d * .5 + sideRadius;
+
+    const insideX = Math.abs(dx) < halfW;
+    const insideZ = Math.abs(dz) < halfD;
+
+    if(!insideX || !insideZ) continue;
+
+    const overlapX = halfW - Math.abs(dx);
+    const overlapZ = halfD - Math.abs(dz);
+
+    if(overlapX < overlapZ){
+      const dirX = dx >= 0 ? 1 : -1;
+
+      animal.position.x = block.x + dirX * (halfW + .015);
+      fallData.vel.x = Math.abs(fallData.vel.x) * dirX * SIDE_BOUNCE_LOSS;
+      fallData.vel.y = Math.max(fallData.vel.y, .45);
+    }else{
+      const dirZ = dz >= 0 ? 1 : -1;
+
+      animal.position.z = block.z + dirZ * (halfD + .015);
+      fallData.vel.z = Math.abs(fallData.vel.z) * dirZ * SIDE_BOUNCE_LOSS;
+      fallData.vel.y = Math.max(fallData.vel.y, .45);
+    }
+
+    fallData.vel.x *= .82;
+    fallData.vel.z *= .82;
+    fallData.hitCooldown = .06;
+
+    burstParticles(
+      new THREE.Vector3(
+        animal.position.x,
+        Math.max(animal.position.y + .25, .5),
+        animal.position.z
+      )
+    );
+
+    break;
+  }
+}
+function startRealFall(initialVy = -1.6){
+  const dir = jumpData?.dir || new THREE.Vector3(1,0,0);
+  const power = jumpData?.power ?? .5;
+  const missType = jumpData?.missType || "side";
+
+  let horizontalSpeed = THREE.MathUtils.lerp(1.7, 4.8, power);
+
+  let vx = dir.x * horizontalSpeed;
+  let vz = dir.z * horizontalSpeed;
+
+  if(missType === "short"){
+    vx *= .55;
+    vz *= .55;
+  }
+
+  fallData = {
+  vel:new THREE.Vector3(vx, initialVy, vz),
+  bounceCount:0,
+  hitCooldown:0,
+  missType,
+
+  spinZ: missType === "short" ? 1.8 : -1.8,
+  spinX: .8
+};
+
+  state = "falling";
+  hintEl.innerHTML = "Truợt rồi...";
+}
+  
+function applyRimImpact(hit){
+  const block = hit.block;
+  const dir = jumpData?.dir || new THREE.Vector3(1,0,0);
+
+  const fromCenter = new THREE.Vector3(
+    hit.x - block.x,
+    0,
+    hit.z - block.z
+  );
+
+  // Vị trí va chạm tính theo hướng nhảy:
+  // edgeDot < 0: mép gần
+  // edgeDot > 0: mép xa
+  const edgeDot = fromCenter.dot(dir);
+
+  const halfAlongDir =
+    Math.abs(dir.x) * block.w * .5 +
+    Math.abs(dir.z) * block.d * .5;
+
+  const rimLimit = halfAlongDir * .38;
+
+  const impactSpeedY = Math.abs(fallData.vel.y);
+
+  if(edgeDot < -rimLimit){
+    // Chạm mép gần do thiếu lực -> ngã / bật lùi về phía sau
+    fallData.vel.x = -dir.x * 1.65;
+    fallData.vel.z = -dir.z * 1.65;
+    fallData.vel.y = Math.max(impactSpeedY * .38, 1.05);
+
+    fallData.spinZ = 4.2;
+    fallData.spinX = 1.2;
+
+  }
+  else if(edgeDot > rimLimit){
+    // Chạm mép xa do dư lực -> chúi về phía trước
+    fallData.vel.x = dir.x * 2.05;
+    fallData.vel.z = dir.z * 2.05;
+    fallData.vel.y = Math.max(impactSpeedY * .28, .75);
+
+    fallData.spinZ = -4.6;
+    fallData.spinX = 1.4;
+
+  }
+  else{
+    // Chạm gần giữa nhưng vẫn không đủ điều kiện đáp chuẩn
+    fallData.vel.y = Math.max(impactSpeedY * BOUNCE_LOSS, MIN_BOUNCE);
+    fallData.vel.x *= .52;
+    fallData.vel.z *= .52;
+
+    fallData.spinZ *= .65;
+    fallData.spinX = 1.1;
+  }
+}
+function toggleViewMode(){
+  viewMode = !viewMode;
+  cameraDragging = false;
+
+  viewBtn.classList.toggle("active", viewMode);
+
+  if(viewMode){
+    hintEl.innerHTML = "Chế độ xem bật.<br>Kéo màn hình để xoay góc nhìn.";
+  }else{
+    hintEl.innerHTML = "Ấn giữ để dồn lực.<br>Canh vừa đủ rồi thả!";
+  }
+}
+
+function startCameraViewDrag(e){
+  cameraDragging = true;
+  lastViewX = e.clientX;
+  lastViewY = e.clientY;
+}
+
+function dragCameraView(e){
+  if(!cameraDragging || !viewMode) return;
+
+  e.preventDefault();
+
+  const dx = e.clientX - lastViewX;
+  const dy = e.clientY - lastViewY;
+
+  lastViewX = e.clientX;
+  lastViewY = e.clientY;
+
+  cameraYaw -= dx * 0.008;
+
+  cameraHeight += dy * 0.018;
+  cameraHeight = THREE.MathUtils.clamp(cameraHeight, 3.8, 11.5);
+}
+
+function stopCameraViewDrag(){
+  cameraDragging = false;
+}
+</script>
+
+</body>
+</html>
