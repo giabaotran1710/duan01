@@ -1,0 +1,6998 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>BIDA 6 LỖ - PLAYER VS AI</title>
+
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;800;900&display=swap');
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#07130b;
+  font-family:Arial, sans-serif;
+  touch-action:none;
+}
+
+canvas{
+  display:block;
+  width:100vw;
+  height:100vh;
+  background:radial-gradient(circle at center,#1c3f25,#061009 78%);
+}
+
+/* ================= UI ================= */
+
+#ui{
+  position:fixed;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+  color:white;
+}
+
+#topHud{
+  position:absolute;
+  top:12px;
+  left:12px;
+  right:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.panel{
+  background:rgba(0,0,0,.42);
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:0 0 18px rgba(0,0,0,.35);
+  backdrop-filter:blur(8px);
+  border-radius:14px;
+  padding:10px 13px;
+  text-shadow:0 2px 3px rgba(0,0,0,.8);
+}
+
+#titleBox{
+  font-weight:900;
+  letter-spacing:.5px;
+}
+
+#titleBox .main{
+  font-size:18px;
+  color:#ffe27a;
+  text-shadow:
+    -1px -1px 0 #2b1700,
+     1px -1px 0 #2b1700,
+    -1px  1px 0 #2b1700,
+     1px  1px 0 #2b1700,
+     0 0 12px rgba(255,220,90,.8);
+}
+
+#titleBox .sub{
+  margin-top:4px;
+  font-size:12px;
+  opacity:.88;
+}
+
+#turnBox{
+  min-width:210px;
+  text-align:right;
+  font-weight:bold;
+  font-size:13px;
+  line-height:1.45;
+}
+
+#turnLabel{
+  font-size:18px;
+  color:#7dff99;
+  -webkit-text-stroke:1px rgba(0,0,0,.65);
+}
+
+#message{
+  position:absolute;
+  top:74px;
+  left:50%;
+  transform:translateX(-50%);
+  min-width:300px;
+  max-width:70vw;
+  text-align:center;
+  font-weight:900;
+  font-size:15px;
+  color:#fff;
+  background:rgba(5,10,5,.5);
+  border:1px solid rgba(255,255,255,.2);
+  border-radius:999px;
+  padding:9px 16px;
+  text-shadow:0 2px 3px #000;
+}
+
+/* ================= POWER ================= */
+
+#powerWrap{
+  position:absolute;
+  right:18px;
+  top:50%;
+  transform:translateY(-50%);
+  width:34px;
+  height:220px;
+  border-radius:999px;
+  background:rgba(0,0,0,.45);
+  border:2px solid rgba(255,255,255,.25);
+  overflow:hidden;
+  box-shadow:0 0 15px rgba(0,0,0,.5);
+}
+
+#powerFill{
+  position:absolute;
+  left:0;
+  top:0;
+  width:100%;
+  height:0%;
+  background:linear-gradient(to bottom,#46ff63,#ffe66e,#ff4848);
+  box-shadow:0 0 18px rgba(255,230,80,.8);
+}
+  
+  #powerPercent{
+  position:absolute;
+  inset:0;
+  z-index:5;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  pointer-events:none;
+  white-space:nowrap;
+
+  font-size:11px;
+  font-weight:900;
+  color:#fff;
+
+  transform:rotate(-90deg);
+
+  opacity:0;
+  transition:opacity .12s ease;
+
+  text-shadow:
+    -1px -1px 0 #000,
+     1px -1px 0 #000,
+    -1px  1px 0 #000,
+     1px  1px 0 #000,
+     0 0 7px rgba(255,255,255,.75);
+}
+
+#powerPercent.show,
+#powerWrap.charging #powerPercent{
+  opacity:1;
+}
+
+#powerText{
+  position:absolute;
+  right:58px;
+  top:50%;
+  transform:translateY(-50%) rotate(-90deg);
+  transform-origin:center;
+  white-space:nowrap;
+  font-size:12px;
+  font-weight:900;
+  opacity:.92;
+  text-shadow:0 2px 3px #000;
+}
+
+/* ================= SPIN PAD ================= */
+
+#spinPanel{
+  position:absolute;
+  left:8px;
+  bottom:8px;
+  width:146px;
+  padding:6px;
+  transform:scale(.72);
+  transform-origin:left bottom;
+  pointer-events:auto;
+  z-index:25;
+
+  opacity:.72;
+  background:rgba(0,0,0,.24);
+  border-color:rgba(255,255,255,.11);
+  box-shadow:0 3px 10px rgba(0,0,0,.28);
+}
+
+#spinTitle{
+  font-size:13px;
+  font-weight:900;
+  text-align:center;
+  margin-bottom:6px;
+  color:#ffef94;
+  text-shadow:0 2px 3px #000;
+}
+
+#spinPad{
+  position:relative;
+  width:132px;
+  height:132px;
+  margin:0 auto;
+  border-radius:50%;
+  background:
+    radial-gradient(circle at center,rgba(255,255,255,.2) 0 10%,transparent 11%),
+    linear-gradient(90deg,transparent 49%,rgba(255,255,255,.28) 50%,transparent 51%),
+    linear-gradient(0deg,transparent 49%,rgba(255,255,255,.28) 50%,transparent 51%),
+    radial-gradient(circle at center,#e9fff0,#d5ffe2 62%,#75d987 100%);
+  border:4px solid rgba(0,0,0,.55);
+  box-shadow:
+    inset 0 0 18px rgba(0,0,0,.25),
+    0 6px 15px rgba(0,0,0,.45);
+}
+
+#spinKnob{
+  position:absolute;
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 30% 25%,#fff,#ffdf5a 55%,#d88100);
+  border:2px solid rgba(0,0,0,.6);
+  box-shadow:0 3px 8px rgba(0,0,0,.55);
+}
+
+.spinLabel{
+  position:absolute;
+  font-size:10px;
+  font-weight:900;
+  color:#09220e;
+}
+
+#spinValue{
+  margin-top:7px;
+  text-align:center;
+  font-size:11px;
+  font-weight:bold;
+  opacity:.9;
+  text-shadow:0 2px 3px #000;
+}
+
+/* ================= BUTTONS ================= */
+
+#resetBtn{
+  position:absolute;
+  bottom:20px;
+  right:20px;
+  pointer-events:auto;
+  border:none;
+  border-radius:999px;
+  padding:11px 16px;
+  color:white;
+  font-weight:900;
+  background:linear-gradient(135deg,#b42323,#ff7b4a);
+  box-shadow:0 6px 15px rgba(0,0,0,.45);
+}
+
+#guide{
+  position:absolute;
+  left:50%;
+  bottom:18px;
+  transform:translateX(-50%);
+  pointer-events:none;
+  text-align:center;
+  font-size:12px;
+  font-weight:800;
+  color:#fff;
+  background:rgba(0,0,0,.36);
+  border:1px solid rgba(255,255,255,.18);
+  border-radius:999px;
+  padding:8px 14px;
+  white-space:nowrap;
+  text-shadow:0 2px 3px #000;
+}
+
+/* ================= PORTRAIT BLOCK ================= */
+
+#rotateOverlay{
+  position:fixed;
+  inset:0;
+  z-index:99;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:24px;
+  background:radial-gradient(circle,#173522,#050806 80%);
+  color:white;
+}
+
+#rotateOverlay .box{
+  max-width:360px;
+  padding:24px;
+  border-radius:24px;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 0 30px rgba(0,0,0,.45);
+}
+
+#rotateOverlay h1{
+  font-size:28px;
+  margin-bottom:10px;
+  color:#ffe27a;
+  -webkit-text-stroke:1px rgba(0,0,0,.55);
+}
+
+#rotateOverlay p{
+  line-height:1.5;
+  opacity:.9;
+}
+
+@media (orientation:portrait){
+  #rotateOverlay{display:flex}
+}
+  
+/* =================================================
+   CLEAN GAME UI - GIẢM CHỮ, TẬP TRUNG VÀO BÀN BIDA
+   ================================================= */
+
+/* Ẩn toàn bộ HUD chữ không cần thiết */
+#topHud,
+#titleBox,
+#turnBox,
+#guide,
+#powerText{
+  display:none;
+}
+
+/* Thông báo nhỏ, ít chiếm bàn */
+#message{
+  top:12px;
+  min-width:unset;
+  max-width:72vw;
+  padding:7px 13px;
+  font-size:12px;
+  font-weight:900;
+  opacity:.9;
+  background:rgba(0,0,0,.34);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 4px 14px rgba(0,0,0,.28);
+  transition:.25s ease;
+}
+
+#message.hide{
+  opacity:0;
+  transform:translateX(-50%) translateY(-8px);
+}
+
+/* Thu nhỏ bảng áp phê */
+
+
+#spinTitle,
+#spinValue{
+  display:none;
+}
+
+/* Thanh lực nhỏ hơn, ít nổi hơn */
+#powerWrap{
+  right:10px;
+  width:22px;
+  height:150px;
+  opacity:.72;
+  border-width:1px;
+  background:rgba(0,0,0,.28);
+}
+
+/* Nút chơi lại mặc định ẩn */
+#resetBtn{
+  display:none;
+  bottom:14px;
+  right:14px;
+  padding:10px 15px;
+  font-size:12px;
+  z-index:30;
+}
+
+/* Chỉ hiện khi game kết thúc */
+#resetBtn.show{
+  display:block;
+}
+  
+  #powerWrap{
+  pointer-events:auto;
+  touch-action:none;
+}
+
+#powerWrap.charging{
+  opacity:1;
+  box-shadow:
+    0 0 16px rgba(255,230,80,.75),
+    0 0 28px rgba(255,120,60,.35);
+}
+  /* ================= AIM RULER ================= */
+/* Tách thước ngắm và thanh lực ra xa nhau */
+#aimRuler{
+  right: 53px !important;
+  left: auto !important;
+  bottom: 34px !important;
+  z-index: 20;
+}
+
+#powerBar{
+  right: 28px !important;
+  left: auto !important;
+  bottom: 34px !important;
+  z-index: 21;
+}
+#aimRuler{
+  position:absolute;
+  right:42px;
+  top:50%;
+  transform:translateY(-50%);
+  width:30px;
+  height:150px;
+  border-radius:999px;
+  pointer-events:auto;
+  touch-action:none;
+
+  background:
+    linear-gradient(to bottom,
+      rgba(255,255,255,.75) 0 2px,
+      transparent 2px 10px
+    ),
+    linear-gradient(to right,
+      transparent 0 11px,
+      rgba(255,255,255,.75) 11px 14px,
+      transparent 14px 100%
+    ),
+    rgba(0,0,0,.28);
+
+  background-size:
+    100% 15px,
+    100% 100%,
+    100% 100%;
+
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 4px 12px rgba(0,0,0,.32);
+  opacity:.68;
+}
+
+#aimRuler::before{
+  content:"";
+  position:absolute;
+  left:5px;
+  right:5px;
+  top:50%;
+  height:2px;
+  transform:translateY(-50%);
+  background:rgba(255,230,90,.95);
+  box-shadow:0 0 8px rgba(255,230,90,.8);
+}
+
+#aimRulerKnob{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:20px;
+  height:20px;
+  border-radius:50%;
+  transform:translate(-50%,-50%);
+  background:radial-gradient(circle at 30% 25%,#fff,#ffe66e 55%,#d88900);
+  border:2px solid rgba(0,0,0,.55);
+  box-shadow:0 3px 8px rgba(0,0,0,.5);
+}
+
+#aimRuler.active{
+  opacity:1;
+  box-shadow:
+    0 0 14px rgba(255,230,90,.65),
+    0 4px 12px rgba(0,0,0,.32);
+}
+/* ================= DEVELOPER BUTTON ================= */
+
+#devBtn{
+  position:absolute;
+  left:8px;
+  top:8px;
+  width:28px;
+  height:28px;
+  border:none;
+  border-radius:7px;
+  pointer-events:auto;
+  z-index:60;
+
+  color:#fff;
+  font-size:12px;
+  font-weight:900;
+  background:rgba(0,0,0,.42);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 3px 10px rgba(0,0,0,.32);
+  opacity:.55;
+}
+
+#devBtn.active{
+  opacity:1;
+  color:#101010;
+  background:linear-gradient(135deg,#ffe66e,#53ff7a);
+  box-shadow:
+    0 0 12px rgba(255,230,90,.75),
+    0 3px 10px rgba(0,0,0,.32);
+}
+  /* ================= DEVELOPER POWER CASE BAR ================= */
+
+#devCaseBar{
+  position:absolute;
+  left:42px;
+  top:8px;
+  height:28px;
+  display:none;
+  align-items:center;
+  gap:5px;
+  pointer-events:auto;
+  z-index:61;
+
+  padding:3px 5px;
+  border-radius:8px;
+  background:rgba(0,0,0,.42);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 3px 10px rgba(0,0,0,.32);
+}
+
+#devCaseBar button{
+  width:24px;
+  height:22px;
+  border:none;
+  border-radius:6px;
+  font-size:16px;
+  font-weight:900;
+  color:#111;
+  background:linear-gradient(135deg,#ffe66e,#53ff7a);
+}
+
+#devPowerCaseLabel{
+  min-width:42px;
+  text-align:center;
+  font-size:12px;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 2px 3px #000;
+}
+
+#resetBtn.devShoot{
+  display:block;
+  background:linear-gradient(135deg,#1c9f46,#6eff8d);
+  color:#08140b;
+  box-shadow:
+    0 0 14px rgba(90,255,130,.65),
+    0 6px 15px rgba(0,0,0,.45);
+}
+  /* ================= TARGET BOARD MINI ================= */
+
+#targetBoard{
+  position:absolute;
+  left:20px;
+  top:44px;
+
+  display:flex;
+  flex-direction:column;
+  gap:6px;
+
+  pointer-events:none;
+  z-index:18;
+
+  transform:scale(.82);
+  transform-origin:left top;
+}
+
+.targetCard{
+  width:86px;
+  padding:5px;
+  border-radius:10px;
+
+  background:rgba(0,0,0,.30);
+  border:1px solid rgba(255,255,255,.13);
+  box-shadow:0 3px 10px rgba(0,0,0,.30);
+}
+
+.avatarBox{
+  width:auto;
+  height:20px;
+  margin:0 auto 4px;
+
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:10px;
+  font-weight:900;
+  color:#fff;
+
+  background:linear-gradient(135deg,#315dff,#35e1ff);
+  border:1px solid rgba(255,255,255,.45);
+  text-shadow:0 1px 2px #000;
+}
+
+.targetCard.ai .avatarBox{
+  background:linear-gradient(135deg,#7336ff,#ff5fd2);
+}
+
+.targetBalls{
+  display:grid;
+  grid-template-columns:repeat(4, 16px);
+  grid-auto-rows:16px;
+  justify-content:center;
+  gap:3px;
+}
+
+.targetSlot{
+  width:16px;
+  height:16px;
+  border-radius:50%;
+  position:relative;
+  margin:auto;
+
+  background:rgba(255,255,255,.07);
+  border:1px dashed rgba(255,255,255,.22);
+}
+
+.targetSlot.hasBall{
+  border:1px solid rgba(0,0,0,.55);
+  box-shadow:
+    inset -2px -2px 4px rgba(0,0,0,.36),
+    inset 2px 2px 4px rgba(255,255,255,.30),
+    0 1px 3px rgba(0,0,0,.35);
+}
+
+.targetSlot .ballNum{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+
+  width:9px;
+  height:9px;
+  border-radius:50%;
+
+  background:#fff;
+  color:#111;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:6px;
+  font-weight:900;
+  line-height:1;
+}
+
+.targetSlot.solid{
+  background:currentColor;
+}
+
+.targetSlot.black{
+  background:#111;
+}
+
+.targetSlot.stripe{
+  background:#eee8d8;
+  overflow:hidden;
+}
+
+.targetSlot.stripe::before{
+  content:"";
+  position:absolute;
+  left:0;
+  right:0;
+  top:5px;
+  height:6px;
+  background:currentColor;
+}
+
+.targetSlot.potted{
+  opacity:.38;
+  filter:brightness(.45) saturate(.55);
+  box-shadow:
+    inset 0 0 8px rgba(0,0,0,.75),
+    0 1px 3px rgba(0,0,0,.35);
+}
+
+.targetSlot.potted::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:50%;
+  background:rgba(0,0,0,.42);
+  pointer-events:none;
+}
+
+.targetSlot.potted .ballNum{
+  opacity:.55;
+}
+  /* ================= PLAYER SHOT TIMER ================= */
+
+.targetCard.player{
+  position:relative;
+  overflow:hidden;
+
+  --shotTimer:100;
+  --shotTimerColor:#51ff7a;
+  --timerRest:rgba(255,255,255,.14);
+
+  border:1px solid rgba(255,255,255,.16);
+}
+
+/* Thanh thời gian nằm đúng vị trí bo viền */
+.targetCard.player::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:inherit;
+  padding:2px;
+  pointer-events:none;
+
+  background:conic-gradient(
+    from -90deg,
+    var(--shotTimerColor) 0 calc(var(--shotTimer) * 1%),
+    var(--timerRest) 0 100%
+  );
+
+  /* Chỉ hiện phần viền, cắt rỗng phần ruột */
+  -webkit-mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  -webkit-mask-composite:xor;
+
+  mask:
+    linear-gradient(#000 0 0) content-box,
+    linear-gradient(#000 0 0);
+  mask-composite:exclude;
+
+  opacity:0;
+}
+
+.targetCard.player.timerActive::after{
+  opacity:1;
+}
+
+.targetCard.player.timerLow{
+  --shotTimerColor:#ff3d3d;
+}
+
+
+
+.targetCard.player .avatarBox,
+.targetCard.player .targetBalls{
+  position:relative;
+  z-index:2;
+}
+  /* ================= COMBO FX ================= */
+
+/* ================= HIT / COMBO FX ================= */
+
+#comboFx{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%);
+  z-index:45;
+  pointer-events:none;
+
+  display:flex;
+  align-items:center;
+  gap:8px;
+
+  opacity:0;
+  filter:blur(2px);
+  white-space:nowrap;
+
+}
+
+#comboFx.show{
+  animation:comboBurst .68s ease-out forwards;
+}
+
+#comboFx::before,
+#comboFx::after{
+  content:"";
+  position:absolute;
+  top:30%;
+  width:46px;
+  height:3px;
+  border-radius:999px;
+  background:linear-gradient(90deg,transparent,rgba(255,150,40,.92),transparent);
+  box-shadow:0 0 9px rgba(255,130,30,.58);
+  transform:translateY(-50%);
+  opacity:.82;
+}
+
+#comboFx::before{
+  right:100%;
+  margin-right:10px;
+}
+
+#comboFx::after{
+  left:100%;
+  margin-left:10px;
+}
+
+#comboFx .hitWord{
+  font-family:'Orbitron', Arial, sans-serif;
+  font-size:28px;
+  font-weight:900;
+  letter-spacing:1.5px;
+  color:#fff;
+  font-style:italic;
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.78),
+     2px -2px 0 rgba(0,0,0,.78),
+    -2px  2px 0 rgba(0,0,0,.78),
+     2px  2px 0 rgba(0,0,0,.78),
+     0 0 10px rgba(255,255,255,.32);
+  
+}
+
+#comboFx .comboText{
+  font-family:'Orbitron', Arial, sans-serif;
+  font-size:22px;
+  font-weight:900;
+  letter-spacing:1px;
+  color:#fff;
+  font-style:italic;
+  display:none;
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.78),
+     2px -2px 0 rgba(0,0,0,.78),
+    -2px  2px 0 rgba(0,0,0,.78),
+     2px  2px 0 rgba(0,0,0,.78);
+}
+
+#comboFx.combo .comboText{
+  display:inline-block;
+}
+
+#comboFx .comboNum{
+  font-family:'Orbitron', Arial, sans-serif;
+  font-size:34px;
+  line-height:1;
+  font-weight:900;
+  font-style:italic;
+  color:#ff941a;
+  display:none;
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.82),
+     2px -2px 0 rgba(0,0,0,.82),
+    -2px  2px 0 rgba(0,0,0,.82),
+     2px  2px 0 rgba(0,0,0,.82),
+     0 0 12px rgba(255,140,30,.82),
+     0 0 22px rgba(255,100,20,.38);
+}
+
+#comboFx.combo .comboNum{
+  display:inline-block;
+}
+
+@keyframes comboBurst{
+  0%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.72) skewX(-14deg) translateX(-34px);
+    filter:blur(5px);
+  }
+  18%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(1.06) skewX(-8deg) translateX(7px);
+    filter:blur(0);
+  }
+  46%{
+    opacity:1;
+    transform:translate(-50%,-50%) scale(.98) skewX(-5deg) translateX(0);
+    filter:blur(0);
+  }
+  100%{
+    opacity:0;
+    transform:translate(-50%,-50%) scale(1.02) skewX(-4deg) translateX(30px);
+    filter:blur(2px);
+  }
+}
+  /* ================= GAME RESULT FX ================= */
+
+#gameResultFx{
+  position:absolute;
+  inset:0;
+  z-index:70;
+  pointer-events:none;
+
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+
+  opacity:0;
+  visibility:hidden;
+}
+
+#gameResultFx.show{
+  visibility:visible;
+  animation:resultFadeIn .9s ease forwards;
+}
+
+#gameResultFx.hide{
+  opacity:0;
+  visibility:hidden;
+}
+
+#gameResultFx .resultGlow{
+  position:absolute;
+  width:420px;
+  height:420px;
+  border-radius:50%;
+  background:radial-gradient(circle, rgba(255,255,255,.22) 0%, rgba(255,255,255,.10) 30%, rgba(255,255,255,0) 72%);
+  filter:blur(10px);
+  transform:scale(.7);
+  opacity:0;
+}
+
+#gameResultFx .resultSlash{
+  position:absolute;
+  width:520px;
+  height:12px;
+  border-radius:999px;
+  background:linear-gradient(90deg, transparent, rgba(255,255,255,.92), transparent);
+  filter:blur(1px);
+  opacity:0;
+  transform:rotate(-10deg) scaleX(.3);
+}
+
+#gameResultFx .resultMain{
+  position:relative;
+  z-index:2;
+  font-family:'Orbitron', Arial, sans-serif;
+  font-size:76px;
+  font-weight:900;
+  letter-spacing:0px;
+  line-height:1;
+  text-transform:uppercase;
+  transform:scale(.55) translateY(16px);
+  opacity:0;
+  text-align:center;
+}
+
+#gameResultFx .resultSub{
+  position:relative;
+  z-index:2;
+  margin-top:14px;
+  padding:7px 16px;
+  border-radius:999px;
+  font-size:14px;
+  font-weight:900;
+  color:#fff;
+  background:rgba(0,0,0,.36);
+  border:1px solid rgba(255,255,255,.16);
+  text-shadow:0 2px 3px rgba(0,0,0,.7);
+  opacity:0;
+  transform:translateY(10px);
+}
+
+/* WIN */
+#gameResultFx.win .resultMain{
+  color:#fff7b0;
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.8),
+     2px -2px 0 rgba(0,0,0,.8),
+    -2px  2px 0 rgba(0,0,0,.8),
+     2px  2px 0 rgba(0,0,0,.8),
+     0 0 18px rgba(255,225,90,.95),
+     0 0 34px rgba(80,255,140,.65),
+     0 0 54px rgba(80,255,140,.35);
+}
+
+#gameResultFx.win .resultGlow{
+  background:radial-gradient(circle, rgba(105,255,150,.30) 0%, rgba(255,230,90,.18) 35%, rgba(255,255,255,0) 72%);
+}
+
+/* LOSE */
+#gameResultFx.lose .resultMain{
+  color:#ffd1c4;
+  text-shadow:
+    -2px -2px 0 rgba(0,0,0,.85),
+     2px -2px 0 rgba(0,0,0,.85),
+    -2px  2px 0 rgba(0,0,0,.85),
+     2px  2px 0 rgba(0,0,0,.85),
+     0 0 18px rgba(255,110,70,.95),
+     0 0 34px rgba(255,70,70,.70),
+     0 0 54px rgba(255,70,70,.35);
+}
+
+#gameResultFx.lose .resultGlow{
+  background:radial-gradient(circle, rgba(255,90,70,.30) 0%, rgba(255,160,70,.18) 35%, rgba(255,255,255,0) 72%);
+}
+
+#gameResultFx.show .resultGlow{
+  animation:resultGlowPulse 1.1s ease-out forwards;
+}
+
+#gameResultFx.show .resultSlash{
+  animation:resultSlashFx .7s ease-out forwards;
+}
+
+#gameResultFx.show .resultMain{
+  animation:resultMainPop .75s cubic-bezier(.2,.9,.2,1) forwards;
+}
+
+#gameResultFx.show .resultSub{
+  animation:resultSubFade .55s ease-out .2s forwards;
+}
+
+@keyframes resultFadeIn{
+  from{opacity:0}
+  to{opacity:1}
+}
+
+@keyframes resultGlowPulse{
+  0%{
+    opacity:0;
+    transform:scale(.55);
+  }
+  35%{
+    opacity:1;
+    transform:scale(1.06);
+  }
+  100%{
+    opacity:.95;
+    transform:scale(1);
+  }
+}
+
+@keyframes resultSlashFx{
+  0%{
+    opacity:0;
+    transform:rotate(-10deg) scaleX(.25);
+  }
+  35%{
+    opacity:1;
+    transform:rotate(-10deg) scaleX(1.08);
+  }
+  100%{
+    opacity:0;
+    transform:rotate(-10deg) scaleX(1.2);
+  }
+}
+
+@keyframes resultMainPop{
+  0%{
+    opacity:0;
+    transform:scale(.48) translateY(18px);
+    filter:blur(5px);
+  }
+  58%{
+    opacity:1;
+    transform:scale(1.08) translateY(0);
+    filter:blur(0);
+  }
+  100%{
+    opacity:1;
+    transform:scale(1) translateY(0);
+    filter:blur(0);
+  }
+}
+
+@keyframes resultSubFade{
+  from{
+    opacity:0;
+    transform:translateY(10px);
+  }
+  to{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <button id="devBtn" type="button" title="Developer">🛠️</button>
+  <div id="devCaseBar">
+  <button id="devPrevPowerBtn" type="button">‹</button>
+  <span id="devPowerCaseLabel">0/0</span>
+  <button id="devNextPowerBtn" type="button">›</button>
+</div>
+
+<div id="targetBoard">
+<div class="targetCard player" id="playerTargetCard">
+  <div class="avatarBox">PLAYER</div>
+  <div class="targetBalls" id="playerTargetBalls"></div>
+</div>
+
+  <div class="targetCard ai">
+    <div class="avatarBox">AI.GiaBao</div>
+    <div class="targetBalls" id="aiTargetBalls"></div>
+  </div>
+</div>
+  <div id="topHud">
+    <div id="titleBox" class="panel">
+      <div class="main">🎱 BIDA 6 LỖ</div>
+      <div class="sub">Player vs AI · 8-Ball rút gọn</div>
+    </div>
+
+    <div id="turnBox" class="panel">
+      <div>Lượt: <span id="turnLabel">PLAYER</span></div>
+      <div id="groupLabel">Nhóm bi: Chưa chia</div>
+      <div id="remainLabel">Còn bi: --</div>
+    </div>
+  </div>
+
+  <div id="message">Kéo trên bàn để ngắm · Thả tay để đánh</div>
+ <div id="comboFx">
+  <span class="hitWord">GOOD</span>
+  <span class="comboText">COMBO</span>
+  <span class="comboNum">2</span>
+</div>
+  
+  <div id="gameResultFx" class="hide">
+  <div class="resultGlow"></div>
+  <div class="resultSlash"></div>
+  <div class="resultMain">YOU WIN</div>
+  <div class="resultSub">Bi số 8 vào lỗ hợp lệ</div>
+</div>
+
+  <div id="aimRuler">
+  <div id="aimRulerKnob"></div>
+</div>
+
+<div id="powerWrap">
+  <div id="powerFill"></div>
+  <div id="powerPercent">0%</div>
+</div>
+<div id="powerText">LỰC ĐÁNH</div>
+
+  <div id="spinPanel" class="panel">
+    <div id="spinTitle">ÁP PHÊ</div>
+    <div id="spinPad">
+      <div id="spinKnob"></div>
+      
+    </div>
+    <div id="spinValue">Trái/Phải: 0 · Thuận/Nghịch: 0</div>
+  </div>
+
+  <button id="resetBtn">CHƠI LẠI</button>
+
+  <div id="guide">
+    Vuốt/kéo trên bàn để ngắm và tăng lực · Chỉnh áp phê bằng bi trắng góc trái
+  </div>
+</div>
+
+<div id="rotateOverlay">
+  <div class="box">
+    <h1>🔄 XOAY MÀN HÌNH</h1>
+    <p>Game bida chỉ hỗ trợ <b>màn hình ngang</b> để đủ không gian ngắm, đánh lực và điều bi.</p>
+  </div>
+</div>
+
+<script>
+/* =========================================================
+   BIDA 6 LỖ - PLAYER VS AI
+   Single file HTML/CSS/JS
+   ========================================================= */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const powerFill = document.getElementById("powerFill");
+const powerWrap = document.getElementById("powerWrap");
+const powerPercent = document.getElementById("powerPercent");
+
+const aimRuler = document.getElementById("aimRuler");
+const aimRulerKnob = document.getElementById("aimRulerKnob");
+const turnLabel = document.getElementById("turnLabel");
+const groupLabel = document.getElementById("groupLabel");
+const remainLabel = document.getElementById("remainLabel");
+const msg = document.getElementById("message");
+const resetBtn = document.getElementById("resetBtn");
+const devBtn = document.getElementById("devBtn");
+const devCaseBar = document.getElementById("devCaseBar");
+const devPrevPowerBtn = document.getElementById("devPrevPowerBtn");
+const devNextPowerBtn = document.getElementById("devNextPowerBtn");
+const devPowerCaseLabel = document.getElementById("devPowerCaseLabel");
+const comboFx = document.getElementById("comboFx");
+const hitWordEl = comboFx.querySelector(".hitWord");
+const comboNum = comboFx.querySelector(".comboNum");
+const gameResultFx = document.getElementById("gameResultFx");
+const resultMainEl = gameResultFx.querySelector(".resultMain");
+const resultSubEl = gameResultFx.querySelector(".resultSub");
+
+let comboFxTimer = null;
+
+let hitChain = {
+  player: 0,
+  ai: 0
+};
+
+const HIT_WORDS = ["GOOD", "GREAT", "NICE", "GOOD", "GREAT"];
+let hitWordIndex = 0;
+
+let developerAimGuide = false;
+let developerPromptOpen = false;
+
+/* Cache global, bắt buộc phải nằm ngoài function */
+let DEV_PREDICT_CACHE = {
+  key:"",
+  time:0,
+  result:null
+};
+
+/* Developer power case */
+let devPowerCases = [];
+let devCaseIndex = 0;
+let devPowerScanKey = "";
+let devScanJob = null;
+const DEV_MAX_BOUNCES = 6;      // Số lần nảy tối đa muốn dự đoán
+const DEV_OBJECT_MAX_LEN = 3200; // Độ dài dự đoán bi mục tiêu
+const DEV_CUE_MAX_LEN = 2200;    // Độ dài dự đoán bi cái
+function showHitComboFx(chainValue){
+  if(!comboFx || !hitWordEl || !comboNum) return;
+
+  comboFx.classList.remove("show");
+  comboFx.classList.remove("combo");
+
+  // Từ Combo 2 trở đi: chỉ hiện COMBO + số
+  if(chainValue >= 2){
+    hitWordEl.textContent = "";
+    comboNum.textContent = chainValue;
+    comboFx.classList.add("combo");
+  }else{
+    // Lần ăn bi đầu tiên: chỉ hiện GOOD/GREAT/NICE
+    hitWordEl.textContent = HIT_WORDS[hitWordIndex % HIT_WORDS.length];
+    comboNum.textContent = "";
+    hitWordIndex++;
+  }
+
+  void comboFx.offsetWidth;
+  comboFx.classList.add("show");
+
+  clearTimeout(comboFxTimer);
+  comboFxTimer = setTimeout(() => {
+    comboFx.classList.remove("show");
+    comboFx.classList.remove("combo");
+  }, 720);
+}
+  
+function hideGameResultFx(){
+  if(!gameResultFx) return;
+
+  gameResultFx.classList.remove("show", "win", "lose");
+  gameResultFx.classList.add("hide");
+}
+
+function showGameResultFx(type, subText = ""){
+  if(!gameResultFx || !resultMainEl || !resultSubEl) return;
+
+  gameResultFx.classList.remove("show", "win", "lose", "hide");
+
+  if(type === "win"){
+    gameResultFx.classList.add("win");
+    resultMainEl.textContent = "YOU WIN";
+  }else{
+    gameResultFx.classList.add("lose");
+    resultMainEl.textContent = "YOU LOSE";
+  }
+
+  resultSubEl.textContent = subText || "";
+
+  void gameResultFx.offsetWidth; // reset animation
+  gameResultFx.classList.add("show");
+}
+
+function updateDevButtonUI(){
+  if(!devBtn) return;
+
+  if(developerAimGuide){
+    devBtn.classList.add("active");
+  }else{
+    devBtn.classList.remove("active");
+  }
+}
+  
+function clearDeveloperPowerCases(updateUI = true){
+  devPowerCases = [];
+  devCaseIndex = 0;
+  devPowerScanKey = "";
+  devScanJob = null;
+
+  if(updateUI){
+    updateDeveloperPowerUI();
+  }
+}
+
+function getSelectedDeveloperPowerCase(){
+  if(!devPowerCases.length) return null;
+  return devPowerCases[devCaseIndex] || null;
+}
+
+function updateDeveloperPowerUI(){
+  if(gameOver){
+    devCaseBar.style.display = "none";
+    resetBtn.textContent = "CHƠI LẠI";
+    resetBtn.classList.add("show");
+    resetBtn.classList.remove("devShoot");
+    return;
+  }
+
+  if(!developerAimGuide){
+    devCaseBar.style.display = "none";
+    resetBtn.textContent = "CHƠI LẠI";
+    resetBtn.classList.remove("show");
+    resetBtn.classList.remove("devShoot");
+    return;
+  }
+
+  devCaseBar.style.display = "flex";
+
+  if(devScanJob){
+    devPowerCaseLabel.textContent = "...";
+  }else{
+    devPowerCaseLabel.textContent = `${devPowerCases.length ? devCaseIndex + 1 : 0}/${devPowerCases.length}`;
+  }
+
+  const selected = getSelectedDeveloperPowerCase();
+
+  const canShoot =
+    selected &&
+    turn === "player" &&
+    !isMoving() &&
+    !shotLocked &&
+    !powerDragging &&
+    !rulerDragging &&
+    !cueBallDragging;
+
+  if(canShoot){
+    resetBtn.textContent = "ĐÁNH";
+    resetBtn.title = `Đánh lực ${selected.selectedPercent}%`;
+    resetBtn.classList.add("show");
+    resetBtn.classList.add("devShoot");
+  }else{
+    resetBtn.textContent = "CHƠI LẠI";
+    resetBtn.title = "Chơi lại";
+    resetBtn.classList.remove("show");
+    resetBtn.classList.remove("devShoot");
+  }
+}
+
+function setDeveloperPowerCaseIndex(nextIndex){
+  if(!devPowerCases.length) return;
+
+  devCaseIndex = (nextIndex + devPowerCases.length) % devPowerCases.length;
+
+  const c = getSelectedDeveloperPowerCase();
+
+  if(c){
+    setMessage(
+      `Case ${devCaseIndex + 1}/${devPowerCases.length} · bi ${c.targetNum} · lực ${c.minPercent}-${c.maxPercent}% · chọn ${c.selectedPercent}%`
+    );
+  }
+
+  updateDeveloperPowerUI();
+}
+
+function bindDeveloperCaseButton(btn, action){
+  btn.addEventListener("pointerdown", e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+
+  btn.addEventListener("pointerup", e => {
+    e.preventDefault();
+    e.stopPropagation();
+    action();
+  });
+
+  btn.addEventListener("click", e => {
+    e.preventDefault();
+    e.stopPropagation();
+  });
+}
+
+bindDeveloperCaseButton(devPrevPowerBtn, () => {
+  setDeveloperPowerCaseIndex(devCaseIndex - 1);
+});
+
+bindDeveloperCaseButton(devNextPowerBtn, () => {
+  setDeveloperPowerCaseIndex(devCaseIndex + 1);
+});
+
+function getDeveloperPowerScanKey(hit, dir){
+  const ballKey = balls.map(b => {
+    if(!b.active) return `${b.num}:x`;
+    return `${b.num}:${Math.round(b.x)},${Math.round(b.y)}`;
+  }).join("|");
+
+  return [
+    dir.x.toFixed(4),
+    dir.y.toFixed(4),
+    spin.x.toFixed(2),
+    spin.y.toFixed(2),
+    ballKey
+  ].join(";");
+}
+
+function requestDeveloperPowerScan(hit, dir){
+  if(!developerAimGuide){
+    clearDeveloperPowerCases();
+    return;
+  }
+
+  const key = getDeveloperPowerScanKey(hit, dir);
+
+  if(key === devPowerScanKey){
+    return;
+  }
+
+  devPowerScanKey = key;
+  devPowerCases = [];
+  devCaseIndex = 0;
+
+  devScanJob = {
+    key,
+    dir: {
+      x: dir.x,
+      y: dir.y
+    },
+    spin: {
+      x: spin.x,
+      y: spin.y
+    },
+    percent: 1,
+    raw: []
+  };
+
+  updateDeveloperPowerUI();
+}
+
+function processDeveloperPowerScanJob(){
+  if(!devScanJob) return;
+
+  /*
+    Mỗi frame chỉ xử lý vài mức lực để tránh đứng máy.
+    Muốn quét nhanh hơn: tăng 3 lên 5 hoặc 6.
+    Muốn máy yếu chạy mượt hơn: giảm 3 xuống 1 hoặc 2.
+  */
+  const SCAN_PER_FRAME = 3;
+
+  let count = 0;
+
+  while(devScanJob.percent <= 100 && count < SCAN_PER_FRAME){
+    const percent = devScanJob.percent;
+    const power = percent / 100;
+
+    const sim = simulateDeveloperPhysicsPrediction(
+      devScanJob.dir,
+      power,
+      devScanJob.spin
+    );
+
+    if(
+  sim.firstHitNum !== null &&
+  sim.firstHitPocket
+){
+  devScanJob.raw.push({
+    percent,
+    power,
+    targetNum: sim.firstHitNum,
+    pocket: sim.firstHitPocket
+  });
+}
+
+    devScanJob.percent++;
+    count++;
+  }
+
+  if(devScanJob.percent > 100){
+    finalizeDeveloperPowerScan(devScanJob);
+    devScanJob = null;
+  }
+
+  updateDeveloperPowerUI();
+}
+
+function finalizeDeveloperPowerScan(job){
+  const groups = [];
+
+  for(const item of job.raw){
+    const last = groups[groups.length - 1];
+
+    if(
+      last &&
+      item.percent === last.maxPercent + 1 &&
+      item.pocket.id === last.pocket.id &&
+      item.targetNum === last.targetNum
+    ){
+      last.maxPercent = item.percent;
+      last.samples.push(item);
+    }else{
+      groups.push({
+        minPercent: item.percent,
+        maxPercent: item.percent,
+        targetNum: item.targetNum,
+        pocket: item.pocket,
+        samples: [item]
+      });
+    }
+  }
+
+  devPowerCases = groups.map(g => {
+    const selectedPercent = Math.round((g.minPercent + g.maxPercent) / 2);
+
+    return {
+      minPercent: g.minPercent,
+      maxPercent: g.maxPercent,
+      selectedPercent,
+      power: selectedPercent / 100,
+      targetNum: g.targetNum,
+      pocket: g.pocket
+    };
+  });
+
+  devCaseIndex = 0;
+
+  if(devPowerCases.length){
+    const c = devPowerCases[0];
+
+    setMessage(
+      `Tìm thấy ${devPowerCases.length} case · bi ${c.targetNum} vào lỗ · lực ${c.selectedPercent}%`
+    );
+  }else{
+    setMessage("Không có mức lực nào làm bi mục tiêu vào lỗ");
+  }
+}
+
+function shootDeveloperSelectedCase(){
+  const c = getSelectedDeveloperPowerCase();
+
+  if(!c) return;
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+
+  const dir = getAimDir();
+
+  aimPower = c.power;
+  powerFill.style.height = Math.round(c.power * 100) + "%";
+
+  setMessage(
+    `Developer đánh case ${devCaseIndex + 1}/${devPowerCases.length} · bi ${c.targetNum} · lực ${c.selectedPercent}%`
+  );
+
+  shoot("player", dir, c.power, spin);
+
+  aimPower = 0;
+  powerFill.style.height = "0%";
+}
+
+function clearOnlyDeveloperButtonFocus(){
+  if(devBtn){
+    devBtn.blur();
+  }
+}
+
+function resetInputLockAfterDeveloperPrompt(){
+  isAiming = false;
+  cueBallDragging = false;
+  powerDragging = false;
+  rulerDragging = false;
+  spinDragging = false;
+
+  aimPower = 0;
+  powerFill.style.height = "0%";
+
+  powerWrap.classList.remove("charging");
+  aimRuler.classList.remove("active");
+
+  rulerTargetKnobTop = 50;
+  rulerKnobTop = 50;
+  aimRulerKnob.style.top = "50%";
+
+  clearOnlyDeveloperButtonFocus();
+}
+
+function toggleDeveloperMode(){
+  if(developerPromptOpen) return;
+
+  resetInputLockAfterDeveloperPrompt();
+
+  if(developerAimGuide){
+  developerAimGuide = false;
+  clearDeveloperPowerCases();
+  updateDevButtonUI();
+  updateDeveloperPowerUI();
+  setMessage("Developer mode đã tắt");
+  return;
+}
+
+  developerPromptOpen = true;
+
+  setTimeout(() => {
+    const pass = prompt("Nhập mật khẩu Developer:");
+
+    developerPromptOpen = false;
+    resetInputLockAfterDeveloperPrompt();
+
+    if(pass === null) return;
+
+    if(pass.trim() === "2417"){
+  developerAimGuide = true;
+  clearDeveloperPowerCases();
+  updateDevButtonUI();
+  updateDeveloperPowerUI();
+  setMessage("Developer mode đã bật", true);
+}
+  }, 60);
+}
+
+devBtn.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+devBtn.addEventListener("pointerup", e => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleDeveloperMode();
+});
+
+devBtn.addEventListener("click", e => {
+  e.preventDefault();
+  e.stopPropagation();
+});
+
+updateDevButtonUI();
+const spinPad = document.getElementById("spinPad");
+const spinKnob = document.getElementById("spinKnob");
+const spinValue = document.getElementById("spinValue");
+
+const VW = 1600;
+const VH = 900;
+
+let dpr = 1;
+let scale = 1;
+let ox = 0;
+let oy = 0;
+
+const table = {
+  x: 130,
+  y: 80,
+  w: 1340,
+  h: 740
+};
+
+const BALL_R = 21;
+const CORNER_POCKET_R = 43;
+const SIDE_POCKET_R = 34;
+
+// Độ mở miệng lỗ
+const CORNER_MOUTH = 50;     // khớp khoảng hở mép lỗ góc đang vẽ
+const SIDE_MOUTH = 62;       // khớp khoảng hở mép lỗ giữa đang vẽ
+const SIDE_MOUTH_HALF = SIDE_MOUTH * 0.5;
+
+// Bán kính mép cong hai bên miệng lỗ
+const POCKET_JAW_R = 14;
+const CUSHION_THICKNESS = 17; // phải khớp với độ dày mép xanh đang vẽ
+const RAIL_BOUNCE = 0.84;
+const RAIL_SIDE_FRICTION = 0.985;
+// Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
+const CORNER_PHYS_CATCH_R = CORNER_POCKET_R + BALL_R * 0.75;
+const CORNER_PHYS_RANGE = CORNER_MOUTH + BALL_R * 1.08;
+const CORNER_RAIL_OPEN = CORNER_MOUTH + BALL_R * 1.05;
+  
+function isCornerPocketPhysicsHit(x, y, p){
+  if(p.type !== "corner") return false;
+
+  const d = Math.hypot(x - p.x, y - p.y);
+  let inCorner = false;
+
+  if(p.id === "tl"){
+    inCorner =
+      x <= table.x + CORNER_PHYS_RANGE &&
+      y <= table.y + CORNER_PHYS_RANGE;
+  }
+
+  if(p.id === "tr"){
+    inCorner =
+      x >= table.x + table.w - CORNER_PHYS_RANGE &&
+      y <= table.y + CORNER_PHYS_RANGE;
+  }
+
+  if(p.id === "bl"){
+    inCorner =
+      x <= table.x + CORNER_PHYS_RANGE &&
+      y >= table.y + table.h - CORNER_PHYS_RANGE;
+  }
+
+  if(p.id === "br"){
+    inCorner =
+      x >= table.x + table.w - CORNER_PHYS_RANGE &&
+      y >= table.y + table.h - CORNER_PHYS_RANGE;
+  }
+
+  return inCorner && d <= CORNER_PHYS_CATCH_R;
+}
+
+function isSidePocketPhysicsHit(x, y, p){
+  if(p.type !== "side") return false;
+
+  const midX = table.x + table.w / 2;
+  const d = Math.hypot(x - p.x, y - p.y);
+
+  const mouthX = Math.abs(x - midX);
+  const sideCatchR = SIDE_POCKET_R + BALL_R * 0.55;
+  const sideCatchY = BALL_R * 1.25;
+
+  if(p.id === "tm"){
+    return (
+      mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.45 &&
+      y <= table.y + sideCatchY &&
+      d <= sideCatchR
+    );
+  }
+
+  if(p.id === "bm"){
+    return (
+      mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.45 &&
+      y >= table.y + table.h - sideCatchY &&
+      d <= sideCatchR
+    );
+  }
+
+  return false;
+}
+
+function isPocketPhysicsHit(x, y, p){
+  if(p.type === "corner"){
+    return isCornerPocketPhysicsHit(x, y, p);
+  }
+
+  if(p.type === "side"){
+    return isSidePocketPhysicsHit(x, y, p);
+  }
+
+  return false;
+}
+
+const pockets = [
+  {x:table.x, y:table.y, type:"corner", id:"tl"},
+  {x:table.x + table.w / 2, y:table.y - 8, type:"side", id:"tm"},
+  {x:table.x + table.w, y:table.y, type:"corner", id:"tr"},
+
+  {x:table.x, y:table.y + table.h, type:"corner", id:"bl"},
+  {x:table.x + table.w / 2, y:table.y + table.h + 8, type:"side", id:"bm"},
+  {x:table.x + table.w, y:table.y + table.h, type:"corner", id:"br"}
+];
+
+let balls = [];
+let cueBall = null;
+
+let turn = "player";
+let gameOver = false;
+let isAiming = false;
+let hasAim = false;
+let aimWorld = {x:0, y:0};
+let aimPower = 0;
+let powerDragging = false;
+let powerStartY = 0;
+
+let rulerDragging = false;
+let rulerStartY = 0;
+let rulerStartAngle = 0;
+
+let rulerTargetAngle = 0;
+let rulerCurrentAngle = 0;
+
+let rulerTargetKnobTop = 50;
+let rulerKnobTop = 50;
+
+// Giảm số này để thước rà chậm hơn
+const RULER_SENSITIVITY = 0.0018;
+
+// Giảm số này để mượt hơn nhưng hơi trễ hơn
+const RULER_SMOOTH = 0.16;
+
+// Độ mượt của núm thước
+const RULER_KNOB_SMOOTH = 0.22;
+
+let shotLocked = false;
+let spin = {x:0, y:0}; 
+let activeSpin = {x:0, y:0, life:0};
+
+let groups = {
+  player:null,
+  ai:null
+};
+
+let currentShot = null;
+let aiTimer = null;
+let aiThinking = false;
+let breakDone = false;
+let aiCueMove = null;
+let aiCueVisual = null;
+let aiCueAim = null;
+let aiCueTimer = null;
+let aiThinkingCue = null;
+let isBreakShot = true;
+let cueBallDragging = false;
+let ballInHand = false;
+let ballInHandOwner = null;
+let pottedTrayBalls = [];
+let pocketAnimations = [];
+
+const MAX_POTTED_BALLS = 15;
+const TRAY_BALL_SCALE = 0.72;
+const TRAY_SLOT_GAP = 35;
+
+const POTTED_TRAY = {
+  x: table.x - 118,
+  y: table.y + 90,
+  w: 78,
+  h: 18 + 18 + (BALL_R * TRAY_BALL_SCALE * 2) + (MAX_POTTED_BALLS - 1) * TRAY_SLOT_GAP,
+  ballScale: TRAY_BALL_SCALE,
+  paddingTop: 18,
+  paddingBottom: 18
+};
+
+const ballColors = {
+  1:"#f5d328",
+  2:"#2458ff",
+  3:"#e3332e",
+  4:"#7b2be8",
+  5:"#ff8c24",
+  6:"#1ca752",
+  7:"#8b1d28",
+  8:"#111111",
+  9:"#f5d328",
+  10:"#2458ff",
+  11:"#e3332e",
+  12:"#7b2be8",
+  13:"#ff8c24",
+  14:"#1ca752",
+  15:"#8b1d28"
+};
+  
+  const playerTargetBallsEl = document.getElementById("playerTargetBalls");
+const aiTargetBallsEl = document.getElementById("aiTargetBalls");
+  const playerTargetCardEl = document.getElementById("playerTargetCard");
+
+const PLAYER_SHOT_SECONDS = 30;
+
+let playerShotTimerActive = false;
+let playerShotTimerStart = 0;
+let playerShotTimerExpired = false;
+
+function getGroupNums(group){
+  if(group === "solid") return [1,2,3,4,5,6,7];
+  if(group === "stripe") return [9,10,11,12,13,14,15];
+  return [];
+}
+
+function isBallPotted(num){
+  const b = balls.find(ball => ball.num === num);
+  return !b || !b.active || b.potted;
+}
+
+function createTargetSlot(num, type){
+  const slot = document.createElement("div");
+  slot.className = "targetSlot";
+
+  if(!num){
+    return slot;
+  }
+
+  slot.classList.add("hasBall");
+
+  if(num === 8){
+    slot.classList.add("black");
+  }else{
+    slot.classList.add(type);
+    slot.style.color = ballColors[num];
+  }
+
+  if(isBallPotted(num)){
+    slot.classList.add("potted");
+  }
+
+  const label = document.createElement("span");
+  label.className = "ballNum";
+  label.textContent = num;
+
+  slot.appendChild(label);
+  return slot;
+}
+
+function renderTargetBalls(el, group){
+  el.innerHTML = "";
+
+  // Khi chưa xác định nhóm: chỉ hiện 7 ô trống
+  if(!group){
+    for(let i = 0; i < 7; i++){
+      el.appendChild(createTargetSlot(null));
+    }
+    return;
+  }
+
+  const nums = getGroupNums(group);
+  const type = group === "solid" ? "solid" : "stripe";
+
+  /*
+    Bi số 8 chỉ hiện khi toàn bộ bi mục tiêu của người đó đã hết.
+    Tức là người đó chỉ còn phải đánh bi 8.
+  */
+  const onlyBlackLeft = countRemaining(group) === 0;
+
+  /*
+    Layout:
+    Hàng 1: 4 bi mục tiêu
+    Hàng 2: 3 bi mục tiêu + ô bi 8
+    Nhưng ô bi 8 chỉ có bi khi onlyBlackLeft === true
+  */
+  const layout = [
+    nums[0], nums[1], nums[2], nums[3],
+    nums[4], nums[5], nums[6], onlyBlackLeft ? 8 : null
+  ];
+
+  for(const num of layout){
+    el.appendChild(
+      createTargetSlot(
+        num,
+        num === 8 ? "black" : type
+      )
+    );
+  }
+}
+
+function updateTargetBoard(){
+  renderTargetBalls(playerTargetBallsEl, groups.player);
+  renderTargetBalls(aiTargetBallsEl, groups.ai);
+}
+function setPlayerTimerVisual(secondsLeft){
+  if(!playerTargetCardEl) return;
+
+  const left = clamp(secondsLeft, 0, PLAYER_SHOT_SECONDS);
+  const percent = left / PLAYER_SHOT_SECONDS * 100;
+
+  playerTargetCardEl.style.setProperty("--shotTimer", percent.toFixed(2));
+
+  let color = "#51ff7a"; // xanh
+
+  if(percent <= 65){
+    color = "#ffe45c"; // vàng
+  }
+
+  if(percent <= 40){
+    color = "#ff9f2a"; // cam
+  }
+
+  if(percent <= 20){
+    color = "#ff3030"; // đỏ
+  }
+
+  playerTargetCardEl.style.setProperty("--shotTimerColor", color);
+}
+
+function startPlayerShotTimer(){
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+
+  playerShotTimerActive = true;
+  playerShotTimerExpired = false;
+  playerShotTimerStart = performance.now();
+
+  if(playerTargetCardEl){
+    playerTargetCardEl.classList.add("timerActive");
+  }
+
+  setPlayerTimerVisual(PLAYER_SHOT_SECONDS);
+}
+
+function stopPlayerShotTimer(reset = true){
+  playerShotTimerActive = false;
+  playerShotTimerExpired = false;
+
+  if(playerTargetCardEl){
+    playerTargetCardEl.classList.remove("timerActive");
+    playerTargetCardEl.classList.remove("timerLow");
+  }
+
+  if(reset){
+    setPlayerTimerVisual(PLAYER_SHOT_SECONDS);
+  }
+}
+
+function updatePlayerShotTimer(){
+  if(!playerShotTimerActive) return;
+
+  if(gameOver || turn !== "player"){
+    stopPlayerShotTimer();
+    return;
+  }
+
+  if(isMoving() || shotLocked || aiCueMove){
+    stopPlayerShotTimer(false);
+    return;
+  }
+
+  const elapsed = (performance.now() - playerShotTimerStart) / 1000;
+  const left = PLAYER_SHOT_SECONDS - elapsed;
+
+  setPlayerTimerVisual(left);
+
+  if(left <= 0 && !playerShotTimerExpired){
+    playerShotTimerExpired = true;
+    handlePlayerShotTimeout();
+  }
+}
+
+function handlePlayerShotTimeout(){
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+
+  stopPlayerShotTimer(false);
+
+  isAiming = false;
+  cueBallDragging = false;
+  powerDragging = false;
+  rulerDragging = false;
+
+  aimPower = 0;
+  powerFill.style.height = "0%";
+  resetPowerPercent();
+
+  powerWrap.classList.remove("charging");
+  aimRuler.classList.remove("active");
+
+  // Nếu hết giờ ngay lúc đề-pa, cho AI đề-pa luôn
+  if(isBreakShot && !breakDone){
+    setTurn("ai");
+    updateHud();
+    setMessage("PLAYER hết giờ. Đến lượt AI đề-pa.", true);
+    scheduleAIShot(650);
+    return;
+  }
+
+  // Sau đề-pa: hết giờ tính như phạm lỗi
+  setTurn("ai");
+  startBallInHand("ai", "PLAYER hết giờ.");
+  updateHud();
+  scheduleAIShot(650);
+}
+  
+function resize(){
+  dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  canvas.width = Math.floor(innerWidth * dpr);
+  canvas.height = Math.floor(innerHeight * dpr);
+  canvas.style.width = innerWidth + "px";
+  canvas.style.height = innerHeight + "px";
+
+  const cssW = innerWidth;
+  const cssH = innerHeight;
+  scale = Math.min(cssW / VW, cssH / VH);
+  ox = (cssW - VW * scale) / 2;
+  oy = (cssH - VH * scale) / 2;
+}
+
+window.addEventListener("resize", resize);
+resize();
+
+/* =========================
+   UTILS
+   ========================= */
+
+function clamp(v,min,max){
+  return Math.max(min, Math.min(max, v));
+}
+  
+function updatePowerPercent(show = false){
+  if(!powerPercent) return;
+
+  const pct = Math.round(clamp(aimPower, 0, 1) * 100);
+
+  powerPercent.textContent = pct + "%";
+
+  if(show){
+    powerPercent.classList.add("show");
+  }else{
+    powerPercent.classList.remove("show");
+  }
+}
+
+function resetPowerPercent(){
+  if(!powerPercent) return;
+
+  powerPercent.textContent = "0%";
+  powerPercent.classList.remove("show");
+}
+
+function dist(a,b){
+  return Math.hypot(a.x-b.x, a.y-b.y);
+}
+
+function len(x,y){
+  return Math.hypot(x,y);
+}
+
+function norm(x,y){
+  const l = Math.hypot(x,y) || 1;
+  return {x:x/l, y:y/l};
+}
+  
+const MAX_BALL_SPEED = 72;
+
+function limitBallSpeed(b, max = MAX_BALL_SPEED){
+  const sp = Math.hypot(b.vx, b.vy);
+
+  if(sp > max){
+    const k = max / sp;
+    b.vx *= k;
+    b.vy *= k;
+  }
+}
+
+function updateBallRollingVisual(b, dx, dy){
+  if(!b || !b.active) return;
+
+  const move = Math.hypot(dx, dy);
+  if(move < 0.01) return;
+
+  const dir = Math.atan2(dy, dx);
+
+  b.rollDir = dir;
+
+  /*
+    rollPhase mô phỏng một điểm trên mặt bi đi vòng quanh quả bi.
+    Khi phase:
+    0      = họa tiết ở giữa mặt nhìn thấy
+    PI/2   = họa tiết ra mép bi
+    PI     = họa tiết úp xuống mặt bàn / khuất phía sau
+    2PI    = quay trở lại mặt nhìn thấy
+  */
+  b.rollPhase += move / BALL_R * 1.35;
+
+  // Xoay con số/sọc theo chiều lăn, nhưng không quá gắt.
+  const spinSign = dx * Math.cos(dir) + dy * Math.sin(dir) >= 0 ? 1 : -1;
+  b.faceRot += (move / BALL_R) * spinSign * 0.55;
+}
+
+  function getRollFaceState(b){
+  const phase = b.rollPhase || 0;
+  const dir = b.rollDir || 0;
+
+  /*
+    side: vị trí trái/phải/trước/sau trên mặt bi
+    depth: độ nổi của họa tiết
+      1  = ở mặt trên / nhìn rõ
+      0  = ở mép bi
+     -1  = đã khuất xuống mặt bàn
+  */
+  const side = Math.sin(phase);
+  const depth = Math.cos(phase);
+
+  const visibleDepth = Math.max(0, depth);
+
+  // Họa tiết chạy theo hướng lăn, ra mép rồi biến mất.
+  const x = Math.cos(dir) * side * BALL_R * 0.72;
+  const y = Math.sin(dir) * side * BALL_R * 0.72;
+
+  // Càng ra mép thì càng nhỏ và mờ.
+  const alpha = clamp((depth + 0.30) / 1.30, 0.08, 1);
+const scale = clamp(0.34 + visibleDepth * 0.66, 0.34, 1);
+const squash = clamp(0.30 + visibleDepth * 0.70, 0.30, 1);
+
+  return {
+    x,
+    y,
+    depth,
+    alpha,
+    scale,
+    squash,
+    rot:b.faceRot || 0
+  };
+}
+  
+  function drawRollingNumberBadge(b, face){
+  // Nếu số đã khuất xuống dưới mặt bàn thì không vẽ.
+  if(face.alpha <= 0.03) return;
+
+  const badgeR = BALL_R * 0.52;
+
+  ctx.save();
+
+  ctx.translate(b.x + face.x, b.y + face.y);
+  ctx.rotate(face.rot);
+
+  /*
+    Scale mô phỏng số chạy vòng quanh quả bi:
+    - ở giữa: tròn, rõ
+    - ra mép: nhỏ, dẹt
+    - phía sau: biến mất
+  */
+  ctx.scale(face.scale, face.scale * face.squash);
+
+  ctx.globalAlpha = face.alpha;
+
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#111";
+  ctx.font = `900 ${BALL_R * 0.62}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(b.num, 0, 0.6);
+
+  ctx.restore();
+}
+  
+  function drawRollingStripe(b, color, face){
+  ctx.save();
+  ctx.translate(b.x, b.y);
+
+  const phase = b.rollPhase || 0;
+
+  // Sọc dịch chuyển quanh mặt bi nhưng KHÔNG biến mất hoàn toàn
+  const stripeSide = Math.sin(phase * 0.9);
+  const stripeDepth = Math.cos(phase * 0.9);
+
+  // Dịch chuyển lên/xuống một chút để tạo cảm giác lăn
+  const stripeY = stripeSide * BALL_R * 0.34;
+
+  // Khi ra mép thì mỏng lại, nhưng vẫn giữ độ dày tối thiểu
+  const stripeH = BALL_R * 0.92 * clamp(0.62 + stripeDepth * 0.22, 0.52, 1.0);
+
+  // Alpha luôn khá cao để không bị "trắng bệch"
+  const alpha = clamp(0.72 + stripeDepth * 0.18, 0.58, 0.96);
+
+  ctx.rotate((b.faceRot || 0) * 0.16);
+
+  // Thân sọc chính
+  ctx.globalAlpha = alpha;
+  ctx.fillStyle = color;
+  ctx.fillRect(
+    -BALL_R * 1.55,
+    stripeY - stripeH / 2,
+    BALL_R * 3.1,
+    stripeH
+  );
+
+  // Viền sáng trên sọc
+  ctx.globalAlpha = alpha * 0.22;
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(
+    -BALL_R * 1.55,
+    stripeY - stripeH / 2,
+    BALL_R * 3.1,
+    Math.max(2, stripeH * 0.12)
+  );
+
+  // Viền tối nhẹ phía dưới cho có chiều sâu
+  ctx.globalAlpha = alpha * 0.18;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(
+    -BALL_R * 1.55,
+    stripeY + stripeH * 0.24,
+    BALL_R * 3.1,
+    Math.max(2, stripeH * 0.12)
+  );
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+  
+function dot(ax,ay,bx,by){
+  return ax*bx + ay*by;
+}
+
+function worldFromScreen(clientX, clientY){
+  return {
+    x:(clientX - ox) / scale,
+    y:(clientY - oy) / scale
+  };
+}
+  
+function getPlayableBounds(){
+  return {
+    left: table.x + CUSHION_THICKNESS + BALL_R,
+    right: table.x + table.w - CUSHION_THICKNESS - BALL_R,
+    top: table.y + CUSHION_THICKNESS + BALL_R,
+    bottom: table.y + table.h - CUSHION_THICKNESS - BALL_R
+  };
+}
+  
+function getFullCueZone(){
+  return getPlayableBounds();
+}
+
+function findSafeCueSpotInZone(zone){
+  const preferred = [
+    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.5},
+    {x: table.x + table.w * 0.33, y: table.y + table.h * 0.5},
+    {x: table.x + table.w * 0.5,  y: table.y + table.h * 0.5},
+    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.35},
+    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.65}
+  ];
+
+  for(const p of preferred){
+    const x = clamp(p.x, zone.left, zone.right);
+    const y = clamp(p.y, zone.top, zone.bottom);
+
+    if(isCueSpotFree(x, y)){
+      return {x, y};
+    }
+  }
+
+  for(let i = 0; i < 120; i++){
+    const x = zone.left + Math.random() * (zone.right - zone.left);
+    const y = zone.top + Math.random() * (zone.bottom - zone.top);
+
+    if(isCueSpotFree(x, y)){
+      return {x, y};
+    }
+  }
+
+  return {
+    x: (zone.left + zone.right) / 2,
+    y: (zone.top + zone.bottom) / 2
+  };
+}
+
+function moveCueBallInFullTable(p){
+  const z = getFullCueZone();
+
+  let x = clamp(p.x, z.left, z.right);
+  let y = clamp(p.y, z.top, z.bottom);
+
+  const safe = pullCueOutOfPocketDanger({x, y});
+
+  x = safe.x;
+  y = safe.y;
+
+  if(isCueSpotFree(x, y)){
+    cueBall.x = x;
+    cueBall.y = y;
+  }
+
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  aimWorld = {
+    x: cueBall.x + 260,
+    y: cueBall.y
+  };
+
+  hasAim = true;
+}
+
+function startBallInHand(owner, reasonText){
+  ballInHand = true;
+  ballInHandOwner = owner;
+
+  cueBall.active = true;
+  cueBall.potted = false;
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  const z = getFullCueZone();
+
+  if(
+    cueBall.x < z.left ||
+    cueBall.x > z.right ||
+    cueBall.y < z.top ||
+    cueBall.y > z.bottom ||
+    !isCueSpotFree(cueBall.x, cueBall.y)
+  ){
+    const spot = findSafeCueSpotInZone(z);
+    cueBall.x = spot.x;
+    cueBall.y = spot.y;
+  }
+
+  aimWorld = {
+    x: cueBall.x + 260,
+    y: cueBall.y
+  };
+
+  hasAim = true;
+
+  setMessage(
+    `${reasonText} ${sideName(owner)} được đặt bi cái toàn bàn.`,
+    true
+  );
+}
+
+function clearBallInHand(){
+  ballInHand = false;
+  ballInHandOwner = null;
+}
+
+function getBreakCueZone(){
+  const b = getPlayableBounds();
+
+  // Kim cương thứ 2 tính từ lỗ góc trái:
+  // drawDiamonds đang chia bàn thành 8 phần => kim cương thứ 2 = 2/8 chiều dài bàn
+  const secondDiamondX = table.x + table.w * 2 / 8;
+
+  return {
+    left: b.left,
+    right: secondDiamondX,
+    top: b.top,
+    bottom: b.bottom
+  };
+}
+
+function isPointInsideBreakCueZone(p){
+  const z = getBreakCueZone();
+
+  return (
+    p.x >= z.left &&
+    p.x <= z.right &&
+    p.y >= z.top &&
+    p.y <= z.bottom
+  );
+}
+
+function isTouchingCueBall(p){
+  if(!cueBall || !cueBall.active) return false;
+
+  return Math.hypot(p.x - cueBall.x, p.y - cueBall.y) <= BALL_R * 1.8;
+}
+
+function moveCueBallBeforeBreak(p){
+  const z = getBreakCueZone();
+
+  let x = clamp(p.x, z.left, z.right);
+  let y = clamp(p.y, z.top, z.bottom);
+
+  const safe = pullCueOutOfPocketDanger({x, y});
+
+  cueBall.x = safe.x;
+  cueBall.y = safe.y;
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  // Cập nhật lại hướng ngắm mặc định theo vị trí mới của bi cái
+  aimWorld = {
+    x: cueBall.x + 260,
+    y: cueBall.y
+  };
+
+  hasAim = true;
+}
+
+let messageTimer = null;
+
+function setMessage(text, sticky = false){
+  msg.textContent = text;
+  msg.classList.remove("hide");
+
+  clearTimeout(messageTimer);
+
+  if(!sticky){
+    messageTimer = setTimeout(() => {
+      msg.classList.add("hide");
+    }, 1600);
+  }
+}
+
+function isMoving(){
+  return balls.some(b => b.active && Math.hypot(b.vx,b.vy) > 0.16);
+}
+
+function stopTinyMotion(){
+  for(const b of balls){
+    if(!b.active) continue;
+
+    const sp = Math.hypot(b.vx, b.vy);
+
+    if(sp < 0.22){
+      b.vx = 0;
+      b.vy = 0;
+    }
+  }
+}
+
+function getBall(num){
+  return balls.find(b => b.num === num);
+}
+
+function countRemaining(type){
+  return balls.filter(b => b.active && b.type === type).length;
+}
+
+function otherSide(side){
+  return side === "player" ? "ai" : "player";
+}
+
+function sideName(side){
+  return side === "player" ? "PLAYER" : "AI.GiaBao";
+}
+
+function groupText(g){
+  if(!g) return "Chưa chia";
+  return g === "solid" ? "bi trơn" : "bi sọc";
+}
+
+function updateHud(){
+  turnLabel.textContent = sideName(turn);
+  turnLabel.style.color = turn === "player" ? "#7dff99" : "#ffdf6c";
+
+  groupLabel.textContent = 
+    `Nhóm bi: Player ${groupText(groups.player)} · AI ${groupText(groups.ai)}`;
+
+  const pr = groups.player ? countRemaining(groups.player) : "--";
+  const ar = groups.ai ? countRemaining(groups.ai) : "--";
+  remainLabel.textContent = `Còn bi: Player ${pr} · AI ${ar}`;
+  updateTargetBoard();
+}
+
+/* =========================
+   BALL SETUP
+   ========================= */
+
+class Ball{
+  constructor(x,y,num){
+    this.x = x;
+    this.y = y;
+    this.vx = 0;
+    this.vy = 0;
+    this.num = num;
+    this.active = true;
+    this.potted = false;
+    this.rollPhase = 0;
+    this.rollDir = 0;
+    this.faceX = 0;
+    this.faceY = 0;
+    this.faceRot = 0;
+
+    if(num === 0) this.type = "cue";
+    else if(num === 8) this.type = "black";
+    else if(num <= 7) this.type = "solid";
+    else this.type = "stripe";
+  }
+}
+
+function rackBalls(){
+  balls = [];
+
+  const cueX = table.x + table.w * 0.25;
+  const cueY = table.y + table.h * 0.5;
+  cueBall = new Ball(cueX, cueY, 0);
+  balls.push(cueBall);
+
+  const startX = table.x + table.w * 0.70;
+  const startY = table.y + table.h * 0.5;
+  const gap = BALL_R * 2 + 1.2;
+
+  const order = [
+    1,
+    9,2,
+    10,8,3,
+    4,11,12,5,
+    13,6,14,7,15
+  ];
+
+  let idx = 0;
+  for(let row=0; row<5; row++){
+    for(let col=0; col<=row; col++){
+      const x = startX + row * gap * 0.88;
+      const y = startY + (col - row / 2) * gap;
+      const b = new Ball(x,y,order[idx++]);
+      balls.push(b);
+    }
+  }
+}
+  
+function randomFirstTurn(){
+  return Math.random() < 0.5 ? "player" : "ai";
+}
+
+function resetGame(){
+hideGameResultFx();
+resetBtn.classList.remove("show");
+resetBtn.textContent = "CHƠI LẠI";
+resetBtn.classList.remove("devShoot");
+hitChain.player = 0;
+hitChain.ai = 0;
+
+clearTimeout(comboFxTimer);
+
+if(comboFx){
+  comboFx.classList.remove("show");
+  comboFx.classList.remove("combo");
+}
+clearDeveloperPowerCases(false);
+clearTimeout(aiTimer);
+clearTimeout(aiCueTimer);
+stopAIThinkingCueMotion();
+aiCueAim = null;
+aiThinking = false;
+shotLocked = false;
+
+pottedTrayBalls = [];
+pocketAnimations = [];
+gameOver = false;
+breakDone = false;
+isBreakShot = true;
+cueBallDragging = false;
+ballInHand = false;
+ballInHandOwner = null;
+aiCueMove = null;
+turn = randomFirstTurn();
+groups.player = null;
+groups.ai = null;
+currentShot = null;
+isAiming = false;
+aimPower = 0;
+resetSpinToDefault();
+activeSpin = {x:0,y:0,life:0};
+
+rackBalls();
+
+hasAim = true;
+aimWorld = {
+  x: cueBall.x + 260,
+  y: cueBall.y
+};
+
+updateHud();
+
+if(turn === "player"){
+  setMessage("PLAYER được đề-pa trước");
+  startPlayerShotTimer();
+}else{
+  stopPlayerShotTimer();
+  setMessage("AI được đề-pa trước");
+  scheduleAIShot(800);
+}
+}
+
+resetBtn.addEventListener("click", () => {
+  if(resetBtn.classList.contains("devShoot")){
+    shootDeveloperSelectedCase();
+    return;
+  }
+
+  resetGame();
+});
+resetGame();
+
+/* =========================
+   SPIN CONTROL
+   ========================= */
+
+let spinDragging = false;
+
+function resetSpinToDefault(){
+  spin.x = 0;
+  spin.y = 0;
+  updateSpinUI();
+}
+
+function setTurn(nextTurn){
+  if(turn !== nextTurn){
+    turn = nextTurn;
+    resetSpinToDefault();
+  }else{
+    turn = nextTurn;
+  }
+
+  if(turn === "player"){
+    stopAIThinkingCueMotion();
+    startPlayerShotTimer();
+  }else{
+    stopPlayerShotTimer();
+  }
+
+  if(turn !== "ai"){
+    stopAIThinkingCueMotion();
+  }
+}
+  
+function updateSpinUI(){
+  const center = spinPad.clientWidth / 2;
+  const r = center * 0.78;
+
+  spinKnob.style.left = (center + spin.x * r) + "px";
+  spinKnob.style.top = (center - spin.y * r) + "px";
+
+  const sx = Math.round(spin.x * 100);
+  const sy = Math.round(spin.y * 100);
+
+  let side = sx === 0 ? "0" : (sx < 0 ? `Trái ${Math.abs(sx)}` : `Phải ${sx}`);
+  let vert = sy === 0 ? "0" : (sy > 0 ? `Thuận ${sy}` : `Nghịch ${Math.abs(sy)}`);
+
+  spinValue.textContent = `${side} · ${vert}`;
+}
+
+function easeInOutCubic(t){
+  return t < 0.5
+    ? 4 * t * t * t
+    : 1 - Math.pow(-2 * t + 2, 3) / 2;
+}
+
+function getBreakCueArea(){
+  const margin = CUSHION_THICKNESS + BALL_R + 4;
+
+  return {
+    // Từ lỗ góc trái vào đến kim cương thứ 2.
+    // Kim cương thứ 2 trên cạnh dài = 2/8 chiều dài bàn.
+    minX: table.x + margin,
+    maxX: table.x + table.w * 0.25,
+    minY: table.y + margin,
+    maxY: table.y + table.h - margin
+  };
+}
+
+function isCueSpotFree(x, y){
+  if(isInsideCuePocketDanger({x, y})){
+    return false;
+  }
+  for(const b of balls){
+    if(!b.active || b === cueBall) continue;
+
+    if(Math.hypot(x - b.x, y - b.y) < BALL_R * 2.35){
+      return false;
+    }
+  }
+
+  return true;
+}
+function pickAIFullTableCueSpot(){
+  const z = getFullCueZone();
+
+  for(let i = 0; i < 80; i++){
+    const x = z.left + Math.random() * (z.right - z.left);
+    const y = z.top + Math.random() * (z.bottom - z.top);
+
+    if(isCueSpotFree(x, y)){
+      return {x, y};
+    }
+  }
+
+  return findSafeCueSpotInZone(z);
+}
+  
+function pickAIBreakCueSpot(){
+  const area = getBreakCueArea();
+
+  // AI ưu tiên đặt bi cái gần giữa để đề-pa hợp lý hơn
+  for(let i = 0; i < 30; i++){
+    const x = area.minX + Math.random() * (area.maxX - area.minX);
+    const y = clamp(
+      table.y + table.h * 0.5 + (Math.random() - 0.5) * 190,
+      area.minY,
+      area.maxY
+    );
+
+    if(isCueSpotFree(x, y)){
+      return {x, y};
+    }
+  }
+
+  return {
+    x: area.maxX,
+    y: table.y + table.h * 0.5
+  };
+}
+
+function startAICueBallDragThenShoot(mode = "break"){
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(aiCueMove) return;
+  if(isMoving()) return;
+
+  const target = mode === "full"
+    ? pickAIFullTableCueSpot()
+    : pickAIBreakCueSpot();
+
+  aiCueMove = {
+    mode,
+    sx: cueBall.x,
+    sy: cueBall.y,
+    tx: target.x,
+    ty: target.y,
+    start: performance.now(),
+    duration: 1220
+  };
+
+  cueBall.active = true;
+  cueBall.potted = false;
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  aiThinking = true;
+
+  setMessage(
+    mode === "full"
+      ? "AI.GiaBao đang đặt bi cái..."
+      : "AI.GiaBao đang kéo bi cái để đề-pa..."
+  );
+}
+
+function updateAICueBallMove(){
+  if(!aiCueMove) return;
+
+  const now = performance.now();
+  const rawT = clamp((now - aiCueMove.start) / aiCueMove.duration, 0, 1);
+  const t = easeInOutCubic(rawT);
+
+  cueBall.x = aiCueMove.sx + (aiCueMove.tx - aiCueMove.sx) * t;
+  cueBall.y = aiCueMove.sy + (aiCueMove.ty - aiCueMove.sy) * t;
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  if(rawT >= 1){
+    cueBall.x = aiCueMove.tx;
+    cueBall.y = aiCueMove.ty;
+
+    aiCueMove = null;
+    aiThinking = false;
+    if(ballInHand && ballInHandOwner === "ai"){
+  clearBallInHand();
+}
+
+    setTimeout(() => {
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+  if(aiCueMove) return;
+
+  // Nếu AI vừa kéo bi cái để đề-pa
+  if(!breakDone){
+    const shot = typeof findAIBreakShot === "function"
+      ? findAIBreakShot()
+      : {
+          dir:{x:1,y:0},
+          power:0.86,
+          spinX:0,
+          spinY:0.12
+        };
+
+    showAICueAndShoot(shot, AI_ENGINE?.previewMs || 1250);
+    return;
+  }
+
+  // Nếu AI vừa đặt bi cái toàn bàn sau phạm lỗi
+  if(typeof startAIThinkSearch === "function"){
+    aiThinking = true;
+
+    setMessage(`AI đang suy nghĩ sâu ${AI_THINKER?.depth || 5} lớp...`, true);
+
+    startAIThinkSearch(bestShot => {
+      if(gameOver) return;
+      if(turn !== "ai") return;
+      if(isMoving() || shotLocked || aiCueMove){
+        aiThinking = false;
+        scheduleAIShot(260);
+        return;
+      }
+
+      aiThinking = false;
+
+      if(typeof prepareAIForcePot === "function"){
+        prepareAIForcePot(bestShot);
+      }
+
+      showAICueAndShoot(bestShot, AI_ENGINE?.previewMs || 1250);
+    });
+
+    return;
+  }
+
+  // Dự phòng nếu engine chưa load đủ
+  const fallback = typeof findAISafeFallbackShot === "function"
+    ? findAISafeFallbackShot()
+    : {
+        dir:{x:1,y:0},
+        power:0.45,
+        spinX:0,
+        spinY:0
+      };
+
+  showAICueAndShoot(fallback, 1200);
+}, 260);
+  }
+}
+
+function drawAICueDragGuide(){
+  if(!aiCueMove) return;
+
+  ctx.save();
+
+  // Đường kéo bi cái
+  ctx.setLineDash([12, 10]);
+  ctx.lineWidth = 3;
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(255,255,255,.55)";
+  ctx.shadowColor = "rgba(255,255,255,.35)";
+  ctx.shadowBlur = 8;
+
+  ctx.beginPath();
+  ctx.moveTo(aiCueMove.sx, aiCueMove.sy);
+  ctx.lineTo(cueBall.x, cueBall.y);
+  ctx.stroke();
+
+  // Vòng mục tiêu AI đang kéo tới
+  ctx.setLineDash([]);
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(255,230,90,.9)";
+  ctx.shadowColor = "rgba(255,230,90,.8)";
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.arc(aiCueMove.tx, aiCueMove.ty, BALL_R + 7, 0, Math.PI * 2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+  
+function startAIShotWithCuePreview(shot, delay = 1200){
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(!cueBall || !cueBall.active) return;
+
+  clearTimeout(aiCueTimer);
+
+  aiThinking = true;
+
+  spin.x = shot.spinX;
+  spin.y = shot.spinY;
+  updateSpinUI();
+
+  aiCueAim = {
+    dir: shot.dir,
+    power: shot.power,
+    spinX: shot.spinX,
+    spinY: shot.spinY,
+    start: performance.now(),
+    duration: delay
+  };
+
+  setMessage("AI.GiaBao đang ngắm...");
+
+  aiCueTimer = setTimeout(() => {
+    if(gameOver){
+      aiCueAim = null;
+      aiThinking = false;
+      return;
+    }
+
+    if(turn !== "ai"){
+      aiCueAim = null;
+      aiThinking = false;
+      return;
+    }
+
+    if(isMoving() || shotLocked || aiCueMove){
+      aiCueAim = null;
+      aiThinking = false;
+      scheduleAIShot(260);
+      return;
+    }
+
+    const finalAim = aiCueAim;
+    aiCueAim = null;
+    aiThinking = false;
+
+    shoot("ai", finalAim.dir, finalAim.power, {
+      x: finalAim.spinX,
+      y: finalAim.spinY
+    });
+  }, delay);
+}
+
+function drawAICueStick(){
+  if(!aiCueAim) return;
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(!cueBall || !cueBall.active) return;
+  if(isMoving()) return;
+
+  const dir = aiCueAim.dir;
+  const startX = cueBall.x;
+  const startY = cueBall.y;
+
+  const now = performance.now();
+  const t = clamp((now - aiCueAim.start) / aiCueAim.duration, 0, 1);
+
+  // Cơ AI thụt nhẹ rồi tiến vào, tạo cảm giác đang chuẩn bị đánh
+  const pulse = Math.sin(t * Math.PI);
+  const aimPull = 42 + pulse * 58 + aiCueAim.power * 24;
+
+  const cueLength = BALL_R * 22;
+  const tipGap = BALL_R + 12 + aimPull;
+
+  const tipX = startX - dir.x * tipGap;
+  const tipY = startY - dir.y * tipGap;
+
+  const endX = tipX - dir.x * cueLength;
+  const endY = tipY - dir.y * cueLength;
+
+  const cueGrad = ctx.createLinearGradient(tipX, tipY, endX, endY);
+
+  // Màu riêng của AI: tím/xanh điện
+  cueGrad.addColorStop(0, "#e9e2ff");
+  cueGrad.addColorStop(0.16, "#9b7cff");
+  cueGrad.addColorStop(0.55, "#4b2bbf");
+  cueGrad.addColorStop(1, "#160b4a");
+
+  ctx.save();
+
+
+  // Thân cơ AI
+  ctx.lineWidth = 10;
+  ctx.strokeStyle = cueGrad;
+  ctx.shadowColor = "rgba(125,85,255,.85)";
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  // Viền sáng trên thân cơ
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(255,255,255,.65)";
+  ctx.shadowBlur = 0;
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(tipX - dir.x * 24, tipY - dir.y * 24);
+  ctx.stroke();
+
+  // Đầu cơ AI màu tím nhạt
+  ctx.fillStyle = "#d9ccff";
+  ctx.strokeStyle = "rgba(40,20,90,.75)";
+  ctx.lineWidth = 2;
+
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, 5.2, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function setSpinFromEvent(e){
+  const rect = spinPad.getBoundingClientRect();
+  const cx = rect.left + rect.width / 2;
+  const cy = rect.top + rect.height / 2;
+
+  let dx = e.clientX - cx;
+  let dy = e.clientY - cy;
+
+  const max = rect.width * 0.40;
+  const l = Math.hypot(dx,dy);
+
+  if(l > max){
+    dx = dx / l * max;
+    dy = dy / l * max;
+  }
+
+  spin.x = clamp(dx / max, -1, 1);
+  spin.y = clamp(-dy / max, -1, 1);
+
+  updateSpinUI();
+}
+
+spinPad.addEventListener("pointerdown", e => {
+  clearOnlyDeveloperButtonFocus();
+
+  spinDragging = true;
+  spinPad.setPointerCapture(e.pointerId);
+  setSpinFromEvent(e);
+});
+
+spinPad.addEventListener("pointermove", e => {
+  if(spinDragging) setSpinFromEvent(e);
+});
+
+spinPad.addEventListener("pointerup", e => {
+  spinDragging = false;
+});
+
+spinPad.addEventListener("pointercancel", e => {
+  spinDragging = false;
+});
+
+/* =========================
+   AIM RULER
+   Rà trên thước để chỉnh cơ tinh hơn.
+   ========================= */
+
+aimRuler.addEventListener("pointerdown", e => {
+  clearOnlyDeveloperButtonFocus();
+
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+  if(powerDragging) return;
+if(rulerDragging) return;
+
+  rulerDragging = true;
+  isAiming = false;
+  hasAim = true;
+
+rulerStartY = e.clientY;
+rulerStartAngle = getAimAngle();
+
+rulerCurrentAngle = rulerStartAngle;
+rulerTargetAngle = rulerStartAngle;
+
+rulerTargetKnobTop = 50;
+rulerKnobTop = 50;
+aimRulerKnob.style.top = "50%";
+
+  aimRuler.classList.add("active");
+  aimRuler.setPointerCapture(e.pointerId);
+
+  updateRulerKnob(0);
+});
+
+aimRuler.addEventListener("pointermove", e => {
+  if(!rulerDragging) return;
+
+  const dy = e.clientY - rulerStartY;
+
+  // Không set trực tiếp nữa, chỉ cập nhật góc mục tiêu
+  rulerTargetAngle = rulerStartAngle + dy * RULER_SENSITIVITY;
+
+  updateRulerKnob(dy);
+});
+
+aimRuler.addEventListener("pointerup", e => {
+  if(!rulerDragging) return;
+
+  rulerDragging = false;
+  aimRuler.classList.remove("active");
+
+  aimRulerKnob.style.top = "50%";
+});
+
+aimRuler.addEventListener("pointercancel", e => {
+  rulerDragging = false;
+  aimRuler.classList.remove("active");
+
+  aimRulerKnob.style.top = "50%";
+});
+/* =========================
+   PLAYER AIM
+   Bàn chỉ dùng để ngắm, không dùng để bắn.
+   ========================= */
+
+canvas.addEventListener("pointerdown", e => {
+  clearOnlyDeveloperButtonFocus();
+
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+  if(powerDragging) return;
+  if(rulerDragging) return;
+
+  const p = worldFromScreen(e.clientX, e.clientY);
+
+  // Trước khi đề-pa: chạm vào bi cái để kéo trong vùng hợp lệ
+  if(ballInHand && ballInHandOwner === "player" && cueBall.active && isTouchingCueBall(p)){
+  cueBallDragging = true;
+  isAiming = false;
+
+  canvas.setPointerCapture(e.pointerId);
+  moveCueBallInFullTable(p);
+
+  setMessage("Đang đặt bi cái toàn bàn");
+  return;
+}
+
+if(isBreakShot && cueBall.active && isTouchingCueBall(p)){
+  cueBallDragging = true;
+  isAiming = false;
+
+  canvas.setPointerCapture(e.pointerId);
+  moveCueBallBeforeBreak(p);
+
+  setMessage("Đang đặt bi cái trong vùng đề-pa");
+  return;
+}
+  isAiming = true;
+  hasAim = true;
+  updateAimFromPointer(e);
+});
+
+canvas.addEventListener("pointermove", e => {
+  if(cueBallDragging){
+  const p = worldFromScreen(e.clientX, e.clientY);
+
+  if(ballInHand && ballInHandOwner === "player"){
+    moveCueBallInFullTable(p);
+  }else{
+    moveCueBallBeforeBreak(p);
+  }
+
+  return;
+}
+  if(!isAiming) return;
+  updateAimFromPointer(e);
+});
+
+canvas.addEventListener("pointerup", e => {
+  if(cueBallDragging){
+  cueBallDragging = false;
+
+  if(ballInHand && ballInHandOwner === "player"){
+    setMessage("Đã đặt bi cái toàn bàn · Kéo trên bàn để ngắm", true);
+  }else{
+    setMessage("Đã đặt bi cái · Kéo trên bàn để ngắm");
+  }
+
+  return;
+}
+
+  if(!isAiming) return;
+
+  // Buông trên bàn chỉ dừng di chuyển cơ, KHÔNG đánh.
+  isAiming = false;
+});
+
+canvas.addEventListener("pointercancel", e => {
+  cueBallDragging = false;
+  isAiming = false;
+});
+
+function updateAimFromPointer(e){
+  const p = worldFromScreen(e.clientX, e.clientY);
+
+  // Tránh hướng ngắm quá sát tâm bi cái.
+  const dx = p.x - cueBall.x;
+  const dy = p.y - cueBall.y;
+  const d = Math.hypot(dx, dy);
+
+  if(d < BALL_R * 1.5) return;
+
+  aimWorld = p;
+}
+
+function getAimDir(){
+  if(!cueBall) return {x:1, y:0};
+
+  const dx = aimWorld.x - cueBall.x;
+  const dy = aimWorld.y - cueBall.y;
+  const d = Math.hypot(dx, dy);
+
+  if(d < 0.001){
+    return {x:1, y:0};
+  }
+
+  return {
+    x:dx / d,
+    y:dy / d
+  };
+}
+
+function getAimAngle(){
+  const dir = getAimDir();
+  return Math.atan2(dir.y, dir.x);
+}
+
+function setAimByAngle(angle){
+  if(!cueBall) return;
+
+  const aimDistance = 420;
+
+  hasAim = true;
+  aimWorld = {
+    x:cueBall.x + Math.cos(angle) * aimDistance,
+    y:cueBall.y + Math.sin(angle) * aimDistance
+  };
+}
+
+function updateRulerKnob(dy){
+  const rect = aimRuler.getBoundingClientRect();
+  const maxMove = rect.height * 0.38;
+
+  const move = clamp(dy, -maxMove, maxMove);
+  rulerTargetKnobTop = 50 + (move / maxMove) * 38;
+}
+
+function updateAimRulerSmooth(){
+  if(rulerDragging){
+    const diff = angleDiff(rulerTargetAngle, rulerCurrentAngle);
+
+    rulerCurrentAngle += diff * RULER_SMOOTH;
+
+    setAimByAngle(rulerCurrentAngle);
+  }else{
+    rulerTargetKnobTop = 50;
+  }
+
+  rulerKnobTop += (rulerTargetKnobTop - rulerKnobTop) * RULER_KNOB_SMOOTH;
+  aimRulerKnob.style.top = rulerKnobTop.toFixed(2) + "%";
+}
+
+function angleDiff(target, current){
+  let diff = target - current;
+
+  while(diff > Math.PI) diff -= Math.PI * 2;
+  while(diff < -Math.PI) diff += Math.PI * 2;
+
+  return diff;
+}
+/* =========================
+   POWER BAR SHOOT
+   Thanh lực mới là nơi đánh thật sự.
+   ========================= */
+
+function setPowerFromPointer(e){
+  const rect = powerWrap.getBoundingClientRect();
+
+  // Kéo từ điểm chạm ban đầu xuống dưới.
+  // Kéo xuống càng xa thì lực càng mạnh.
+  const dragDown = e.clientY - powerStartY;
+
+  aimPower = clamp(dragDown / rect.height, 0, 1);
+
+  powerFill.style.height = Math.round(aimPower * 100) + "%";
+updatePowerPercent(true);
+}
+
+powerWrap.addEventListener("pointerdown", e => {
+  clearOnlyDeveloperButtonFocus();
+  if(gameOver) return;
+  if(turn !== "player") return;
+  if(isMoving()) return;
+  if(shotLocked) return;
+  if(rulerDragging) return;
+
+  if(!hasAim){
+    setMessage("Kéo trên bàn để ngắm trước");
+    return;
+  }
+
+  powerDragging = true;
+isAiming = false;
+
+powerStartY = e.clientY;
+aimPower = 0;
+powerFill.style.height = "0%";
+  resetPowerPercent();
+updatePowerPercent(true);
+
+powerWrap.classList.add("charging");
+powerWrap.setPointerCapture(e.pointerId);
+});
+
+powerWrap.addEventListener("pointermove", e => {
+  if(!powerDragging) return;
+  setPowerFromPointer(e);
+});
+
+powerWrap.addEventListener("pointerup", e => {
+  if(!powerDragging) return;
+
+  powerDragging = false;
+  powerWrap.classList.remove("charging");
+
+  setPowerFromPointer(e);
+
+  if(aimPower < 0.05){
+    aimPower = 0;
+    powerFill.style.height = "0%";
+    resetPowerPercent();
+    return;
+  }
+
+  const dir = getAimDir();
+
+  shoot("player", dir, aimPower, spin);
+
+  aimPower = 0;
+  powerFill.style.height = "0%";
+    resetPowerPercent();
+});
+
+powerWrap.addEventListener("pointercancel", e => {
+  powerDragging = false;
+  powerWrap.classList.remove("charging");
+
+  aimPower = 0;
+  powerFill.style.height = "0%";
+  resetPowerPercent();
+});
+  
+  
+/* =========================
+   SHOOT
+   ========================= */
+
+function shoot(side, dir, power, shotSpin){
+  if(gameOver) return;
+  if(isMoving()) return;
+  if(aiCueMove) return;
+  if(side === "player"){
+    stopPlayerShotTimer(false);
+  }
+  if(side === "ai"){
+  stopAIThinkingCueMotion();
+  aiCueVisual = null;
+  aiCueAim = null;
+}
+  if(ballInHand && side === ballInHandOwner){
+  clearBallInHand();
+}
+  if(!breakDone){
+  breakDone = true;
+}
+  if(isBreakShot){
+    isBreakShot = false;
+    cueBallDragging = false;
+  }
+
+  powerDragging = false;
+  isAiming = false;
+  if(!cueBall || !cueBall.active) placeCueBall();
+
+  shotLocked = true;
+  powerFill.style.height = "0%";
+
+  const targetBeforeShot = getCurrentTarget(side);
+
+currentShot = {
+  side,
+  potted:[],
+  firstHit:null,
+  scratch:false,
+  noHit:true,
+
+  // Mục tiêu hợp lệ tại thời điểm TRƯỚC khi đánh
+  targetBeforeShot,
+  blackLegalBeforeShot: targetBeforeShot === "black",
+
+  railAfterFirstHit:false,
+  railHit:false
+};
+
+  const force = 14 + power * 66;
+
+  cueBall.vx = dir.x * force;
+  cueBall.vy = dir.y * force;
+
+  activeSpin.x = clamp(shotSpin.x, -1, 1);
+  activeSpin.y = clamp(shotSpin.y, -1, 1);
+  activeSpin.life = 120;
+}
+
+/* =========================
+   PHYSICS
+   ========================= */
+
+function updatePhysics(){
+  if(gameOver) return;
+
+  let maxSpeed = 0;
+
+  for(const b of balls){
+    if(!b.active) continue;
+
+    limitBallSpeed(b);
+    maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
+  }
+
+  // Tăng sub-step để tránh bi xuyên mép/lỗ khi tốc độ cao
+  const steps = clamp(Math.ceil(maxSpeed / (BALL_R * 0.22)), 6, 24);
+
+  for(let s = 0; s < steps; s++){
+    for(const b of balls){
+      if(!b.active) continue;
+
+      const speed = Math.hypot(b.vx, b.vy);
+
+      if(b === cueBall && activeSpin.life > 0 && speed > 0.3){
+        const n = norm(b.vx, b.vy);
+
+        b.vx += n.x * activeSpin.y * 0.022;
+        b.vy += n.y * activeSpin.y * 0.022;
+
+        const px = -n.y;
+        const py = n.x;
+
+        b.vx += px * activeSpin.x * 0.018;
+        b.vy += py * activeSpin.x * 0.018;
+
+        activeSpin.life--;
+      }
+
+      limitBallSpeed(b);
+
+      const stepDX = b.vx / steps;
+      const stepDY = b.vy / steps;
+
+      b.x += stepDX;
+      b.y += stepDY;
+
+      updateBallRollingVisual(b, stepDX, stepDY);
+
+      const friction = Math.pow(0.987, 1 / steps);
+      b.vx *= friction;
+      b.vy *= friction;
+
+      if(Math.abs(b.vx) < 0.015) b.vx = 0;
+      if(Math.abs(b.vy) < 0.015) b.vy = 0;
+handlePocket(b);
+
+if(b.active){
+  applyCornerPocketJaws(b, true);
+  applySidePocketMiddleJaws(b);
+  handleRail(b);
+}
+    }
+
+    handleCollisions();
+
+    // Khóa an toàn sau va chạm, vì va chạm có thể đẩy bi lệch ra ngoài mép
+    for(const b of balls){
+      if(!b.active) continue;
+
+      handlePocket(b);
+
+if(b.active){
+  applyCornerPocketJaws(b, true);
+  applySidePocketMiddleJaws(b);
+  handleRail(b);
+  limitBallSpeed(b);
+}
+    }
+  }
+
+  if(shotLocked && !isMoving()){
+    stopTinyMotion();
+    shotLocked = false;
+    finishShot();
+  }
+}
+  
+function collideCircleObstacle(b, cx, cy, r){
+  const dx = b.x - cx;
+  const dy = b.y - cy;
+  const d = Math.hypot(dx, dy) || 0.0001;
+  const minD = BALL_R + r;
+
+  if(d < minD){
+    const nx = dx / d;
+    const ny = dy / d;
+    const overlap = minD - d;
+
+    b.x += nx * overlap;
+    b.y += ny * overlap;
+
+    const vn = b.vx * nx + b.vy * ny;
+
+    if(vn < 0){
+      const bounce = 0.78;
+      b.vx -= vn * bounce * nx;
+      b.vy -= vn * bounce * ny;
+    }
+  }
+}
+  
+  function collideLineJaw(b, x1, y1, x2, y2, hitRadius = BALL_R + 0.8){
+  const ax = x2 - x1;
+  const ay = y2 - y1;
+  const lenSq = ax * ax + ay * ay || 1;
+
+  const t = clamp(
+    ((b.x - x1) * ax + (b.y - y1) * ay) / lenSq,
+    0,
+    1
+  );
+
+  const cx = x1 + ax * t;
+  const cy = y1 + ay * t;
+
+  let dx = b.x - cx;
+  let dy = b.y - cy;
+
+  let d = Math.hypot(dx, dy);
+
+  if(d >= hitRadius) return false;
+
+  if(d < 0.0001){
+    dx = -ay;
+    dy = ax;
+    d = Math.hypot(dx, dy) || 1;
+  }
+
+  const nx = dx / d;
+  const ny = dy / d;
+
+  const overlap = hitRadius - d;
+
+  b.x += nx * overlap;
+  b.y += ny * overlap;
+
+  const vn = b.vx * nx + b.vy * ny;
+
+  if(vn < 0){
+    const bounce = 0.82;
+
+    b.vx -= (1 + bounce) * vn * nx;
+    b.vy -= (1 + bounce) * vn * ny;
+
+    // Ma sát nhẹ theo mép để bi không bật quá ảo
+    b.vx *= 0.992;
+    b.vy *= 0.992;
+  }
+
+  return true;
+}
+
+function applySidePocketMiddleJaws(b){
+  const midX = table.x + table.w / 2;
+
+  const gap = SIDE_MOUTH / 2;
+  const c = CUSHION_THICKNESS;
+  const bevel = CUSHION_THICKNESS * 0.62;
+
+  const top = table.y;
+  const bottom = table.y + table.h;
+
+  const leftJawX = midX - gap;
+  const rightJawX = midX + gap;
+
+  let hit = false;
+
+  // Lỗ giữa phía trên - mép nhọn trái
+  if(
+    collideLineJaw(
+      b,
+      leftJawX,
+      top,
+      leftJawX - bevel,
+      top + c
+    )
+  ){
+    hit = true;
+  }
+
+  // Lỗ giữa phía trên - mép nhọn phải
+  if(
+    collideLineJaw(
+      b,
+      rightJawX,
+      top,
+      rightJawX + bevel,
+      top + c
+    )
+  ){
+    hit = true;
+  }
+
+  // Lỗ giữa phía dưới - mép nhọn trái
+  if(
+    collideLineJaw(
+      b,
+      leftJawX,
+      bottom,
+      leftJawX - bevel,
+      bottom - c
+    )
+  ){
+    hit = true;
+  }
+
+  // Lỗ giữa phía dưới - mép nhọn phải
+  if(
+    collideLineJaw(
+      b,
+      rightJawX,
+      bottom,
+      rightJawX + bevel,
+      bottom - c
+    )
+  ){
+    hit = true;
+  }
+
+  if(hit){
+  markRailHit(b);
+}
+
+return hit;
+}
+  
+  function applyCornerPocketJaws(b, shouldMarkRail = false){
+  const x = table.x;
+  const y = table.y;
+  const w = table.w;
+  const h = table.h;
+
+  const c = CUSHION_THICKNESS;
+  const bevel = CUSHION_THICKNESS * 0.62;
+  const gap = CORNER_MOUTH;
+
+  let hit = false;
+
+  // ================= TOP LEFT =================
+  // Mép xéo của băng trên
+  if(collideLineJaw(
+    b,
+    x + gap,
+    y,
+    x + gap + bevel,
+    y + c
+  )){
+    hit = true;
+  }
+
+  // Mép xéo của băng trái
+  if(collideLineJaw(
+    b,
+    x,
+    y + gap,
+    x + c,
+    y + gap + bevel
+  )){
+    hit = true;
+  }
+
+  // ================= TOP RIGHT =================
+  // Mép xéo của băng trên
+  if(collideLineJaw(
+    b,
+    x + w - gap,
+    y,
+    x + w - gap - bevel,
+    y + c
+  )){
+    hit = true;
+  }
+
+  // Mép xéo của băng phải
+  if(collideLineJaw(
+    b,
+    x + w,
+    y + gap,
+    x + w - c,
+    y + gap + bevel
+  )){
+    hit = true;
+  }
+
+  // ================= BOTTOM LEFT =================
+  // Mép xéo của băng dưới
+  if(collideLineJaw(
+    b,
+    x + gap,
+    y + h,
+    x + gap + bevel,
+    y + h - c
+  )){
+    hit = true;
+  }
+
+  // Mép xéo của băng trái
+  if(collideLineJaw(
+    b,
+    x,
+    y + h - gap,
+    x + c,
+    y + h - gap - bevel
+  )){
+    hit = true;
+  }
+
+  // ================= BOTTOM RIGHT =================
+  // Mép xéo của băng dưới
+  if(collideLineJaw(
+    b,
+    x + w - gap,
+    y + h,
+    x + w - gap - bevel,
+    y + h - c
+  )){
+    hit = true;
+  }
+
+  // Mép xéo của băng phải
+  if(collideLineJaw(
+    b,
+    x + w,
+    y + h - gap,
+    x + w - c,
+    y + h - gap - bevel
+  )){
+    hit = true;
+  }
+
+  if(hit && shouldMarkRail){
+    markRailHit(b);
+  }
+
+  return hit;
+}
+
+function applyPocketJaws(b){
+  const left = table.x;
+  const right = table.x + table.w;
+  const top = table.y;
+  const bottom = table.y + table.h;
+  const midX = table.x + table.w / 2;
+
+  const jc = CORNER_MOUTH * 0.62;
+  const js = SIDE_MOUTH_HALF + 4;
+  const inset = 8;
+
+  // 4 góc: 2 mép cong mỗi góc
+  collideCircleObstacle(b, left + jc, top + inset, POCKET_JAW_R);
+  collideCircleObstacle(b, left + inset, top + jc, POCKET_JAW_R);
+
+  collideCircleObstacle(b, right - jc, top + inset, POCKET_JAW_R);
+  collideCircleObstacle(b, right - inset, top + jc, POCKET_JAW_R);
+
+  collideCircleObstacle(b, left + jc, bottom - inset, POCKET_JAW_R);
+  collideCircleObstacle(b, left + inset, bottom - jc, POCKET_JAW_R);
+
+  collideCircleObstacle(b, right - jc, bottom - inset, POCKET_JAW_R);
+  collideCircleObstacle(b, right - inset, bottom - jc, POCKET_JAW_R);
+
+  // 2 lỗ giữa: 2 mép cong mỗi lỗ
+  collideCircleObstacle(b, midX - js, top + inset, POCKET_JAW_R);
+  collideCircleObstacle(b, midX + js, top + inset, POCKET_JAW_R);
+
+  collideCircleObstacle(b, midX - js, bottom - inset, POCKET_JAW_R);
+  collideCircleObstacle(b, midX + js, bottom - inset, POCKET_JAW_R);
+}
+
+function inSidePocketOpening(x, midX){
+  return Math.abs(x - midX) < SIDE_MOUTH_HALF;
+}
+  
+function isTopBottomPocketOpeningX(x){
+  const midX = table.x + table.w / 2;
+
+  return (
+    x < table.x + CORNER_RAIL_OPEN ||
+    x > table.x + table.w - CORNER_RAIL_OPEN ||
+    Math.abs(x - midX) < SIDE_MOUTH_HALF + BALL_R * 0.45
+  );
+}
+
+function isLeftRightPocketOpeningY(y){
+  return (
+    y < table.y + CORNER_RAIL_OPEN ||
+    y > table.y + table.h - CORNER_RAIL_OPEN
+  );
+}
+
+function markRailHit(b){
+  if(!currentShot || !shotLocked) return;
+
+  currentShot.railHit = true;
+
+  if(currentShot.firstHit){
+    currentShot.railAfterFirstHit = true;
+  }
+}
+  
+function handleRail(b){
+  /*
+    Hitbox mép bàn nằm ở mép TRONG của cao su xanh,
+    không còn nằm ở thành nâu nữa.
+  */
+  const left = table.x + CUSHION_THICKNESS + BALL_R;
+  const right = table.x + table.w - CUSHION_THICKNESS - BALL_R;
+  const top = table.y + CUSHION_THICKNESS + BALL_R;
+  const bottom = table.y + table.h - CUSHION_THICKNESS - BALL_R;
+
+  const openTopBottom = isTopBottomPocketOpeningX(b.x);
+  const openLeftRight = isLeftRightPocketOpeningY(b.y);
+
+  const movingToTopPocket = openTopBottom && b.vy < -0.15;
+  const movingToBottomPocket = openTopBottom && b.vy > 0.15;
+  const movingToLeftPocket = openLeftRight && b.vx < -0.15;
+  const movingToRightPocket = openLeftRight && b.vx > 0.15;
+
+  // Mép trái
+  if(b.x < left && !movingToLeftPocket){
+    b.x = left;
+    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
+    b.vy *= RAIL_SIDE_FRICTION;
+    markRailHit(b);
+  }
+
+  // Mép phải
+  if(b.x > right && !movingToRightPocket){
+    b.x = right;
+    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
+    b.vy *= RAIL_SIDE_FRICTION;
+    markRailHit(b);
+  }
+
+  // Mép trên
+  if(b.y < top && !movingToTopPocket){
+    b.y = top;
+    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
+    b.vx *= RAIL_SIDE_FRICTION;
+    markRailHit(b);
+  }
+
+  // Mép dưới
+  if(b.y > bottom && !movingToBottomPocket){
+    b.y = bottom;
+    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
+    b.vx *= RAIL_SIDE_FRICTION;
+    markRailHit(b);
+  }
+
+  /*
+    Chốt an toàn:
+    Nếu vì tốc độ cao mà bi lọt quá xa ra ngoài,
+    kéo nó về lại vùng chơi thay vì để bay khỏi bàn.
+  */
+  const safeLeft = table.x - BALL_R * 2;
+  const safeRight = table.x + table.w + BALL_R * 2;
+  const safeTop = table.y - BALL_R * 2;
+  const safeBottom = table.y + table.h + BALL_R * 2;
+
+  if(b.x < safeLeft){
+    b.x = left;
+    b.vx = Math.abs(b.vx) * 0.55;
+  }
+
+  if(b.x > safeRight){
+    b.x = right;
+    b.vx = -Math.abs(b.vx) * 0.55;
+  }
+
+  if(b.y < safeTop){
+    b.y = top;
+    b.vy = Math.abs(b.vy) * 0.55;
+  }
+
+  if(b.y > safeBottom){
+    b.y = bottom;
+    b.vy = -Math.abs(b.vy) * 0.55;
+  }
+}
+function isCueBallPlacementMode(){
+  return (
+    cueBallDragging ||
+    aiCueMove ||
+    isBreakShot ||
+    (ballInHand && ballInHandOwner)
+  );
+}
+
+function isInsideCuePocketDanger(p){
+  const midX = table.x + table.w / 2;
+
+  for(const pocket of pockets){
+    const d = Math.hypot(p.x - pocket.x, p.y - pocket.y);
+
+    if(pocket.type === "corner"){
+      const catchR = CORNER_POCKET_R + BALL_R * 0.85;
+      const range = CORNER_MOUTH + BALL_R * 0.85;
+
+      let inCorner = false;
+
+      if(pocket.id === "tl"){
+        inCorner = p.x <= table.x + range && p.y <= table.y + range;
+      }
+
+      if(pocket.id === "tr"){
+        inCorner = p.x >= table.x + table.w - range && p.y <= table.y + range;
+      }
+
+      if(pocket.id === "bl"){
+        inCorner = p.x <= table.x + range && p.y >= table.y + table.h - range;
+      }
+
+      if(pocket.id === "br"){
+        inCorner = p.x >= table.x + table.w - range && p.y >= table.y + table.h - range;
+      }
+
+      if(inCorner && d < catchR){
+        return {
+          pocket,
+          catchR
+        };
+      }
+    }
+
+    if(pocket.type === "side"){
+      const catchR = SIDE_POCKET_R + BALL_R * 0.75;
+      const mouthX = Math.abs(p.x - midX);
+
+      let inSide = false;
+
+      if(pocket.id === "tm"){
+        inSide =
+          mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.55 &&
+          p.y <= table.y + BALL_R * 1.55;
+      }
+
+      if(pocket.id === "bm"){
+        inSide =
+          mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.55 &&
+          p.y >= table.y + table.h - BALL_R * 1.55;
+      }
+
+      if(inSide && d < catchR){
+        return {
+          pocket,
+          catchR
+        };
+      }
+    }
+  }
+
+  return null;
+}
+
+function pullCueOutOfPocketDanger(p){
+  const bounds = getPlayableBounds();
+
+  let safe = {
+    x:p.x,
+    y:p.y
+  };
+
+  for(let i = 0; i < 4; i++){
+    const danger = isInsideCuePocketDanger(safe);
+
+    if(!danger) break;
+
+    const pocket = danger.pocket;
+
+    let dx = safe.x - pocket.x;
+    let dy = safe.y - pocket.y;
+
+    let d = Math.hypot(dx, dy);
+
+    if(d < 0.001){
+      if(pocket.id === "tl"){ dx = 1; dy = 1; }
+      else if(pocket.id === "tr"){ dx = -1; dy = 1; }
+      else if(pocket.id === "bl"){ dx = 1; dy = -1; }
+      else if(pocket.id === "br"){ dx = -1; dy = -1; }
+      else if(pocket.id === "tm"){ dx = 0; dy = 1; }
+      else if(pocket.id === "bm"){ dx = 0; dy = -1; }
+
+      d = Math.hypot(dx, dy) || 1;
+    }
+
+    const nx = dx / d;
+    const ny = dy / d;
+
+    const outD = danger.catchR + 8;
+
+    safe.x = pocket.x + nx * outD;
+    safe.y = pocket.y + ny * outD;
+
+    safe.x = clamp(safe.x, bounds.left, bounds.right);
+    safe.y = clamp(safe.y, bounds.top, bounds.bottom);
+  }
+
+  return safe;
+}
+  
+function handlePocket(b){
+  // Khi đang đặt / kéo bi cái, không cho handlePocket xử lý bi cái.
+  // Nếu không, kéo bi cái gần lỗ sẽ bị hiểu nhầm là rơi lỗ.
+  if(b === cueBall && isCueBallPlacementMode()){
+    return;
+  }
+
+  for(const p of pockets){
+    if(!isPocketPhysicsHit(b.x, b.y, p)){
+      continue;
+    }
+
+    b.active = false;
+    b.vx = 0;
+    b.vy = 0;
+    b.potted = true;
+
+    if(typeof startPocketAnimation === "function" && b !== cueBall){
+      startPocketAnimation(b, p);
+    }
+
+    if(b === cueBall){
+      if(currentShot) currentShot.scratch = true;
+    }else{
+      if(currentShot) currentShot.potted.push(b);
+    }
+    updateTargetBoard();
+
+    return;
+  }
+}
+  
+function handleCollisions(){
+  for(let i=0; i<balls.length; i++){
+    for(let j=i+1; j<balls.length; j++){
+      const a = balls[i];
+      const b = balls[j];
+
+      if(!a.active || !b.active) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const d = Math.hypot(dx,dy);
+      const minD = BALL_R * 2;
+
+      if(d > 0 && d < minD){
+        const nx = dx / d;
+        const ny = dy / d;
+        const overlap = minD - d;
+
+        a.x -= nx * overlap / 2;
+        a.y -= ny * overlap / 2;
+        b.x += nx * overlap / 2;
+        b.y += ny * overlap / 2;
+
+        const rvx = a.vx - b.vx;
+        const rvy = a.vy - b.vy;
+        const impact = rvx * nx + rvy * ny;
+
+        if(impact > 0){
+          const restitution = 0.94;
+          const impulse = impact * restitution;
+
+          a.vx -= impulse * nx;
+          a.vy -= impulse * ny;
+          b.vx += impulse * nx;
+          b.vy += impulse * ny;
+
+          const tx = -ny;
+          const ty = nx;
+
+          // Ghi nhận bi đầu tiên bi cái chạm.
+          if(currentShot && !currentShot.firstHit){
+            if(a === cueBall && b.num !== 0){
+              currentShot.firstHit = b;
+              currentShot.noHit = false;
+            }
+            if(b === cueBall && a.num !== 0){
+              currentShot.firstHit = a;
+              currentShot.noHit = false;
+            }
+          }
+
+          // Áp phê sau va chạm: mô phỏng điều bi cái.
+          if(a === cueBall || b === cueBall){
+            const cue = a === cueBall ? a : b;
+            const sideSign = a === cueBall ? 1 : -1;
+
+            cue.vx += tx * activeSpin.x * 1.15 * sideSign;
+cue.vy += ty * activeSpin.x * 1.15 * sideSign;
+
+cue.vx -= nx * activeSpin.y * 0.7 * sideSign;
+cue.vy -= ny * activeSpin.y * 0.7 * sideSign;
+
+            activeSpin.life = Math.max(activeSpin.life, 40);
+          }
+        }
+      }
+    }
+  }
+}
+
+/* =========================
+   RULES
+   ========================= */
+
+function isTargetBallPottedForCombo(side){
+  if(!currentShot) return false;
+  if(currentShot.scratch) return false; // bi cái rơi lỗ thì không tính
+
+  const target = currentShot.targetBeforeShot;
+  const potted = currentShot.potted || [];
+
+  // Bàn mở: ăn được bất kỳ bi trơn/sọc nào, không tính bi 8
+  if(target === "open"){
+    return potted.some(b =>
+      b.num !== 8 &&
+      (b.type === "solid" || b.type === "stripe")
+    );
+  }
+
+  // Khi chỉ còn bi 8: phải ăn đúng bi 8
+  if(target === "black"){
+    return potted.some(b => b.num === 8);
+  }
+
+  // Khi đã có nhóm: phải ăn đúng nhóm của mình
+  return potted.some(b => b.type === target);
+}
+function finishShot(){
+  activeSpin.life = 0;
+
+  if(!currentShot) return;
+
+  const side = currentShot.side;
+  const enemy = otherSide(side);
+  const potted = currentShot.potted;
+  const blackPotted = potted.some(b => b.num === 8);
+  const wasOpenTable = !groups.player && !groups.ai;
+  
+
+  if(blackPotted){
+  const legalBlack = currentShot.blackLegalBeforeShot;
+
+  if(legalBlack && !currentShot.scratch){
+    endGame(
+      side === "player" ? "win" : "lose",
+      side === "player"
+        ? "Bạn đã đưa bi số 8 xuống lỗ hợp lệ"
+        : "AI đã đưa bi số 8 xuống lỗ hợp lệ"
+    );
+  }else{
+    endGame(
+      side === "player" ? "lose" : "win",
+      side === "player"
+        ? "Bi số 8 rơi quá sớm hoặc phạm lỗi"
+        : "AI.GiaBao làm rơi bi số 8 quá sớm hoặc phạm lỗi"
+    );
+  }
+
+  return;
+}
+
+  let foul = false;
+  let text = "";
+
+  // 1. Bi cái xuống lỗ
+  if(currentShot.scratch){
+    foul = true;
+    text = `${sideName(side)} phạm lỗi: bi cái xuống lỗ.`;
+  }
+
+  // 2. Không chạm bi mục tiêu
+  if(currentShot.noHit){
+    foul = true;
+    text = `${sideName(side)} phạm lỗi: không chạm bi mục tiêu.`;
+  }
+
+  // 3. Khi đã có nhóm màu: bi cái chạm đầu tiên sai nhóm
+if(!wasOpenTable && groups[side] && !foul){
+  const target = currentShot.targetBeforeShot;
+
+  if(currentShot.firstHit){
+    if(target === "black"){
+      if(currentShot.firstHit.num !== 8){
+        foul = true;
+        text = `${sideName(side)} phạm lỗi: phải đánh bi số 8 trước.`;
+      }
+    }else{
+      if(currentShot.firstHit.type !== target){
+        foul = true;
+        text = `${sideName(side)} phạm lỗi: bi cái chạm đầu tiên không phải bi của mình.`;
+      }
+    }
+  }
+}
+
+  // 4. Luật nhấp nhả:
+  // Nếu đã chạm bi mục tiêu, không có bi nào vào lỗ,
+  // và sau va chạm không có bi nào chạm băng => phạm lỗi.
+  const objectBallPotted = potted.length > 0;
+
+  if(!foul && currentShot.firstHit && !objectBallPotted && !currentShot.railAfterFirstHit){
+    foul = true;
+    text = `${sideName(side)} phạm lỗi: đánh nhấp nhả, sau va chạm không có bi nào chạm băng.`;
+  }
+
+  // Chia nhóm nếu trước cú đánh bàn còn mở màu
+  if(wasOpenTable && !foul){
+    const firstGroupBall = potted.find(b =>
+      b.type === "solid" || b.type === "stripe"
+    );
+
+    if(firstGroupBall){
+      groups[side] = firstGroupBall.type;
+      groups[enemy] = firstGroupBall.type === "solid" ? "stripe" : "solid";
+
+      text = `${sideName(side)} nhận ${groupText(groups[side])}.`;
+    }
+  }
+
+  let ownPotted = false;
+
+  if(wasOpenTable){
+    ownPotted = potted.some(b =>
+      b.type === "solid" || b.type === "stripe"
+    );
+  }else{
+    const ownGroup = groups[side];
+
+    ownPotted = ownGroup
+      ? potted.some(b => b.type === ownGroup)
+      : potted.some(b => b.type === "solid" || b.type === "stripe");
+  }
+  
+const potSuccess = !foul && isTargetBallPottedForCombo(side);
+
+if(potSuccess){
+  hitChain[side] = (hitChain[side] || 0) + 1;
+
+  // Bên còn lại bị cắt chuỗi
+  hitChain[enemy] = 0;
+
+  showHitComboFx(hitChain[side]);
+}else{
+  hitChain[side] = 0;
+}
+  if(foul){
+    setTurn(enemy);
+    startBallInHand(turn, text);
+  }else if(ownPotted){
+    setMessage(
+      (text ? text + " " : "") +
+      `${sideName(side)} được đánh tiếp.`
+    );
+  }else{
+    setTurn(enemy);
+    setMessage(
+      (text ? text + " " : "") +
+      `Đến lượt ${sideName(turn)}`
+    );
+  }
+
+  updateHud();
+  currentShot = null;
+
+  if(turn === "ai" && !gameOver){
+  stopPlayerShotTimer();
+  scheduleAIShot(650);
+}else if(turn === "player" && !gameOver && ballInHand){
+  startPlayerShotTimer();
+  setMessage(`${sideName(turn)} được đặt bi cái toàn bàn.`, true);
+}else if(turn === "player" && !gameOver){
+  startPlayerShotTimer();
+  setMessage("Lượt của bạn");
+}
+}
+
+function getPlayableTargetBalls(side){
+  const target = getCurrentTarget(side);
+
+  if(target === "open"){
+    return balls.filter(b =>
+      b.active &&
+      b.num !== 0 &&
+      b.num !== 8 &&
+      (b.type === "solid" || b.type === "stripe")
+    );
+  }
+
+  if(target === "black"){
+    return balls.filter(b =>
+      b.active &&
+      b.num === 8
+    );
+  }
+
+  return balls.filter(b =>
+    b.active &&
+    b.type === target
+  );
+}
+  
+function getCurrentTarget(side){
+  const g = groups[side];
+
+  if(!g){
+    return "open";
+  }
+
+  if(countRemaining(g) === 0){
+    return "black";
+  }
+
+  return g;
+}
+
+function placeCueBall(){
+  cueBall.active = true;
+  cueBall.potted = false;
+  cueBall.x = table.x + table.w * 0.25;
+  cueBall.y = table.y + table.h * 0.5;
+  cueBall.vx = 0;
+  cueBall.vy = 0;
+
+  // Nếu vị trí có bi khác, đẩy nhẹ lên/xuống để tránh chồng.
+  for(let k=0; k<20; k++){
+    let overlap = false;
+    for(const b of balls){
+      if(b === cueBall || !b.active) continue;
+      if(Math.hypot(cueBall.x - b.x, cueBall.y - b.y) < BALL_R * 2.3){
+        overlap = true;
+        cueBall.y += BALL_R * 2.4;
+        if(cueBall.y > table.y + table.h - BALL_R){
+          cueBall.y = table.y + BALL_R;
+          cueBall.x += BALL_R * 2.4;
+        }
+      }
+    }
+    if(!overlap) break;
+  }
+}
+
+function endGame(resultType, subText = ""){
+  gameOver = true;
+
+  stopPlayerShotTimer(false);
+  stopAIThinkingCueMotion();
+
+  clearTimeout(aiTimer);
+  clearTimeout(aiCueTimer);
+
+  aiCueVisual = null;
+  aiCueAim = null;
+  aiThinking = false;
+  aiCueMove = null;
+
+  resetBtn.textContent = "CHƠI LẠI";
+  resetBtn.classList.add("show");
+  resetBtn.classList.remove("devShoot");
+
+  devCaseBar.style.display = "none";
+
+  // Ẩn toast cũ
+  msg.classList.add("hide");
+
+  // Hiện hiệu ứng YOU WIN / YOU LOSE
+  showGameResultFx(resultType, subText);
+}
+
+  
+function scheduleAIShot(delay = 650){
+  clearTimeout(aiTimer);
+
+  if(!gameOver && turn === "ai" && !aiThinkingCue){
+    startAIThinkingCueMotion();
+  }
+
+  aiTimer = setTimeout(() => {
+    if(gameOver) return;
+    if(turn !== "ai") return;
+
+    // Chờ bi dừng hẳn rồi AI mới được đánh.
+    if(isMoving() || shotLocked){
+      scheduleAIShot(260);
+      return;
+    }
+
+    aiTakeShot();
+  }, delay);
+}
+
+
+/* =========================
+   DRAW
+   ========================= */
+function drawBreakCueZone(){
+  if(!isBreakShot) return;
+  if(turn !== "player") return;
+  if(isMoving() || shotLocked) return;
+  if(!cueBall || !cueBall.active) return;
+
+  const z = getBreakCueZone();
+
+  ctx.save();
+
+  // Nền vùng đặt bi cái
+  ctx.globalAlpha = 0.13;
+  ctx.fillStyle = "#ffffff";
+  ctx.fillRect(
+    z.left,
+    z.top,
+    z.right - z.left,
+    z.bottom - z.top
+  );
+
+  // Viền vùng hợp lệ
+  ctx.globalAlpha = 0.72;
+  ctx.setLineDash([12, 9]);
+  ctx.lineWidth = 2.5;
+  ctx.strokeStyle = "rgba(255,255,255,.8)";
+  ctx.strokeRect(
+    z.left,
+    z.top,
+    z.right - z.left,
+    z.bottom - z.top
+  );
+
+  ctx.setLineDash([]);
+
+  // Đường kim cương thứ 2
+  ctx.globalAlpha = 0.85;
+  ctx.strokeStyle = "rgba(255,230,90,.85)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.moveTo(z.right, z.top);
+  ctx.lineTo(z.right, z.bottom);
+  ctx.stroke();
+
+  // Chữ nhỏ hướng dẫn
+  ctx.globalAlpha = 0.9;
+  ctx.fillStyle = "#fff";
+  ctx.font = "900 18px Arial";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(
+    "KÉO BI CÁI TRONG VÙNG ĐỀ-PA",
+    (z.left + z.right) / 2,
+    z.top + 26
+  );
+
+  ctx.restore();
+}
+
+function draw(){
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+  ctx.clearRect(0,0,innerWidth,innerHeight);
+
+  ctx.save();
+  ctx.translate(ox,oy);
+  ctx.scale(scale,scale);
+
+drawBackground();
+drawTable();
+drawPottedTray();
+drawAICueDragGuide();
+drawBreakCueZone();
+drawBalls();
+drawAiming();
+drawAIThinkingCueMotion();
+drawAICueVisual();
+drawAICueStick();
+
+
+
+  ctx.restore();
+}
+
+function drawBackground(){
+  const g = ctx.createRadialGradient(VW/2,VH/2,100,VW/2,VH/2,900);
+  g.addColorStop(0,"#184125");
+  g.addColorStop(1,"#061009");
+  ctx.fillStyle = g;
+  ctx.fillRect(0,0,VW,VH);
+
+  ctx.globalAlpha = 0.14;
+  for(let i=0;i<80;i++){
+    const x = (i * 173) % VW;
+    const y = (i * 97) % VH;
+    ctx.fillStyle = "#b7ffd0";
+    ctx.beginPath();
+    ctx.arc(x,y,1.2 + (i%3),0,Math.PI*2);
+    ctx.fill();
+  }
+  ctx.globalAlpha = 1;
+}
+
+function drawTable(){
+  // Bóng bàn.
+  ctx.shadowColor = "rgba(0,0,0,.7)";
+  ctx.shadowBlur = 30;
+  ctx.fillStyle = "#3b1f0e";
+  roundRect(table.x-68, table.y-68, table.w+136, table.h+136, 58, true);
+  ctx.shadowBlur = 0;
+
+  // Viền gỗ.
+  const wood = ctx.createLinearGradient(table.x,table.y,table.x,table.y+table.h);
+  wood.addColorStop(0,"#8a4a1d");
+  wood.addColorStop(.5,"#5a2d11");
+  wood.addColorStop(1,"#2f1709");
+  ctx.fillStyle = wood;
+  roundRect(table.x-52, table.y-52, table.w+104, table.h+104, 44, true);
+
+  // Nỉ.
+  const felt = ctx.createRadialGradient(
+    table.x + table.w/2, table.y + table.h/2, 80,
+    table.x + table.w/2, table.y + table.h/2, 820
+  );
+  felt.addColorStop(0,"#20944d");
+  felt.addColorStop(.65,"#116b37");
+  felt.addColorStop(1,"#0b4b27");
+  ctx.fillStyle = felt;
+  roundRect(table.x, table.y, table.w, table.h, 24, true);
+
+  // Vân nỉ.
+  ctx.save();
+  ctx.clip();
+  ctx.globalAlpha = .08;
+  for(let y=table.y; y<table.y+table.h; y+=18){
+    ctx.strokeStyle = y % 36 === 0 ? "#ffffff" : "#001a0b";
+    ctx.beginPath();
+    ctx.moveTo(table.x,y);
+    ctx.lineTo(table.x+table.w,y+Math.sin(y*.03)*8);
+    ctx.stroke();
+  }
+  ctx.restore();
+  ctx.globalAlpha = 1;
+
+// Mép bao cao su quanh bàn
+drawCushionRails();
+
+// Kim cương ngắm trên băng.
+drawDiamonds();
+    
+    // Bo lại 2 mép nhọn ở lỗ giữa
+
+
+// Vẽ lòng lỗ
+drawRealPockets();
+}
+
+function drawDiamonds(){
+  ctx.fillStyle = "rgba(255,234,160,.75)";
+
+  for(let i=1;i<8;i++){
+    const x = table.x + table.w * i / 8;
+
+    ctx.beginPath();
+    ctx.moveTo(x, table.y - 35);
+    ctx.lineTo(x+8, table.y - 27);
+    ctx.lineTo(x, table.y - 19);
+    ctx.lineTo(x-8, table.y - 27);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x, table.y + table.h + 35);
+    ctx.lineTo(x+8, table.y + table.h + 27);
+    ctx.lineTo(x, table.y + table.h + 19);
+    ctx.lineTo(x-8, table.y + table.h + 27);
+    ctx.fill();
+  }
+
+  for(let i=1;i<4;i++){
+    const y = table.y + table.h * i / 4;
+
+    ctx.beginPath();
+    ctx.moveTo(table.x - 35, y);
+    ctx.lineTo(table.x - 27, y+8);
+    ctx.lineTo(table.x - 19, y);
+    ctx.lineTo(table.x - 27, y-8);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(table.x + table.w + 35, y);
+    ctx.lineTo(table.x + table.w + 27, y+8);
+    ctx.lineTo(table.x + table.w + 19, y);
+    ctx.lineTo(table.x + table.w + 27, y-8);
+    ctx.fill();
+  }
+}
+    
+ function drawCushionRails(){
+  const x = table.x;
+  const y = table.y;
+  const w = table.w;
+  const h = table.h;
+
+  const midX = x + w / 2;
+
+  const c = CUSHION_THICKNESS;
+const cornerGap = CORNER_MOUTH;
+const sideGap = SIDE_MOUTH;
+  ctx.save();
+
+  ctx.shadowColor = "rgba(0,0,0,.30)";
+  ctx.shadowBlur = 6;
+
+  // Mép trên: chia 2 đoạn, chừa lỗ giữa
+  drawCushionSegment(
+    x + cornerGap,
+    y,
+    midX - sideGap / 2,
+    y,
+    c,
+    "top"
+  );
+
+  drawCushionSegment(
+    midX + sideGap / 2,
+    y,
+    x + w - cornerGap,
+    y,
+    c,
+    "top"
+  );
+
+  // Mép dưới: chia 2 đoạn, chừa lỗ giữa
+  drawCushionSegment(
+    x + cornerGap,
+    y + h,
+    midX - sideGap / 2,
+    y + h,
+    c,
+    "bottom"
+  );
+
+  drawCushionSegment(
+    midX + sideGap / 2,
+    y + h,
+    x + w - cornerGap,
+    y + h,
+    c,
+    "bottom"
+  );
+
+  // Mép trái: nối liền, chỉ chừa 2 lỗ góc
+  drawCushionSegment(
+    x,
+    y + cornerGap,
+    x,
+    y + h - cornerGap,
+    c,
+    "left"
+  );
+
+  // Mép phải: nối liền, chỉ chừa 2 lỗ góc
+  drawCushionSegment(
+    x + w,
+    y + cornerGap,
+    x + w,
+    y + h - cornerGap,
+    c,
+    "right"
+  );
+
+  ctx.restore();
+}
+
+  
+  
+function drawCushionSegment(x1, y1, x2, y2, thickness, side){
+  const grad = ctx.createLinearGradient(x1, y1, x2, y2);
+
+  grad.addColorStop(0, "#0d4f2a");
+  grad.addColorStop(0.5, "#28a856");
+  grad.addColorStop(1, "#0d4f2a");
+
+  const bevel = thickness * 0.62;
+
+  ctx.fillStyle = grad;
+  ctx.strokeStyle = "rgba(0,0,0,.28)";
+  ctx.lineWidth = 1.6;
+
+  ctx.beginPath();
+
+  if(side === "top"){
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2 - bevel, y2 + thickness);
+    ctx.lineTo(x1 + bevel, y1 + thickness);
+  }
+
+  if(side === "bottom"){
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2 - bevel, y2 - thickness);
+    ctx.lineTo(x1 + bevel, y1 - thickness);
+  }
+
+  if(side === "left"){
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2 + thickness, y2 - bevel);
+    ctx.lineTo(x1 + thickness, y1 + bevel);
+  }
+
+  if(side === "right"){
+    ctx.moveTo(x1, y1);
+    ctx.lineTo(x2, y2);
+    ctx.lineTo(x2 - thickness, y2 - bevel);
+    ctx.lineTo(x1 - thickness, y1 + bevel);
+  }
+
+  ctx.closePath();
+  ctx.fill();
+  ctx.stroke();
+
+  // Highlight nhẹ trên mép cao su
+  ctx.save();
+  ctx.globalAlpha = 0.18;
+  ctx.strokeStyle = "#e8ffd8";
+  ctx.lineWidth = 1.5;
+
+  ctx.beginPath();
+
+  if(side === "top"){
+    ctx.moveTo(x1 + bevel, y1 + thickness * 0.38);
+    ctx.lineTo(x2 - bevel, y2 + thickness * 0.38);
+  }
+
+  if(side === "bottom"){
+    ctx.moveTo(x1 + bevel, y1 - thickness * 0.38);
+    ctx.lineTo(x2 - bevel, y2 - thickness * 0.38);
+  }
+
+  if(side === "left"){
+    ctx.moveTo(x1 + thickness * 0.38, y1 + bevel);
+    ctx.lineTo(x2 + thickness * 0.38, y2 - bevel);
+  }
+
+  if(side === "right"){
+    ctx.moveTo(x1 - thickness * 0.38, y1 + bevel);
+    ctx.lineTo(x2 - thickness * 0.38, y2 - bevel);
+  }
+
+  ctx.stroke();
+  ctx.restore();
+}
+
+  
+function drawPocketFacings(){
+  const midX = table.x + table.w / 2;
+
+  // 6 miệng lỗ kiểu cong
+  drawCornerFacing(table.x, table.y, "tl");
+  drawCornerFacing(table.x + table.w, table.y, "tr");
+  drawCornerFacing(table.x, table.y + table.h, "bl");
+  drawCornerFacing(table.x + table.w, table.y + table.h, "br");
+
+  drawSideFacing(midX, table.y, "top");
+  drawSideFacing(midX, table.y + table.h, "bottom");
+}
+
+function drawCornerFacing(x, y, id){
+  ctx.save();
+
+  ctx.fillStyle = "#4ea663";
+
+  if(id === "tl"){
+    ctx.beginPath();
+    ctx.moveTo(x + CORNER_MOUTH, y);
+    ctx.quadraticCurveTo(x + CORNER_MOUTH * 0.55, y + 8, x + 10, y + CORNER_MOUTH * 0.55);
+    ctx.lineTo(x, y + CORNER_MOUTH);
+    ctx.lineTo(x, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if(id === "tr"){
+    ctx.beginPath();
+    ctx.moveTo(x - CORNER_MOUTH, y);
+    ctx.quadraticCurveTo(x - CORNER_MOUTH * 0.55, y + 8, x - 10, y + CORNER_MOUTH * 0.55);
+    ctx.lineTo(x, y + CORNER_MOUTH);
+    ctx.lineTo(x, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if(id === "bl"){
+    ctx.beginPath();
+    ctx.moveTo(x + CORNER_MOUTH, y);
+    ctx.quadraticCurveTo(x + CORNER_MOUTH * 0.55, y - 8, x + 10, y - CORNER_MOUTH * 0.55);
+    ctx.lineTo(x, y - CORNER_MOUTH);
+    ctx.lineTo(x, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  if(id === "br"){
+    ctx.beginPath();
+    ctx.moveTo(x - CORNER_MOUTH, y);
+    ctx.quadraticCurveTo(x - CORNER_MOUTH * 0.55, y - 8, x - 10, y - CORNER_MOUTH * 0.55);
+    ctx.lineTo(x, y - CORNER_MOUTH);
+    ctx.lineTo(x, y);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawSideFacing(x, y, side){
+  ctx.save();
+  ctx.fillStyle = "#4ea663";
+
+  const half = SIDE_MOUTH_HALF + 8;
+  const depth = 24;
+
+  ctx.beginPath();
+
+  if(side === "top"){
+    ctx.moveTo(x - half, y);
+    ctx.quadraticCurveTo(x - half * 0.55, y, x - 20, y + depth);
+    ctx.quadraticCurveTo(x, y + depth + 7, x + 20, y + depth);
+    ctx.quadraticCurveTo(x + half * 0.55, y, x + half, y);
+  }else{
+    ctx.moveTo(x - half, y);
+    ctx.quadraticCurveTo(x - half * 0.55, y, x - 20, y - depth);
+    ctx.quadraticCurveTo(x, y - depth - 7, x + 20, y - depth);
+    ctx.quadraticCurveTo(x + half * 0.55, y, x + half, y);
+  }
+
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.restore();
+}
+  
+function drawRealPockets(){
+  for(const p of pockets){
+    const r = p.type === "side" ? SIDE_POCKET_R : CORNER_POCKET_R;
+    drawPocketHole(p.x, p.y, r, p.type);
+  }
+}
+
+
+
+function drawPocketHole(x, y, r, type, id){
+  ctx.save();
+
+  const pg = ctx.createRadialGradient(
+    x - r * 0.25,
+    y - r * 0.25,
+    3,
+    x,
+    y,
+    r
+  );
+
+  pg.addColorStop(0, "#151515");
+  pg.addColorStop(0.65, "#030303");
+  pg.addColorStop(1, "#000000");
+
+  ctx.fillStyle = pg;
+
+  ctx.beginPath();
+
+  if(type === "side"){
+    // Lỗ giữa hơi dẹt theo chiều ngang, không còn tròn to lộ thiên
+    ctx.ellipse(
+      x,
+      y,
+      r * 1.08,
+      r * 0.92,
+      0,
+      0,
+      Math.PI * 2
+    );
+  }else{
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+  }
+
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,220,120,.35)";
+  ctx.lineWidth = 2.2;
+  ctx.stroke();
+
+  ctx.restore();
+}
+  
+function getTraySlot(index){
+  const trayBallR = BALL_R * POTTED_TRAY.ballScale;
+
+  return {
+    x: POTTED_TRAY.x + POTTED_TRAY.w / 2,
+    y: POTTED_TRAY.y + POTTED_TRAY.h - POTTED_TRAY.paddingBottom - trayBallR - index * TRAY_SLOT_GAP
+  };
+}
+
+function startPocketAnimation(ball, pocket){
+  const slotIndex = pottedTrayBalls.length + pocketAnimations.length;
+  const slot = getTraySlot(slotIndex);
+
+  // Bi sẽ xuất hiện trên cao, ngay phía trên khay
+  // rồi rơi thẳng xuống vị trí cần xếp.
+  const spawnX = slot.x;
+  const spawnY = POTTED_TRAY.y - 90;
+
+  pocketAnimations.push({
+    num: ball.num,
+    type: ball.type,
+    x: spawnX,
+    y: spawnY,
+    sx: spawnX,
+    sy: spawnY,
+    tx: slot.x,
+    ty: slot.y,
+    vy: 0,
+    gravity: 0.42,
+    bounce: 0.28,
+    settled: false,
+    scale: 0.92
+  });
+}
+
+function updatePocketAnimations(){
+  for(let i = pocketAnimations.length - 1; i >= 0; i--){
+    const a = pocketAnimations[i];
+
+    if(a.settled){
+      pottedTrayBalls.push({
+        num: a.num,
+        type: a.type,
+        x: a.tx,
+        y: a.ty
+      });
+
+      pocketAnimations.splice(i, 1);
+      continue;
+    }
+
+    a.vy += a.gravity;
+    a.y += a.vy;
+
+    // Giữ x cố định để bi rơi thẳng đứng
+    a.x = a.tx;
+
+    // Scale thu nhỏ dần về kích cỡ trong khay
+    a.scale += (POTTED_TRAY.ballScale - a.scale) * 0.08;
+
+    // Chạm vị trí đích thì nảy nhẹ rồi dừng
+    if(a.y >= a.ty){
+      a.y = a.ty;
+
+      if(Math.abs(a.vy) < 1.15){
+        a.vy = 0;
+        a.settled = true;
+      }else{
+        a.vy *= -a.bounce;
+      }
+    }
+  }
+}
+
+function drawPottedTray(){
+  ctx.save();
+
+  // Thân khay
+  ctx.shadowColor = "rgba(0,0,0,.55)";
+  ctx.shadowBlur = 18;
+
+  const trayGrad = ctx.createLinearGradient(
+    POTTED_TRAY.x,
+    POTTED_TRAY.y,
+    POTTED_TRAY.x + POTTED_TRAY.w,
+    POTTED_TRAY.y
+  );
+
+  trayGrad.addColorStop(0, "#1f0e05");
+  trayGrad.addColorStop(0.5, "#4b260d");
+  trayGrad.addColorStop(1, "#160904");
+
+  ctx.fillStyle = trayGrad;
+  roundRect(
+    POTTED_TRAY.x,
+    POTTED_TRAY.y,
+    POTTED_TRAY.w,
+    POTTED_TRAY.h,
+    24,
+    true
+  );
+
+  ctx.shadowBlur = 0;
+
+  // Lòng khay
+  ctx.fillStyle = "rgba(0,0,0,.32)";
+  roundRect(
+    POTTED_TRAY.x + 8,
+    POTTED_TRAY.y + 10,
+    POTTED_TRAY.w - 16,
+    POTTED_TRAY.h - 20,
+    18,
+    true
+  );
+
+  // Viền ngoài
+  ctx.strokeStyle = "rgba(255,220,120,.35)";
+  ctx.lineWidth = 2;
+  roundRect(
+    POTTED_TRAY.x,
+    POTTED_TRAY.y,
+    POTTED_TRAY.w,
+    POTTED_TRAY.h,
+    24,
+    false
+  );
+
+  // Rãnh xếp bi theo chiều dọc
+  const maxSlots = MAX_POTTED_BALLS;
+  for(let i = 0; i < maxSlots; i++){
+    const slot = getTraySlot(i);
+
+    ctx.fillStyle = "rgba(0,0,0,.38)";
+    ctx.beginPath();
+    ctx.arc(slot.x, slot.y, BALL_R * 0.82, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,.10)";
+    ctx.lineWidth = 1.3;
+    ctx.stroke();
+  }
+
+  // Bi đang nằm trong khay
+  for(const item of pottedTrayBalls){
+    drawTrayBallIcon(item.num, item.type, item.x, item.y, POTTED_TRAY.ballScale);
+  }
+
+  // Bi đang rơi
+  for(const a of pocketAnimations){
+    drawTrayBallIcon(a.num, a.type, a.x, a.y, a.scale);
+  }
+
+  ctx.restore();
+}
+
+function drawTrayBallIcon(num, type, x, y, scaleSize){
+  ctx.save();
+  ctx.translate(x, y);
+  ctx.scale(scaleSize, scaleSize);
+
+  drawBall({
+    x: 0,
+    y: 0,
+    num,
+    type,
+    active: true,
+    rollPhase: 0,
+    faceX: 0,
+    faceY: 0,
+    faceRot: 0
+  });
+
+  ctx.restore();
+}
+  
+function findAimCollision(startX, startY, dir){
+  let nearest = null;
+  const hitRadius = BALL_R * 2;
+
+  for(const b of balls){
+    if(!b.active || b === cueBall) continue;
+
+    const bx = b.x - startX;
+    const by = b.y - startY;
+
+    const projection = bx * dir.x + by * dir.y;
+    if(projection <= BALL_R) continue;
+
+    const closestX = startX + dir.x * projection;
+    const closestY = startY + dir.y * projection;
+
+    const sideDist = Math.hypot(b.x - closestX, b.y - closestY);
+    if(sideDist > hitRadius) continue;
+
+    const backDist = Math.sqrt(hitRadius * hitRadius - sideDist * sideDist);
+    const tHit = projection - backDist;
+
+    if(tHit <= 0) continue;
+
+    if(!nearest || tHit < nearest.tHit){
+      const cueImpactX = startX + dir.x * tHit;
+      const cueImpactY = startY + dir.y * tHit;
+
+      nearest = {
+        ball:b,
+        tHit,
+        cueImpactX,
+        cueImpactY,
+        contactX:cueImpactX + dir.x * BALL_R,
+        contactY:cueImpactY + dir.y * BALL_R
+      };
+    }
+  }
+
+  return nearest;
+}
+
+function drawGhostCueBall(x, y){
+  ctx.save();
+
+  // Vòng tròn rỗng, kích thước bằng bi cái thật
+  ctx.beginPath();
+  ctx.arc(x, y, BALL_R, 0, Math.PI * 2);
+
+  ctx.lineWidth = 3;
+  ctx.strokeStyle = "rgba(255,255,255,.95)";
+  ctx.shadowColor = "rgba(255,255,255,.45)";
+  ctx.shadowBlur = 8;
+  ctx.stroke();
+
+  ctx.restore();
+}
+function drawImpactLine(x1, y1, x2, y2, color){
+  ctx.save();
+
+  ctx.lineCap = "round";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 9;
+
+  ctx.beginPath();
+  ctx.moveTo(x1, y1);
+  ctx.lineTo(x2, y2);
+  ctx.stroke();
+
+  ctx.restore();
+}
+  
+function predictDeveloperBallPath({
+  startX,
+  startY,
+  dir,
+  selfBall,
+  ignoreBalls = [],
+  maxLen = 3200,
+  maxBounces = DEV_MAX_BOUNCES,
+  kind = "object"
+}){
+  const points = [];
+
+  let x = startX;
+  let y = startY;
+  let vx = dir.x;
+  let vy = dir.y;
+
+  let travelled = 0;
+  let bounces = 0;
+  
+
+  const step = 5;
+
+  points.push({x, y});
+
+  while(travelled < maxLen){
+    x += vx * step;
+    y += vy * step;
+    travelled += step;
+
+    const pocket = getDeveloperPredictionPocketHit(x, y);
+
+    if(pocket){
+      points.push({
+        x:pocket.x,
+        y:pocket.y
+      });
+
+      return {
+        result:"pocket",
+        pocket,
+        points,
+        kind,
+        bounces
+      };
+    }
+
+    const blocker = getDeveloperPredictionBlockerAdvanced(
+      x,
+      y,
+      ignoreBalls
+    );
+
+    if(blocker){
+      points.push({x, y});
+
+      return {
+        result:"blocker",
+        blocker,
+        points,
+        kind,
+        bounces
+      };
+    }
+
+    const rail = getDeveloperPredictionRailHit(
+      x,
+      y,
+      {x:vx, y:vy}
+    );
+
+    if(rail){
+      points.push({x, y});
+
+      if(bounces >= maxBounces){
+        return {
+          result:"rail",
+          rail,
+          points,
+          kind,
+          bounces
+        };
+      }
+
+      const reflected = reflectDeveloperDirByRail(
+        {x:vx, y:vy},
+        rail
+      );
+
+      vx = reflected.x;
+      vy = reflected.y;
+
+      const nudged = nudgeDeveloperPointAfterRail(
+        x,
+        y,
+        rail
+      );
+
+      x = nudged.x;
+      y = nudged.y;
+
+      points.push({x, y});
+
+      bounces++;
+      continue;
+    }
+
+    if(travelled % 20 === 0){
+      points.push({x, y});
+    }
+  }
+
+  points.push({x, y});
+
+  return {
+    result:"none",
+    points,
+    kind,
+    bounces
+  };
+}
+
+function getDeveloperPredictionBlockerAdvanced(x, y, ignoreBalls = []){
+  for(const b of balls){
+    if(!b.active) continue;
+    if(ignoreBalls.includes(b)) continue;
+
+    if(Math.hypot(x - b.x, y - b.y) < BALL_R * 2.02){
+      return b;
+    }
+  }
+
+  return null;
+}
+
+function reflectDeveloperDirByRail(dir, rail){
+  if(rail === "left" || rail === "right"){
+    return {
+      x:-dir.x,
+      y:dir.y
+    };
+  }
+
+  if(rail === "top" || rail === "bottom"){
+    return {
+      x:dir.x,
+      y:-dir.y
+    };
+  }
+
+  return {
+    x:dir.x,
+    y:dir.y
+  };
+}
+
+function nudgeDeveloperPointAfterRail(x, y, rail){
+  const left = table.x + CUSHION_THICKNESS + BALL_R;
+  const right = table.x + table.w - CUSHION_THICKNESS - BALL_R;
+  const top = table.y + CUSHION_THICKNESS + BALL_R;
+  const bottom = table.y + table.h - CUSHION_THICKNESS - BALL_R;
+
+  const nudge = 3;
+
+  if(rail === "left"){
+    return {
+      x:left + nudge,
+      y
+    };
+  }
+
+  if(rail === "right"){
+    return {
+      x:right - nudge,
+      y
+    };
+  }
+
+  if(rail === "top"){
+    return {
+      x,
+      y:top + nudge
+    };
+  }
+
+  if(rail === "bottom"){
+    return {
+      x,
+      y:bottom - nudge
+    };
+  }
+
+  return {x, y};
+}
+
+function drawDeveloperPredictedPath(prediction, colors){
+  if(!prediction || !prediction.points || prediction.points.length < 2) return;
+
+  let color = colors.main;
+
+  if(prediction.result === "pocket"){
+    color = colors.pocket;
+  }
+
+  if(prediction.result === "blocker"){
+    color = colors.blocker;
+  }
+
+  if(prediction.result === "rail"){
+    color = colors.rail;
+  }
+
+  ctx.save();
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = prediction.kind === "cue" ? 3.5 : 4.3;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  ctx.moveTo(
+    prediction.points[0].x,
+    prediction.points[0].y
+  );
+
+  for(let i = 1; i < prediction.points.length; i++){
+    ctx.lineTo(
+      prediction.points[i].x,
+      prediction.points[i].y
+    );
+  }
+
+  ctx.stroke();
+
+  // Chấm cuối đường dự đoán
+  const last = prediction.points[prediction.points.length - 1];
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, prediction.kind === "cue" ? 5 : 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Nếu vào lỗ thì khoanh lỗ
+  if(prediction.result === "pocket" && prediction.pocket){
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = colors.pocket;
+    ctx.shadowColor = colors.pocket;
+    ctx.shadowBlur = 16;
+
+    ctx.beginPath();
+    ctx.arc(
+      prediction.pocket.x,
+      prediction.pocket.y,
+      prediction.pocket.type === "corner"
+        ? CORNER_POCKET_R + 7
+        : SIDE_POCKET_R + 7,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+  }
+
+  // Nếu bị chặn thì khoanh bi chặn
+  if(prediction.result === "blocker" && prediction.blocker){
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = colors.blocker;
+    ctx.shadowColor = colors.blocker;
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.arc(
+      prediction.blocker.x,
+      prediction.blocker.y,
+      BALL_R + 6,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawDeveloperStopPoint(x, y, color){
+  ctx.save();
+
+  ctx.strokeStyle = color;
+  ctx.fillStyle = "rgba(0,0,0,.35)";
+  ctx.lineWidth = 3;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.arc(x, y, BALL_R * 0.72, 0, Math.PI * 2);
+  ctx.fill();
+  ctx.stroke();
+
+  ctx.beginPath();
+  ctx.moveTo(x - 8, y);
+  ctx.lineTo(x + 8, y);
+  ctx.moveTo(x, y - 8);
+  ctx.lineTo(x, y + 8);
+  ctx.stroke();
+
+  ctx.restore();
+}
+ 
+function getDeveloperPredictionPocketHit(x, y){
+  for(const p of pockets){
+    if(isPocketPhysicsHit(x, y, p)){
+      return p;
+    }
+  }
+
+  return null;
+}
+
+function getDeveloperPredictionBlocker(x, y, targetBall){
+  for(const b of balls){
+    if(!b.active) continue;
+    if(b === cueBall) continue;
+    if(b === targetBall) continue;
+
+    if(Math.hypot(x - b.x, y - b.y) < BALL_R * 2.02){
+      return b;
+    }
+  }
+
+  return null;
+}
+
+function getDeveloperPredictionRailHit(x, y, dir){
+  const left = table.x + CUSHION_THICKNESS + BALL_R;
+  const right = table.x + table.w - CUSHION_THICKNESS - BALL_R;
+  const top = table.y + CUSHION_THICKNESS + BALL_R;
+  const bottom = table.y + table.h - CUSHION_THICKNESS - BALL_R;
+
+  const openTopBottom = isTopBottomPocketOpeningX(x);
+  const openLeftRight = isLeftRightPocketOpeningY(y);
+
+  const movingToTopPocket = openTopBottom && dir.y < -0.001;
+  const movingToBottomPocket = openTopBottom && dir.y > 0.001;
+  const movingToLeftPocket = openLeftRight && dir.x < -0.001;
+  const movingToRightPocket = openLeftRight && dir.x > 0.001;
+
+  if(x <= left && !movingToLeftPocket) return "left";
+  if(x >= right && !movingToRightPocket) return "right";
+  if(y <= top && !movingToTopPocket) return "top";
+  if(y >= bottom && !movingToBottomPocket) return "bottom";
+
+  return null;
+}
+
+function predictDeveloperObjectBallPath(targetBall, dir, maxLen = 1800){
+  const points = [];
+
+  let x = targetBall.x;
+  let y = targetBall.y;
+
+  const step = 5;
+
+  points.push({x, y});
+
+  for(let travelled = 0; travelled < maxLen; travelled += step){
+    x += dir.x * step;
+    y += dir.y * step;
+
+    const pocket = getDeveloperPredictionPocketHit(x, y);
+
+    if(pocket){
+      points.push({
+        x:pocket.x,
+        y:pocket.y
+      });
+
+      return {
+        result:"pocket",
+        pocket,
+        points
+      };
+    }
+
+    const blocker = getDeveloperPredictionBlocker(x, y, targetBall);
+
+    if(blocker){
+      points.push({x, y});
+
+      return {
+        result:"blocker",
+        blocker,
+        points
+      };
+    }
+
+    const rail = getDeveloperPredictionRailHit(x, y, dir);
+
+    if(rail){
+      points.push({x, y});
+
+      return {
+        result:"rail",
+        rail,
+        points
+      };
+    }
+
+    if(travelled % 20 === 0){
+      points.push({x, y});
+    }
+  }
+
+  points.push({x, y});
+
+  return {
+    result:"none",
+    points
+  };
+}
+function getDeveloperPhysicsPredictionCached(dir, power, shotSpin){
+  const key = [
+    dir.x.toFixed(4),
+    dir.y.toFixed(4),
+    power.toFixed(3),
+    shotSpin.x.toFixed(2),
+    shotSpin.y.toFixed(2),
+    balls.map(b => {
+      if(!b.active) return `${b.num}:x`;
+      return `${b.num}:${Math.round(b.x)},${Math.round(b.y)}`;
+    }).join("|")
+  ].join(";");
+
+  const now = performance.now();
+
+  if(
+    DEV_PREDICT_CACHE.result &&
+    DEV_PREDICT_CACHE.key === key &&
+    now - DEV_PREDICT_CACHE.time < 80
+  ){
+    return DEV_PREDICT_CACHE.result;
+  }
+
+  const result = simulateDeveloperPhysicsPrediction(dir, power, shotSpin);
+
+  DEV_PREDICT_CACHE.key = key;
+  DEV_PREDICT_CACHE.time = now;
+  DEV_PREDICT_CACHE.result = result;
+
+  return result;
+}
+
+function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
+  const simBalls = balls.map(b => ({
+  num:b.num,
+  type:b.type,
+  x:b.x,
+  y:b.y,
+  vx:0,
+  vy:0,
+  active:b.active,
+  potted:b.potted,
+  devBounces:0
+}));
+
+  const simCue = simBalls.find(b => b.num === 0);
+
+  const cuePath = [];
+  const targetPath = [];
+
+  let firstHitNum = null;
+  let firstHitBall = null;
+  let firstHitPocket = null;
+  let cuePocket = null;
+
+  if(!simCue || !simCue.active){
+    return {
+      cuePath,
+      targetPath,
+      firstHitNum:null,
+      firstHitPocket:null,
+      cuePocket:null
+    };
+  }
+
+  const force = 14 + power * 66;
+
+  simCue.vx = dir.x * force;
+  simCue.vy = dir.y * force;
+
+  const simSpin = {
+    x: clamp(shotSpin.x || 0, -1, 1),
+    y: clamp(shotSpin.y || 0, -1, 1),
+    life: 120
+  };
+
+  pushDeveloperPathPoint(cuePath, simCue.x, simCue.y, 1);
+
+  const frameLimit = 760;
+
+  for(let frame = 0; frame < frameLimit; frame++){
+    let maxSpeed = 0;
+
+    for(const b of simBalls){
+      if(!b.active) continue;
+
+      limitDeveloperSimBallSpeed(b);
+      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
+    }
+
+    if(maxSpeed < 0.16 && frame > 8){
+      break;
+    }
+
+    const steps = clamp(
+      Math.ceil(maxSpeed / (BALL_R * 0.22)),
+      6,
+      24
+    );
+
+    for(let s = 0; s < steps; s++){
+      for(const b of simBalls){
+        if(!b.active) continue;
+
+        const speed = Math.hypot(b.vx, b.vy);
+
+        if(b.num === 0 && simSpin.life > 0 && speed > 0.3){
+          const n = norm(b.vx, b.vy);
+
+          b.vx += n.x * simSpin.y * 0.022;
+          b.vy += n.y * simSpin.y * 0.022;
+
+          const px = -n.y;
+          const py = n.x;
+
+          b.vx += px * simSpin.x * 0.018;
+          b.vy += py * simSpin.x * 0.018;
+
+          simSpin.life--;
+        }
+
+        limitDeveloperSimBallSpeed(b);
+
+        const stepDX = b.vx / steps;
+        const stepDY = b.vy / steps;
+
+        b.x += stepDX;
+        b.y += stepDY;
+
+        const friction = Math.pow(0.987, 1 / steps);
+
+        b.vx *= friction;
+        b.vy *= friction;
+
+        if(Math.abs(b.vx) < 0.015) b.vx = 0;
+        if(Math.abs(b.vy) < 0.015) b.vy = 0;
+
+        const pocket = handleDeveloperSimPocket(b);
+
+        if(pocket){
+          if(b.num === 0){
+            cuePocket = pocket;
+          }
+
+          if(firstHitBall && b.num === firstHitNum){
+            firstHitPocket = pocket;
+            pushDeveloperPathPoint(targetPath, pocket.x, pocket.y, 1);
+          }
+        }
+
+       if(b.active){
+  applyCornerPocketJaws(b, false);
+  applySidePocketMiddleJaws(b);
+  handleDeveloperSimRailWithLimit(b);
+}
+      }
+
+      handleDeveloperSimCollisions(
+        simBalls,
+        hitBall => {
+          if(firstHitNum !== null) return;
+
+          firstHitNum = hitBall.num;
+          firstHitBall = hitBall;
+
+          pushDeveloperPathPoint(
+            targetPath,
+            hitBall.x,
+            hitBall.y,
+            1
+          );
+        },
+        simSpin
+      );
+
+      for(const b of simBalls){
+        if(!b.active) continue;
+
+        const pocket = handleDeveloperSimPocket(b);
+
+        if(pocket){
+          if(b.num === 0){
+            cuePocket = pocket;
+          }
+
+          if(firstHitBall && b.num === firstHitNum){
+            firstHitPocket = pocket;
+            pushDeveloperPathPoint(targetPath, pocket.x, pocket.y, 1);
+          }
+        }
+
+        if(b.active){
+  applyCornerPocketJaws(b, false);
+  applySidePocketMiddleJaws(b);
+  handleDeveloperSimRailWithLimit(b);
+  limitDeveloperSimBallSpeed(b);
+}
+      }
+    }
+
+    pushDeveloperPathPoint(cuePath, simCue.x, simCue.y, 10);
+
+    if(firstHitBall && firstHitBall.active){
+      pushDeveloperPathPoint(
+        targetPath,
+        firstHitBall.x,
+        firstHitBall.y,
+        10
+      );
+    }
+  }
+
+  return {
+    cuePath,
+    targetPath,
+    firstHitNum,
+    firstHitPocket,
+    cuePocket
+  };
+}
+
+function limitDeveloperSimBallSpeed(b, max = MAX_BALL_SPEED){
+  const sp = Math.hypot(b.vx, b.vy);
+
+  if(sp > max){
+    const k = max / sp;
+    b.vx *= k;
+    b.vy *= k;
+  }
+}
+
+function pushDeveloperPathPoint(path, x, y, minGap = 8){
+  const last = path[path.length - 1];
+
+  if(!last || Math.hypot(x - last.x, y - last.y) >= minGap){
+    path.push({x, y});
+  }
+}
+
+function handleDeveloperSimCollisions(simBalls, onFirstHit, simSpin){
+  for(let i = 0; i < simBalls.length; i++){
+    for(let j = i + 1; j < simBalls.length; j++){
+      const a = simBalls[i];
+      const b = simBalls[j];
+
+      if(!a.active || !b.active) continue;
+
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      const d = Math.hypot(dx, dy);
+      const minD = BALL_R * 2;
+
+      if(d > 0 && d < minD){
+        const nx = dx / d;
+        const ny = dy / d;
+        const overlap = minD - d;
+
+        a.x -= nx * overlap / 2;
+        a.y -= ny * overlap / 2;
+        b.x += nx * overlap / 2;
+        b.y += ny * overlap / 2;
+
+        const rvx = a.vx - b.vx;
+        const rvy = a.vy - b.vy;
+        const impact = rvx * nx + rvy * ny;
+
+        if(impact > 0){
+          if(a.num === 0 && b.num !== 0){
+            onFirstHit(b);
+          }
+
+          if(b.num === 0 && a.num !== 0){
+            onFirstHit(a);
+          }
+
+          const restitution = 0.94;
+          const impulse = impact * restitution;
+
+          a.vx -= impulse * nx;
+          a.vy -= impulse * ny;
+          b.vx += impulse * nx;
+          b.vy += impulse * ny;
+
+          const tx = -ny;
+          const ty = nx;
+
+          if(a.num === 0 || b.num === 0){
+            const cue = a.num === 0 ? a : b;
+            const sideSign = a.num === 0 ? 1 : -1;
+
+            cue.vx += tx * simSpin.x * 1.15 * sideSign;
+            cue.vy += ty * simSpin.x * 1.15 * sideSign;
+
+            cue.vx -= nx * simSpin.y * 0.7 * sideSign;
+            cue.vy -= ny * simSpin.y * 0.7 * sideSign;
+
+            simSpin.life = Math.max(simSpin.life, 40);
+          }
+        }
+      }
+    }
+  }
+}
+
+function handleDeveloperSimPocket(b){
+  for(const p of pockets){
+    if(!isPocketPhysicsHit(b.x, b.y, p)){
+      continue;
+    }
+
+    b.active = false;
+    b.vx = 0;
+    b.vy = 0;
+    b.potted = true;
+
+    return p;
+  }
+
+  return null;
+}
+function handleDeveloperSimRailWithLimit(b){
+  const rail = handleDeveloperSimRail(b);
+
+  if(!rail) return null;
+
+  b.devBounces = (b.devBounces || 0) + 1;
+
+  if(b.devBounces >= DEV_MAX_BOUNCES){
+    b.vx = 0;
+    b.vy = 0;
+  }
+
+  return rail;
+}
+  
+function handleDeveloperSimRail(b){
+  const left = table.x + CUSHION_THICKNESS + BALL_R;
+  const right = table.x + table.w - CUSHION_THICKNESS - BALL_R;
+  const top = table.y + CUSHION_THICKNESS + BALL_R;
+  const bottom = table.y + table.h - CUSHION_THICKNESS - BALL_R;
+
+  const openTopBottom = isTopBottomPocketOpeningX(b.x);
+  const openLeftRight = isLeftRightPocketOpeningY(b.y);
+
+  const movingToTopPocket = openTopBottom && b.vy < -0.15;
+  const movingToBottomPocket = openTopBottom && b.vy > 0.15;
+  const movingToLeftPocket = openLeftRight && b.vx < -0.15;
+  const movingToRightPocket = openLeftRight && b.vx > 0.15;
+
+  if(b.x < left && !movingToLeftPocket){
+    b.x = left;
+    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
+    b.vy *= RAIL_SIDE_FRICTION;
+    return "left";
+  }
+
+  if(b.x > right && !movingToRightPocket){
+    b.x = right;
+    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
+    b.vy *= RAIL_SIDE_FRICTION;
+    return "right";
+  }
+
+  if(b.y < top && !movingToTopPocket){
+    b.y = top;
+    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
+    b.vx *= RAIL_SIDE_FRICTION;
+    return "top";
+  }
+
+  if(b.y > bottom && !movingToBottomPocket){
+    b.y = bottom;
+    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
+    b.vx *= RAIL_SIDE_FRICTION;
+    return "bottom";
+  }
+
+  return null;
+}
+
+function drawDeveloperPhysicsPrediction(sim){
+  if(!sim) return;
+
+  // Đường bi cái
+  drawDeveloperSimPath(
+    sim.cuePath,
+    sim.cuePocket
+      ? "rgba(80,190,255,.96)"
+      : "rgba(130,220,255,.88)",
+    true
+  );
+
+  // Đường bi mục tiêu đầu tiên
+  drawDeveloperSimPath(
+    sim.targetPath,
+    sim.firstHitPocket
+      ? "rgba(90,255,130,.96)"
+      : "rgba(255,230,90,.92)",
+    false
+  );
+
+  if(sim.firstHitPocket){
+    ctx.save();
+
+    ctx.strokeStyle = "rgba(90,255,130,.96)";
+    ctx.shadowColor = "rgba(90,255,130,.96)";
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.arc(
+      sim.firstHitPocket.x,
+      sim.firstHitPocket.y,
+      sim.firstHitPocket.type === "corner"
+        ? CORNER_POCKET_R + 8
+        : SIDE_POCKET_R + 8,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+
+    ctx.restore();
+  }
+
+  if(sim.cuePocket){
+    ctx.save();
+
+    ctx.strokeStyle = "rgba(80,190,255,.96)";
+    ctx.shadowColor = "rgba(80,190,255,.96)";
+    ctx.shadowBlur = 16;
+    ctx.lineWidth = 3;
+
+    ctx.beginPath();
+    ctx.arc(
+      sim.cuePocket.x,
+      sim.cuePocket.y,
+      sim.cuePocket.type === "corner"
+        ? CORNER_POCKET_R + 8
+        : SIDE_POCKET_R + 8,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+
+    ctx.restore();
+  }
+}
+
+function drawDeveloperSimPath(path, color, dashed = false){
+  if(!path || path.length < 2) return;
+
+  ctx.save();
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = dashed ? 3.2 : 4.4;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+
+  if(dashed){
+    ctx.setLineDash([12, 9]);
+  }else{
+    ctx.setLineDash([]);
+  }
+
+  ctx.beginPath();
+  ctx.moveTo(path[0].x, path[0].y);
+
+  for(let i = 1; i < path.length; i++){
+    ctx.lineTo(path[i].x, path[i].y);
+  }
+
+  ctx.stroke();
+
+  ctx.setLineDash([]);
+
+  const last = path[path.length - 1];
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, dashed ? 4.8 : 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+function drawDeveloperPredictedObjectPath(prediction){
+  if(!prediction || prediction.points.length < 2) return;
+
+  let color = "rgba(255,230,90,.9)";
+
+  if(prediction.result === "pocket"){
+    color = "rgba(90,255,130,.95)";
+  }
+
+  if(prediction.result === "blocker"){
+    color = "rgba(255,80,80,.95)";
+  }
+
+  if(prediction.result === "rail"){
+    color = "rgba(255,170,70,.95)";
+  }
+
+  ctx.save();
+
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = color;
+  ctx.shadowColor = color;
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  ctx.moveTo(prediction.points[0].x, prediction.points[0].y);
+
+  for(let i = 1; i < prediction.points.length; i++){
+    ctx.lineTo(prediction.points[i].x, prediction.points[i].y);
+  }
+
+  ctx.stroke();
+
+  const last = prediction.points[prediction.points.length - 1];
+
+  ctx.fillStyle = color;
+  ctx.beginPath();
+  ctx.arc(last.x, last.y, 6, 0, Math.PI * 2);
+  ctx.fill();
+
+  if(prediction.result === "pocket" && prediction.pocket){
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = "rgba(120,255,150,.95)";
+    ctx.shadowColor = "rgba(120,255,150,.9)";
+    ctx.shadowBlur = 16;
+
+    ctx.beginPath();
+    ctx.arc(
+      prediction.pocket.x,
+      prediction.pocket.y,
+      prediction.pocket.type === "corner"
+        ? CORNER_POCKET_R + 7
+        : SIDE_POCKET_R + 7,
+      0,
+      Math.PI * 2
+    );
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawTargetGlow(ball){
+  if(!ball || !ball.active) return;
+
+  ctx.save();
+
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, BALL_R + 4, 0, Math.PI * 2);
+
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = "rgba(255,225,80,.95)";
+  ctx.shadowColor = "rgba(255,215,0,.95)";
+  ctx.shadowBlur = 18;
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function getAimTableEnd(startX, startY, dir){
+  /*
+    Tia ngắm sẽ kéo dài tới mép chơi thật của bàn,
+    tức là mép trong của cao su xanh, không xuyên ra viền gỗ nâu.
+  */
+  const left = table.x + CUSHION_THICKNESS + BALL_R;
+  const right = table.x + table.w - CUSHION_THICKNESS - BALL_R;
+  const top = table.y + CUSHION_THICKNESS + BALL_R;
+  const bottom = table.y + table.h - CUSHION_THICKNESS - BALL_R;
+
+  let tMin = Infinity;
+
+  if(dir.x > 0){
+    tMin = Math.min(tMin, (right - startX) / dir.x);
+  }else if(dir.x < 0){
+    tMin = Math.min(tMin, (left - startX) / dir.x);
+  }
+
+  if(dir.y > 0){
+    tMin = Math.min(tMin, (bottom - startY) / dir.y);
+  }else if(dir.y < 0){
+    tMin = Math.min(tMin, (top - startY) / dir.y);
+  }
+
+  if(!isFinite(tMin) || tMin < 0){
+    tMin = 900;
+  }
+
+  return {
+    x: startX + dir.x * tMin,
+    y: startY + dir.y * tMin
+  };
+}
+  
+function drawCueBallAfterHitPrediction(hit, dir, outDir = null){
+  const target = hit.ball;
+
+  const objectDir = outDir || norm(
+    target.x - hit.cueImpactX,
+    target.y - hit.cueImpactY
+  );
+
+  /*
+    Developer mode:
+    - Vẽ đường bi mục tiêu sau va chạm
+    - Vẽ đường bi cái sau va chạm
+    - Cả 2 đều có phản xạ sau khi chạm băng
+  */
+  if(developerAimGuide){
+    const objectPathMaxLen = powerDragging
+  ? 450 + aimPower * DEV_OBJECT_MAX_LEN
+  : DEV_OBJECT_MAX_LEN;
+
+    const objectPrediction = predictDeveloperBallPath({
+      startX: target.x,
+      startY: target.y,
+      dir: objectDir,
+      selfBall: target,
+      ignoreBalls: [cueBall, target],
+      maxLen: objectPathMaxLen,
+maxBounces: DEV_MAX_BOUNCES,
+kind: "object"
+    });
+
+    drawDeveloperPredictedPath(objectPrediction, {
+      main:"rgba(255,230,90,.95)",
+      pocket:"rgba(90,255,130,.95)",
+      blocker:"rgba(255,80,80,.95)",
+      rail:"rgba(255,170,70,.95)",
+      label:"BI MỤC TIÊU"
+    });
+  }
+
+  /*
+    Dự đoán hướng bi cái sau va chạm.
+    Công thức này là dự đoán hình học cơ bản, dùng tốt nhất khi không áp phê.
+  */
+  const n = objectDir;
+
+  const normalPower = dot(
+    dir.x,
+    dir.y,
+    n.x,
+    n.y
+  );
+
+  let cx = dir.x - n.x * normalPower;
+  let cy = dir.y - n.y * normalPower;
+
+  const cueLen = Math.hypot(cx, cy);
+
+  // Nếu đánh gần như trúng thẳng tâm: bi cái gần như dừng lại.
+  if(cueLen < 0.08){
+    if(developerAimGuide){
+      drawDeveloperStopPoint(
+        hit.cueImpactX,
+        hit.cueImpactY,
+        "rgba(130,220,255,.95)"
+      );
+    }
+
+    return;
+  }
+
+  cx /= cueLen;
+  cy /= cueLen;
+
+  const cueStartX = hit.cueImpactX + cx * BALL_R * 0.95;
+  const cueStartY = hit.cueImpactY + cy * BALL_R * 0.95;
+
+  if(developerAimGuide){
+    const cuePathMaxLen = powerDragging
+  ? 350 + aimPower * DEV_CUE_MAX_LEN
+  : DEV_CUE_MAX_LEN;
+
+    const cuePrediction = predictDeveloperBallPath({
+      startX: cueStartX,
+      startY: cueStartY,
+      dir:{x:cx, y:cy},
+      selfBall: cueBall,
+      ignoreBalls: [cueBall, target],
+      maxLen: cuePathMaxLen,
+      maxBounces: DEV_MAX_BOUNCES,
+      kind: "cue"
+    });
+
+    drawDeveloperPredictedPath(cuePrediction, {
+      main:"rgba(130,220,255,.92)",
+      pocket:"rgba(80,190,255,.95)",
+      blocker:"rgba(255,80,80,.95)",
+      rail:"rgba(255,170,70,.95)",
+      label:"BI CÁI"
+    });
+
+    return;
+  }
+
+  // Chế độ thường: chỉ vẽ tia ngắn của bi cái
+  drawImpactLine(
+    cueStartX,
+    cueStartY,
+    cueStartX + cx * 55,
+    cueStartY + cy * 55,
+    "rgba(255,255,255,.82)"
+  );
+}
+function drawCueStick(cueX, cueY, dir, options = {}){
+  const isAI = options.isAI || false;
+  const pullBack = options.pullBack || 0;
+
+  const cueLength = BALL_R * 24;
+  const tipGap = BALL_R + 10 + pullBack;
+
+  const tipX = cueX - dir.x * tipGap;
+  const tipY = cueY - dir.y * tipGap;
+
+  const frontX = tipX - dir.x * 60;
+  const frontY = tipY - dir.y * 60;
+
+  const midX = tipX - dir.x * (cueLength * 0.52);
+  const midY = tipY - dir.y * (cueLength * 0.52);
+
+  const endX = tipX - dir.x * cueLength;
+  const endY = tipY - dir.y * cueLength;
+
+  const px = -dir.y;
+  const py = dir.x;
+
+  // Độ dày tăng dần: đầu nhỏ -> thân vừa -> đuôi lớn
+  const tipW = 3.2;
+  const frontW = 5.4;
+  const midW = 8.6;
+  const buttW = 14;
+
+  const cueGrad = ctx.createLinearGradient(tipX, tipY, endX, endY);
+
+  if(isAI){
+    cueGrad.addColorStop(0, "#e9f7ff");
+    cueGrad.addColorStop(0.18, "#67b7ff");
+    cueGrad.addColorStop(0.62, "#2450a8");
+    cueGrad.addColorStop(1, "#06122e");
+  }else{
+    cueGrad.addColorStop(0, "#f8e6b8");
+    cueGrad.addColorStop(0.18, "#d79a4a");
+    cueGrad.addColorStop(0.62, "#8c4b18");
+    cueGrad.addColorStop(1, "#3d1a07");
+  }
+
+  ctx.save();
+
+  ctx.shadowColor = "rgba(0,0,0,.45)";
+  ctx.shadowBlur = 5;
+
+  // Thân cơ thuôn dài
+  ctx.fillStyle = cueGrad;
+  ctx.beginPath();
+
+  ctx.moveTo(tipX + px * tipW / 2, tipY + py * tipW / 2);
+  ctx.lineTo(frontX + px * frontW / 2, frontY + py * frontW / 2);
+  ctx.lineTo(midX + px * midW / 2, midY + py * midW / 2);
+  ctx.lineTo(endX + px * buttW / 2, endY + py * buttW / 2);
+
+  ctx.lineTo(endX - px * buttW / 2, endY - py * buttW / 2);
+  ctx.lineTo(midX - px * midW / 2, midY - py * midW / 2);
+  ctx.lineTo(frontX - px * frontW / 2, frontY - py * frontW / 2);
+  ctx.lineTo(tipX - px * tipW / 2, tipY - py * tipW / 2);
+
+  ctx.closePath();
+  ctx.fill();
+
+  // Viền mỏng giúp cây cơ sắc hơn
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(0,0,0,.38)";
+  ctx.lineWidth = 1.2;
+  ctx.stroke();
+
+  // Đầu cơ nhỏ
+  const ferruleLen = 22;
+  const ferruleX = tipX - dir.x * ferruleLen;
+  const ferruleY = tipY - dir.y * ferruleLen;
+
+  ctx.lineCap = "round";
+  ctx.lineWidth = 3.2;
+  ctx.strokeStyle = isAI ? "#e8fbff" : "#fff4d2";
+
+  ctx.beginPath();
+  ctx.moveTo(tipX, tipY);
+  ctx.lineTo(ferruleX, ferruleY);
+  ctx.stroke();
+
+  // Chấm đầu cơ
+  ctx.fillStyle = isAI ? "#ff5f6d" : "#2f62ff";
+  ctx.beginPath();
+  ctx.arc(tipX, tipY, 2.7, 0, Math.PI * 2);
+  ctx.fill();
+
+  // Tay / chuôi cơ lớn hơn ở phía sau
+  const gripStartX = tipX - dir.x * (cueLength * 0.70);
+  const gripStartY = tipY - dir.y * (cueLength * 0.70);
+
+  ctx.globalAlpha = 0.55;
+  ctx.strokeStyle = isAI ? "#0b1028" : "#2b1204";
+  ctx.lineWidth = 7.5;
+  ctx.lineCap = "round";
+
+  ctx.beginPath();
+  ctx.moveTo(gripStartX, gripStartY);
+  ctx.lineTo(endX, endY);
+  ctx.stroke();
+
+  ctx.globalAlpha = 1;
+  ctx.restore();
+}
+function getAIThinkingCueBaseAngle(){
+  if(!cueBall || !cueBall.active) return 0;
+
+  const targets = getPlayableTargetBalls("ai");
+  let pick = null;
+  let bestDist = Infinity;
+
+  for(const b of targets){
+    const d = Math.hypot(b.x - cueBall.x, b.y - cueBall.y);
+    if(d < bestDist){
+      bestDist = d;
+      pick = b;
+    }
+  }
+
+  // Nếu chưa có bi mục tiêu rõ ràng thì ngắm về giữa rack / giữa bàn
+  if(pick){
+    return Math.atan2(pick.y - cueBall.y, pick.x - cueBall.x);
+  }
+
+  return Math.atan2(
+    table.y + table.h * 0.5 - cueBall.y,
+    table.x + table.w * 0.72 - cueBall.x
+  );
+}
+
+function startAIThinkingCueMotion(){
+  if(gameOver) return;
+  if(!cueBall || !cueBall.active) return;
+
+  const baseAngle = getAIThinkingCueBaseAngle();
+
+  aiThinkingCue = {
+    start: performance.now(),
+    lastRetarget: performance.now(),
+    baseAngle,
+    currentAngle: baseAngle,
+    phase: Math.random() * Math.PI * 2
+  };
+}
+
+function stopAIThinkingCueMotion(){
+  aiThinkingCue = null;
+}
+
+function updateAIThinkingCueMotion(){
+  if(!aiThinkingCue) return;
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(!cueBall || !cueBall.active) return;
+
+  // Trong lúc AI đang kéo bi cái / đã vào preview thật / đang bắn thì dừng animation rê cơ
+  if(aiCueMove || aiCueVisual || isMoving() || shotLocked) return;
+
+  const now = performance.now();
+
+  // Cứ một lúc AI đổi hướng ngắm nhẹ về target gần nhất
+  if(now - aiThinkingCue.lastRetarget > 280){
+    aiThinkingCue.baseAngle = getAIThinkingCueBaseAngle();
+    aiThinkingCue.lastRetarget = now;
+  }
+
+  const t = (now - aiThinkingCue.start) / 1000;
+
+  // Rê qua lại nhẹ để tạo cảm giác đang tính
+  const sweep = Math.sin(t * 2.15 + aiThinkingCue.phase) * 0.22;
+  const drift = Math.sin(t * 0.9 + aiThinkingCue.phase * 0.6) * 0.08;
+
+  const targetAngle = aiThinkingCue.baseAngle + sweep + drift;
+
+  aiThinkingCue.currentAngle += angleDiff(targetAngle, aiThinkingCue.currentAngle) * 0.18;
+}
+
+function drawAIThinkingCueMotion(){
+  if(!aiThinkingCue) return;
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(!cueBall || !cueBall.active) return;
+
+  // Nếu đang có animation khác thì không vẽ chồng
+  if(aiCueMove || aiCueVisual || isMoving()) return;
+
+  const t = (performance.now() - aiThinkingCue.start) / 1000;
+
+  const dir = {
+    x: Math.cos(aiThinkingCue.currentAngle),
+    y: Math.sin(aiThinkingCue.currentAngle)
+  };
+
+  // Nhịp thụt cơ nhẹ
+  const pullBack = 28 + (Math.sin(t * 5.1) + 1) * 18;
+
+  // Vẽ cây cơ
+  drawCueStick(cueBall.x, cueBall.y, dir, {
+    isAI: true,
+    pullBack
+  });
+
+  
+}
+  
+function showAICueAndShoot(shot, duration = 1200){
+  
+  if(gameOver) return;
+  if(turn !== "ai") return;
+  if(!cueBall || !cueBall.active) return;
+stopAIThinkingCueMotion();
+  clearTimeout(aiTimer);
+
+  aiThinking = true;
+
+  spin.x = shot.spinX;
+  spin.y = shot.spinY;
+  updateSpinUI();
+
+  aiCueVisual = {
+    dir: shot.dir,
+    start: performance.now(),
+    duration
+  };
+
+  setMessage("AI.GiaBao đang ngắm...");
+
+  aiTimer = setTimeout(() => {
+    if(gameOver || turn !== "ai"){
+      aiCueVisual = null;
+      aiThinking = false;
+      return;
+    }
+
+    aiCueVisual = null;
+    aiThinking = false;
+
+    shoot("ai", shot.dir, shot.power, {
+      x: shot.spinX,
+      y: shot.spinY
+    });
+  }, duration + 80);
+}
+
+function drawAICueVisual(){
+  if(!aiCueVisual) return;
+  if(!cueBall || !cueBall.active) return;
+  if(turn !== "ai") return;
+
+  const rawT = clamp(
+    (performance.now() - aiCueVisual.start) / aiCueVisual.duration,
+    0,
+    1
+  );
+
+  // Cơ AI từ từ lùi ra rồi chạm lại để đánh
+  const pullBack = Math.sin(rawT * Math.PI) * 95;
+
+  drawCueStick(cueBall.x, cueBall.y, aiCueVisual.dir, {
+    isAI: true,
+    pullBack
+  });
+}
+  
+function drawAiming(){
+  if(gameOver) return;
+  if(turn !== "player") return;
+
+  if(cueBallDragging) return;
+
+  if(!hasAim) return;
+  if(!cueBall.active) return;
+  if(isMoving()) return;
+
+  const dir = getAimDir();
+  const startX = cueBall.x;
+  const startY = cueBall.y;
+
+  const hit = findAimCollision(startX, startY, dir);
+  const tableEnd = getAimTableEnd(startX, startY, dir);
+
+  const aimEndX = hit ? hit.cueImpactX : tableEnd.x;
+  const aimEndY = hit ? hit.cueImpactY : tableEnd.y;
+
+  // Đường ngắm chính
+  ctx.save();
+  ctx.setLineDash([]);
+  ctx.lineCap = "round";
+  ctx.lineWidth = 3.5;
+  ctx.strokeStyle = "rgba(255,255,255,.82)";
+  ctx.shadowColor = "rgba(255,255,255,.55)";
+  ctx.shadowBlur = 10;
+
+  ctx.beginPath();
+  ctx.moveTo(startX, startY);
+  ctx.lineTo(aimEndX, aimEndY);
+  ctx.stroke();
+
+  ctx.restore();
+
+  /*
+    DEVELOPER MODE:
+    Chạy cả khi:
+    - Cơ chỉ thẳng vào bi
+    - Cơ chỉ vào băng trước rồi mới chạm bi
+  */
+  if(developerAimGuide){
+    if(hit){
+      drawGhostCueBall(hit.cueImpactX, hit.cueImpactY);
+    }else{
+      drawGhostCueBall(tableEnd.x, tableEnd.y);
+    }
+
+    requestDeveloperPowerScan(hit, dir);
+
+    const selectedCase = getSelectedDeveloperPowerCase();
+
+    const previewPower = selectedCase
+      ? selectedCase.power
+      : (
+          powerDragging
+            ? clamp(aimPower, 0.06, 1)
+            : 0.55
+        );
+
+    const sim = getDeveloperPhysicsPredictionCached(
+      dir,
+      previewPower,
+      {
+        x: spin.x,
+        y: spin.y
+      }
+    );
+
+    drawDeveloperPhysicsPrediction(sim);
+  }else{
+    // Chế độ thường
+    if(!hit){
+      drawGhostCueBall(tableEnd.x, tableEnd.y);
+    }
+
+    if(hit){
+      const target = hit.ball;
+
+      drawGhostCueBall(hit.cueImpactX, hit.cueImpactY);
+
+      const outDir = norm(
+        target.x - hit.cueImpactX,
+        target.y - hit.cueImpactY
+      );
+
+      drawImpactLine(
+        target.x,
+        target.y,
+        target.x + outDir.x * 95,
+        target.y + outDir.y * 95,
+        "rgba(255,230,90,.85)"
+      );
+
+      drawCueBallAfterHitPrediction(hit, dir);
+    }
+  }
+
+  const pullBack = powerDragging ? aimPower * 115 : 0;
+
+  drawCueStick(startX, startY, dir, {
+    isAI:false,
+    pullBack
+  });
+}
+function drawBalls(){
+  const activeBalls = balls.filter(b => b.active);
+
+  // Đổ bóng trước.
+  for(const b of activeBalls){
+    ctx.fillStyle = "rgba(0,0,0,.32)";
+    ctx.beginPath();
+    ctx.ellipse(b.x + 6, b.y + 9, BALL_R*1.08, BALL_R*.48, 0, 0, Math.PI*2);
+    ctx.fill();
+  }
+
+  // Viền vàng cho các bi người chơi có thể ăn được.
+  if(!gameOver && turn === "player" && !isMoving()){
+    const playableTargets = getPlayableTargetBalls("player");
+
+    for(const b of playableTargets){
+      drawTargetGlow(b);
+    }
+  }
+
+  for(const b of activeBalls){
+    drawBall(b);
+  }
+}
+
+function drawBall(b){
+  ctx.save();
+
+  const face = getRollFaceState(b);
+
+  ctx.beginPath();
+  ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+  ctx.clip();
+
+  if(b.num === 0){
+    const g = ctx.createRadialGradient(
+      b.x - BALL_R * 0.35,
+      b.y - BALL_R * 0.38,
+      3,
+      b.x,
+      b.y,
+      BALL_R
+    );
+
+    g.addColorStop(0,"#ffffff");
+    g.addColorStop(.55,"#f5f5e9");
+    g.addColorStop(1,"#b9b9a6");
+
+    ctx.fillStyle = g;
+    ctx.fillRect(b.x-BALL_R,b.y-BALL_R,BALL_R*2,BALL_R*2);
+
+    // Vân mờ trên bi cái, cũng lăn ra mép rồi mất.
+    ctx.save();
+    ctx.translate(b.x + face.x * 0.75, b.y + face.y * 0.75);
+    ctx.rotate(face.rot);
+    ctx.scale(
+  clamp(face.scale, 0.42, 1),
+  clamp(face.scale * face.squash, 0.34, 1)
+);
+    ctx.globalAlpha = face.alpha * 0.45;
+
+    ctx.strokeStyle = "rgba(55,55,55,.45)";
+    ctx.lineWidth = 2;
+
+    ctx.beginPath();
+    ctx.arc(0, 0, BALL_R * 0.55, -0.9, 0.9);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.arc(0, 0, BALL_R * 0.30, Math.PI * 0.15, Math.PI * 1.12);
+    ctx.stroke();
+
+    ctx.restore();
+
+    // Dấu áp phê cũng biến mất khi lăn xuống dưới.
+    ctx.save();
+    ctx.translate(
+      b.x + spin.x * 8 + face.x * 0.65,
+      b.y - spin.y * 8 + face.y * 0.65
+    );
+    ctx.scale(face.scale, face.scale * face.squash);
+    ctx.globalAlpha = face.alpha * 0.75;
+
+    ctx.fillStyle = "rgba(40,40,40,.48)";
+    ctx.beginPath();
+    ctx.arc(0, 0, 3.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+
+  }else{
+    const color = ballColors[b.num];
+
+    if(b.type === "stripe"){
+      // Nền trắng của bi sọc
+      const base = ctx.createRadialGradient(
+        b.x - BALL_R * 0.35,
+        b.y - BALL_R * 0.38,
+        3,
+        b.x,
+        b.y,
+        BALL_R
+      );
+
+      base.addColorStop(0,"#ffffff");
+      base.addColorStop(.62,"#f8f4df");
+      base.addColorStop(1,"#cfc8a9");
+
+      ctx.fillStyle = base;
+      ctx.fillRect(b.x-BALL_R,b.y-BALL_R,BALL_R*2,BALL_R*2);
+
+      drawRollingStripe(b, color, face);
+
+    }else{
+      // Bi trơn
+      const g = ctx.createRadialGradient(
+        b.x - BALL_R * 0.35,
+        b.y - BALL_R * 0.38,
+        3,
+        b.x,
+        b.y,
+        BALL_R
+      );
+
+      g.addColorStop(0,lighten(color,0.45));
+      g.addColorStop(.6,color);
+      g.addColorStop(1,darken(color,0.45));
+
+      ctx.fillStyle = g;
+      ctx.fillRect(b.x-BALL_R,b.y-BALL_R,BALL_R*2,BALL_R*2);
+
+      // Vân sáng mỏng trên bi trơn để thấy đang lăn.
+      ctx.save();
+      ctx.translate(b.x + face.x * 0.55, b.y + face.y * 0.55);
+      ctx.rotate(face.rot);
+      ctx.scale(face.scale, face.scale * face.squash);
+      ctx.globalAlpha = face.alpha * 0.22;
+
+      ctx.strokeStyle = "#fff";
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.arc(0, 0, BALL_R * 0.68, 0.35, Math.PI * 1.08);
+      ctx.stroke();
+
+      ctx.restore();
+    }
+
+    // Số trên bi sẽ chạy ra mép, dẹt lại, mờ đi rồi biến mất.
+    drawRollingNumberBadge(b, face);
+  }
+
+  // Highlight cố định theo nguồn sáng, không xoay theo bi.
+  ctx.globalAlpha = .42;
+  ctx.fillStyle = "#fff";
+  ctx.beginPath();
+  ctx.arc(
+    b.x - BALL_R * 0.42,
+    b.y - BALL_R * 0.46,
+    BALL_R * 0.32,
+    0,
+    Math.PI*2
+  );
+  ctx.fill();
+  ctx.globalAlpha = 1;
+
+  // Rim tối ở mép để bi có cảm giác tròn.
+  const rim = ctx.createRadialGradient(
+    b.x,
+    b.y,
+    BALL_R * 0.42,
+    b.x,
+    b.y,
+    BALL_R
+  );
+  rim.addColorStop(0, "rgba(0,0,0,0)");
+  rim.addColorStop(1, "rgba(0,0,0,.30)");
+
+  ctx.fillStyle = rim;
+  ctx.fillRect(b.x-BALL_R,b.y-BALL_R,BALL_R*2,BALL_R*2);
+
+  ctx.restore();
+
+  ctx.strokeStyle = "rgba(0,0,0,.45)";
+  ctx.lineWidth = 1.5;
+  ctx.beginPath();
+  ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
+  ctx.stroke();
+}
+
+function roundRect(x,y,w,h,r,fill){
+  ctx.beginPath();
+  ctx.moveTo(x+r,y);
+  ctx.lineTo(x+w-r,y);
+  ctx.quadraticCurveTo(x+w,y,x+w,y+r);
+  ctx.lineTo(x+w,y+h-r);
+  ctx.quadraticCurveTo(x+w,y+h,x+w-r,y+h);
+  ctx.lineTo(x+r,y+h);
+  ctx.quadraticCurveTo(x,y+h,x,y+h-r);
+  ctx.lineTo(x,y+r);
+  ctx.quadraticCurveTo(x,y,x+r,y);
+  if(fill) ctx.fill();
+}
+
+function lighten(hex, amt){
+  const c = hexToRgb(hex);
+  const r = Math.round(c.r + (255-c.r)*amt);
+  const g = Math.round(c.g + (255-c.g)*amt);
+  const b = Math.round(c.b + (255-c.b)*amt);
+  return `rgb(${r},${g},${b})`;
+}
+
+function darken(hex, amt){
+  const c = hexToRgb(hex);
+  const r = Math.round(c.r * (1-amt));
+  const g = Math.round(c.g * (1-amt));
+  const b = Math.round(c.b * (1-amt));
+  return `rgb(${r},${g},${b})`;
+}
+
+function hexToRgb(hex){
+  const h = hex.replace("#","");
+  return {
+    r:parseInt(h.slice(0,2),16),
+    g:parseInt(h.slice(2,4),16),
+    b:parseInt(h.slice(4,6),16)
+  };
+}
+
+/* =========================
+   LOOP
+   ========================= */
+
+function loop(){
+  updateAICueBallMove();
+  updateAimRulerSmooth();
+  updateAIThinkingCueMotion();
+  updatePlayerShotTimer();
+
+  processDeveloperPowerScanJob();
+
+  if(!aiCueMove){
+    updatePhysics();
+  }
+
+  updatePocketAnimations();
+  draw();
+  updateDeveloperPowerUI();
+
+  requestAnimationFrame(loop);
+}
+
+loop();
+</script>
+<script src="aiengine.js"></script>
+</body>
+</html>
