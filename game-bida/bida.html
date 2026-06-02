@@ -135,12 +135,23 @@ canvas{
 
 #powerFill{
   position:absolute;
-  left:0;
+  left:50%;
   top:0;
-  width:100%;
-  height:0%;
-  background:linear-gradient(to bottom,#46ff63,#ffe66e,#ff4848);
+  width:24px;
+  height:0;
+
+  transform:translateX(-50%);
+
+  background:linear-gradient(
+    180deg,
+    #46ff63 0%,
+    #ffe66e 55%,
+    #ff4848 100%
+  );
+
+  border-radius:999px;
   box-shadow:0 0 18px rgba(255,230,80,.8);
+  z-index:2;
 }
   
   #powerPercent{
@@ -1092,6 +1103,100 @@ canvas{
     transform:translateY(0);
   }
 }
+  /* =================================================
+   FIX POWER UX - CHỐNG ĐỤNG THƯỚC, KHÓA VÙNG KÉO LỰC
+   ================================================= */
+
+/* Thanh lực có vùng chạm lớn hơn, nhưng hình nhìn vẫn nhỏ */
+#powerWrap{
+  right:6px !important;
+  top:50% !important;
+  width:74px !important;
+  height:165px !important;
+  transform:translateY(-50%) !important;
+
+  background:transparent !important;
+  border:none !important;
+  box-shadow:none !important;
+  opacity:1 !important;
+  overflow:visible !important;
+
+  z-index:42 !important;
+  pointer-events:auto;
+  touch-action:none;
+}
+
+/* Hình thanh lực thật */
+#powerWrap::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:0;
+  width:24px;
+  height:100%;
+  transform:translateX(-50%);
+
+  border-radius:999px;
+  background:rgba(0,0,0,.34);
+  border:1px solid rgba(255,255,255,.24);
+  box-shadow:0 4px 12px rgba(0,0,0,.36);
+}
+
+/* Vùng chạm ảo để người chơi dễ kéo hơn */
+#powerWrap::after{
+  content:"";
+  position:absolute;
+  inset:-10px -6px;
+  border-radius:999px;
+  background:rgba(255,255,255,.015);
+}
+
+/* Fill chạy từ điểm ngón tay kéo xuống */
+#powerFill{
+  position:absolute;
+  left:50%;
+  top:0;
+  bottom:auto;
+  width:24px;
+  height:0;
+
+  transform:translateX(-50%);
+
+  background:linear-gradient(
+    180deg,
+    #46ff63 0%,
+    #ffe66e 55%,
+    #ff4848 100%
+  );
+
+  border-radius:999px;
+  box-shadow:0 0 18px rgba(255,230,80,.8);
+  z-index:2;
+}
+
+/* Text phần trăm nằm giữa thanh thật, không chiếm toàn vùng chạm */
+#powerPercent{
+  left:50% !important;
+  top:0 !important;
+  width:24px !important;
+  height:100% !important;
+  transform:translateX(-50%) rotate(-90deg) !important;
+  z-index:4;
+}
+
+/* Khi đang kéo lực thì nổi rõ hơn */
+#powerWrap.charging::before{
+  box-shadow:
+    0 0 16px rgba(255,230,80,.75),
+    0 0 28px rgba(255,120,60,.35),
+    0 4px 12px rgba(0,0,0,.36);
+}
+
+/* Đẩy thước ngắm ra xa thanh lực */
+#aimRuler{
+  right:92px !important;
+  z-index:20 !important;
+}
 </style>
 </head>
 
@@ -1689,9 +1794,21 @@ const CUSHION_THICKNESS = 17; // phải khớp với độ dày mép xanh đang 
 const RAIL_BOUNCE = 0.84;
 const RAIL_SIDE_FRICTION = 0.985;
 // Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
-const CORNER_PHYS_CATCH_R = CORNER_POCKET_R + BALL_R * 0.75;
-const CORNER_PHYS_RANGE = CORNER_MOUTH + BALL_R * 1.08;
-const CORNER_RAIL_OPEN = CORNER_MOUTH + BALL_R * 1.05;
+// Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
+// Đã giảm hitbox để bi không bị "hút ảo" khi chỉ lướt gần lỗ
+const CORNER_PHYS_CATCH_R = CORNER_POCKET_R + BALL_R * 0.32;
+const CORNER_PHYS_INNER_R = CORNER_POCKET_R * 0.76;
+const CORNER_PHYS_RANGE = CORNER_MOUTH + BALL_R * 0.62;
+const CORNER_RAIL_OPEN = CORNER_MOUTH + BALL_R * 0.72;
+
+// Vật lý riêng cho lỗ giữa
+const SIDE_PHYS_CATCH_R = SIDE_POCKET_R + BALL_R * 0.32;
+const SIDE_PHYS_INNER_R = SIDE_POCKET_R * 0.78;
+const SIDE_PHYS_Y = BALL_R * 0.95;
+const SIDE_PHYS_MOUTH_X = SIDE_MOUTH_HALF + BALL_R * 0.26;
+
+// Bi phải có hướng đi vào tâm lỗ mới được tính rơi
+const POCKET_APPROACH_MIN_DOT = 0.16;
   
 function isCornerPocketPhysicsHit(x, y, p){
   if(p.type !== "corner") return false;
@@ -1731,24 +1848,21 @@ function isSidePocketPhysicsHit(x, y, p){
 
   const midX = table.x + table.w / 2;
   const d = Math.hypot(x - p.x, y - p.y);
-
   const mouthX = Math.abs(x - midX);
-  const sideCatchR = SIDE_POCKET_R + BALL_R * 0.55;
-  const sideCatchY = BALL_R * 1.25;
 
   if(p.id === "tm"){
     return (
-      mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.45 &&
-      y <= table.y + sideCatchY &&
-      d <= sideCatchR
+      mouthX <= SIDE_PHYS_MOUTH_X &&
+      y <= table.y + SIDE_PHYS_Y &&
+      d <= SIDE_PHYS_CATCH_R
     );
   }
 
   if(p.id === "bm"){
     return (
-      mouthX <= SIDE_MOUTH_HALF + BALL_R * 0.45 &&
-      y >= table.y + table.h - sideCatchY &&
-      d <= sideCatchR
+      mouthX <= SIDE_PHYS_MOUTH_X &&
+      y >= table.y + table.h - SIDE_PHYS_Y &&
+      d <= SIDE_PHYS_CATCH_R
     );
   }
 
@@ -1765,6 +1879,62 @@ function isPocketPhysicsHit(x, y, p){
   }
 
   return false;
+}
+
+function isPocketInnerHit(x, y, p){
+  const d = Math.hypot(x - p.x, y - p.y);
+
+  if(p.type === "corner"){
+    return d <= CORNER_PHYS_INNER_R;
+  }
+
+  if(p.type === "side"){
+    const midX = table.x + table.w / 2;
+    const mouthX = Math.abs(x - midX);
+
+    return (
+      mouthX <= SIDE_MOUTH_HALF * 0.58 &&
+      d <= SIDE_PHYS_INNER_R
+    );
+  }
+
+  return false;
+}
+
+function getPocketApproachDot(b, p){
+  const speed = Math.hypot(b.vx, b.vy);
+
+  if(speed < 0.18){
+    return -1;
+  }
+
+  const tx = p.x - b.x;
+  const ty = p.y - b.y;
+  const td = Math.hypot(tx, ty) || 1;
+
+  const vx = b.vx / speed;
+  const vy = b.vy / speed;
+
+  const nx = tx / td;
+  const ny = ty / td;
+
+  return vx * nx + vy * ny;
+}
+
+function shouldCapturePocketBall(b, p){
+  if(!isPocketPhysicsHit(b.x, b.y, p)){
+    return false;
+  }
+
+  // Nếu tâm bi đã lọt sâu vào lòng lỗ thì cho rơi luôn
+  if(isPocketInnerHit(b.x, b.y, p)){
+    return true;
+  }
+
+  // Nếu chỉ lướt ngoài miệng lỗ thì phải có hướng đi vào tâm lỗ
+  const approachDot = getPocketApproachDot(b, p);
+
+  return approachDot >= POCKET_APPROACH_MIN_DOT;
 }
 
 const pockets = [
@@ -1788,6 +1958,7 @@ let aimWorld = {x:0, y:0};
 let aimPower = 0;
 let powerDragging = false;
 let powerStartY = 0;
+let powerLockedDir = null;
 
 let rulerDragging = false;
 let rulerStartY = 0;
@@ -1811,6 +1982,204 @@ const RULER_KNOB_SMOOTH = 0.22;
 let shotLocked = false;
 let spin = {x:0, y:0}; 
 let activeSpin = {x:0, y:0, life:0};
+const SPIN_PHYS = {
+  // Culê / đề-lùi khi bi cái còn đang chạy trên nỉ
+  clothTop: 0.030,
+  clothBack: 0.042,
+
+  // Áp phê ngang trên mặt bàn thật ra rất ít làm bi cong
+  sideDrift: 0.002,
+
+  // Hao xoáy theo thời gian
+  decay: 0.987,
+
+  // Sau khi bi cái chạm bi mục tiêu
+  ballHitFollow: 1.18, // culê
+  ballHitDraw: 1.55,   // đề-lùi
+  ballHitSide: 0.76,   // áp phê trái/phải sau va chạm
+
+  // Khi chạm băng
+  railSide: 1.35,
+  railTop: 0.18,
+  railDecayX: 0.58,
+  railDecayY: 0.78,
+
+  minSpeed: 0.18
+};
+
+function decaySpinState(s, amount = 1){
+  const k = Math.pow(SPIN_PHYS.decay, amount);
+
+  s.x *= k;
+  s.y *= k;
+  s.life = Math.max(0, s.life - amount);
+
+  if(s.life <= 0 || (Math.abs(s.x) < 0.015 && Math.abs(s.y) < 0.015)){
+    s.x = 0;
+    s.y = 0;
+    s.life = 0;
+  }
+}
+
+function applyCueSpinOnCloth(b, steps = 1){
+  if(b !== cueBall) return;
+  if(activeSpin.life <= 0) return;
+
+  const speed = Math.hypot(b.vx, b.vy);
+
+  if(speed < SPIN_PHYS.minSpeed) return;
+
+  const n = norm(b.vx, b.vy);
+  const side = {
+    x:-n.y,
+    y:n.x
+  };
+
+  const top = activeSpin.y;
+  const topK = top >= 0 ? SPIN_PHYS.clothTop : SPIN_PHYS.clothBack;
+
+  // Culê đẩy nhẹ theo hướng chạy, đề-lùi hãm hướng chạy
+  b.vx += n.x * top * topK / steps;
+  b.vy += n.y * top * topK / steps;
+
+  // Áp phê ngang chỉ làm lệch rất nhẹ trên mặt bàn
+  b.vx += side.x * activeSpin.x * SPIN_PHYS.sideDrift / steps;
+  b.vy += side.y * activeSpin.x * SPIN_PHYS.sideDrift / steps;
+
+  decaySpinState(activeSpin, 1 / steps);
+}
+
+function applyCueSpinAfterBallHit(cue, hitNx, hitNy){
+  if(activeSpin.life <= 0) return;
+
+  const tx = -hitNy;
+  const ty = hitNx;
+
+  const follow = Math.max(0, activeSpin.y);
+  const draw = Math.max(0, -activeSpin.y);
+
+  // Culê: bi cái đi tiếp theo hướng bi mục tiêu
+  cue.vx += hitNx * follow * SPIN_PHYS.ballHitFollow;
+  cue.vy += hitNy * follow * SPIN_PHYS.ballHitFollow;
+
+  // Đề-lùi: bi cái kéo ngược lại
+  cue.vx -= hitNx * draw * SPIN_PHYS.ballHitDraw;
+  cue.vy -= hitNy * draw * SPIN_PHYS.ballHitDraw;
+
+  // Áp phê ngang: lệch theo tiếp tuyến sau va chạm
+  cue.vx += tx * activeSpin.x * SPIN_PHYS.ballHitSide;
+  cue.vy += ty * activeSpin.x * SPIN_PHYS.ballHitSide;
+
+  activeSpin.y *= 0.44;
+  activeSpin.x *= 0.62;
+  activeSpin.life = Math.max(activeSpin.life, 38);
+
+  limitBallSpeed(cue);
+}
+
+function applyRailSpinEffect(b, rail){
+  if(b !== cueBall) return;
+  if(activeSpin.life <= 0) return;
+
+  if(rail === "left" || rail === "right"){
+    const sideSign = rail === "left" ? 1 : -1;
+
+    // Áp phê ngang ăn mạnh khi chạm băng
+    b.vy += activeSpin.x * SPIN_PHYS.railSide * sideSign;
+
+    // Culê/đề-lùi ảnh hưởng nhẹ tốc độ bật ra
+    b.vx += Math.sign(b.vx || 1) * activeSpin.y * SPIN_PHYS.railTop;
+  }
+
+  if(rail === "top" || rail === "bottom"){
+    const sideSign = rail === "top" ? -1 : 1;
+
+    b.vx += activeSpin.x * SPIN_PHYS.railSide * sideSign;
+    b.vy += Math.sign(b.vy || 1) * activeSpin.y * SPIN_PHYS.railTop;
+  }
+
+  activeSpin.x *= SPIN_PHYS.railDecayX;
+  activeSpin.y *= SPIN_PHYS.railDecayY;
+  activeSpin.life = Math.max(activeSpin.life, 25);
+
+  limitBallSpeed(b);
+}
+  
+  function applyCueSpinOnClothSim(b, simSpin, steps = 1){
+  if(b.num !== 0) return;
+  if(simSpin.life <= 0) return;
+
+  const speed = Math.hypot(b.vx, b.vy);
+
+  if(speed < SPIN_PHYS.minSpeed) return;
+
+  const n = norm(b.vx, b.vy);
+  const side = {
+    x:-n.y,
+    y:n.x
+  };
+
+  const top = simSpin.y;
+  const topK = top >= 0 ? SPIN_PHYS.clothTop : SPIN_PHYS.clothBack;
+
+  b.vx += n.x * top * topK / steps;
+  b.vy += n.y * top * topK / steps;
+
+  b.vx += side.x * simSpin.x * SPIN_PHYS.sideDrift / steps;
+  b.vy += side.y * simSpin.x * SPIN_PHYS.sideDrift / steps;
+
+  decaySpinState(simSpin, 1 / steps);
+}
+
+function applyCueSpinAfterBallHitSim(cue, hitNx, hitNy, simSpin){
+  if(simSpin.life <= 0) return;
+
+  const tx = -hitNy;
+  const ty = hitNx;
+
+  const follow = Math.max(0, simSpin.y);
+  const draw = Math.max(0, -simSpin.y);
+
+  cue.vx += hitNx * follow * SPIN_PHYS.ballHitFollow;
+  cue.vy += hitNy * follow * SPIN_PHYS.ballHitFollow;
+
+  cue.vx -= hitNx * draw * SPIN_PHYS.ballHitDraw;
+  cue.vy -= hitNy * draw * SPIN_PHYS.ballHitDraw;
+
+  cue.vx += tx * simSpin.x * SPIN_PHYS.ballHitSide;
+  cue.vy += ty * simSpin.x * SPIN_PHYS.ballHitSide;
+
+  simSpin.y *= 0.44;
+  simSpin.x *= 0.62;
+  simSpin.life = Math.max(simSpin.life, 38);
+
+  limitDeveloperSimBallSpeed(cue);
+}
+
+function applyRailSpinEffectSim(b, rail, simSpin){
+  if(b.num !== 0) return;
+  if(simSpin.life <= 0) return;
+
+  if(rail === "left" || rail === "right"){
+    const sideSign = rail === "left" ? 1 : -1;
+
+    b.vy += simSpin.x * SPIN_PHYS.railSide * sideSign;
+    b.vx += Math.sign(b.vx || 1) * simSpin.y * SPIN_PHYS.railTop;
+  }
+
+  if(rail === "top" || rail === "bottom"){
+    const sideSign = rail === "top" ? -1 : 1;
+
+    b.vx += simSpin.x * SPIN_PHYS.railSide * sideSign;
+    b.vy += Math.sign(b.vy || 1) * simSpin.y * SPIN_PHYS.railTop;
+  }
+
+  simSpin.x *= SPIN_PHYS.railDecayX;
+  simSpin.y *= SPIN_PHYS.railDecayY;
+  simSpin.life = Math.max(simSpin.life, 25);
+
+  limitDeveloperSimBallSpeed(b);
+}
 
 let groups = {
   player:null,
@@ -1832,6 +2201,7 @@ let ballInHand = false;
 let ballInHandOwner = null;
 let pottedTrayBalls = [];
 let pocketAnimations = [];
+let sinkingBalls = [];
 
 const MAX_POTTED_BALLS = 15;
 const TRAY_BALL_SCALE = 0.72;
@@ -2628,6 +2998,7 @@ shotLocked = false;
 
 pottedTrayBalls = [];
 pocketAnimations = [];
+sinkingBalls = [];
 gameOver = false;
 breakDone = false;
 isBreakShot = true;
@@ -2641,6 +3012,7 @@ groups.ai = null;
 currentShot = null;
 isAiming = false;
 aimPower = 0;
+powerLockedDir = null;
 resetSpinToDefault();
 activeSpin = {x:0,y:0,life:0};
 
@@ -3341,52 +3713,88 @@ function angleDiff(target, current){
    POWER BAR SHOOT
    Thanh lực mới là nơi đánh thật sự.
    ========================= */
+function setPowerFillVisual(heightPx){
+  powerFill.style.setProperty("top", "0px");
+  powerFill.style.setProperty("bottom", "auto");
+  powerFill.style.setProperty("height", heightPx + "px");
+}
+
+function resetPowerFillVisual(){
+  setPowerFillVisual(0);
+}
 
 function setPowerFromPointer(e){
   const rect = powerWrap.getBoundingClientRect();
 
-  // Kéo từ điểm chạm ban đầu xuống dưới.
-  // Kéo xuống càng xa thì lực càng mạnh.
-  const dragDown = e.clientY - powerStartY;
+  /*
+    Thanh lực chạy từ TRÊN xuống.
+    Ngón tay kéo/chạm tới đâu thì fill từ đỉnh xuống tới đó.
+  */
+  const y = clamp(e.clientY - rect.top, 0, rect.height);
 
-  aimPower = clamp(dragDown / rect.height, 0, 1);
+  aimPower = clamp(y / rect.height, 0, 1);
 
-  powerFill.style.height = Math.round(aimPower * 100) + "%";
-updatePowerPercent(true);
+  setPowerFillVisual(y);
+
+  updatePowerPercent(true);
 }
 
 powerWrap.addEventListener("pointerdown", e => {
+  e.preventDefault();
+  e.stopPropagation();
+
   clearOnlyDeveloperButtonFocus();
+
   if(gameOver) return;
   if(turn !== "player") return;
   if(isMoving()) return;
   if(shotLocked) return;
-  if(rulerDragging) return;
 
   if(!hasAim){
     setMessage("Kéo trên bàn để ngắm trước");
     return;
   }
 
+  /*
+    Khóa hướng cơ ngay khi bắt đầu kéo lực.
+    Từ lúc này trở đi, dù tay có lệch qua thước hay canvas,
+    hướng bắn vẫn giữ nguyên.
+  */
+  powerLockedDir = getAimDir();
+
   powerDragging = true;
-isAiming = false;
+  isAiming = false;
+  rulerDragging = false;
+  cueBallDragging = false;
 
-powerStartY = e.clientY;
-aimPower = 0;
-powerFill.style.height = "0%";
+  powerStartY = e.clientY;
+
+  aimPower = 0;
+  resetPowerFillVisual();
   resetPowerPercent();
-updatePowerPercent(true);
 
-powerWrap.classList.add("charging");
-powerWrap.setPointerCapture(e.pointerId);
+  powerWrap.classList.add("charging");
+
+  try{
+    powerWrap.setPointerCapture(e.pointerId);
+  }catch(err){}
+
+  setPowerFromPointer(e);
 });
 
 powerWrap.addEventListener("pointermove", e => {
+  e.preventDefault();
+  e.stopPropagation();
+
   if(!powerDragging) return;
+
   setPowerFromPointer(e);
 });
 
 powerWrap.addEventListener("pointerup", e => {
+  e.preventDefault();
+  e.stopPropagation();
+
   if(!powerDragging) return;
 
   powerDragging = false;
@@ -3396,29 +3804,35 @@ powerWrap.addEventListener("pointerup", e => {
 
   if(aimPower < 0.05){
     aimPower = 0;
-    powerFill.style.height = "0%";
+    powerLockedDir = null;
+    resetPowerFillVisual();
     resetPowerPercent();
     return;
   }
 
-  const dir = getAimDir();
+  const dir = powerLockedDir || getAimDir();
 
   shoot("player", dir, aimPower, spin);
 
+  powerLockedDir = null;
   aimPower = 0;
-  powerFill.style.height = "0%";
-    resetPowerPercent();
+  resetPowerFillVisual();
+  resetPowerPercent();
 });
 
 powerWrap.addEventListener("pointercancel", e => {
+  e.preventDefault();
+  e.stopPropagation();
+
   powerDragging = false;
+  powerLockedDir = null;
+
   powerWrap.classList.remove("charging");
 
   aimPower = 0;
-  powerFill.style.height = "0%";
+  resetPowerFillVisual();
   resetPowerPercent();
 });
-  
   
 /* =========================
    SHOOT
@@ -3477,8 +3891,10 @@ currentShot = {
   cueBall.vy = dir.y * force;
 
   activeSpin.x = clamp(shotSpin.x, -1, 1);
-  activeSpin.y = clamp(shotSpin.y, -1, 1);
-  activeSpin.life = 120;
+activeSpin.y = clamp(shotSpin.y, -1, 1);
+
+// Cú càng mạnh thì xoáy còn tác dụng lâu hơn
+activeSpin.life = Math.round(75 + power * 95);
 }
 
 /* =========================
@@ -3506,21 +3922,9 @@ function updatePhysics(){
 
       const speed = Math.hypot(b.vx, b.vy);
 
-      if(b === cueBall && activeSpin.life > 0 && speed > 0.3){
-        const n = norm(b.vx, b.vy);
-
-        b.vx += n.x * activeSpin.y * 0.022;
-        b.vy += n.y * activeSpin.y * 0.022;
-
-        const px = -n.y;
-        const py = n.x;
-
-        b.vx += px * activeSpin.x * 0.018;
-        b.vy += py * activeSpin.x * 0.018;
-
-        activeSpin.life--;
-      }
-
+      if(b === cueBall){
+  applyCueSpinOnCloth(b, steps);
+}
       limitBallSpeed(b);
 
       const stepDX = b.vx / steps;
@@ -3916,6 +4320,7 @@ function handleRail(b){
     b.x = left;
     b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
     b.vy *= RAIL_SIDE_FRICTION;
+    applyRailSpinEffect(b, "left");
     markRailHit(b);
   }
 
@@ -3924,6 +4329,7 @@ function handleRail(b){
     b.x = right;
     b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
     b.vy *= RAIL_SIDE_FRICTION;
+    applyRailSpinEffect(b, "right");
     markRailHit(b);
   }
 
@@ -3932,6 +4338,7 @@ function handleRail(b){
     b.y = top;
     b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
     b.vx *= RAIL_SIDE_FRICTION;
+    applyRailSpinEffect(b, "top");
     markRailHit(b);
   }
 
@@ -3940,6 +4347,7 @@ function handleRail(b){
     b.y = bottom;
     b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
     b.vx *= RAIL_SIDE_FRICTION;
+    applyRailSpinEffect(b, "bottom");
     markRailHit(b);
   }
 
@@ -4101,8 +4509,12 @@ function handlePocket(b){
     return;
   }
 
+  if(b.potted){
+    return;
+  }
+
   for(const p of pockets){
-    if(!isPocketPhysicsHit(b.x, b.y, p)){
+    if(!shouldCapturePocketBall(b, p)){
       continue;
     }
 
@@ -4111,17 +4523,18 @@ function handlePocket(b){
     b.vy = 0;
     b.potted = true;
 
-    if(typeof startPocketAnimation === "function" && b !== cueBall){
-      startPocketAnimation(b, p);
-    }
+    // Animation hút/rơi xuống lỗ trước, sau đó mới chạy qua khay
+    startPocketSinkAnimation(b, p);
 
     if(b === cueBall){
       if(currentShot) currentShot.scratch = true;
     }else{
-      if(currentShot) currentShot.potted.push(b);
+      if(currentShot && !currentShot.potted.includes(b)){
+        currentShot.potted.push(b);
+      }
     }
-    updateTargetBoard();
 
+    updateTargetBoard();
     return;
   }
 }
@@ -4179,17 +4592,14 @@ function handleCollisions(){
 
           // Áp phê sau va chạm: mô phỏng điều bi cái.
           if(a === cueBall || b === cueBall){
-            const cue = a === cueBall ? a : b;
-            const sideSign = a === cueBall ? 1 : -1;
+  const cue = a === cueBall ? a : b;
 
-            cue.vx += tx * activeSpin.x * 1.15 * sideSign;
-cue.vy += ty * activeSpin.x * 1.15 * sideSign;
+  // Vector từ bi cái đi tới bi mục tiêu
+  const hitNx = a === cueBall ? nx : -nx;
+  const hitNy = a === cueBall ? ny : -ny;
 
-cue.vx -= nx * activeSpin.y * 0.7 * sideSign;
-cue.vy -= ny * activeSpin.y * 0.7 * sideSign;
-
-            activeSpin.life = Math.max(activeSpin.life, 40);
-          }
+  applyCueSpinAfterBallHit(cue, hitNx, hitNy);
+}
         }
       }
     }
@@ -4562,6 +4972,7 @@ drawPottedTray();
 drawAICueDragGuide();
 drawBreakCueZone();
 drawBalls();
+drawSinkingBalls();
 drawAiming();
 drawAIThinkingCueMotion();
 drawAICueVisual();
@@ -4993,7 +5404,109 @@ function getTraySlot(index){
     y: POTTED_TRAY.y + POTTED_TRAY.h - POTTED_TRAY.paddingBottom - trayBallR - index * TRAY_SLOT_GAP
   };
 }
+function startPocketSinkAnimation(ball, pocket){
+  sinkingBalls.push({
+    num: ball.num,
+    type: ball.type,
 
+    x: ball.x,
+    y: ball.y,
+
+    sx: ball.x,
+    sy: ball.y,
+
+    tx: pocket.x,
+    ty: pocket.y,
+
+    pocket,
+
+    start: performance.now(),
+    duration: 280,
+
+    scale: 1,
+    alpha: 1
+  });
+}
+
+function updateSinkingBalls(){
+  const now = performance.now();
+
+  for(let i = sinkingBalls.length - 1; i >= 0; i--){
+    const a = sinkingBalls[i];
+
+    const rawT = clamp((now - a.start) / a.duration, 0, 1);
+    const t = 1 - Math.pow(1 - rawT, 3);
+
+    a.x = a.sx + (a.tx - a.sx) * t;
+    a.y = a.sy + (a.ty - a.sy) * t;
+
+    a.scale = 1 - t * 0.66;
+    a.alpha = 1 - t * 0.92;
+
+    if(rawT >= 1){
+      // Bi cái rơi lỗ thì không đưa vào khay
+      if(a.num !== 0){
+        startPocketAnimation(
+          {
+            num: a.num,
+            type: a.type
+          },
+          a.pocket
+        );
+      }
+
+      sinkingBalls.splice(i, 1);
+    }
+  }
+}
+
+function drawSinkingBalls(){
+  if(!sinkingBalls.length) return;
+
+  for(const a of sinkingBalls){
+    drawSinkingBallIcon(a);
+  }
+}
+
+function drawSinkingBallIcon(a){
+  ctx.save();
+
+  ctx.globalAlpha = clamp(a.alpha, 0, 1);
+
+  // Bóng tối dưới miệng lỗ
+  ctx.fillStyle = "rgba(0,0,0,.42)";
+  ctx.beginPath();
+  ctx.ellipse(
+    a.x,
+    a.y + BALL_R * 0.34,
+    BALL_R * a.scale * 0.96,
+    BALL_R * a.scale * 0.42,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  ctx.translate(a.x, a.y);
+  ctx.scale(a.scale, a.scale);
+
+  drawBall({
+    x: 0,
+    y: 0,
+    num: a.num,
+    type: a.type,
+    active: true,
+    potted: false,
+    rollPhase: 0,
+    rollDir: 0,
+    faceX: 0,
+    faceY: 0,
+    faceRot: 0
+  });
+
+  ctx.restore();
+}
+  
 function startPocketAnimation(ball, pocket){
   const slotIndex = pottedTrayBalls.length + pocketAnimations.length;
   const slot = getTraySlot(slotIndex);
@@ -5760,20 +6273,9 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
 
         const speed = Math.hypot(b.vx, b.vy);
 
-        if(b.num === 0 && simSpin.life > 0 && speed > 0.3){
-          const n = norm(b.vx, b.vy);
-
-          b.vx += n.x * simSpin.y * 0.022;
-          b.vy += n.y * simSpin.y * 0.022;
-
-          const px = -n.y;
-          const py = n.x;
-
-          b.vx += px * simSpin.x * 0.018;
-          b.vy += py * simSpin.x * 0.018;
-
-          simSpin.life--;
-        }
+        if(b.num === 0){
+  applyCueSpinOnClothSim(b, simSpin, steps);
+}
 
         limitDeveloperSimBallSpeed(b);
 
@@ -5807,7 +6309,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
        if(b.active){
   applyCornerPocketJaws(b, false);
   applySidePocketMiddleJaws(b);
-  handleDeveloperSimRailWithLimit(b);
+  handleDeveloperSimRailWithLimit(b, simSpin);
 }
       }
 
@@ -5848,7 +6350,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
         if(b.active){
   applyCornerPocketJaws(b, false);
   applySidePocketMiddleJaws(b);
-  handleDeveloperSimRailWithLimit(b);
+  handleDeveloperSimRailWithLimit(b, simSpin);
   limitDeveloperSimBallSpeed(b);
 }
       }
@@ -5941,17 +6443,13 @@ function handleDeveloperSimCollisions(simBalls, onFirstHit, simSpin){
           const ty = nx;
 
           if(a.num === 0 || b.num === 0){
-            const cue = a.num === 0 ? a : b;
-            const sideSign = a.num === 0 ? 1 : -1;
+  const cue = a.num === 0 ? a : b;
 
-            cue.vx += tx * simSpin.x * 1.15 * sideSign;
-            cue.vy += ty * simSpin.x * 1.15 * sideSign;
+  const hitNx = a.num === 0 ? nx : -nx;
+  const hitNy = a.num === 0 ? ny : -ny;
 
-            cue.vx -= nx * simSpin.y * 0.7 * sideSign;
-            cue.vy -= ny * simSpin.y * 0.7 * sideSign;
-
-            simSpin.life = Math.max(simSpin.life, 40);
-          }
+  applyCueSpinAfterBallHitSim(cue, hitNx, hitNy, simSpin);
+}
         }
       }
     }
@@ -5960,7 +6458,7 @@ function handleDeveloperSimCollisions(simBalls, onFirstHit, simSpin){
 
 function handleDeveloperSimPocket(b){
   for(const p of pockets){
-    if(!isPocketPhysicsHit(b.x, b.y, p)){
+    if(!shouldCapturePocketBall(b, p)){
       continue;
     }
 
@@ -5974,10 +6472,12 @@ function handleDeveloperSimPocket(b){
 
   return null;
 }
-function handleDeveloperSimRailWithLimit(b){
+function handleDeveloperSimRailWithLimit(b, simSpin){
   const rail = handleDeveloperSimRail(b);
 
   if(!rail) return null;
+
+  applyRailSpinEffectSim(b, rail, simSpin);
 
   b.devBounces = (b.devBounces || 0) + 1;
 
@@ -6984,8 +7484,9 @@ function loop(){
     updatePhysics();
   }
 
-  updatePocketAnimations();
-  draw();
+  updateSinkingBalls();
+updatePocketAnimations();
+draw();
   updateDeveloperPowerUI();
 
   requestAnimationFrame(loop);
