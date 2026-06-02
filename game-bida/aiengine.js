@@ -309,7 +309,7 @@ function AI_getPhasePowerMax(phase){
 
 function AI_handlePhaseTimeout(job){
   if(job.phase === "direct"){
-    setMessage("AI.GiaBao đang tìm cú A băng...", true);
+    setMessage("AI.GiaBao đang suy nghĩ...", true);
     AI_switchToKickPhase(job);
     return;
   }
@@ -350,7 +350,7 @@ function AI_switchToSafeKickPhase(job){
   job.powerPct = AI_getPhasePowerMin(job.phase);
   job.bestForCurrentTarget = null;
 
-  setMessage("AI đang tìm cú A băng để chạm đúng bi...", true);
+  setMessage("AI đang suy nghĩ...", true);
 
   setTimeout(() => AI_processScanJob(job), 0);
 }
