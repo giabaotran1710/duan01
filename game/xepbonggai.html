@@ -1,0 +1,4500 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Xếp bóng gai</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+:root{
+  --bg:#12091f;
+  --panel:rgba(255,255,255,.09);
+  --text:#fff;
+  --muted:rgba(255,255,255,.65);
+  --gold:#ffd166;
+  --pink:#ff4fd8;
+  --cyan:#4df3ff;
+}
+
+html,body{
+  width:100%;
+  min-height:100%;
+  overflow:hidden;
+  font-family:Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at 20% 10%, rgba(255,79,216,.28), transparent 30%),
+    radial-gradient(circle at 80% 15%, rgba(77,243,255,.20), transparent 32%),
+    radial-gradient(circle at 50% 90%, rgba(255,209,102,.18), transparent 38%),
+    linear-gradient(160deg,#12091f,#20103c 55%,#090615);
+  color:var(--text);
+}
+
+body{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+}
+
+#game{
+  width:100%;
+  height:100dvh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:flex-start;
+  padding:12px;
+  position:relative;
+}
+
+#top{
+  width:min(96vw,560px);
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:8px;
+  margin-bottom:10px;
+}
+
+.stat{
+  flex:1;
+  background:var(--panel);
+  border:1px solid rgba(255,255,255,.12);
+  border-radius:14px;
+  padding:8px 6px;
+  text-align:center;
+  box-shadow:0 8px 24px rgba(0,0,0,.22);
+  backdrop-filter:blur(8px);
+}
+
+.stat .label{
+  font-size:10px;
+  color:var(--muted);
+  font-weight:800;
+  letter-spacing:.8px;
+}
+
+.stat .value{
+  margin-top:2px;
+  font-size:18px;
+  font-weight:900;
+  text-shadow:0 2px 8px rgba(0,0,0,.5);
+}
+
+#title{
+  width:min(96vw,560px);
+  text-align:center;
+  margin:2px 0 10px;
+}
+
+#title h1{
+  font-size:clamp(24px,7vw,42px);
+  font-weight:1000;
+  letter-spacing:1px;
+  color:#fff;
+  text-shadow:
+    0 3px 0 #5b1bb3,
+    0 0 18px rgba(255,79,216,.75),
+    0 0 34px rgba(77,243,255,.35);
+}
+
+#title p{
+  color:rgba(255,255,255,.72);
+  font-size:13px;
+  font-weight:700;
+  margin-top:4px;
+}
+
+#boardWrap{
+  width:min(94vw,560px);
+  aspect-ratio:1/1;
+  padding:10px;
+  border-radius:28px;
+  background:
+    linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,.04)),
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,.16), transparent 55%);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:
+    0 20px 55px rgba(0,0,0,.44),
+    inset 0 0 28px rgba(255,255,255,.06);
+  position:relative;
+}
+
+#board{
+  width:100%;
+  height:100%;
+  display:grid;
+  grid-template-columns:repeat(8,1fr);
+  grid-template-rows:repeat(8,1fr);
+  gap:6px;
+  touch-action:none;
+  position:relative;
+}
+#board.clipDrag{
+  overflow:hidden;
+}
+  
+.cell{
+  position:relative;
+  border-radius:18px;
+  background:transparent;
+  box-shadow:none;
+  overflow:visible;
+}
+
+.ball{
+  position:absolute;
+  inset:3px;
+  z-index:5;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  cursor:grab;
+  overflow:visible;
+
+  clip-path:polygon(
+    50% 0%, 58% 7%, 66% 3%, 72% 12%,
+    82% 10%, 86% 20%, 96% 25%, 93% 36%,
+    100% 44%, 92% 52%, 98% 62%, 88% 68%,
+    87% 80%, 75% 82%, 70% 94%, 58% 90%,
+    50% 100%, 42% 91%, 31% 96%, 25% 84%,
+    13% 84%, 12% 70%, 1% 64%, 8% 53%,
+    0% 44%, 8% 34%, 4% 24%, 17% 19%,
+    18% 8%, 30% 11%, 37% 3%, 44% 9%
+  );
+
+  transition:
+    transform .18s cubic-bezier(.2,1.4,.28,1),
+    opacity .18s ease,
+    filter .18s ease;
+
+  background:
+    radial-gradient(circle at 34% 24%,
+      rgba(255,255,255,.72) 0 8%,
+      rgba(255,255,255,.26) 9% 17%,
+      transparent 18%
+    ),
+    radial-gradient(circle at 68% 78%,
+      rgba(0,0,0,.26) 0 16%,
+      transparent 42%
+    ),
+    radial-gradient(circle at 50% 50%,
+      var(--c2) 0 8%,
+      var(--c1) 34%,
+      var(--c3) 100%
+    );
+
+  box-shadow:
+    inset -9px -12px 16px rgba(0,0,0,.28),
+    inset 7px 8px 13px rgba(255,255,255,.34),
+    0 8px 13px rgba(0,0,0,.30);
+}
+.ball::before{
+  content:"";
+  position:absolute;
+  inset:5%;
+  z-index:1;
+  pointer-events:none;
+
+
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,.42) 0 6%, transparent 7%),
+    radial-gradient(circle at 78% 22%, rgba(255,255,255,.24) 0 5%, transparent 6%),
+    radial-gradient(circle at 26% 78%, rgba(255,255,255,.20) 0 5%, transparent 6%),
+    radial-gradient(circle at 82% 74%, rgba(0,0,0,.18) 0 10%, transparent 28%);
+
+  opacity:.9;
+}
+
+
+  .ball::before,
+.ball::after{
+  clip-path:none;
+  border-radius:50%;
+}
+
+.face{
+  width:62%;
+  height:42%;
+  position:relative;
+  z-index:4;
+  transform:translateY(3%);
+}
+.eye{
+  position:absolute;
+  top:0;
+  background:#fff;
+  border-radius:50%;
+  box-shadow:
+    inset 0 -3px 4px rgba(0,0,0,.18),
+    0 2px 4px rgba(0,0,0,.18);
+
+  animation:blink var(--blinkDur, 8.5s) infinite;
+  animation-delay:var(--blinkDelay, 0s);
+  transform-origin:center;
+}
+
+.eye.left{
+  left:7%;
+  top:-4%;
+  width:36%;
+  aspect-ratio:1/1.18;
+  transform:rotate(-6deg);
+}
+
+.eye.right{
+  right:9%;
+  top:7%;
+  width:24%;
+  aspect-ratio:1/1.12;
+  transform:rotate(8deg);
+}
+
+.eye::after{
+  content:"";
+  position:absolute;
+  width:42%;
+  aspect-ratio:1;
+  border-radius:50%;
+  background:#111;
+  left:32%;
+  top:36%;
+  box-shadow:
+    0 0 0 2px rgba(255,255,255,.18),
+    inset 0 0 3px rgba(255,255,255,.25);
+}
+
+.eye.left::after{
+  width:38%;
+  left:38%;
+  top:38%;
+}
+
+.eye.right::after{
+  width:48%;
+  left:24%;
+  top:31%;
+}
+
+.type0{--c1:#ff4fd8;--c2:#ffb6ef;--c3:#a90d80}
+.type1{--c1:#22dfff;--c2:#a8fbff;--c3:#076fae}
+.type2{--c1:#ffbd2e;--c2:#fff1a8;--c3:#b96700}
+.type3{--c1:#39e875;--c2:#bbffc8;--c3:#0c7d39}
+.type4{--c1:#8d55ff;--c2:#d4bdff;--c3:#3e0f9e}
+.type5{--c1:#ff5050;--c2:#ffb2a8;--c3:#9e1421}
+  
+.ball.dragPreview{
+  transition:none;
+  z-index:5;
+  filter:brightness(1.15) saturate(1.16);
+}
+
+.ball.pop{
+  animation:pop .28s ease forwards;
+  pointer-events:none;
+}
+
+.ball.drop{
+  animation:ballDrop .32s cubic-bezier(.18,.95,.22,1.12) both;
+}
+
+.ball.newDrop{
+  animation:ballNewDrop .36s cubic-bezier(.18,.95,.22,1.12) both;
+}
+
+@keyframes ballDrop{
+  from{
+    transform:translate3d(0,var(--dropY),0) scale(.98);
+  }
+  to{
+    transform:translate3d(0,0,0) scale(1);
+  }
+}
+
+@keyframes ballNewDrop{
+  from{
+    transform:translate3d(0,calc(var(--dropY) - 18px),0) scale(.82);
+    opacity:0;
+  }
+  to{
+    transform:translate3d(0,0,0) scale(1);
+    opacity:1;
+  }
+}
+.hintLine{
+  width:min(96vw,560px);
+  margin-top:10px;
+  display:flex;
+  flex-wrap:wrap;
+  align-items:stretch;
+  justify-content:space-between;
+  gap:8px;
+}
+
+/* Hai nút nằm cùng một hàng */
+.hintLine .btn{
+  order:1;
+  flex:1 1 calc(50% - 4px);
+  min-width:0;
+  white-space:nowrap;
+}
+
+/* Tin nhắn nằm xuống dưới hai nút */
+#message{
+  order:2;
+  flex:0 0 100%;
+  min-height:38px;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.13);
+  border-radius:14px;
+  color:rgba(255,255,255,.82);
+  font-size:13px;
+  font-weight:800;
+  padding:8px;
+}
+
+/* Blink nhẹ khi đổi tin nhắn */
+#message.msgBlink{
+  animation:messageBlink .28s ease both;
+}
+
+@keyframes messageBlink{
+  0%{
+    opacity:0;
+    transform:translateY(4px);
+  }
+
+  100%{
+    opacity:1;
+    transform:translateY(0);
+  }
+}
+
+.btn{
+  border:none;
+  outline:none;
+  padding:11px 13px;
+  border-radius:14px;
+  color:white;
+  font-weight:1000;
+  letter-spacing:.4px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.28), rgba(255,255,255,0)),
+    linear-gradient(135deg,#ff4fd8,#6e5bff);
+  box-shadow:
+    0 9px 20px rgba(0,0,0,.3),
+    inset 0 1px 0 rgba(255,255,255,.35);
+  cursor:pointer;
+}
+
+.btn:active{
+  transform:translateY(2px) scale(.98);
+}
+
+#overlay{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(8,3,18,.76);
+  backdrop-filter:blur(10px);
+}
+
+.panel{
+  width:min(92vw,440px);
+  padding:24px 20px;
+  border-radius:28px;
+  text-align:center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,79,216,.22), transparent 48%),
+    linear-gradient(145deg, rgba(255,255,255,.14), rgba(255,255,255,.06));
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:0 24px 80px rgba(0,0,0,.45);
+}
+
+.panel h2{
+  font-size:34px;
+  font-weight:1000;
+  text-shadow:0 0 24px rgba(255,79,216,.8);
+  margin-bottom:8px;
+}
+
+.panel p{
+  color:rgba(255,255,255,.75);
+  font-size:14px;
+  font-weight:700;
+  line-height:1.45;
+  margin:9px 0;
+}
+
+.bigBtn{
+  width:100%;
+  margin-top:14px;
+  padding:15px 18px;
+  border:none;
+  border-radius:18px;
+  font-size:18px;
+  font-weight:1000;
+  color:#fff;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.32), transparent),
+    linear-gradient(135deg,#ff4fd8,#4df3ff);
+  box-shadow:
+    0 14px 30px rgba(0,0,0,.36),
+    0 0 24px rgba(255,79,216,.28);
+}
+
+#floatingScore{
+  position:fixed;
+  z-index:30;
+  left:0;
+  top:0;
+  transform:translate3d(0,0,0);
+  color:#fff;
+  font-size:22px;
+  font-weight:1000;
+  pointer-events:none;
+  opacity:0;
+  text-shadow:
+    0 2px 0 #55159e,
+    0 0 12px rgba(255,255,255,.7);
+}
+#floatingScore.show{
+  animation:scoreFloat .8s ease forwards;
+}
+
+@keyframes idle{
+  0%,100%{transform:scale(1)}
+  50%{transform:scale(1.035)}
+}
+
+@keyframes blink{
+  0%,88%,100%{
+    scale:1 1;
+  }
+  92%,95%{
+    scale:1 .12;
+  }
+}
+
+
+
+@keyframes pop{
+  0%{transform:scale(1);opacity:1}
+  55%{transform:scale(1.25);opacity:1;filter:brightness(1.45)}
+  100%{transform:scale(.08);opacity:0;filter:brightness(2)}
+}
+
+@keyframes dropIn{
+  0%{transform:translateY(-18px) scale(.7);opacity:0}
+  100%{transform:translateY(0) scale(1);opacity:1}
+}
+
+@keyframes scoreFloat{
+  0%{
+    opacity:0;
+    transform:translate3d(0,10px,0) scale(.8);
+  }
+  20%{
+    opacity:1;
+    transform:translate3d(0,-2px,0) scale(1.08);
+  }
+  100%{
+    opacity:0;
+    transform:translate3d(0,-34px,0) scale(1);
+  }
+}
+
+@media (max-height:720px){
+  #title h1{font-size:24px}
+  #title p{display:none}
+  #top{margin-bottom:6px}
+  #boardWrap{width:min(88vw,calc(100dvh - 210px))}
+}
+/* Hiệu ứng trượt hàng/cột */
+#boardWrap{
+  overflow:hidden;
+}
+
+.ball.shiftAnim{
+  transition:
+    transform .28s cubic-bezier(.34,1.56,.64,1),
+    opacity .24s ease,
+    filter .24s ease;
+  animation:none;
+  will-change:transform;
+}
+
+.ball.shiftGhost{
+  pointer-events:none;
+  z-index:7;
+}
+  /* Dải highlight liền mạch cho cả hàng/cột */
+.dragLineBar{
+  position:absolute;
+  pointer-events:none;
+  z-index:1;
+
+  background:none;
+  border-radius:0;
+  box-shadow:none;
+  overflow:hidden;
+
+  border-top:2px solid rgba(255,255,255,.65);
+  border-bottom:2px solid rgba(255,255,255,.65);
+}
+
+.dragLineBar::before{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-45%;
+  width:40%;
+  height:100%;
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.45),
+    transparent
+  );
+  animation:windSwipeRow 2.75s linear infinite;
+}
+
+.dragLineBar.col{
+  border-top:none;
+  border-bottom:none;
+  border-left:2px solid rgba(255,255,255,.65);
+  border-right:2px solid rgba(255,255,255,.65);
+}
+
+.dragLineBar.col::before{
+  left:0;
+  top:-45%;
+  width:100%;
+  height:40%;
+  background:linear-gradient(
+    180deg,
+    transparent,
+    rgba(255,255,255,.45),
+    transparent
+  );
+  animation:windSwipeCol 2.75s linear infinite;
+}
+
+@keyframes windSwipeRow{
+  from{left:-45%}
+  to{left:105%}
+}
+
+@keyframes windSwipeCol{
+  from{top:-45%}
+  to{top:105%}
+}
+
+
+.dragAnchorRing{
+  position:absolute;
+  pointer-events:none;
+  z-index:8;
+  border-radius:100%;
+  will-change:transform;
+}
+
+.cell{
+  z-index:2;
+}
+
+.ball{
+  z-index:5;
+}
+
+
+  /* Live drag: bóng đi theo tay khi đang kéo */
+.ball.dragPreview{
+  transition:none !important;
+  animation:none !important;
+  z-index:9;
+  will-change:transform;
+  pointer-events:none;
+}
+
+.ball.dragWrapGhost{
+  transition:none !important;
+  animation:none !important;
+  z-index:10;
+  opacity:.98;
+  will-change:transform;
+  pointer-events:none;
+}
+
+.ball.dragWrapGhost.shiftAnim{
+  transition:
+    transform .24s cubic-bezier(.18,.95,.22,1.08),
+    opacity .24s ease,
+    filter .24s ease !important;
+}
+  .ball{
+  backface-visibility:hidden;
+  transform:translate3d(0,0,0);
+}
+
+.ball.dragPreview,
+.ball.dragWrapGhost,
+.ball.shiftAnim{
+  will-change:transform;
+}
+.ball.locked::before{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  border-radius:50%;
+  border:4px solid #8b8b8b;
+  box-shadow:
+    inset 0 0 8px rgba(0,0,0,.8),
+    0 0 8px rgba(255,255,255,.35);
+  z-index:10;
+  pointer-events:none;
+}
+
+.ball.locked::after{
+  content:"🔒";
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:20px;
+  z-index:11;
+  pointer-events:none;
+}
+  #board{
+  position:relative;
+}
+
+.ball{
+  position:absolute;
+}
+
+.ball.size2 .face{
+  transform:translateY(3%) scale(1.15);
+}
+
+.ball.size3 .face{
+  transform:translateY(3%) scale(1.28);
+}
+  /* Ball giờ nằm trực tiếp trong #board, không nằm trong .cell nữa */
+#board > .ball{
+  inset:auto;
+}
+
+/* Bỏ vòng trắng khi kéo nếu không cần */
+.dragAnchorRing{
+  display:none;
+}
+  
+  .lockRingFx{
+  position:absolute;
+  width:52px;
+  height:52px;
+  border-radius:50%;
+  border:5px solid #8b8b8b;
+  z-index:60;
+  pointer-events:none;
+  opacity:0;
+
+  box-shadow:
+    inset 0 0 10px rgba(0,0,0,.85),
+    0 0 10px rgba(255,255,255,.45),
+    0 0 24px rgba(180,180,180,.28);
+
+  transform:translate3d(0,0,0) scale(2.2) rotate(0deg);
+  will-change:transform, opacity;
+}
+
+.lockRingFx::before{
+  content:"";
+  position:absolute;
+  inset:-7px;
+  border-radius:50%;
+  border:2px solid rgba(255,255,255,.28);
+  opacity:.7;
+}
+
+.lockRingFx.fly{
+  animation:lockRingFly 2s cubic-bezier(.16,.9,.24,1.06) forwards;
+}
+
+@keyframes lockRingFly{
+  0%{
+    opacity:0;
+    transform:
+      translate3d(var(--fromX),var(--fromY),0)
+      scale(2.45)
+      rotate(var(--rotStart));
+    filter:blur(1px);
+  }
+
+  12%{
+    opacity:1;
+  }
+
+  40%{
+    opacity:1;
+    transform:
+      translate3d(var(--midX),var(--midY),0)
+      scale(1.28)
+      rotate(calc(var(--rotStart) * .35));
+    filter:blur(0);
+  }
+
+  88%{
+    opacity:1;
+    transform:
+      translate3d(var(--toX),var(--toY),0)
+      scale(.88)
+      rotate(10deg);
+  }
+
+  100%{
+    opacity:0;
+    transform:
+      translate3d(var(--toX),var(--toY),0)
+      scale(1)
+      rotate(0deg);
+  }
+}
+
+.ball.locked{
+  filter:brightness(.88) saturate(.82);
+}
+
+.ball.locked::after{
+  content:"🔒";
+  position:absolute;
+  top:50%;
+  left:50%;
+  transform:translate(-50%,-50%);
+  font-size:clamp(18px,5vw,28px);
+  z-index:12;
+  pointer-events:none;
+  text-shadow:
+    0 2px 4px rgba(0,0,0,.65),
+    0 0 8px rgba(255,255,255,.45);
+}
+
+.ball.locked::before{
+  content:"";
+  position:absolute;
+  inset:-5px;
+  border-radius:50%;
+  border:4px solid #8b8b8b;
+  box-shadow:
+    inset 0 0 8px rgba(0,0,0,.85),
+    0 0 8px rgba(255,255,255,.35);
+  z-index:11;
+  pointer-events:none;
+}
+  .ball.startDrop{
+  animation:startBoardDrop .78s cubic-bezier(.18,.95,.22,1.12) both;
+  animation-delay:var(--dropDelay, 0s);
+}
+
+@keyframes startBoardDrop{
+  0%{
+    transform:translate3d(0,var(--dropY),0) scale(.72);
+    opacity:0;
+    filter:brightness(1.25);
+  }
+
+  68%{
+    transform:translate3d(0,8px,0) scale(1.06);
+    opacity:1;
+  }
+
+  100%{
+    transform:translate3d(0,0,0) scale(1);
+    opacity:1;
+    filter:brightness(1);
+  }
+}
+  #lockFxLayer{
+  position:absolute;
+  left:10px;
+  top:10px;
+  right:10px;
+  bottom:10px;
+  z-index:120;
+  pointer-events:none;
+  overflow:hidden;
+}
+
+#board{
+  z-index:1;
+}
+
+.lockRingFx{
+  z-index:130;
+}
+  
+ .ball.wrapGhost{
+  pointer-events:none;
+  z-index:10;
+  opacity:.98;
+  will-change:transform;
+}
+  #itemBar{
+  width:min(96vw,560px);
+  display:grid;
+  grid-template-columns:repeat(4,1fr);
+  gap:7px;
+  margin-top:8px;
+}
+
+.itemBtn{
+  min-height:66px;
+  border:none;
+  outline:none;
+  border-radius:14px;
+  padding:6px 4px;
+  color:#fff;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.18), rgba(255,255,255,.04)),
+    rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.16);
+  box-shadow:
+    0 8px 18px rgba(0,0,0,.28),
+    inset 0 1px 0 rgba(255,255,255,.18);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  justify-content:center;
+  gap:2px;
+  cursor:pointer;
+  overflow:hidden;
+}
+
+.itemBtn:active{
+  transform:translateY(2px) scale(.98);
+}
+
+.itemBtn.active{
+  border-color:rgba(77,243,255,.9);
+  background:
+    linear-gradient(180deg, rgba(77,243,255,.28), rgba(255,79,216,.12)),
+    rgba(255,255,255,.1);
+  box-shadow:
+    0 0 16px rgba(77,243,255,.36),
+    inset 0 0 14px rgba(255,255,255,.12);
+}
+
+.itemIcon{
+  font-size:21px;
+  line-height:1;
+}
+
+.itemName{
+  font-size:11px;
+  font-weight:1000;
+  letter-spacing:.4px;
+  line-height:1;
+}
+
+.itemDesc{
+  font-size:8.5px;
+  font-weight:800;
+  color:rgba(255,255,255,.66);
+  line-height:1.15;
+  text-align:center;
+}
+
+@media (max-width:390px){
+  .itemBtn{
+    min-height:60px;
+    padding:5px 3px;
+  }
+
+  .itemIcon{
+    font-size:19px;
+  }
+
+  .itemName{
+    font-size:10px;
+  }
+
+  .itemDesc{
+    font-size:7.8px;
+  }
+}
+/* =========================
+   ICE CORE + FROZEN STYLE
+========================= */
+
+.ball .iceAura,
+.ball .frozenShell,
+.ball .frozenShine{
+  display:none;
+  position:absolute;
+  pointer-events:none;
+}
+
+/* -------------------------
+   BALL BĂNG GIÁ
+   Ngoại hình riêng, kiểu lõi băng
+------------------------- */
+.ball.iceCore{
+  background:
+    radial-gradient(circle at 30% 22%,
+      rgba(255,255,255,.95) 0 7%,
+      rgba(210,245,255,.88) 8% 16%,
+      transparent 17%
+    ),
+    radial-gradient(circle at 68% 74%,
+      rgba(0,60,120,.30) 0 16%,
+      transparent 35%
+    ),
+    radial-gradient(circle at 50% 50%,
+      #eefcff 0 10%,
+      #aee8ff 26%,
+      #57bfff 54%,
+      #2e85e6 76%,
+      #1d4fb8 100%
+    ) !important;
+
+  box-shadow:
+    inset -12px -14px 20px rgba(0,42,100,.28),
+    inset 10px 10px 18px rgba(255,255,255,.55),
+    0 0 18px rgba(120,220,255,.60),
+    0 0 34px rgba(90,190,255,.28);
+}
+
+.ball.iceCore .iceAura{
+  display:block;
+  inset:-8px;
+  border-radius:50%;
+  z-index:8;
+  background:
+    conic-gradient(
+      from 0deg,
+      rgba(255,255,255,0) 0deg 18deg,
+      rgba(210,245,255,.95) 18deg 28deg,
+      rgba(255,255,255,0) 28deg 52deg,
+      rgba(150,230,255,.85) 52deg 64deg,
+      rgba(255,255,255,0) 64deg 90deg,
+      rgba(210,245,255,.95) 90deg 102deg,
+      rgba(255,255,255,0) 102deg 128deg,
+      rgba(150,230,255,.82) 128deg 140deg,
+      rgba(255,255,255,0) 140deg 180deg,
+      rgba(210,245,255,.92) 180deg 194deg,
+      rgba(255,255,255,0) 194deg 220deg,
+      rgba(150,230,255,.82) 220deg 232deg,
+      rgba(255,255,255,0) 232deg 270deg,
+      rgba(210,245,255,.90) 270deg 282deg,
+      rgba(255,255,255,0) 282deg 320deg,
+      rgba(150,230,255,.80) 320deg 332deg,
+      rgba(255,255,255,0) 332deg 360deg
+    );
+  filter:drop-shadow(0 0 8px rgba(170,240,255,.75));
+  animation:iceCoreSpin 7.5s linear infinite;
+  opacity:.95;
+}
+
+.ball.iceCore::after{
+  content:"";
+  position:absolute;
+  inset:-4px;
+  border-radius:50%;
+  z-index:7;
+  background:
+    radial-gradient(circle at 50% 50%, transparent 58%, rgba(215,248,255,.9) 63%, transparent 69%);
+  opacity:.9;
+  animation:iceCorePulse 1.8s ease-in-out infinite;
+  pointer-events:none;
+}
+
+/* =========================
+   ICE BLOCK - VUÔNG CHÂN THẬT, BO NHẸ 1PX
+========================= */
+
+/* Ball bị đóng băng: đổi hẳn thành khối băng vuông */
+.ball.frozen{
+  clip-path:inset(0 round 1px) !important;
+  border-radius:1px !important;
+  overflow:hidden;
+
+  filter:saturate(.62) brightness(1.08) contrast(1.05);
+
+  background:
+    linear-gradient(145deg,
+      rgba(240,252,255,.92) 0%,
+      rgba(165,225,255,.72) 24%,
+      rgba(75,165,230,.58) 58%,
+      rgba(210,245,255,.78) 100%
+    ) !important;
+
+  box-shadow:
+    inset 0 0 0 2px rgba(235,252,255,.95),
+    inset 5px 5px 12px rgba(255,255,255,.62),
+    inset -9px -12px 18px rgba(35,110,185,.42),
+    inset 0 -22px 28px rgba(40,135,210,.18),
+    0 0 12px rgba(125,220,255,.42),
+    0 8px 15px rgba(0,0,0,.32);
+}
+
+/* Lớp băng phủ toàn bộ ball */
+.ball.frozen .frozenShell{
+  display:block;
+  inset:0;
+  z-index:12;
+  border-radius:1px;
+  overflow:hidden;
+
+  background:
+    linear-gradient(135deg,
+      rgba(255,255,255,.82) 0%,
+      rgba(255,255,255,.28) 15%,
+      rgba(115,205,255,.28) 36%,
+      rgba(45,135,220,.30) 62%,
+      rgba(220,248,255,.42) 82%,
+      rgba(255,255,255,.72) 100%
+    ),
+    linear-gradient(35deg,
+      transparent 0%,
+      rgba(255,255,255,.24) 22%,
+      transparent 24%,
+      transparent 100%
+    );
+
+  box-shadow:
+    inset 0 0 0 1px rgba(255,255,255,.82),
+    inset 0 0 0 3px rgba(120,210,255,.28),
+    inset 8px 8px 14px rgba(255,255,255,.34),
+    inset -10px -12px 18px rgba(30,100,180,.36);
+}
+
+/* Vân nứt và mặt cắt băng */
+.ball.frozen .frozenShell::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  border-radius:1px;
+
+  background:
+    linear-gradient(118deg,
+      transparent 0 21%,
+      rgba(255,255,255,.50) 22% 23%,
+      transparent 24% 100%
+    ),
+    linear-gradient(46deg,
+      transparent 0 45%,
+      rgba(230,252,255,.42) 46% 47%,
+      transparent 48% 100%
+    ),
+    linear-gradient(158deg,
+      transparent 0 58%,
+      rgba(255,255,255,.32) 59% 60%,
+      transparent 61% 100%
+    ),
+    linear-gradient(82deg,
+      transparent 0 68%,
+      rgba(170,230,255,.26) 69% 70%,
+      transparent 71% 100%
+    ),
+    radial-gradient(circle at 22% 18%, rgba(255,255,255,.48) 0 7%, transparent 8%),
+    radial-gradient(circle at 76% 78%, rgba(110,210,255,.24) 0 15%, transparent 27%);
+
+  opacity:.95;
+}
+
+/* Viền trong tạo cảm giác khối băng dày */
+.ball.frozen .frozenShell::after{
+  content:"";
+  position:absolute;
+  inset:4px;
+  border-radius:1px;
+
+  border:1px solid rgba(255,255,255,.42);
+
+  box-shadow:
+    inset 4px 4px 7px rgba(255,255,255,.36),
+    inset -5px -7px 10px rgba(35,120,195,.34),
+    0 0 8px rgba(210,245,255,.18);
+
+  opacity:.95;
+}
+
+/* Mảng phản sáng sắc cạnh */
+.ball.frozen .frozenShine{
+  display:block;
+  position:absolute;
+  left:-38%;
+  top:-12%;
+  width:44%;
+  height:150%;
+  z-index:13;
+  border-radius:1px;
+  pointer-events:none;
+  overflow:hidden;
+  opacity:.95;
+
+  background:
+    linear-gradient(115deg,
+      transparent 0%,
+      rgba(255,255,255,.00) 18%,
+      rgba(255,255,255,.22) 32%,
+      rgba(255,255,255,.82) 48%,
+      rgba(220,245,255,.55) 56%,
+      rgba(255,255,255,.18) 66%,
+      rgba(255,255,255,0) 82%,
+      transparent 100%
+    );
+
+  transform:skewX(-18deg) rotate(8deg);
+  filter:blur(.25px);
+  mix-blend-mode:screen;
+  animation:iceShineSlide 2.6s ease-in-out infinite;
+}
+  
+  @keyframes iceShineSlide{
+  0%{
+    transform:translateX(-165%) skewX(-18deg) rotate(8deg);
+    opacity:0;
+  }
+
+  10%{
+    opacity:.18;
+  }
+
+  28%{
+    opacity:.95;
+  }
+
+  55%{
+    opacity:.78;
+  }
+
+  72%{
+    opacity:.16;
+  }
+
+  100%{
+    transform:translateX(290%) skewX(-18deg) rotate(8deg);
+    opacity:0;
+  }
+}
+
+/* Ball bên trong bị nhìn xuyên qua băng */
+.ball.frozen .face{
+  opacity:.62;
+  transform:translateY(3%) scale(.88);
+  filter:saturate(.35) brightness(1.12) blur(.35px);
+}
+
+.ball.frozen .eye{
+  opacity:.62;
+}
+
+/* Tắt aura nếu ball đang bị frozen */
+.ball.frozen .iceAura{
+  display:none !important;
+}
+  .itemIcon{
+  width:32px;
+  height:32px;
+  border-radius:12px;
+  display:grid;
+  place-items:center;
+  color:var(--itemColor,#fff);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.42), transparent 34%),
+    linear-gradient(145deg, rgba(255,255,255,.18), rgba(255,255,255,.04));
+  box-shadow:
+    inset 0 1px 0 rgba(255,255,255,.35),
+    inset 0 -8px 14px rgba(0,0,0,.18),
+    0 0 14px color-mix(in srgb, var(--itemColor,#fff) 48%, transparent);
+}
+
+.itemIcon svg{
+  width:24px;
+  height:24px;
+  display:block;
+  fill:none;
+  stroke:currentColor;
+  stroke-width:4;
+  stroke-linecap:round;
+  stroke-linejoin:round;
+  filter:
+    drop-shadow(0 0 5px color-mix(in srgb, var(--itemColor,#fff) 65%, transparent))
+    drop-shadow(0 2px 2px rgba(0,0,0,.45));
+}
+
+.itemBtn[data-item="hammer"]{--itemColor:#ffd166}
+.itemBtn[data-item="spike"]{--itemColor:#8dff7a}
+.itemBtn[data-item="bomb"]{--itemColor:#ff5b5b}
+.itemBtn[data-item="shuffle"]{--itemColor:#4df3ff}
+
+.itemBtn.active .itemIcon{
+  transform:scale(1.08);
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255,255,255,.65), transparent 35%),
+    linear-gradient(145deg, color-mix(in srgb, var(--itemColor) 42%, transparent), rgba(255,255,255,.08));
+}
+  /* =========================
+   STONE SPECIAL BALL
+========================= */
+
+.ball.stone{
+  clip-path:polygon(
+    50% 1%,
+    72% 6%,
+    91% 20%,
+    98% 42%,
+    94% 65%,
+    78% 86%,
+    55% 98%,
+    32% 95%,
+    12% 80%,
+    3% 57%,
+    7% 31%,
+    27% 10%
+  ) !important;
+
+  border-radius:0 !important;
+  overflow:hidden;
+
+  background:
+    linear-gradient(145deg,
+      #d8d8d8 0%,
+      #aaa 24%,
+      #777 55%,
+      #bdbdbd 78%,
+      #5e5e5e 100%
+    ) !important;
+
+  box-shadow:
+    inset 8px 8px 12px rgba(255,255,255,.32),
+    inset -10px -12px 16px rgba(0,0,0,.38),
+    0 8px 14px rgba(0,0,0,.38),
+    0 0 8px rgba(255,255,255,.12);
+}
+
+.ball.stone::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+
+  background:
+    polygon,
+    linear-gradient(120deg, transparent 0 20%, rgba(255,255,255,.22) 21% 24%, transparent 25% 100%),
+    linear-gradient(38deg, transparent 0 45%, rgba(0,0,0,.18) 46% 50%, transparent 51% 100%),
+    radial-gradient(circle at 28% 22%, rgba(255,255,255,.26) 0 9%, transparent 10%),
+    radial-gradient(circle at 72% 72%, rgba(0,0,0,.26) 0 18%, transparent 30%);
+}
+
+.ball.stone::after{
+  content:"";
+  position:absolute;
+  inset:8%;
+  z-index:3;
+  pointer-events:none;
+  clip-path:polygon(
+    46% 0%,
+    70% 9%,
+    95% 34%,
+    88% 66%,
+    60% 94%,
+    26% 88%,
+    4% 60%,
+    11% 25%
+  );
+  border:1px solid rgba(255,255,255,.22);
+  box-shadow:
+    inset 4px 4px 7px rgba(255,255,255,.16),
+    inset -5px -6px 9px rgba(0,0,0,.22);
+}
+
+.ball.stone .face,
+.ball.stone .iceAura,
+.ball.stone .frozenShell,
+.ball.stone .frozenShine{
+  display:none !important;
+}
+  /* =========================
+   LIGHTNING SPECIAL BALL
+========================= */
+
+.ball .lightAura,
+.ball .lightBolt{
+  display:none;
+  position:absolute;
+  pointer-events:none;
+}
+
+.ball.lightning{
+  background:
+    radial-gradient(circle at 32% 20%, rgba(255,255,255,.28) 0 7%, transparent 8%),
+    radial-gradient(circle at 68% 78%, rgba(0,0,0,.55) 0 22%, transparent 45%),
+    linear-gradient(145deg,#1b1b1b 0%,#050505 55%,#2a2500 100%) !important;
+
+  box-shadow:
+    inset 8px 8px 14px rgba(255,255,255,.10),
+    inset -12px -14px 18px rgba(0,0,0,.72),
+    0 8px 14px rgba(0,0,0,.38),
+    0 0 10px rgba(255,210,0,.18);
+}
+
+
+.ball.lightning .lightAura{
+  display:block !important;
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+  background:none;
+  opacity:1;
+}
+
+/* Nhánh chính - lệch trái, không chạy giữa mặt */
+.ball.lightning .lightBolt{
+  display:block;
+  position:absolute;
+  inset:0;
+  z-index:2;
+  pointer-events:none;
+
+  background:linear-gradient(180deg,#fff4a8 0%, #ffd23c 55%, #ffae00 100%);
+
+  clip-path:polygon(
+    34.5% 48%,
+    36.2% 50.5%,
+    34.8% 54.5%,
+    37.4% 58.8%,
+    35.7% 63.2%,
+    38.2% 68.5%,
+    36.4% 74.2%,
+    39.2% 80.5%,
+    37.5% 88.8%,
+
+    34.8% 87.2%,
+    36.1% 80.1%,
+    33.5% 74.3%,
+    35.1% 68.7%,
+    32.7% 63.4%,
+    34.2% 58.5%,
+    31.8% 54.3%,
+    33.1% 50.2%
+  );
+
+  filter:
+    drop-shadow(0 0 2px rgba(255,220,80,.78))
+    drop-shadow(0 0 6px rgba(255,196,0,.42))
+    drop-shadow(0 0 10px rgba(255,176,0,.2));
+
+  animation:lightCrackPulse 1.45s ease-in-out infinite;
+}
+
+/* Nhánh rễ trái */
+.ball.lightning .lightAura::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,#fff4a8 0%, #ffd23c 55%, #ffae00 100%);
+
+  clip-path:polygon(
+    36% 62%,
+    37.4% 64.3%,
+    33.8% 67.8%,
+    35.5% 71.6%,
+    30.7% 75.5%,
+    32.5% 80.2%,
+    25.8% 86.8%,
+
+    24.3% 84.2%,
+    29.6% 79.1%,
+    27.7% 75.1%,
+    32.2% 71.1%,
+    30.5% 67.5%,
+    34.2% 64%
+  );
+
+  filter:
+    drop-shadow(0 0 2px rgba(255,220,80,.72))
+    drop-shadow(0 0 5px rgba(255,196,0,.36));
+}
+
+/* Nhánh rễ phải */
+.ball.lightning .lightAura::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:linear-gradient(180deg,#fff4a8 0%, #ffd23c 55%, #ffae00 100%);
+
+  clip-path:polygon(
+    40% 66%,
+    42% 68.5%,
+    46.2% 70.1%,
+    44.9% 74.4%,
+    50.8% 77.6%,
+    49.3% 82.7%,
+    56.8% 88.7%,
+
+    55.1% 91.2%,
+    47.5% 84.8%,
+    48.9% 79.7%,
+    43.1% 76.1%,
+    44.3% 72.2%,
+    39.6% 69.8%,
+    38.2% 67.2%
+  );
+
+  filter:
+    drop-shadow(0 0 2px rgba(255,220,80,.72))
+    drop-shadow(0 0 5px rgba(255,196,0,.36));
+}
+
+
+@keyframes lightCrackPulse{
+  0%,100%{
+    opacity:.76;
+    filter:
+      drop-shadow(0 0 2px rgba(255,220,80,.7))
+      drop-shadow(0 0 5px rgba(255,190,0,.32));
+  }
+
+  50%{
+    opacity:1;
+    filter:
+      drop-shadow(0 0 3px rgba(255,235,120,.95))
+      drop-shadow(0 0 9px rgba(255,202,0,.5));
+  }
+}
+  .ball.lightning .face{
+  z-index:6;
+  width:64%;
+  height:42%;
+  transform:translateY(5%) rotate(-2deg);
+  position:relative;
+  overflow:visible;
+}
+
+/* reset riêng cho mắt của ball sấm sét */
+.ball.lightning .eye{
+  position:absolute;
+  animation:none !important;
+  box-shadow:none;
+  background:none;
+  overflow:visible;
+}
+
+/* Mắt trái chột: nhỏ, hẹp, kiểu bị hỏng */
+.ball.lightning .eye.left{
+  left:7%;
+  top:18%;
+  width:22%;
+  height:12%;
+  border-radius:999px;
+  background:linear-gradient(180deg,#ffe37a 0%, #ffbc00 100%);
+  transform:rotate(18deg) skewX(-18deg);
+  filter:
+    drop-shadow(0 0 3px rgba(255,210,60,.55))
+    drop-shadow(0 0 6px rgba(255,180,0,.18));
+  opacity:.95;
+}
+
+/* Vết nứt ngang qua mắt chột */
+.ball.lightning .eye.left::before{
+  content:"";
+  position:absolute;
+  left:-6%;
+  top:42%;
+  width:112%;
+  height:2px;
+  border-radius:999px;
+  background:rgba(25,18,0,.95);
+  transform:rotate(-12deg);
+  box-shadow:0 0 3px rgba(0,0,0,.25);
+}
+
+/* Đồng tử rất nhỏ, lệch nhẹ cho cảm giác chột */
+.ball.lightning .eye.left::after{
+  content:"";
+  position:absolute;
+  right:16%;
+  top:16%;
+  width:16%;
+  height:55%;
+  border-radius:50%;
+  background:#120d00;
+  opacity:.88;
+}
+
+/* Mắt phải bán nguyệt: mắt chính, nhìn xảo quyệt */
+.ball.lightning .eye.right{
+  right:4%;
+  top:8%;
+  width:42%;
+  height:24%;
+  border-radius:100% 100% 78% 78% / 100% 100% 42% 42%;
+  background:linear-gradient(180deg,#fff7b8 0%, #ffd84a 100%);
+  transform:rotate(-12deg) skewX(10deg);
+  box-shadow:
+    inset 0 -3px 4px rgba(0,0,0,.32),
+    0 0 6px rgba(255,216,70,.42);
+  overflow:hidden;
+}
+
+/* Tạo cảm giác bán nguyệt bằng phần che phía trên */
+.ball.lightning .eye.right::before{
+  content:"";
+  position:absolute;
+  left:-6%;
+  top:-42%;
+  width:112%;
+  height:78%;
+  border-radius:0 0 100% 100%;
+  background:#0d0d0d;
+  transform:rotate(-2deg);
+}
+
+/* Đồng tử mắt phải */
+.ball.lightning .eye.right::after{
+  content:"";
+  position:absolute;
+  right:24%;
+  top:34%;
+  width:18%;
+  height:42%;
+  border-radius:50%;
+  background:#050505;
+  box-shadow:0 0 0 1px rgba(255,240,160,.08);
+}
+
+/* Lông mày/xếch mắt cho vẻ xảo quyệt hơn */
+.ball.lightning .face::before{
+  content:"";
+  position:absolute;
+  right:2%;
+  top:-2%;
+  width:42%;
+  height:10%;
+  border-radius:999px;
+  background:linear-gradient(90deg, rgba(255,215,70,.15), rgba(255,215,70,.85));
+  transform:rotate(-14deg);
+  filter:blur(.2px);
+  opacity:.9;
+}
+
+/* =========================
+   LIGHTNING STRIKE FX
+========================= */
+
+.lightningStrikeFx{
+  position:absolute;
+  top:0;
+  width:26px;
+  transform:translateX(-50%);
+  pointer-events:none;
+  z-index:170;
+  opacity:0;
+  animation:lightningStrikeFlash .42s ease-out forwards;
+  animation-delay:var(--delay, 0s);
+}
+
+.lightningStrikeFx::before{
+  content:"";
+  position:absolute;
+  left:50%;
+  top:0;
+  transform:translateX(-50%);
+  width:22px;
+  height:100%;
+  clip-path:polygon(
+    46% 0%,
+    64% 10%,
+    42% 18%,
+    70% 30%,
+    38% 42%,
+    62% 55%,
+    34% 68%,
+    58% 82%,
+    44% 100%,
+    24% 86%,
+    46% 72%,
+    26% 58%,
+    52% 44%,
+    30% 28%,
+    56% 14%,
+    36% 0%
+  );
+  background:linear-gradient(180deg,#ffffff 0%, #fff3a0 28%, #ffe000 62%, #ffb300 100%);
+  filter:
+    drop-shadow(0 0 7px rgba(255,240,130,.98))
+    drop-shadow(0 0 18px rgba(255,220,0,.8))
+    drop-shadow(0 0 28px rgba(255,220,0,.38));
+}
+
+.lightningStrikeFx::after{
+  content:"";
+  position:absolute;
+  left:50%;
+  bottom:-10px;
+  transform:translateX(-50%);
+  width:54px;
+  height:54px;
+  border-radius:50%;
+  background:
+    radial-gradient(circle,
+      rgba(255,255,255,.96) 0%,
+      rgba(255,236,120,.92) 28%,
+      rgba(255,210,0,.45) 52%,
+      rgba(255,210,0,0) 76%
+    );
+  filter:blur(1px);
+}
+
+@keyframes lightningStrikeFlash{
+  0%{
+    opacity:0;
+    filter:brightness(1.6);
+  }
+  12%{
+    opacity:1;
+  }
+  68%{
+    opacity:1;
+  }
+  100%{
+    opacity:0;
+    filter:brightness(1);
+  }
+}
+</style>
+</head>
+
+<body>
+<div id="game">
+  <div id="top">
+    <div class="stat">
+      <div class="label">ĐIỂM</div>
+      <div class="value" id="score">0</div>
+    </div>
+<div class="stat">
+  <div class="label">🪙</div>
+  <div class="value" id="coins">0</div>
+</div>
+    <div class="stat">
+      <div class="label">BEST</div>
+      <div class="value" id="best">0</div>
+    </div>
+  </div>
+
+  <div id="title">
+    <h1>BÓNG LÔNG XẾP HÀNG</h1>
+    <p>Kéo ngang để trượt hàng · Kéo dọc để trượt cột · Nối 3+ bóng cùng màu</p>
+  </div>
+
+  <div id="boardWrap">
+  <div id="board"></div>
+  <div id="lockFxLayer"></div>
+</div>
+
+  <div class="hintLine">
+    <button class="btn" id="pauseBtn">TẠM DỪNG</button>
+    <div id="message">Chạm một bóng rồi kéo theo hướng muốn trượt.</div>
+    <div id="itemBar">
+  <button class="itemBtn" data-item="hammer">
+    <span class="itemIcon">
+      <svg viewBox="0 0 64 64">
+        <path d="M24 12 14 22l7 7L31 19z"/>
+        <path d="M29 17 47 35"/>
+        <path d="M42 30 54 42c2 2 2 5 0 7l-4 4c-2 2-5 2-7 0L31 41"/>
+        <path d="M18 30 6 42l16 16 12-12"/>
+      </svg>
+    </span>
+    <span class="itemName">BÚA</span>
+    <span class="itemDesc">🪙 3000</span>
+  </button>
+
+  <button class="itemBtn" data-item="spike">
+    <span class="itemIcon">
+      <svg viewBox="0 0 64 64">
+        <path d="M32 6 37 23 54 14 45 31 62 36 44 41 53 58 36 49 32 64 28 49 11 58 20 41 2 36 19 31 10 14 27 23z"/>
+        <circle cx="32" cy="36" r="9"/>
+      </svg>
+    </span>
+    <span class="itemName">GAI</span>
+    <span class="itemDesc">🪙 3000</span>
+  </button>
+
+  <button class="itemBtn" data-item="bomb">
+    <span class="itemIcon">
+      <svg viewBox="0 0 64 64">
+        <circle cx="30" cy="38" r="17"/>
+        <path d="M41 25c3-8 8-12 15-14"/>
+        <path d="M51 9l3 6 6 1-5 4 1 7-5-4-6 3 2-7-5-5 7-1z"/>
+        <path d="M20 32c3-4 7-6 12-6"/>
+      </svg>
+    </span>
+    <span class="itemName">BOM</span>
+    <span class="itemDesc">🪙 3000</span>
+  </button>
+
+  <button class="itemBtn" data-item="shuffle">
+    <span class="itemIcon">
+      <svg viewBox="0 0 64 64">
+        <path d="M8 18h10c9 0 12 9 18 18s9 10 18 10h2"/>
+        <path d="M48 38l8 8-8 8"/>
+        <path d="M8 46h10c5 0 8-3 11-8"/>
+        <path d="M37 26c4-6 8-8 17-8h2"/>
+        <path d="M48 10l8 8-8 8"/>
+      </svg>
+    </span>
+    <span class="itemName">XÁO TRỘN</span>
+    <span class="itemDesc">🪙 3000</span>
+  </button>
+</div>
+    <button class="btn" id="restartBtn">CHƠI LẠI</button>
+  </div>
+</div>
+
+<div id="floatingScore"></div>
+
+<div id="overlay">
+  <div class="panel">
+    <h2>BÓNG LÔNG</h2>
+    <p>Game match-3 kiểu trượt hàng/cột. Không đổi từng viên riêng lẻ.</p>
+    <p><b>Kéo ngang:</b> cả hàng di chuyển. <br><b>Kéo dọc:</b> cả cột di chuyển.</p>
+    <button class="bigBtn" id="startBtn">BẮT ĐẦU</button>
+  </div>
+</div>
+
+<script>
+const ROWS = 8;
+const COLS = 8;
+const TYPES = 6;
+
+const SIZE_RATE = {
+  giant: 0.03,
+  mid: 0.11
+};
+const ICE_CORE_SPAWN_RATE = 0.11; // 10%
+const MAX_ICE_CORES = 2;
+const ICE_RELEASE_COUNT = 3;
+const LIGHTNING_SPAWN_RATE = 0.02; // 2%
+const LIGHTNING_STRIKE_COUNT = 10; // 10 tia sét
+const thunderSound = new Audio("../audio/thunder_sound.mp3");
+  thunderSound.preload = "auto";
+thunderSound.volume = 0.95;
+
+function unlockThunderSound(){
+  try{
+    thunderSound.load();
+
+    thunderSound.muted = true;
+    thunderSound.currentTime = 0;
+
+    thunderSound.play()
+      .then(() => {
+        thunderSound.pause();
+        thunderSound.currentTime = 0;
+        thunderSound.muted = false;
+      })
+      .catch(() => {
+        thunderSound.muted = false;
+      });
+  }catch(err){
+    thunderSound.muted = false;
+  }
+}
+
+function playThunderSound(){
+  try{
+    const s = thunderSound.cloneNode(true);
+    s.volume = 0.95;
+    s.currentTime = 0;
+    s.play().catch(() => {});
+  }catch(err){}
+}
+const boardEl = document.getElementById("board");
+const scoreEl = document.getElementById("score");
+const coinsEl = document.getElementById("coins");
+const bestEl = document.getElementById("best");
+const messageEl = document.getElementById("message");
+const overlay = document.getElementById("overlay");
+const startBtn = document.getElementById("startBtn");
+const pauseBtn = document.getElementById("pauseBtn");
+const restartBtn = document.getElementById("restartBtn");
+const floatingScore = document.getElementById("floatingScore");
+const itemButtons = document.querySelectorAll(".itemBtn");
+let activeItem = null;
+
+let pieces = [];
+let pieceId = 1;
+let occ = [];
+
+let score = 0;
+let coins = Number(localStorage.getItem("fur_match_coins") || 0);
+let best = Number(localStorage.getItem("fur_match_best") || 0);
+let gameState = "ready";
+let resolving = false;
+
+const ITEM_COST = 3000;
+
+let drag = {
+  active:false,
+  piece:null,
+  row:0,
+  col:0,
+  startX:0,
+  startY:0,
+  dx:0,
+  dy:0,
+  direction:null,
+  bandRows:[],
+  bandCols:[],
+  movingIds:new Set(),
+  previewMove:0,
+  previewStep:0
+};
+
+let moveRAF = null;
+let lastPointerEvent = null;
+
+let dragLineBar = null;
+let lastHighlightKey = "";
+
+let dragLineCache = [];
+let dragDistCache = 0;
+let dragDirectionCache = "";
+let lastMatchGroupCount = 0;
+let wrapGhosts = [];
+let spawnedBallCounter = 0;
+let nextStoneSpawnAt = 100;
+let wrapGhostKey = "";
+bestEl.textContent = best;
+
+function randType(){
+  return Math.floor(Math.random() * TYPES);
+}
+
+function randSize(){
+  const r = Math.random();
+  if(r < SIZE_RATE.giant) return 3;
+  if(r < SIZE_RATE.giant + SIZE_RATE.mid) return 2;
+  return 1;
+}
+  function tryMakeLightning(piece){
+  if(!piece) return;
+  if(piece.size !== 1) return; // chỉ cho ball 1x1
+  if(piece.lightning || piece.iceCore || piece.frozen || piece.stone) return;
+
+  if(Math.random() < LIGHTNING_SPAWN_RATE){
+    piece.lightning = true;
+  }
+}
+
+function applyLightningSpawn(newIds){
+  for(const p of pieces){
+    if(!newIds.has(p.id)) continue;
+    tryMakeLightning(p);
+  }
+}
+  function countIceCores(){
+  return pieces.filter(p => p.iceCore).length;
+}
+
+function tryMakeIceCore(piece){
+  if(!piece) return;
+  if(piece.iceCore) return;
+  if(piece.lightning) return;
+  if(piece.stone) return;
+  if(piece.frozen) return;
+  if(countIceCores() >= MAX_ICE_CORES) return;
+
+  if(Math.random() < ICE_CORE_SPAWN_RATE){
+    piece.iceCore = true;
+  }
+}
+
+function applyIceCoreSpawn(newIds){
+  for(const p of pieces){
+    if(!newIds.has(p.id)) continue;
+    tryMakeIceCore(p);
+  }
+}
+function isSpecialPiece(p){
+  return (
+    p.iceCore ||
+    p.frozen ||
+    p.stone ||
+    p.lightning
+  );
+}
+
+function columnHasStone(col){
+  return pieces.some(p => {
+    return p.stone && pieceCols(p).includes(col);
+  });
+}
+
+function allColumnsHaveStone(){
+  for(let c = 0; c < COLS; c++){
+    if(!columnHasStone(c)) return false;
+  }
+
+  return true;
+}
+
+function getStoneSpawnColumns(){
+  rebuildOcc();
+
+  const cols = [];
+
+  for(let c = 0; c < COLS; c++){
+    if(columnHasStone(c)) continue;
+
+    const topId = occ[0]?.[c];
+    const topPiece = topId ? getPieceById(topId) : null;
+
+    // Chỉ spawn đá đè lên ball 1x1 để tránh phá layout 2x2 / 3x3
+    if(!topPiece || topPiece.size !== 1) continue;
+    if(isSpecialPiece(topPiece)) continue;
+    if(topPiece.locked || topPiece.lockPending) continue;
+
+    cols.push(c);
+  }
+
+  return shuffleArray(cols);
+}
+
+function spawnStoneAtTop(){
+  if(allColumnsHaveStone()){
+    nextStoneSpawnAt = Infinity;
+    return false;
+  }
+
+  const cols = getStoneSpawnColumns();
+
+  if(cols.length === 0){
+    return false;
+  }
+
+  const col = cols[0];
+
+  const oldPiece = getPieceAt(0, col);
+
+  if(oldPiece){
+    pieces = pieces.filter(p => p.id !== oldPiece.id);
+  }
+
+  const stone = createPiece(0, 0, col, 1);
+
+  stone.stone = true;
+  stone.iceCore = false;
+  stone.frozen = false;
+  stone.locked = false;
+  stone.lockPending = false;
+
+  pieces.push(stone);
+  rebuildOcc();
+
+  return true;
+}
+
+function checkStoneSpawnByCounter(){
+  if(allColumnsHaveStone()){
+    nextStoneSpawnAt = Infinity;
+    return;
+  }
+
+  while(spawnedBallCounter >= nextStoneSpawnAt){
+    const spawned = spawnStoneAtTop();
+
+    nextStoneSpawnAt += 100;
+
+    if(!spawned) break;
+
+    if(allColumnsHaveStone()){
+      nextStoneSpawnAt = Infinity;
+      break;
+    }
+  }
+}
+
+function countSpawnedBalls(amount){
+  spawnedBallCounter += amount;
+  checkStoneSpawnByCounter();
+}
+
+function moveStonesDownOneStep(){
+  rebuildOcc();
+
+  const stones = pieces
+    .filter(p => p.stone)
+    .sort((a,b) => b.row - a.row);
+
+  let moved = false;
+
+  for(const stone of stones){
+    if(stone.row >= ROWS - 1) continue;
+
+    const belowRow = stone.row + 1;
+    const belowCol = stone.col;
+
+    const belowId = occ[belowRow]?.[belowCol];
+    const belowPiece = belowId ? getPieceById(belowId) : null;
+
+    if(!belowPiece){
+      stone.row++;
+      moved = true;
+      rebuildOcc();
+      continue;
+    }
+
+    if(belowPiece.id === stone.id) continue;
+    if(belowPiece.stone) continue;
+
+    // Chỉ swap với ball 1x1 để không phá cấu trúc ball lớn
+    if(belowPiece.size !== 1) continue;
+
+    const oldStoneRow = stone.row;
+
+    stone.row = belowRow;
+    belowPiece.row = oldStoneRow;
+
+    moved = true;
+    rebuildOcc();
+  }
+
+  return moved;
+}
+
+async function moveStonesAfterPlayerMove(){
+  const moved = moveStonesDownOneStep();
+
+  if(!moved) return;
+
+  render();
+  await sleep(160);
+}
+  
+function sleep(ms){
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+function setMessage(text){
+  messageEl.textContent = text;
+
+  messageEl.classList.remove("msgBlink");
+  void messageEl.offsetWidth;
+  messageEl.classList.add("msgBlink");
+}
+
+function createPiece(type, row, col, size = 1){
+  return {
+    id: pieceId++,
+    type,
+    row,
+    col,
+    size,
+    locked:false,
+    lockPending:false,
+    stone:false,
+    iceCore:false,  // ball băng giá
+    frozen:false,   // ball bị đóng băng
+    lightning:false,
+
+    blinkDur: 5.5 + Math.random() * 7.5,
+    blinkDelay: -Math.random() * 9
+  };
+}
+  
+  function movingBandHasBigPiece(){
+  for(const p of pieces){
+    if(drag.movingIds.has(p.id) && p.size > 1){
+      return true;
+    }
+  }
+
+  return false;
+}
+function bandHasStone(direction){
+  const band = direction === "row" ? drag.bandRows : drag.bandCols;
+
+  if(direction === "row"){
+    return pieces.some(p => p.stone && band.includes(p.row));
+  }
+
+  if(direction === "col"){
+    return pieces.some(p => p.stone && band.includes(p.col));
+  }
+
+  return false;
+}
+  
+function pieceRows(p){
+  const arr = [];
+  for(let r = p.row; r < p.row + p.size; r++){
+    if(r >= 0 && r < ROWS) arr.push(r);
+  }
+  return arr;
+}
+
+function pieceCols(p){
+  const arr = [];
+  for(let c = p.col; c < p.col + p.size; c++){
+    if(c >= 0 && c < COLS) arr.push(c);
+  }
+  return arr;
+}
+
+function rectsOverlap(a, b){
+  return (
+    a.row < b.row + b.size &&
+    a.row + a.size > b.row &&
+    a.col < b.col + b.size &&
+    a.col + a.size > b.col
+  );
+}
+
+function canPlaceAt(row, col, size, ignoreIds = new Set()){
+  if(row < 0 || col < 0) return false;
+  if(row + size > ROWS) return false;
+  if(col + size > COLS) return false;
+
+  const test = { row, col, size };
+
+  for(const p of pieces){
+    if(ignoreIds.has(p.id)) continue;
+    if(rectsOverlap(test, p)) return false;
+  }
+
+  return true;
+}
+
+function rebuildOcc(){
+  occ = Array.from({length: ROWS}, () => Array(COLS).fill(null));
+
+  for(const p of pieces){
+    for(let r = p.row; r < p.row + p.size; r++){
+      for(let c = p.col; c < p.col + p.size; c++){
+        if(r >= 0 && r < ROWS && c >= 0 && c < COLS){
+          occ[r][c] = p.id;
+        }
+      }
+    }
+  }
+}
+
+function getPieceById(id){
+  return pieces.find(p => p.id === id) || null;
+}
+
+function getPieceAt(row, col){
+  rebuildOcc();
+  const id = occ[row]?.[col];
+  if(id === null || id === undefined) return null;
+  return getPieceById(id);
+}
+
+function getBallById(id){
+  return boardEl.querySelector(`.ball[data-id="${id}"]`);
+}
+
+function getCellEl(r, c){
+  return boardEl.querySelector(`.cell[data-r="${r}"][data-c="${c}"]`);
+}
+
+function getGridMetrics(){
+  const boardRect = boardEl.getBoundingClientRect();
+  const c00 = getCellEl(0, 0);
+  const c01 = getCellEl(0, 1);
+  const c10 = getCellEl(1, 0);
+
+  if(!c00){
+    const fallback = boardRect.width / COLS;
+    return {
+      boardW:boardRect.width,
+      boardH:boardRect.height,
+      cellW:fallback,
+      cellH:fallback,
+      pitchX:fallback,
+      pitchY:fallback,
+      gapX:0,
+      gapY:0
+    };
+  }
+
+  const r00 = c00.getBoundingClientRect();
+  const r01 = c01 ? c01.getBoundingClientRect() : null;
+  const r10 = c10 ? c10.getBoundingClientRect() : null;
+
+  const cellW = r00.width;
+  const cellH = r00.height;
+  const pitchX = r01 ? r01.left - r00.left : cellW;
+  const pitchY = r10 ? r10.top - r00.top : cellH;
+
+  return {
+    boardW:boardRect.width,
+    boardH:boardRect.height,
+    cellW,
+    cellH,
+    pitchX,
+    pitchY,
+    gapX:Math.max(0, pitchX - cellW),
+    gapY:Math.max(0, pitchY - cellH)
+  };
+}
+
+function shuffleArray(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+
+  return arr;
+}
+
+function createBoard(){
+  const maxAttempts = 220;
+
+  for(let attempt = 0; attempt < maxAttempts; attempt++){
+    pieces = [];
+    pieceId = 1;
+    rebuildOcc();
+
+    let failed = false;
+
+    for(let r = 0; r < ROWS; r++){
+      for(let c = 0; c < COLS; c++){
+        const types = shuffleArray([...Array(TYPES).keys()]);
+        let placed = false;
+
+        for(const type of types){
+          const p = createPiece(type, r, c, 1);
+
+          pieces.push(p);
+          rebuildOcc();
+
+          const hasMatch = findMatches().length > 0;
+
+          if(!hasMatch){
+            placed = true;
+            break;
+          }
+
+          pieces.pop();
+          pieceId--;
+          rebuildOcc();
+        }
+
+        if(!placed){
+          failed = true;
+          break;
+        }
+      }
+
+      if(failed) break;
+    }
+
+    if(!failed){
+      rebuildOcc();
+      lastMatchGroupCount = 0;
+      const newIds = new Set(pieces.map(p => p.id));
+applyLightningSpawn(newIds);
+applyIceCoreSpawn(newIds);
+return newIds;
+    }
+  }
+
+  pieces = [];
+  pieceId = 1;
+
+  for(let r = 0; r < ROWS; r++){
+    for(let c = 0; c < COLS; c++){
+      pieces.push(createPiece((r + c) % TYPES, r, c, 1));
+    }
+  }
+
+  rebuildOcc();
+  lastMatchGroupCount = 0;
+
+  const newIds = new Set(pieces.map(p => p.id));
+applyLightningSpawn(newIds);
+applyIceCoreSpawn(newIds);
+return newIds;
+}
+function render(){
+  boardEl.innerHTML = "";
+
+  for(let r = 0; r < ROWS; r++){
+    for(let c = 0; c < COLS; c++){
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.dataset.r = r;
+      cell.dataset.c = c;
+      boardEl.appendChild(cell);
+    }
+  }
+
+  const m = getGridMetrics();
+
+  for(const p of pieces){
+    const ball = document.createElement("div");
+    ball.className = `ball type${p.type} size${p.size} ${p.locked ? "locked" : ""} ${p.iceCore ? "iceCore" : ""} ${p.frozen ? "frozen" : ""} ${p.stone ? "stone" : ""} ${p.lightning ? "lightning" : ""}`;
+    ball.dataset.id = p.id;
+    ball.dataset.r = p.row;
+    ball.dataset.c = p.col;
+    ball.style.setProperty("--blinkDur", `${p.blinkDur}s`);
+ball.style.setProperty("--blinkDelay", `${p.blinkDelay}s`);
+
+    ball.style.left = `${p.col * m.pitchX}px`;
+    ball.style.top = `${p.row * m.pitchY}px`;
+    ball.style.width = `${p.size * m.cellW + (p.size - 1) * m.gapX}px`;
+    ball.style.height = `${p.size * m.cellH + (p.size - 1) * m.gapY}px`;
+
+    ball.innerHTML = `
+  <span class="iceAura"></span>
+  <span class="frozenShell"></span>
+  <span class="frozenShine"></span>
+  <span class="lightAura"></span>
+  <span class="lightBolt"></span>
+  <div class="face">
+    <span class="eye left"></span>
+    <span class="eye right"></span>
+    <span class="mouth"></span>
+  </div>
+`;
+
+    boardEl.appendChild(ball);
+  }
+}
+
+function renderWithDrop(movedMap = new Map(), newIds = new Set()){
+  render();
+
+  const m = getGridMetrics();
+
+  for(const p of pieces){
+    const ball = getBallById(p.id);
+    if(!ball) continue;
+
+    if(movedMap.has(p.id)){
+      const oldRow = movedMap.get(p.id);
+      const rows = Math.max(0, p.row - oldRow);
+
+      if(rows > 0){
+        ball.style.setProperty("--dropY", `${-rows * m.pitchY}px`);
+        ball.classList.add("drop");
+      }
+    }
+
+    if(newIds.has(p.id)){
+      ball.style.setProperty("--dropY", `${-(p.row + p.size + 1) * m.pitchY}px`);
+      ball.classList.add("newDrop");
+    }
+  }
+}
+  
+  function renderStartDrop(newIds){
+  render();
+
+  const m = getGridMetrics();
+
+  for(const p of pieces){
+    if(!newIds.has(p.id)) continue;
+
+    const ball = getBallById(p.id);
+    if(!ball) continue;
+
+    const dropY = -((ROWS + p.row + 2) * m.pitchY);
+    const delay = p.row * 0.055 + Math.random() * 0.04;
+
+    ball.style.setProperty("--dropY", `${dropY}px`);
+    ball.style.setProperty("--dropDelay", `${delay.toFixed(3)}s`);
+    ball.classList.add("startDrop");
+  }
+}
+  
+ function clearBallMotionClasses(){
+  boardEl.querySelectorAll(".ball").forEach(ball => {
+    ball.classList.remove(
+      "drop",
+      "newDrop",
+      "startDrop",
+      "dragPreview",
+      "shiftAnim",
+      "dragWrapGhost"
+    );
+
+    ball.style.removeProperty("--dropY");
+    ball.style.removeProperty("--dropDelay");
+    ball.style.transform = "";
+    ball.style.zIndex = "";
+  });
+}
+  
+ function clearWrapGhosts(){
+  wrapGhosts.forEach(g => g.el.remove());
+  wrapGhosts = [];
+  wrapGhostKey = "";
+}
+
+function ensureWrapGhosts(direction, step){
+  const band = direction === "row" ? drag.bandRows : drag.bandCols;
+  const key = `${direction}-${step}-${band.join(",")}`;
+
+  if(wrapGhostKey === key && wrapGhosts.length > 0) return;
+
+  clearWrapGhosts();
+
+  // Chỉ tạo ghost khi band toàn bóng 1x1.
+  // Bóng 2x2, 3x3 không wrap qua mép.
+  if(movingBandHasBigPiece()) return;
+
+  const m = getGridMetrics();
+  rebuildOcc();
+
+  if(direction === "row"){
+    for(const r of drag.bandRows){
+      const sourceCol = step > 0 ? COLS - 1 : 0;
+      const targetCol = step > 0 ? 0 : COLS - 1;
+
+      const sourceId = occ[r]?.[sourceCol];
+      const sourcePiece = sourceId ? getPieceById(sourceId) : null;
+
+      if(!sourcePiece || sourcePiece.size !== 1) continue;
+      if(!drag.movingIds.has(sourcePiece.id)) continue;
+
+      const sourceBall = getBallById(sourcePiece.id);
+      if(!sourceBall) continue;
+
+      const ghost = sourceBall.cloneNode(true);
+      ghost.classList.remove(
+        "drop",
+        "newDrop",
+        "startDrop",
+        "dragPreview",
+        "shiftAnim",
+        "locked"
+      );
+      ghost.classList.add("wrapGhost");
+
+      ghost.removeAttribute("data-id");
+      ghost.removeAttribute("data-r");
+      ghost.removeAttribute("data-c");
+
+      ghost.style.left = `${targetCol * m.pitchX}px`;
+      ghost.style.top = `${r * m.pitchY}px`;
+      ghost.style.width = `${m.cellW}px`;
+      ghost.style.height = `${m.cellH}px`;
+
+      boardEl.appendChild(ghost);
+
+      wrapGhosts.push({
+        el: ghost,
+        direction,
+        step
+      });
+    }
+  }
+
+  if(direction === "col"){
+    for(const c of drag.bandCols){
+      const sourceRow = step > 0 ? ROWS - 1 : 0;
+      const targetRow = step > 0 ? 0 : ROWS - 1;
+
+      const sourceId = occ[sourceRow]?.[c];
+      const sourcePiece = sourceId ? getPieceById(sourceId) : null;
+
+      if(!sourcePiece || sourcePiece.size !== 1) continue;
+      if(!drag.movingIds.has(sourcePiece.id)) continue;
+
+      const sourceBall = getBallById(sourcePiece.id);
+      if(!sourceBall) continue;
+
+      const ghost = sourceBall.cloneNode(true);
+      ghost.classList.remove(
+        "drop",
+        "newDrop",
+        "startDrop",
+        "dragPreview",
+        "shiftAnim",
+        "locked"
+      );
+      ghost.classList.add("wrapGhost");
+
+      ghost.removeAttribute("data-id");
+      ghost.removeAttribute("data-r");
+      ghost.removeAttribute("data-c");
+
+      ghost.style.left = `${c * m.pitchX}px`;
+      ghost.style.top = `${targetRow * m.pitchY}px`;
+      ghost.style.width = `${m.cellW}px`;
+      ghost.style.height = `${m.cellH}px`;
+
+      boardEl.appendChild(ghost);
+
+      wrapGhosts.push({
+        el: ghost,
+        direction,
+        step
+      });
+    }
+  }
+
+  wrapGhostKey = key;
+}
+
+function updateWrapGhosts(move){
+  const dist = dragDistCache || getMoveDistance(drag.direction);
+
+  for(const g of wrapGhosts){
+    const ghostMove = g.step > 0 ? move - dist : move + dist;
+
+    if(g.direction === "row"){
+      g.el.style.transform = `translate3d(${ghostMove}px,0,0) scale(1.035)`;
+    }else{
+      g.el.style.transform = `translate3d(0,${ghostMove}px,0) scale(1.035)`;
+    }
+  }
+}
+
+function getCellFromPoint(x, y){
+  const rect = boardEl.getBoundingClientRect();
+  const m = getGridMetrics();
+
+  const col = Math.floor((x - rect.left) / m.pitchX);
+  const row = Math.floor((y - rect.top) / m.pitchY);
+
+  if(row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
+  return {row, col};
+}
+
+function getMoveDistance(direction){
+  const m = getGridMetrics();
+  return direction === "row" ? m.pitchX : m.pitchY;
+}
+
+/* =========================
+   DRAG BAND LOGIC
+========================= */
+
+function spanIntersectsSet(span, set){
+  return span.some(v => set.has(v));
+}
+
+function closeBand(direction, seedSpan){
+  const set = new Set(seedSpan);
+  let changed = true;
+
+  while(changed){
+    changed = false;
+
+    for(const p of pieces){
+      const span = direction === "row" ? pieceRows(p) : pieceCols(p);
+
+      if(spanIntersectsSet(span, set)){
+        for(const v of span){
+          if(!set.has(v)){
+            set.add(v);
+            changed = true;
+          }
+        }
+      }
+    }
+  }
+
+  return [...set].sort((a,b) => a - b);
+}
+
+function getMovingPieces(direction, band){
+  const set = new Set(band);
+
+  return pieces.filter(p => {
+    const span = direction === "row" ? pieceRows(p) : pieceCols(p);
+    return spanIntersectsSet(span, set);
+  });
+}
+
+function prepareDragBand(direction){
+  if(!drag.piece) return false;
+
+  const seed = direction === "row" ? pieceRows(drag.piece) : pieceCols(drag.piece);
+  const band = closeBand(direction, seed);
+  const moving = getMovingPieces(direction, band);
+
+  drag.bandRows = direction === "row" ? band : [];
+  drag.bandCols = direction === "col" ? band : [];
+  drag.movingIds = new Set(moving.map(p => p.id));
+
+  dragLineCache = moving
+    .map(p => getBallById(p.id))
+    .filter(Boolean);
+
+  dragLineCache.forEach(ball => {
+    ball.classList.add("dragPreview");
+    ball.style.zIndex = 9;
+  });
+
+  dragDistCache = getMoveDistance(direction);
+  dragDirectionCache = direction;
+
+  return true;
+}
+
+function clearDragLineCache(){
+  dragLineCache.forEach(ball => {
+    ball.classList.remove(
+      "dragPreview",
+      "shiftAnim",
+      "drop",
+      "newDrop",
+      "startDrop"
+    );
+
+    ball.style.removeProperty("--dropY");
+    ball.style.removeProperty("--dropDelay");
+    ball.style.transform = "";
+    ball.style.zIndex = "";
+  });
+
+  dragLineCache = [];
+  dragDistCache = 0;
+  dragDirectionCache = "";
+}
+function clearDragPreview(){
+  clearDragLineCache();
+  clearWrapGhosts();
+}
+
+function bandHasLocked(direction){
+  const band = direction === "row" ? drag.bandRows : drag.bandCols;
+  const moving = getMovingPieces(direction, band);
+
+  return moving.some(p => p.locked || p.lockPending);
+}
+function getShiftedPiece(p, direction, step, movingIds){
+  const np = {...p};
+
+  if(!movingIds.has(p.id)) return np;
+
+  if(direction === "row"){
+    if(p.size === 1){
+      np.col = (p.col + step + COLS) % COLS;
+    }else{
+      np.col = p.col + step;
+    }
+  }
+
+  if(direction === "col"){
+    if(p.size === 1){
+      np.row = (p.row + step + ROWS) % ROWS;
+    }else{
+      np.row = p.row + step;
+    }
+  }
+
+  return np;
+}
+  
+function canShiftBand(direction, step){
+  const movingIds = drag.movingIds;
+
+  const testPieces = pieces.map(p => {
+    return getShiftedPiece(p, direction, step, movingIds);
+  });
+
+  // Chỉ chặn nếu sau khi dịch, piece thật sự vượt khỏi bàn.
+  // Ball 1x1 đã được wrap nên không bị lỗi mép nữa.
+  for(const p of testPieces){
+    if(p.row < 0 || p.col < 0) return false;
+    if(p.row + p.size > ROWS) return false;
+    if(p.col + p.size > COLS) return false;
+  }
+
+  // Check va chạm sau khi dịch.
+  for(let i = 0; i < testPieces.length; i++){
+    for(let j = i + 1; j < testPieces.length; j++){
+      if(rectsOverlap(testPieces[i], testPieces[j])){
+        return false;
+      }
+    }
+  }
+
+  return true;
+}
+function commitShiftBand(direction, step){
+  const movingIds = drag.movingIds;
+
+  for(const p of pieces){
+    if(!movingIds.has(p.id)) continue;
+
+    if(direction === "row"){
+      if(p.size === 1){
+        p.col = (p.col + step + COLS) % COLS;
+      }else{
+        p.col += step;
+      }
+    }
+
+    if(direction === "col"){
+      if(p.size === 1){
+        p.row = (p.row + step + ROWS) % ROWS;
+      }else{
+        p.row += step;
+      }
+    }
+  }
+
+  rebuildOcc();
+}
+/* =========================
+   HIGHLIGHT
+========================= */
+
+function clearDragHighlight(){
+  if(dragLineBar){
+    dragLineBar.remove();
+    dragLineBar = null;
+  }
+
+  lastHighlightKey = "";
+}
+
+function applyDragHighlight(){
+  if(!drag.active || !drag.direction) return;
+
+  const band = drag.direction === "row" ? drag.bandRows : drag.bandCols;
+  if(!band.length) return;
+
+  const key = `${drag.direction}-${band.join(",")}`;
+  if(key === lastHighlightKey) return;
+
+  clearDragHighlight();
+
+  const m = getGridMetrics();
+  const min = Math.min(...band);
+  const max = Math.max(...band);
+
+  dragLineBar = document.createElement("div");
+  dragLineBar.className = `dragLineBar ${drag.direction === "col" ? "col" : "row"}`;
+
+  if(drag.direction === "row"){
+    dragLineBar.style.left = `-5px`;
+    dragLineBar.style.top = `${min * m.pitchY - 5}px`;
+    dragLineBar.style.width = `${m.boardW + 10}px`;
+    dragLineBar.style.height = `${(max - min + 1) * m.pitchY - m.gapY + 10}px`;
+  }else{
+    dragLineBar.style.left = `${min * m.pitchX - 5}px`;
+    dragLineBar.style.top = `-5px`;
+    dragLineBar.style.width = `${(max - min + 1) * m.pitchX - m.gapX + 10}px`;
+    dragLineBar.style.height = `${m.boardH + 10}px`;
+  }
+
+  boardEl.appendChild(dragLineBar);
+  lastHighlightKey = key;
+}
+
+/* =========================
+   LIVE PREVIEW
+========================= */
+
+function clampValue(value, min, max){
+  return Math.max(min, Math.min(max, value));
+}
+
+function applyDragPreview(){
+  if(!drag.active || !drag.direction) return;
+
+  if(dragDirectionCache !== drag.direction || dragLineCache.length === 0){
+    clearDragLineCache();
+    prepareDragBand(drag.direction);
+    applyDragHighlight();
+  }
+
+  // Band bị khóa thì không cho kéo preview
+  if(bandHasLocked(drag.direction)){
+    clearDragPreview();
+    applyDragHighlight();
+
+    setMessage(drag.direction === "row"
+      ? "Hàng này đang bị khóa. Phá huỷ ổ khoá để mở lại"
+      : "Cột này đang bị khóa. Phá huỷ ổ khoá để mở lại"
+    );
+    return;
+  }
+  if(bandHasStone(drag.direction)){
+  clearDragPreview();
+  applyDragHighlight();
+
+  setMessage(drag.direction === "row"
+    ? "Hàng này có viên đá nên không kéo được. Dùng BÚA hoặc BOM để phá."
+    : "Cột này có viên đá nên không kéo được. Dùng BÚA hoặc BOM để phá."
+  );
+
+  return;
+}
+
+  const dist = dragDistCache;
+  const rawMove = drag.direction === "row" ? drag.dx : drag.dy;
+  const move = clampValue(rawMove, -dist * .98, dist * .98);
+  const step = move >= 0 ? 1 : -1;
+
+  drag.previewMove = move;
+  drag.previewStep = step;
+
+  for(const ball of dragLineCache){
+    if(drag.direction === "row"){
+      ball.style.transform = `translate3d(${move}px,0,0) scale(1.035)`;
+    }else{
+      ball.style.transform = `translate3d(0,${move}px,0) scale(1.035)`;
+    }
+  }
+  if(!movingBandHasBigPiece()){
+  ensureWrapGhosts(drag.direction, step);
+  updateWrapGhosts(move);
+}else{
+  clearWrapGhosts();
+}
+}
+
+async function animateDragRelease(direction, step, valid){
+  const dist = dragDistCache || getMoveDistance(direction);
+  const currentMove = typeof drag.previewMove === "number" ? drag.previewMove : 0;
+  const finalMove = valid ? dist * step : 0;
+
+  const balls = dragLineCache;
+  const allowWrapGhost = valid && !movingBandHasBigPiece();
+
+if(allowWrapGhost){
+  ensureWrapGhosts(direction, step);
+  updateWrapGhosts(currentMove);
+}else{
+  clearWrapGhosts();
+}
+
+  balls.forEach(ball => {
+    ball.classList.remove("dragPreview");
+    ball.classList.add("shiftAnim");
+
+    if(direction === "row"){
+      ball.style.transform = `translate3d(${currentMove}px,0,0) scale(1.035)`;
+    }else{
+      ball.style.transform = `translate3d(0,${currentMove}px,0) scale(1.035)`;
+    }
+  });
+  if(allowWrapGhost){
+  updateWrapGhosts(finalMove);
+}
+
+  void boardEl.offsetWidth;
+
+  balls.forEach(ball => {
+    if(direction === "row"){
+      ball.style.transform = `translate3d(${finalMove}px,0,0) scale(1.035)`;
+    }else{
+      ball.style.transform = `translate3d(0,${finalMove}px,0) scale(1.035)`;
+    }
+  });
+
+  await sleep(250);
+  clearWrapGhosts();
+}
+
+/* =========================
+   MATCH LOGIC
+========================= */
+
+function getPieceCells(p){
+  const cells = [];
+
+  for(let r = p.row; r < p.row + p.size; r++){
+    for(let c = p.col; c < p.col + p.size; c++){
+      if(r >= 0 && r < ROWS && c >= 0 && c < COLS){
+        cells.push({r, c});
+      }
+    }
+  }
+
+  return cells;
+}
+
+function getNeighborPieceIds(p){
+  const ids = new Set();
+  const dirs = [
+    [1,0],
+    [-1,0],
+    [0,1],
+    [0,-1]
+  ];
+
+  for(const cell of getPieceCells(p)){
+    for(const [dr, dc] of dirs){
+      const nr = cell.r + dr;
+      const nc = cell.c + dc;
+
+      if(nr < 0 || nr >= ROWS || nc < 0 || nc >= COLS) continue;
+
+      const id = occ[nr][nc];
+
+      if(id !== null && id !== p.id){
+        ids.add(id);
+      }
+    }
+  }
+
+  return [...ids];
+}
+
+function findMatches(){
+  rebuildOcc();
+
+  const pieceMap = new Map(pieces.map(p => [p.id, p]));
+  const visited = new Set();
+  const matched = new Set();
+  let groupCount = 0;
+
+  for(const start of pieces){
+    if(visited.has(start.id)) continue;
+
+    // Ball bị đóng băng hoặc ball băng giá là vật thể đặc biệt
+    // Không được tham gia tạo chùm
+    if(isSpecialPiece(start)){
+  visited.add(start.id);
+  continue;
+}
+
+    const stack = [start.id];
+    const group = [];
+
+    visited.add(start.id);
+
+    while(stack.length){
+      const id = stack.pop();
+      const p = pieceMap.get(id);
+      if(!p) continue;
+
+      group.push(p);
+
+      for(const nid of getNeighborPieceIds(p)){
+        if(visited.has(nid)) continue;
+
+        const np = pieceMap.get(nid);
+        if(!np) continue;
+
+        // Không cho ball băng / ball bị đóng băng nối vào chùm
+        if(isSpecialPiece(np)) continue;
+
+        if(np.type !== start.type) continue;
+
+        visited.add(nid);
+        stack.push(nid);
+      }
+    }
+
+    if(group.length >= 3){
+      groupCount++;
+      group.forEach(p => matched.add(p.id));
+    }
+  }
+
+  lastMatchGroupCount = groupCount;
+
+  return [...matched]
+    .map(id => pieceMap.get(id))
+    .filter(Boolean);
+}
+  
+  function findLightningGroups(){
+  rebuildOcc();
+
+  const pieceMap = new Map(pieces.map(p => [p.id, p]));
+  const visited = new Set();
+  const groups = [];
+
+  for(const start of pieces){
+    if(visited.has(start.id)) continue;
+    if(!start.lightning) continue;
+
+    const stack = [start.id];
+    const group = [];
+    visited.add(start.id);
+
+    while(stack.length){
+      const id = stack.pop();
+      const p = pieceMap.get(id);
+      if(!p) continue;
+
+      group.push(p);
+
+      for(const nid of getNeighborPieceIds(p)){
+        if(visited.has(nid)) continue;
+
+        const np = pieceMap.get(nid);
+        if(!np) continue;
+        if(!np.lightning) continue;
+
+        visited.add(nid);
+        stack.push(nid);
+      }
+    }
+
+    if(group.length >= 3){
+      groups.push(group);
+    }
+  }
+
+  return groups;
+}
+
+function getRandomLightningCells(count){
+  const cells = [];
+
+  for(let r = 0; r < ROWS; r++){
+    for(let c = 0; c < COLS; c++){
+      cells.push({ row:r, col:c });
+    }
+  }
+
+  shuffleArray(cells);
+  return cells.slice(0, Math.min(count, cells.length));
+}
+
+function getPiecesFromCells(cells){
+  rebuildOcc();
+
+  const result = [];
+  const usedIds = new Set();
+
+  for(const cell of cells){
+    const id = occ[cell.row]?.[cell.col];
+    if(!id) continue;
+    if(usedIds.has(id)) continue;
+
+    const p = getPieceById(id);
+    if(!p) continue;
+
+    usedIds.add(id);
+    result.push(p);
+  }
+
+  return result;
+}
+
+function animateLightningStorm(cells){
+  return new Promise(resolve => {
+    const fxLayer = document.getElementById("lockFxLayer");
+    if(!fxLayer || !cells.length){
+      resolve();
+      return;
+    }
+
+    const m = getGridMetrics();
+
+    cells.forEach((cell, index) => {
+      const strike = document.createElement("div");
+      strike.className = "lightningStrikeFx";
+
+      const x = cell.col * m.pitchX + m.cellW / 2;
+      const y = cell.row * m.pitchY + m.cellH / 2;
+
+      strike.style.left = `${x}px`;
+      strike.style.height = `${Math.max(36, y + 8)}px`;
+      strike.style.setProperty("--delay", `${(index % 5) * 0.04}s`);
+
+      fxLayer.appendChild(strike);
+
+      setTimeout(() => {
+        strike.remove();
+      }, 650);
+    });
+
+    setTimeout(resolve, 480);
+  });
+}
+let audioCtx = null;
+let soundEnabled = true;
+
+function initAudio(){
+  if(audioCtx) return;
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+}
+
+function createNoiseBuffer(ctx, duration = 0.18){
+  const sampleRate = ctx.sampleRate;
+  const length = sampleRate * duration;
+  const buffer = ctx.createBuffer(1, length, sampleRate);
+  const data = buffer.getChannelData(0);
+
+  for(let i = 0; i < length; i++){
+    data[i] = (Math.random() * 2 - 1) * 0.55;
+  }
+
+  return buffer;
+}
+
+/* Tiếng "É!" kiểu sinh vật nhỏ kêu khi bị nổ */
+function playEeSound(delay = 0, pitch = 1){
+  if(!soundEnabled || !audioCtx) return;
+
+  const ctx = audioCtx;
+  const t = ctx.currentTime + delay;
+  const duration = 0.40; // tăng số này nếu muốn dài hơn nữa
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, t);
+  master.gain.exponentialRampToValueAtTime(0.105, t + 0.04);
+  master.gain.setValueAtTime(0.105, t + 0.42);
+  master.gain.exponentialRampToValueAtTime(0.0001, t + duration);
+  master.connect(ctx.destination);
+
+  const voice = ctx.createOscillator();
+  voice.type = "sawtooth";
+
+  // É dài: lên nhanh rồi giữ cao, sau đó tụt xuống
+  voice.frequency.setValueAtTime(520 * pitch, t);
+  voice.frequency.exponentialRampToValueAtTime(980 * pitch, t + 0.08);
+  voice.frequency.setValueAtTime(920 * pitch, t + 0.38);
+  voice.frequency.exponentialRampToValueAtTime(620 * pitch, t + 0.62);
+  voice.frequency.exponentialRampToValueAtTime(360 * pitch, t + duration);
+
+  // Vibrato kéo dài để giống tiếng kêu hơn
+  const vibrato = ctx.createOscillator();
+  const vibratoGain = ctx.createGain();
+  vibrato.type = "sine";
+  vibrato.frequency.setValueAtTime(18, t);
+  vibratoGain.gain.setValueAtTime(24 * pitch, t);
+
+  vibrato.connect(vibratoGain);
+  vibratoGain.connect(voice.frequency);
+
+  // Formant âm "é"
+  const f1 = ctx.createBiquadFilter();
+  f1.type = "bandpass";
+  f1.frequency.setValueAtTime(520, t);
+  f1.Q.setValueAtTime(7, t);
+
+  const f2 = ctx.createBiquadFilter();
+  f2.type = "bandpass";
+  f2.frequency.setValueAtTime(2250, t);
+  f2.Q.setValueAtTime(10, t);
+
+  const f3 = ctx.createBiquadFilter();
+  f3.type = "bandpass";
+  f3.frequency.setValueAtTime(3200, t);
+  f3.Q.setValueAtTime(7, t);
+
+  const g1 = ctx.createGain();
+  const g2 = ctx.createGain();
+  const g3 = ctx.createGain();
+
+  g1.gain.setValueAtTime(0.38, t);
+  g2.gain.setValueAtTime(0.88, t);
+  g3.gain.setValueAtTime(0.18, t);
+
+  voice.connect(f1);
+  voice.connect(f2);
+  voice.connect(f3);
+
+  f1.connect(g1);
+  f2.connect(g2);
+  f3.connect(g3);
+
+  g1.connect(master);
+  g2.connect(master);
+  g3.connect(master);
+
+  // Hơi xé nhẹ đầu tiếng
+  const noise = ctx.createBufferSource();
+  noise.buffer = createNoiseBuffer(ctx, duration);
+
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.setValueAtTime(2600, t);
+  noiseFilter.Q.setValueAtTime(5, t);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.025, t + 0.02);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(master);
+
+  voice.start(t);
+  vibrato.start(t);
+  noise.start(t);
+
+  voice.stop(t + duration);
+  vibrato.stop(t + duration);
+  noise.stop(t + duration);
+}
+  
+  function playLockSound(){
+  if(!soundEnabled || !audioCtx) return;
+
+  const ctx = audioCtx;
+  const t = ctx.currentTime;
+
+  const master = ctx.createGain();
+  master.gain.setValueAtTime(0.0001, t);
+  master.gain.exponentialRampToValueAtTime(0.18, t + 0.008);
+  master.gain.exponentialRampToValueAtTime(0.0001, t + 0.42);
+  master.connect(ctx.destination);
+
+  // Tiếng "keng" kim loại chính
+  const metal1 = ctx.createOscillator();
+  const metal2 = ctx.createOscillator();
+  const metal3 = ctx.createOscillator();
+
+  metal1.type = "triangle";
+  metal2.type = "sine";
+  metal3.type = "sine";
+
+  metal1.frequency.setValueAtTime(980, t);
+  metal2.frequency.setValueAtTime(1420, t);
+  metal3.frequency.setValueAtTime(2280, t);
+
+  const g1 = ctx.createGain();
+  const g2 = ctx.createGain();
+  const g3 = ctx.createGain();
+
+  g1.gain.setValueAtTime(0.35, t);
+  g2.gain.setValueAtTime(0.22, t);
+  g3.gain.setValueAtTime(0.12, t);
+
+  g1.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.28);
+  g3.gain.exponentialRampToValueAtTime(0.0001, t + 0.22);
+
+  metal1.connect(g1);
+  metal2.connect(g2);
+  metal3.connect(g3);
+
+  g1.connect(master);
+  g2.connect(master);
+  g3.connect(master);
+
+  // Tiếng "cạch" ngắn lúc khóa chốt
+  const noise = ctx.createBufferSource();
+  noise.buffer = createNoiseBuffer(ctx, 0.12);
+
+  const noiseFilter = ctx.createBiquadFilter();
+  noiseFilter.type = "bandpass";
+  noiseFilter.frequency.setValueAtTime(3600, t);
+  noiseFilter.Q.setValueAtTime(9, t);
+
+  const noiseGain = ctx.createGain();
+  noiseGain.gain.setValueAtTime(0.0001, t);
+  noiseGain.gain.exponentialRampToValueAtTime(0.13, t + 0.006);
+  noiseGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.075);
+
+  noise.connect(noiseFilter);
+  noiseFilter.connect(noiseGain);
+  noiseGain.connect(master);
+
+  // Một tiếng cạch phụ sau đó, tạo cảm giác khóa ăn khớp
+  const click2 = ctx.createOscillator();
+  const clickGain = ctx.createGain();
+
+  click2.type = "square";
+  click2.frequency.setValueAtTime(620, t + 0.105);
+
+  clickGain.gain.setValueAtTime(0.0001, t + 0.10);
+  clickGain.gain.exponentialRampToValueAtTime(0.08, t + 0.112);
+  clickGain.gain.exponentialRampToValueAtTime(0.0001, t + 0.18);
+
+  click2.connect(clickGain);
+  clickGain.connect(master);
+
+  metal1.start(t);
+  metal2.start(t);
+  metal3.start(t);
+  noise.start(t);
+  click2.start(t + 0.10);
+
+  metal1.stop(t + 0.55);
+metal2.stop(t + 0.48);
+metal3.stop(t + 0.40);
+  noise.stop(t + 0.12);
+  click2.stop(t + 0.2);
+}
+
+  
+  
+function playPopSqueaks(count){
+  if(!audioCtx) return;
+
+  const maxSounds = Math.min(count, 7);
+
+  for(let i = 0; i < maxSounds; i++){
+    const delay = i * 0.045;
+    const pitch = 0.92 + Math.random() * 0.28;
+
+    playEeSound(delay, pitch);
+  }
+}
+function popPieces(list){
+  playEeSound(0, 1);
+
+  for(const p of list){
+    const ball = getBallById(p.id);
+    if(ball) ball.classList.add("pop");
+  }
+}
+
+function removePieces(list){
+  const ids = new Set(list.map(p => p.id));
+  pieces = pieces.filter(p => !ids.has(p.id));
+  rebuildOcc();
+}
+  function uniquePieces(list){
+  const map = new Map();
+
+  for(const p of list){
+    if(p) map.set(p.id, p);
+  }
+
+  return [...map.values()];
+}
+
+function getPiecesByCross(row, col){
+  return pieces.filter(p => {
+    return pieceRows(p).includes(row) || pieceCols(p).includes(col);
+  });
+}
+
+function getPiecesByType(type){
+  return pieces.filter(p => {
+    return p.type === type && !isSpecialPiece(p);
+  });
+}
+
+function getPiecesInBombArea(row, col){
+  const minR = row - 2;
+  const maxR = row + 2;
+  const minC = col - 2;
+  const maxC = col + 2;
+
+  return pieces.filter(p => {
+    return getPieceCells(p).some(cell => {
+      return (
+        cell.r >= minR &&
+        cell.r <= maxR &&
+        cell.c >= minC &&
+        cell.c <= maxC
+      );
+    });
+  });
+}
+function arePiecesNear(a, b, radius = 1, includeSelf = false){
+  if(!a || !b) return false;
+  if(!includeSelf && a.id === b.id) return false;
+
+  const aCells = getPieceCells(a);
+  const bCells = getPieceCells(b);
+
+  for(const ca of aCells){
+    for(const cb of bCells){
+      if(
+        Math.abs(ca.r - cb.r) <= radius &&
+        Math.abs(ca.c - cb.c) <= radius
+      ){
+        return true;
+      }
+    }
+  }
+
+  return false;
+}
+
+function isNearAnyImpact(piece, impactPieces, includeSelf = false){
+  return impactPieces.some(hit => {
+    return arePiecesNear(piece, hit, 1, includeSelf);
+  });
+}
+
+function freezeRandomBalls(count, excludeIds = new Set()){
+  const candidates = pieces.filter(p => {
+  return (
+    !excludeIds.has(p.id) &&
+    !p.frozen &&
+    !p.iceCore &&
+    !p.stone &&
+    !p.locked &&
+    !p.lockPending &&
+    !p.lightning
+  );
+});
+
+  shuffleArray(candidates);
+
+  let frozenCount = 0;
+
+  for(const p of candidates){
+    if(frozenCount >= count) break;
+
+    p.frozen = true;
+    frozenCount++;
+  }
+
+  return frozenCount;
+}
+
+function processIceReactions(impactPieces, extraExcludeIds = new Set()){
+  const impactIds = new Set(impactPieces.map(p => p.id));
+  const excludeIds = new Set([...impactIds, ...extraExcludeIds]);
+
+  let thawedCount = 0;
+  let frozenCount = 0;
+  const triggeredIceCores = [];
+
+  // 1. Nổ gần ball bị đóng băng -> tan băng
+  for(const p of pieces){
+    if(!p.frozen) continue;
+
+    if(isNearAnyImpact(p, impactPieces, true)){
+      p.frozen = false;
+      excludeIds.add(p.id);
+      thawedCount++;
+    }
+  }
+
+  // 2. Nổ gần / trúng ball băng giá -> phóng băng rồi biến mất
+  for(const p of pieces){
+    if(!p.iceCore) continue;
+
+    if(isNearAnyImpact(p, impactPieces, true)){
+      triggeredIceCores.push(p);
+
+      // Chặn nó bị chọn làm mục tiêu đóng băng
+      excludeIds.add(p.id);
+
+      // Chặn phản ứng lặp trước khi bị remove
+      p.iceCore = false;
+
+      frozenCount += freezeRandomBalls(ICE_RELEASE_COUNT, excludeIds);
+    }
+  }
+
+  return {
+    thawed: thawedCount,
+    frozen: frozenCount,
+    iceCores: triggeredIceCores
+  };
+}
+  
+async function destroyPiecesByItem(list, doneMessage){
+  const targets = uniquePieces(list);
+
+  if(targets.length === 0){
+    gameState = "playing";
+    resolving = false;
+    setMessage("Không có ball nào để phá.");
+    return;
+  }
+
+  clearBallMotionClasses();
+  resetDrag();
+
+  resolving = true;
+  gameState = "resolving";
+
+  const originallyFrozenIds = new Set(
+    targets.filter(p => p.frozen).map(p => p.id)
+  );
+
+  const targetIds = new Set(targets.map(p => p.id));
+
+  const iceInfo = processIceReactions(targets, targetIds);
+
+  const removableTargets = targets.filter(p => {
+  return !originallyFrozenIds.has(p.id);
+});
+
+// Ball băng giá bị kích hoạt bởi item cũng phải biến mất
+const finalTargets = uniquePieces([
+  ...removableTargets,
+  ...iceInfo.iceCores
+]);
+
+if(finalTargets.length > 0){
+  popPieces(finalTargets);
+  await sleep(280);
+
+  removePieces(finalTargets);
+    render();
+    await sleep(70);
+
+    const movedMap = applyGravity();
+    const newIds = refill();
+
+    renderWithDrop(movedMap, newIds);
+    await sleep(380);
+
+    clearBallMotionClasses();
+  }else{
+    render();
+    await sleep(160);
+  }
+
+  resolving = false;
+  gameState = "playing";
+
+  if(iceInfo.thawed > 0 && finalTargets.length === 0){
+    setMessage(`Đã phá lớp băng của ${iceInfo.thawed} ball. 🧊`);
+  }else{
+    setMessage(doneMessage);
+  }
+
+  await sleep(80);
+  await resolveBoard();
+}
+  function formatCoins(value){
+  return value.toLocaleString("vi-VN");
+}
+
+function updateCoins(){
+  coinsEl.textContent = formatCoins(coins);
+  localStorage.setItem("fur_match_coins", String(coins));
+}
+
+function trySpendCoins(itemName){
+  if(coins < ITEM_COST){
+    setMessage(`${itemName} cần ${formatCoins(ITEM_COST)} xu. Hiện có ${formatCoins(coins)} xu.`);
+    return false;
+  }
+
+  coins -= ITEM_COST;
+  updateCoins();
+
+  setMessage(`${itemName} đã dùng. Trừ ${formatCoins(ITEM_COST)} xu.`);
+  return true;
+}
+
+async function useItemAtCell(cell){
+  if(!activeItem || resolving || gameState !== "playing") return;
+
+  const item = activeItem;
+
+  if(item === "hammer"){
+    const targets = getPiecesByCross(cell.row, cell.col);
+
+    if(targets.length === 0){
+      setMessage("Không có ball nào để phá.");
+      return;
+    }
+
+    if(!trySpendCoins("BÚA")) return;
+
+    clearActiveItem();
+
+    await destroyPiecesByItem(
+      targets,
+      `BÚA phá ${targets.length} ball theo hàng và cột. 🔨`
+    );
+    return;
+  }
+
+  if(item === "spike"){
+    const piece = getPieceAt(cell.row, cell.col);
+
+    if(!piece){
+      setMessage("GAI cần chọn vào một ball có màu.");
+      return;
+    }
+
+    const targets = getPiecesByType(piece.type);
+
+    if(targets.length === 0){
+      setMessage("Không có ball cùng màu để phá.");
+      return;
+    }
+
+    if(!trySpendCoins("GAI")) return;
+
+    clearActiveItem();
+
+    await destroyPiecesByItem(
+      targets,
+      `GAI đã nổ toàn bộ ball cùng màu. 🦔`
+    );
+    return;
+  }
+
+  if(item === "bomb"){
+    const targets = getPiecesInBombArea(cell.row, cell.col);
+
+    if(targets.length === 0){
+      setMessage("Không có ball nào trong vùng nổ.");
+      return;
+    }
+
+    if(!trySpendCoins("BOM")) return;
+
+    clearActiveItem();
+
+    await destroyPiecesByItem(
+      targets,
+      `BOM đã phá vùng 5×5. 💣`
+    );
+  }
+}
+function getShufflePositionKey(){
+  return pieces
+    .filter(p => !p.stone)
+    .map(p => `${p.id}:${p.row},${p.col}`)
+    .sort()
+    .join("|");
+}
+
+function takePositionSnapshot(){
+  return pieces.map(p => ({
+    id:p.id,
+    row:p.row,
+    col:p.col
+  }));
+}
+
+function restorePositionSnapshot(snapshot){
+  const map = new Map(snapshot.map(s => [s.id, s]));
+
+  for(const p of pieces){
+    const old = map.get(p.id);
+    if(!old) continue;
+
+    p.row = old.row;
+    p.col = old.col;
+  }
+
+  rebuildOcc();
+}
+
+function hasEnoughPiecesToShuffle(){
+  const groups = new Map();
+
+  for(const p of pieces){
+    if(p.stone) continue;
+
+    const key = `size-${p.size}`;
+    if(!groups.has(key)) groups.set(key, 0);
+    groups.set(key, groups.get(key) + 1);
+  }
+
+  for(const count of groups.values()){
+    if(count >= 2) return true;
+  }
+
+  return false;
+}
+
+function shuffleNonStonePositionsOnce(){
+  const groups = new Map();
+
+  for(const p of pieces){
+    // Viên đá giữ nguyên vị trí tuyệt đối
+    if(p.stone) continue;
+
+    // Chỉ tráo vị trí giữa các ball cùng size để không làm vỡ layout 2x2 / 3x3
+    const key = `size-${p.size}`;
+
+    if(!groups.has(key)){
+      groups.set(key, []);
+    }
+
+    groups.get(key).push(p);
+  }
+
+  let changed = false;
+
+  for(const group of groups.values()){
+    if(group.length < 2) continue;
+
+    const positions = group.map(p => ({
+      row:p.row,
+      col:p.col
+    }));
+
+    let shuffled = shuffleArray([...positions]);
+
+    const samePosition = shuffled.every((pos, i) => {
+      return pos.row === group[i].row && pos.col === group[i].col;
+    });
+
+    // Nếu random trúng đúng vị trí cũ, ép xoay vòng để chắc chắn có thay đổi
+    if(samePosition){
+      shuffled.push(shuffled.shift());
+    }
+
+    for(let i = 0; i < group.length; i++){
+      const p = group[i];
+      const pos = shuffled[i];
+
+      if(p.row !== pos.row || p.col !== pos.col){
+        changed = true;
+      }
+
+      p.row = pos.row;
+      p.col = pos.col;
+    }
+  }
+
+  rebuildOcc();
+  return changed;
+}
+  
+async function shuffleBoardByItem(){
+  if(resolving || gameState !== "playing") return false;
+
+  if(!hasEnoughPiecesToShuffle()){
+    setMessage("Không đủ ball để xáo trộn. Không trừ xu.");
+    return false;
+  }
+
+  clearBallMotionClasses();
+  resetDrag();
+
+  resolving = true;
+  gameState = "resolving";
+  setMessage("Đang xáo trộn vị trí các ball...");
+
+  const originalSnapshot = takePositionSnapshot();
+  const originalKey = getShufflePositionKey();
+
+  let success = false;
+
+  // Ưu tiên xáo trộn nhưng không tạo combo ngay lập tức
+  for(let attempt = 0; attempt < 120; attempt++){
+    restorePositionSnapshot(originalSnapshot);
+
+    const changed = shuffleNonStonePositionsOnce();
+    const newKey = getShufflePositionKey();
+
+    if(!changed || newKey === originalKey) continue;
+
+    if(findMatches().length === 0){
+      success = true;
+      break;
+    }
+  }
+
+  // Nếu không tìm được bàn sạch combo, vẫn cho xáo trộn nếu vị trí thật sự thay đổi
+  if(!success){
+    for(let attempt = 0; attempt < 40; attempt++){
+      restorePositionSnapshot(originalSnapshot);
+
+      const changed = shuffleNonStonePositionsOnce();
+      const newKey = getShufflePositionKey();
+
+      if(changed && newKey !== originalKey){
+        success = true;
+        break;
+      }
+    }
+  }
+
+  if(!success){
+    restorePositionSnapshot(originalSnapshot);
+    render();
+
+    resolving = false;
+    gameState = "playing";
+
+    setMessage("Không thể xáo trộn lúc này. Không trừ xu.");
+    return false;
+  }
+
+  render();
+  await sleep(180);
+
+  resolving = false;
+  gameState = "playing";
+
+  return true;
+}
+/* =========================
+   GRAVITY + REFILL
+========================= */
+
+function applyGravity(){
+  const movedMap = new Map();
+  let changed = true;
+  let guard = 0;
+
+  while(changed && guard < 100){
+    changed = false;
+    guard++;
+
+    const sorted = [...pieces].sort((a,b) => {
+      return (b.row + b.size) - (a.row + a.size);
+    });
+
+    for(const p of sorted){
+      if(canPlaceAt(p.row + 1, p.col, p.size, new Set([p.id]))){
+        if(!movedMap.has(p.id)){
+          movedMap.set(p.id, p.row);
+        }
+
+        p.row++;
+        changed = true;
+      }
+    }
+  }
+
+  rebuildOcc();
+  return movedMap;
+}
+
+function refill(){
+  const newIds = new Set();
+
+  for(let r = 0; r < ROWS; r++){
+    for(let c = 0; c < COLS; c++){
+      rebuildOcc();
+
+      if(occ[r][c] !== null) continue;
+
+      const preferred = randSize();
+      let sizes = [preferred];
+
+      if(preferred === 3) sizes = [3, 2, 1];
+      if(preferred === 2) sizes = [2, 1];
+      if(preferred === 1) sizes = [1];
+
+      let placed = false;
+
+      for(const size of sizes){
+        if(canPlaceAt(r, c, size)){
+          const p = createPiece(randType(), r, c, size);
+          pieces.push(p);
+          newIds.add(p.id);
+          placed = true;
+          break;
+        }
+      }
+
+      if(!placed && canPlaceAt(r, c, 1)){
+        const p = createPiece(randType(), r, c, 1);
+        pieces.push(p);
+        newIds.add(p.id);
+      }
+    }
+  }
+
+  rebuildOcc();
+applyLightningSpawn(newIds);
+applyIceCoreSpawn(newIds);
+
+countSpawnedBalls(newIds.size);
+
+return newIds;
+}
+
+/* =========================
+   LOCK
+========================= */
+
+function pickRandomLockTarget(){
+  const candidates = pieces.filter(p => {
+    return (
+      !p.locked &&
+      !p.lockPending &&
+      !isSpecialPiece(p)
+    );
+  });
+
+  if(!candidates.length) return null;
+
+  return candidates[Math.floor(Math.random() * candidates.length)];
+}
+  
+function shouldSpawnLockAtCombo(combo){
+  return combo >= 5 && (combo - 5) % 3 === 0;
+}
+function addRandomLock(piece){
+  if(!piece) return;
+  piece.locked = true;
+}
+  
+  function getPieceCenterInBoard(piece){
+  const m = getGridMetrics();
+
+  const x = piece.col * m.pitchX + (piece.size * m.cellW + (piece.size - 1) * m.gapX) / 2;
+  const y = piece.row * m.pitchY + (piece.size * m.cellH + (piece.size - 1) * m.gapY) / 2;
+
+  return {x, y};
+}
+
+function animateLockRingToPiece(piece){
+  return new Promise(resolve => {
+    if(!piece){
+      resolve();
+      return;
+    }
+
+    const fxLayer = document.getElementById("lockFxLayer");
+    if(!fxLayer){
+      resolve();
+      return;
+    }
+
+    const m = getGridMetrics();
+    const center = getPieceCenterInBoard(piece);
+
+    const ring = document.createElement("div");
+    ring.className = "lockRingFx";
+
+    const ringSize = Math.max(56, piece.size * Math.min(m.cellW, m.cellH) * 0.92);
+    ring.style.width = `${ringSize}px`;
+    ring.style.height = `${ringSize}px`;
+
+    const targetX = center.x - ringSize / 2;
+    const targetY = center.y - ringSize / 2;
+
+    const angle = Math.random() * Math.PI * 2;
+    const flyRadius = Math.max(m.boardW, m.boardH) * 0.9 + 140;
+
+    const fromX = targetX + Math.cos(angle) * flyRadius;
+    const fromY = targetY + Math.sin(angle) * flyRadius;
+
+    const midRatio = 0.42 + Math.random() * 0.12;
+    const curveOffset = 22 + Math.random() * 28;
+
+    const nx = -Math.sin(angle);
+    const ny = Math.cos(angle);
+
+    const midX = fromX + (targetX - fromX) * midRatio + nx * curveOffset;
+    const midY = fromY + (targetY - fromY) * midRatio + ny * curveOffset;
+
+    const rotStart = `${(-240 + Math.random() * 480).toFixed(1)}deg`;
+
+    ring.style.setProperty("--fromX", `${fromX}px`);
+    ring.style.setProperty("--fromY", `${fromY}px`);
+    ring.style.setProperty("--midX", `${midX}px`);
+    ring.style.setProperty("--midY", `${midY}px`);
+    ring.style.setProperty("--toX", `${targetX}px`);
+    ring.style.setProperty("--toY", `${targetY}px`);
+    ring.style.setProperty("--rotStart", rotStart);
+
+    fxLayer.appendChild(ring);
+
+    requestAnimationFrame(() => {
+      ring.classList.add("fly");
+    });
+
+    let done = false;
+
+    ring.addEventListener("animationend", () => {
+      if(done) return;
+      done = true;
+
+      ring.remove();
+      resolve();
+    }, { once:true });
+
+    setTimeout(() => {
+      if(done) return;
+      done = true;
+
+      ring.remove();
+      resolve();
+    }, 2300);
+  });
+}
+function launchLockAsync(piece){
+  if(!piece) return;
+
+  const targetId = piece.id;
+
+  // Chặn kéo ngay từ lúc vòng bắt đầu bay
+  piece.lockPending = true;
+
+  animateLockRingToPiece(piece).then(() => {
+    const target = getPieceById(targetId);
+
+// Nếu bóng đã bị nổ trong lúc vòng đang bay thì bỏ qua
+if(!target) return;
+
+target.lockPending = false;
+
+// Ball băng giá / ball đóng băng không được nhận vòng sắt
+if(isSpecialPiece(target)) return;
+
+if(target.locked) return;
+
+    playLockSound();
+
+    target.locked = true;
+
+    const ball = getBallById(target.id);
+    if(ball){
+      ball.classList.remove("drop", "newDrop", "startDrop", "dragPreview", "shiftAnim");
+      ball.style.transform = "";
+      ball.style.zIndex = "";
+      ball.classList.add("locked");
+    }
+
+    // Nếu người chơi đang kéo đúng band vừa bị khóa thì hủy drag ngay
+    if(drag.active && drag.movingIds && drag.movingIds.has(target.id)){
+      resetDrag();
+      setMessage("Hàng/cột này vừa bị vòng sắt khóa lại.");
+    }
+  });
+}
+/* =========================
+   SCORE + RESOLVE
+========================= */
+
+function showFloatingScore(text){
+  const scoreBox = scoreEl.closest(".stat");
+  const rect = scoreBox.getBoundingClientRect();
+
+  floatingScore.textContent = text;
+  floatingScore.style.left = `${rect.left + rect.width * 0.55}px`;
+  floatingScore.style.top = `${rect.top + rect.height * 0.48}px`;
+
+  floatingScore.classList.remove("show");
+  void floatingScore.offsetWidth;
+  floatingScore.classList.add("show");
+}
+
+async function resolveBoard(){
+  if(resolving) return;
+
+  resolving = true;
+  gameState = "resolving";
+
+  let combo = 1;
+  let totalPopped = 0;
+
+  while(true){
+    const matches = findMatches();
+    const lightningGroups = findLightningGroups();
+
+    const lightningBalls = uniquePieces(lightningGroups.flat());
+
+    if(matches.length === 0 && lightningBalls.length === 0){
+      break;
+    }
+
+    let lightningCells = [];
+    let lightningVictims = [];
+
+    if(lightningGroups.length > 0){
+      lightningCells = getRandomLightningCells(LIGHTNING_STRIKE_COUNT);
+      lightningVictims = getPiecesFromCells(lightningCells);
+
+      setMessage(`Giáng xuống ${LIGHTNING_STRIKE_COUNT} tia sét! ⚡`);
+playThunderSound();
+await animateLightningStorm(lightningCells);
+    }
+
+    const baseTargets = uniquePieces([
+      ...matches,
+      ...lightningBalls,
+      ...lightningVictims
+    ]);
+
+    const originallyFrozenIds = new Set(
+      baseTargets.filter(p => p.frozen).map(p => p.id)
+    );
+
+    const iceInfo = processIceReactions(baseTargets);
+
+    const removableBaseTargets = baseTargets.filter(p => {
+      return !originallyFrozenIds.has(p.id);
+    });
+
+    const finalPopped = uniquePieces([
+      ...removableBaseTargets,
+      ...iceInfo.iceCores
+    ]);
+
+    if(finalPopped.length > 0){
+      totalPopped += finalPopped.length;
+
+      const gain = finalPopped.length * 10 * combo;
+      score += gain;
+      coins += gain;
+
+      scoreEl.textContent = score;
+      updateCoins();
+
+      showFloatingScore("+" + gain);
+
+      popPieces(finalPopped);
+      
+
+      await sleep(280);
+
+      removePieces(finalPopped);
+      render();
+      await sleep(70);
+
+      const movedMap = applyGravity();
+      const newIds = refill();
+
+      renderWithDrop(movedMap, newIds);
+      await sleep(380);
+
+      clearBallMotionClasses();
+
+      if(shouldSpawnLockAtCombo(combo)){
+        const lockTarget = pickRandomLockTarget();
+
+        if(lockTarget){
+          launchLockAsync(lockTarget);
+        }
+      }
+
+      combo++;
+    }else{
+      break;
+    }
+  }
+
+  if(score > best){
+    best = score;
+    localStorage.setItem("fur_match_best", best);
+    bestEl.textContent = best;
+  }
+
+  resolving = false;
+  gameState = "playing";
+}
+
+/* =========================
+   GAME CONTROL
+========================= */
+
+async function startGame(){
+  initAudio();
+  unlockThunderSound();
+  document.querySelectorAll(".lockRingFx").forEach(el => el.remove());
+resetDrag();
+clearActiveItem();
+score = 0;
+resolving = false;
+gameState = "intro";
+  spawnedBallCounter = 0;
+nextStoneSpawnAt = 100;
+
+  if(typeof lockComboUsed !== "undefined"){
+    lockComboUsed.clear();
+  }
+
+  if(typeof lockAnimating !== "undefined"){
+    lockAnimating = false;
+  }
+
+  scoreEl.textContent = score;
+updateCoins();  
+
+  overlay.style.display = "none";
+  pauseBtn.textContent = "TẠM DỪNG";
+  setMessage("Đang thả bóng vào bàn...");
+
+  const newIds = createBoard();
+  spawnedBallCounter = pieces.length;
+checkStoneSpawnByCounter();
+  renderStartDrop(newIds);
+
+  await sleep(1250);
+
+clearBallMotionClasses();
+
+gameState = "playing";
+setMessage("Kéo một bóng để trượt cả hàng hoặc cả cột.");
+}
+  
+function togglePause(){
+  if(gameState === "playing"){
+    gameState = "paused";
+    pauseBtn.textContent = "TIẾP TỤC";
+    setMessage("Đã tạm dừng.");
+    return;
+  }
+
+  if(gameState === "paused"){
+    gameState = "playing";
+    pauseBtn.textContent = "TẠM DỪNG";
+    setMessage("Tiếp tục chơi.");
+  }
+}
+
+function resetDrag(){
+  boardEl.classList.remove("clipDrag");
+  drag.active = false;
+  drag.piece = null;
+  drag.direction = null;
+  drag.bandRows = [];
+  drag.bandCols = [];
+  drag.movingIds = new Set();
+  drag.previewMove = 0;
+  drag.previewStep = 0;
+
+  clearDragPreview();
+  clearDragHighlight();
+}
+
+/* =========================
+   POINTER EVENTS
+========================= */
+
+boardEl.addEventListener("pointerdown", e => {
+  if(gameState !== "playing" || resolving) return;
+
+  const cell = getCellFromPoint(e.clientX, e.clientY);
+  if(!cell) return;
+
+  if(activeItem){
+    useItemAtCell(cell);
+    return;
+  }
+
+  const piece = getPieceAt(cell.row, cell.col);
+  if(!piece) return;
+
+  if(piece.stone){
+    setMessage("Viên đá không kéo được. Chỉ có thể phá bằng BÚA hoặc BOM.");
+    return;
+  }
+
+  drag.active = true;
+  drag.piece = piece;
+  drag.row = cell.row;
+  drag.col = cell.col;
+  drag.startX = e.clientX;
+  drag.startY = e.clientY;
+  drag.dx = 0;
+  drag.dy = 0;
+  drag.direction = null;
+  drag.bandRows = [];
+  drag.bandCols = [];
+  drag.movingIds = new Set();
+  drag.previewMove = 0;
+  drag.previewStep = 0;
+
+  boardEl.setPointerCapture(e.pointerId);
+});
+
+boardEl.addEventListener("pointermove", e => {
+  if(!drag.active || gameState !== "playing" || resolving) return;
+
+  lastPointerEvent = e;
+
+  if(moveRAF) return;
+
+  moveRAF = requestAnimationFrame(() => {
+    moveRAF = null;
+
+    const ev = lastPointerEvent;
+    if(!ev) return;
+
+    drag.dx = ev.clientX - drag.startX;
+    drag.dy = ev.clientY - drag.startY;
+
+    const absX = Math.abs(drag.dx);
+    const absY = Math.abs(drag.dy);
+
+    if(!drag.direction && Math.max(absX, absY) > 10){
+  drag.direction = absX > absY ? "row" : "col";
+
+  boardEl.classList.add("clipDrag");
+
+  prepareDragBand(drag.direction);
+  applyDragHighlight();
+}
+
+    applyDragPreview();
+  });
+});
+
+boardEl.addEventListener("pointerup", async e => {
+  if(!drag.active) return;
+
+  if(moveRAF){
+    cancelAnimationFrame(moveRAF);
+    moveRAF = null;
+  }
+
+  clearDragHighlight();
+
+  const m = getGridMetrics();
+  const cellSize = drag.direction === "row" ? m.pitchX : m.pitchY;
+
+  const absX = Math.abs(drag.dx);
+  const absY = Math.abs(drag.dy);
+
+  let moved = false;
+  let step = 0;
+  let direction = drag.direction;
+
+  if(gameState === "playing" && !resolving && direction){
+    if(direction === "row" && absX > cellSize * 0.35){
+      step = drag.dx > 0 ? 1 : -1;
+      moved = true;
+    }
+
+    if(direction === "col" && absY > cellSize * 0.35){
+      step = drag.dy > 0 ? 1 : -1;
+      moved = true;
+    }
+
+    if(moved){
+      if(dragLineCache.length === 0){
+        prepareDragBand(direction);
+      }
+
+      if(bandHasLocked(direction)){
+  clearBallMotionClasses();
+  resetDrag();
+
+  setMessage(direction === "row"
+    ? "Hàng này đang bị khóa. Phá huỷ ổ khóa để mở lại"
+    : "Cột này đang bị khóa. Phá huỷ ổ khóa để mở lại"
+  );
+
+  return;
+}
+      if(bandHasStone(direction)){
+  clearBallMotionClasses();
+  resetDrag();
+
+  setMessage(direction === "row"
+    ? "Hàng này có viên đá nên không kéo được. Dùng BÚA hoặc BOM để phá."
+    : "Cột này có viên đá nên không kéo được. Dùng BÚA hoặc BOM để phá."
+  );
+
+  return;
+}
+
+      const valid = canShiftBand(direction, step);
+
+      await animateDragRelease(direction, step, valid);
+
+      if(valid){
+  commitShiftBand(direction, step);
+  render();
+  resetDrag();
+
+  await sleep(80);
+
+  await moveStonesAfterPlayerMove();
+
+  await sleep(80);
+  await resolveBoard();
+}else{
+        resetDrag();
+        setMessage("Kẹt bóng lớn.");
+      }
+
+      return;
+    }
+  }
+
+  resetDrag();
+  setMessage("Kéo xa hơn một chút để trượt hàng/cột.");
+});
+
+boardEl.addEventListener("pointercancel", () => {
+  if(moveRAF){
+    cancelAnimationFrame(moveRAF);
+    moveRAF = null;
+  }
+
+  resetDrag();
+});
+
+/* =========================
+   INIT
+========================= */
+itemButtons.forEach(btn => {
+  btn.addEventListener("click", async () => {
+    if(gameState !== "playing" || resolving) return;
+
+    const item = btn.dataset.item;
+
+    if(item === "shuffle"){
+  clearActiveItem();
+
+  if(coins < ITEM_COST){
+    setMessage(`XÁO TRỘN cần ${formatCoins(ITEM_COST)} xu. Hiện có ${formatCoins(coins)} xu.`);
+    return;
+  }
+
+  const used = await shuffleBoardByItem();
+
+  // Không xáo trộn được thì không trừ xu
+  if(!used) return;
+
+  coins -= ITEM_COST;
+  updateCoins();
+
+  setMessage(`Đã dùng 3000 xu để xáo trộn vị trí ball`);
+  return;
+}
+    if(coins < ITEM_COST){
+  setMessage(`${btn.querySelector(".itemName").textContent} cần ${formatCoins(ITEM_COST)} xu. Hiện có ${formatCoins(coins)} xu.`);
+  return;
+}
+
+    if(activeItem === item){
+      clearActiveItem();
+      setMessage("Đã hủy chọn vật phẩm.");
+      return;
+    }
+
+    activeItem = item;
+
+    itemButtons.forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+
+    if(item === "hammer"){
+      setMessage("BÚA: chọn một ô để phá toàn bộ hàng và cột đó.");
+    }
+
+    if(item === "spike"){
+      setMessage("GAI: chọn một ball màu bất kỳ để nổ toàn bộ màu đó.");
+    }
+
+    if(item === "bomb"){
+      setMessage("BOM: chọn tâm nổ, vùng 5×5 sẽ bị phá.");
+    }
+  });
+});
+
+function clearActiveItem(){
+  activeItem = null;
+  itemButtons.forEach(btn => btn.classList.remove("active"));
+}
+
+startBtn.addEventListener("click", startGame);
+pauseBtn.addEventListener("click", togglePause);
+restartBtn.addEventListener("click", startGame);
+
+updateCoins();
+createBoard();
+render();
+</script>
+</body>
+</html>
