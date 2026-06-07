@@ -1062,6 +1062,7 @@ const ctx = boardCanvas.getContext("2d", {
 });
 
 const DPR_LIMIT = 2;
+  const BOARD_SAFE_PAD = 7;
 
 let canvasRAF = null;
 
@@ -1468,8 +1469,8 @@ function createStoneHitFx(row, col){
   const fx = document.createElement("div");
   fx.className = "stoneHitFx";
 
-  fx.style.left = `${col * m.pitchX + m.cellW / 2}px`;
-  fx.style.top = `${row * m.pitchY + m.cellH / 2}px`;
+  fx.style.left = `${m.offsetX + col * m.pitchX + m.cellW / 2}px`;
+fx.style.top = `${m.offsetY + row * m.pitchY + m.cellH / 2}px`;
 
   fxLayer.appendChild(fx);
 
@@ -1668,7 +1669,6 @@ window.addEventListener("orientationchange", () => {
     render();
   }, 250);
 });
-
 function getGridMetrics(){
   if(gridMetricsCache) return gridMetricsCache;
 
@@ -1678,12 +1678,25 @@ function getGridMetrics(){
   const gapX = parseFloat(style.columnGap || style.gap) || 0;
   const gapY = parseFloat(style.rowGap || style.gap) || gapX;
 
-  const cellW = (boardRect.width - gapX * (COLS - 1)) / COLS;
-  const cellH = (boardRect.height - gapY * (ROWS - 1)) / ROWS;
+  // Chừa mép an toàn để ball ở cạnh phải / cạnh dưới không bị cắt gai
+  const safePad = BOARD_SAFE_PAD;
+
+  const gridW = Math.max(1, boardRect.width - safePad * 2);
+  const gridH = Math.max(1, boardRect.height - safePad * 2);
+
+  const cellW = (gridW - gapX * (COLS - 1)) / COLS;
+  const cellH = (gridH - gapY * (ROWS - 1)) / ROWS;
 
   gridMetricsCache = {
     boardW: boardRect.width,
     boardH: boardRect.height,
+
+    gridW,
+    gridH,
+
+    offsetX: safePad,
+    offsetY: safePad,
+
     cellW,
     cellH,
     pitchX: cellW + gapX,
@@ -1694,7 +1707,6 @@ function getGridMetrics(){
 
   return gridMetricsCache;
 }
-
 function shuffleArray(arr){
   for(let i = arr.length - 1; i > 0; i--){
     const j = Math.floor(Math.random() * (i + 1));
@@ -1835,10 +1847,10 @@ function getPieceRect(p){
   const m = getGridMetrics();
 
   return {
-    x:p.col * m.pitchX,
-    y:p.row * m.pitchY,
-    w:p.size * m.cellW + (p.size - 1) * m.gapX,
-    h:p.size * m.cellH + (p.size - 1) * m.gapY
+    x: m.offsetX + p.col * m.pitchX,
+    y: m.offsetY + p.row * m.pitchY,
+    w: p.size * m.cellW + (p.size - 1) * m.gapX,
+    h: p.size * m.cellH + (p.size - 1) * m.gapY
   };
 }
 
@@ -2750,13 +2762,15 @@ function getCellFromPoint(x, y){
   const rect = boardEl.getBoundingClientRect();
   const m = getGridMetrics();
 
-  const col = Math.floor((x - rect.left) / m.pitchX);
-  const row = Math.floor((y - rect.top) / m.pitchY);
+  const localX = x - rect.left - m.offsetX;
+  const localY = y - rect.top - m.offsetY;
+
+  const col = Math.floor(localX / m.pitchX);
+  const row = Math.floor(localY / m.pitchY);
 
   if(row < 0 || row >= ROWS || col < 0 || col >= COLS) return null;
   return {row, col};
 }
-
 function getMoveDistance(direction){
   const m = getGridMetrics();
   return direction === "row" ? m.pitchX : m.pitchY;
@@ -2947,16 +2961,16 @@ function applyDragHighlight(){
   dragLineBar.className = `dragLineBar ${drag.direction === "col" ? "col" : "row"}`;
 
   if(drag.direction === "row"){
-    dragLineBar.style.left = `-5px`;
-    dragLineBar.style.top = `${min * m.pitchY - 5}px`;
-    dragLineBar.style.width = `${m.boardW + 10}px`;
-    dragLineBar.style.height = `${(max - min + 1) * m.pitchY - m.gapY + 10}px`;
-  }else{
-    dragLineBar.style.left = `${min * m.pitchX - 5}px`;
-    dragLineBar.style.top = `-5px`;
-    dragLineBar.style.width = `${(max - min + 1) * m.pitchX - m.gapX + 10}px`;
-    dragLineBar.style.height = `${m.boardH + 10}px`;
-  }
+  dragLineBar.style.left = `${m.offsetX - 5}px`;
+  dragLineBar.style.top = `${m.offsetY + min * m.pitchY - 5}px`;
+  dragLineBar.style.width = `${m.gridW + 10}px`;
+  dragLineBar.style.height = `${(max - min + 1) * m.pitchY - m.gapY + 10}px`;
+}else{
+  dragLineBar.style.left = `${m.offsetX + min * m.pitchX - 5}px`;
+  dragLineBar.style.top = `${m.offsetY - 5}px`;
+  dragLineBar.style.width = `${(max - min + 1) * m.pitchX - m.gapX + 10}px`;
+  dragLineBar.style.height = `${m.gridH + 10}px`;
+}
 
   boardEl.appendChild(dragLineBar);
   lastHighlightKey = key;
@@ -3260,8 +3274,8 @@ function animateLightningStorm(cells){
       const strike = document.createElement("div");
       strike.className = "lightningStrikeFx";
 
-      const x = cell.col * m.pitchX + m.cellW / 2;
-      const y = cell.row * m.pitchY + m.cellH / 2;
+      const x = m.offsetX + cell.col * m.pitchX + m.cellW / 2;
+const y = m.offsetY + cell.row * m.pitchY + m.cellH / 2;
 
       strike.style.left = `${x}px`;
       strike.style.height = `${Math.max(36, y + 8)}px`;
@@ -4136,8 +4150,15 @@ function shouldSpawnLockAtCombo(combo){
   function getPieceCenterInBoard(piece){
   const m = getGridMetrics();
 
-  const x = piece.col * m.pitchX + (piece.size * m.cellW + (piece.size - 1) * m.gapX) / 2;
-  const y = piece.row * m.pitchY + (piece.size * m.cellH + (piece.size - 1) * m.gapY) / 2;
+  const x =
+    m.offsetX +
+    piece.col * m.pitchX +
+    (piece.size * m.cellW + (piece.size - 1) * m.gapX) / 2;
+
+  const y =
+    m.offsetY +
+    piece.row * m.pitchY +
+    (piece.size * m.cellH + (piece.size - 1) * m.gapY) / 2;
 
   return {x, y};
 }
