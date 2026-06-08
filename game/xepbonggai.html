@@ -1246,7 +1246,8 @@ let wrapGhosts = [];
 let spawnedBallCounter = 0;
 let nextStoneSpawnAt = 100;
 let wrapGhostKey = "";
-  
+const SAVE_KEY = "fur_match_full_save_v1";
+let saveTimer = null;
 bestEl.textContent = best;
 
 function randType(){
@@ -1525,6 +1526,7 @@ async function moveStonesAfterPlayerMove(){
 
   // Đá lăn cuối cùng
   await moveStonesAfterPlayerMove();
+    queueSaveGame();
 }
 function sleep(ms){
   return new Promise(resolve => setTimeout(resolve, ms));
@@ -1557,6 +1559,129 @@ function createPiece(type, row, col, size = 1){
     blinkDur: 5.5 + Math.random() * 7.5,
     blinkDelay: -Math.random() * 9
   };
+}
+  function getSaveData(){
+  return {
+    version:1,
+    savedAt:Date.now(),
+
+    score,
+    coins,
+    best,
+    pieceId,
+    spawnedBallCounter,
+    nextStoneSpawnAt:Number.isFinite(nextStoneSpawnAt) ? nextStoneSpawnAt : null,
+
+    pieces:pieces.map(p => ({
+      id:p.id,
+      type:p.type,
+      row:p.row,
+      col:p.col,
+      size:p.size,
+
+      locked:!!p.locked,
+
+      // Không lưu lockPending vì vòng sắt đang bay không thể tiếp tục sau khi thoát game
+      lockPending:false,
+
+      stone:!!p.stone,
+      iceCore:!!p.iceCore,
+      frozen:!!p.frozen,
+      lightning:!!p.lightning,
+
+      blinkDur:p.blinkDur,
+      blinkDelay:p.blinkDelay
+    }))
+  };
+}
+
+function saveGame(){
+  try{
+    if(!pieces.length) return;
+
+    // Không lưu giữa lúc combo / rơi / resolve để tránh load vào trạng thái dang dở
+    if(resolving) return;
+    if(gameState !== "playing" && gameState !== "paused") return;
+
+    localStorage.setItem(SAVE_KEY, JSON.stringify(getSaveData()));
+  }catch(err){}
+}
+
+function queueSaveGame(){
+  clearTimeout(saveTimer);
+
+  saveTimer = setTimeout(() => {
+    saveGame();
+  }, 120);
+}
+
+function loadSavedGame(){
+  try{
+    const raw = localStorage.getItem(SAVE_KEY);
+    if(!raw) return false;
+
+    const data = JSON.parse(raw);
+
+    if(!data || !Array.isArray(data.pieces) || data.pieces.length === 0){
+      return false;
+    }
+
+    score = Number(data.score || 0);
+    coins = Number(data.coins || 0);
+    best = Number(data.best || 0);
+    pieceId = Number(data.pieceId || 1);
+    spawnedBallCounter = Number(data.spawnedBallCounter || 0);
+    nextStoneSpawnAt = data.nextStoneSpawnAt === null
+      ? Infinity
+      : Number(data.nextStoneSpawnAt || 100);
+
+    pieces = data.pieces.map(p => ({
+      id:p.id,
+      type:p.type,
+      row:p.row,
+      col:p.col,
+      size:p.size,
+
+      locked:!!p.locked,
+      lockPending:false,
+
+      stone:!!p.stone,
+      iceCore:!!p.iceCore,
+      frozen:!!p.frozen,
+      lightning:!!p.lightning,
+
+      blinkDur:p.blinkDur || (5.5 + Math.random() * 7.5),
+      blinkDelay:p.blinkDelay || (-Math.random() * 9)
+    }));
+
+    rebuildOcc();
+
+    scoreEl.textContent = score;
+    coinsEl.textContent = formatCoins(coins);
+    bestEl.textContent = best;
+
+    overlay.style.display = "none";
+    pauseBtn.textContent = "TẠM DỪNG";
+
+    resolving = false;
+    gameState = "playing";
+
+    clearBallMotionClasses();
+    resizeCanvas();
+    render();
+
+    setMessage("Đã tải lại tiến trình trước đó. 💾");
+
+    return true;
+  }catch(err){
+    return false;
+  }
+}
+
+function clearSavedGame(){
+  try{
+    localStorage.removeItem(SAVE_KEY);
+  }catch(err){}
 }
   
   function movingBandHasBigPiece(){
@@ -4426,7 +4551,8 @@ await sleep(popWait);
   }finally{
     document.documentElement.classList.remove("comboMode");
     resolving = false;
-    gameState = "playing";
+gameState = "playing";
+queueSaveGame();
   }
 }
 
@@ -4435,6 +4561,7 @@ await sleep(popWait);
 ========================= */
 
 async function startGame(){
+  clearSavedGame();
   initAudio();
   unlockThunderSound();
   unlockFreezingSound();
@@ -4470,6 +4597,7 @@ clearBallMotionClasses();
 
 gameState = "playing";
 setMessage("Kéo một bóng để trượt cả hàng hoặc cả cột.");
+  queueSaveGame();
 
 // Bắt buộc gọi lại sau khi gameState đã là "playing"
 // để shine / điện / băng chạy ngay, không cần chạm màn hình
@@ -4482,6 +4610,7 @@ function togglePause(){
     gameState = "paused";
     pauseBtn.textContent = "TIẾP TỤC";
     setMessage("Đã tạm dừng.");
+    queueSaveGame();
     return;
   }
 
@@ -4489,6 +4618,7 @@ function togglePause(){
     gameState = "playing";
     pauseBtn.textContent = "TẠM DỪNG";
     setMessage("Tiếp tục chơi.");
+    queueSaveGame();
   }
 }
 
@@ -4698,7 +4828,17 @@ boardEl.addEventListener("pointercancel", () => {
 
   resetDrag();
 });
+window.addEventListener("pagehide", saveGame);
+window.addEventListener("beforeunload", saveGame);
 
+document.addEventListener("visibilitychange", () => {
+  if(document.hidden){
+    saveGame();
+  }
+});
+
+// Auto-save nhẹ, phòng trường hợp trình duyệt kill tab đột ngột
+setInterval(saveGame, 2500);
 /* =========================
    INIT
 ========================= */
@@ -4765,9 +4905,13 @@ function clearActiveItem(){
 startBtn.addEventListener("click", startGame);
 pauseBtn.addEventListener("click", togglePause);
 restartBtn.addEventListener("click", startGame);
+
 updateCoins();
-createBoard();
-render();
+
+if(!loadSavedGame()){
+  createBoard();
+  render();
+}
 </script>
 </body>
 </html>
