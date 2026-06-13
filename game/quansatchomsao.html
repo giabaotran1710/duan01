@@ -1,0 +1,1165 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Quan Sát Chòm Sao</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  background:#030712;
+  font-family:Arial, sans-serif;
+  color:white;
+  touch-action:none;
+}
+
+canvas{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100vh;
+  display:block;
+  background:
+    radial-gradient(circle at 50% 40%, #102a5c 0%, #071225 42%, #02040b 100%);
+}
+
+#ui{
+  position:fixed;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+}
+
+.topbar{
+  position:absolute;
+  top:12px;
+  left:12px;
+  right:12px;
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap:10px;
+}
+
+.stat-box{
+  min-width:86px;
+  padding:8px 10px;
+  border-radius:14px;
+  background:rgba(4,10,24,.62);
+  border:1px solid rgba(137,199,255,.26);
+  box-shadow:0 0 18px rgba(84,166,255,.12);
+  backdrop-filter:blur(8px);
+}
+
+.stat-label{
+  font-size:10px;
+  letter-spacing:1px;
+  color:#a8c9ff;
+  font-weight:800;
+}
+
+.stat-value{
+  margin-top:2px;
+  font-size:20px;
+  font-weight:900;
+  color:#fff;
+  text-shadow:0 0 10px rgba(120,190,255,.8);
+}
+
+#speedText{
+  font-size:13px;
+  margin-top:4px;
+  color:#ffeaa5;
+  font-weight:800;
+}
+
+.center-hint{
+  position:absolute;
+  left:50%;
+  top:80px;
+  transform:translateX(-50%);
+  width:min(92vw,420px);
+  padding:9px 12px;
+  text-align:center;
+  border-radius:999px;
+  background:rgba(8,18,42,.55);
+  border:1px solid rgba(255,255,255,.12);
+  color:#d8e9ff;
+  font-size:13px;
+  font-weight:800;
+  letter-spacing:.2px;
+  box-shadow:0 0 18px rgba(85,162,255,.12);
+}
+
+#feedback{
+  position:absolute;
+  left:50%;
+  top:124px;
+  transform:translateX(-50%);
+  width:76px;
+  height:76px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:54px;
+  font-weight:1000;
+  line-height:1;
+
+  opacity:0;
+  background:rgba(5,14,32,.56);
+  border:1px solid rgba(255,255,255,.2);
+  box-shadow:
+    0 0 24px rgba(120,200,255,.28),
+    inset 0 1px 0 rgba(255,255,255,.14);
+
+  text-shadow:0 0 20px currentColor;
+  transition:opacity .16s, transform .16s;
+}
+
+#feedback.show{
+  opacity:1;
+  transform:translateX(-50%) scale(1.04);
+}
+
+.answer-panel{
+  position:absolute;
+  left:50%;
+  bottom:38px;
+  transform:translateX(-50%);
+  width:min(94vw,480px);
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:8px;
+  pointer-events:auto;
+}
+
+.answer-btn{
+  height:54px;
+  border:none;
+  border-radius:17px;
+  color:#fff;
+  font-size:22px;
+  font-weight:1000;
+  cursor:pointer;
+  background:
+    linear-gradient(180deg, rgba(120,206,255,.95), rgba(32,84,255,.86));
+  box-shadow:
+    0 8px 0 rgba(11,35,116,.82),
+    0 0 18px rgba(84,179,255,.35),
+    inset 0 1px 0 rgba(255,255,255,.55);
+  text-shadow:0 2px 4px rgba(0,0,0,.45);
+  transform:translateY(0);
+}
+
+.answer-btn:active{
+  transform:translateY(5px);
+  box-shadow:
+    0 3px 0 rgba(11,35,116,.82),
+    0 0 14px rgba(84,179,255,.25),
+    inset 0 1px 0 rgba(255,255,255,.55);
+}
+
+.answer-btn.locked{
+  pointer-events:none;
+  filter:grayscale(.45);
+  opacity:.6;
+}
+
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:20;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:22px;
+  background:
+    radial-gradient(circle at 50% 32%, rgba(38,99,255,.28), transparent 34%),
+    rgba(0,0,0,.72);
+  backdrop-filter:blur(8px);
+}
+
+.card{
+  width:min(92vw,440px);
+  padding:24px 20px;
+  border-radius:28px;
+  background:linear-gradient(180deg, rgba(15,31,68,.96), rgba(5,12,31,.96));
+  border:1px solid rgba(155,205,255,.28);
+  box-shadow:
+    0 0 32px rgba(87,169,255,.26),
+    inset 0 1px 0 rgba(255,255,255,.12);
+  text-align:center;
+}
+
+.card h1{
+  font-size:30px;
+  line-height:1.1;
+  margin-bottom:10px;
+  text-shadow:0 0 18px rgba(108,190,255,.75);
+}
+
+.card p{
+  color:#c9ddff;
+  font-size:15px;
+  line-height:1.55;
+  margin:8px 0;
+}
+
+.card .big{
+  margin:14px 0 4px;
+  font-size:46px;
+  font-weight:1000;
+  color:#fff;
+  text-shadow:0 0 22px rgba(100,190,255,.9);
+}
+
+.main-btn{
+  margin-top:18px;
+  width:100%;
+  height:54px;
+  border:none;
+  border-radius:18px;
+  background:linear-gradient(180deg, #fff2a8, #ffb22e);
+  color:#211100;
+  font-size:18px;
+  font-weight:1000;
+  cursor:pointer;
+  box-shadow:
+    0 8px 0 #9b5c00,
+    0 0 22px rgba(255,197,64,.42);
+}
+
+.main-btn:active{
+  transform:translateY(5px);
+  box-shadow:
+    0 3px 0 #9b5c00,
+    0 0 18px rgba(255,197,64,.32);
+}
+
+.hidden{
+  display:none;
+}
+
+@media(max-width:380px){
+  .answer-btn{
+    height:48px;
+    font-size:19px;
+    border-radius:14px;
+  }
+
+  .center-hint{
+    font-size:12px;
+    top:74px;
+  }
+
+  .stat-value{
+    font-size:18px;
+  }
+}.accuracy-box{
+  margin:16px 0 6px;
+  padding:12px;
+  border-radius:18px;
+  background:rgba(255,255,255,.06);
+  border:1px solid rgba(255,255,255,.14);
+}
+
+.accuracy-label{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  margin-bottom:8px;
+  font-size:13px;
+  font-weight:900;
+  color:#cfe4ff;
+}
+
+#accuracyPercent{
+  color:#fff2a8;
+  text-shadow:0 0 12px rgba(255,220,100,.75);
+}
+
+.accuracy-track{
+  width:100%;
+  height:14px;
+  border-radius:999px;
+  overflow:hidden;
+  background:rgba(0,0,0,.35);
+  box-shadow:inset 0 2px 5px rgba(0,0,0,.45);
+}
+
+#accuracyFill{
+  width:0%;
+  height:100%;
+  border-radius:999px;
+  background:linear-gradient(90deg, #ff6b6b, #ffd166, #7cffb2);
+  box-shadow:0 0 16px rgba(124,255,178,.45);
+}
+  
+  footer{
+  position:fixed;
+  left:8px;
+  bottom:4px;
+  z-index:99999;
+
+  padding:3px 7px;
+  border-radius:999px;
+
+  font-size:10px;
+  font-family:Tahoma, sans-serif;
+  font-weight:700;
+}
+  
+ 
+</style>
+</head>
+
+<body>
+
+<canvas id="game"></canvas>
+
+<div id="ui">
+  <div class="topbar">
+    <div class="stat-box">
+      <div class="stat-label">ĐIỂM</div>
+      <div class="stat-value" id="scoreText">0</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-label">THỜI GIAN</div>
+      <div class="stat-value" id="timeText">90</div>
+    </div>
+
+    <div class="stat-box">
+      <div class="stat-label">COMBO</div>
+      <div class="stat-value" id="comboText">0</div>
+      
+    </div>
+  </div>
+
+  <div class="center-hint">
+    Quan sát chòm sao đang xoay và chọn số ngôi sao trong vòng
+  </div>
+
+  <div id="feedback"></div>
+
+  <div class="answer-panel" id="answerPanel">
+    <button class="answer-btn" data-answer="3">3</button>
+    <button class="answer-btn" data-answer="4">4</button>
+    <button class="answer-btn" data-answer="5">5</button>
+    <button class="answer-btn" data-answer="6">6</button>
+    <button class="answer-btn" data-answer="7">7</button>
+    <button class="answer-btn" data-answer="8">8</button>
+    <button class="answer-btn" data-answer="9">9</button>
+  </div>
+</div>
+
+<div class="overlay" id="startOverlay">
+  <div class="card">
+    <h1>QUAN SÁT<br>CHÒM SAO</h1>
+    <p>Các ngôi sao sẽ nối thành một vòng.</p>
+    <p>Nhiệm vụ của bạn là nhìn thật nhanh và chọn đúng số ngôi sao từ <b>3 đến 9</b>.</p>
+    <p>Chơi càng lâu, chòm sao quay càng nhanh. </p>
+    <button class="main-btn" id="startBtn">BẮT ĐẦU</button>
+  </div>
+</div>
+
+<div class="overlay hidden" id="gameOverOverlay">
+  <div class="card">
+    <h1>HẾT GIỜ</h1>
+    <p>Điểm của bạn</p>
+    <div class="big" id="finalScore">0</div>
+
+    <div class="accuracy-box">
+      <div class="accuracy-label">
+        <span>ĐỘ CHÍNH XÁC</span>
+        <span id="accuracyPercent">0%</span>
+      </div>
+      <div class="accuracy-track">
+        <div id="accuracyFill"></div>
+      </div>
+    </div>
+
+    <p id="finalRank">Khá ổn đó. Chơi lại để phá điểm nhé.</p>
+    <button class="main-btn" id="restartBtn">CHƠI LẠI</button>
+  </div>
+</div>
+  <footer>Version:D20260613-H11M41T0228 »»» developed by Tran Gia Bao</footer>
+
+
+<script>
+/* =====================================================
+   GAME: QUAN SÁT CHÒM SAO
+   BY: TRẦN GIA BẢO
+   ===================================================== */
+
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const scoreText = document.getElementById("scoreText");
+const timeText = document.getElementById("timeText");
+const comboText = document.getElementById("comboText");
+
+const feedback = document.getElementById("feedback");
+const answerPanel = document.getElementById("answerPanel");
+const startOverlay = document.getElementById("startOverlay");
+const gameOverOverlay = document.getElementById("gameOverOverlay");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
+const finalScore = document.getElementById("finalScore");
+const finalRank = document.getElementById("finalRank");
+const accuracyPercent = document.getElementById("accuracyPercent");
+const accuracyFill = document.getElementById("accuracyFill");
+
+let W = 0;
+let H = 0;
+let DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+const GAME_TIME = 90;
+
+let running = false;
+let score = 0;
+let combo = 0;
+let startTime = 0;
+let remainTime = GAME_TIME;
+
+let totalAnswers = 0;
+let correctAnswers = 0;
+
+let roundLocked = false;
+let constellation = null;
+
+/*
+  Tốc độ chỉ tăng khi sang câu hỏi kế tiếp.
+  Không tăng liên tục theo thời gian nữa.
+*/
+let questionIndex = 0;
+let lastStarCount = null;
+
+let bgStars = [];
+let particles = [];
+
+function resize(){
+  W = window.innerWidth;
+  H = window.innerHeight;
+
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+  makeBackgroundStars();
+}
+
+window.addEventListener("resize", resize);
+
+function rand(min, max){
+  return Math.random() * (max - min) + min;
+}
+
+function randInt(min, max){
+  return Math.floor(rand(min, max + 1));
+}
+
+function clamp(v, min, max){
+  return Math.max(min, Math.min(max, v));
+}
+
+/* =====================================================
+   BACKGROUND
+   ===================================================== */
+
+function makeBackgroundStars(){
+  bgStars = [];
+
+  const count = Math.floor((W * H) / 5200);
+
+  for(let i = 0; i < count; i++){
+    bgStars.push({
+      x: Math.random() * W,
+      y: Math.random() * H,
+      r: rand(.5, 1.8),
+      a: rand(.25, .95),
+      tw: rand(.6, 2.6),
+      phase: rand(0, Math.PI * 2)
+    });
+  }
+}
+
+function drawBackground(t){
+  const g = ctx.createRadialGradient(W * .5, H * .36, 0, W * .5, H * .48, Math.max(W,H) * .8);
+  g.addColorStop(0, "#12316b");
+  g.addColorStop(.42, "#07142d");
+  g.addColorStop(1, "#01030a");
+
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+
+  for(const s of bgStars){
+    const alpha = s.a * (.62 + Math.sin(t * .001 * s.tw + s.phase) * .32);
+
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.fillStyle = "#d8ecff";
+    ctx.beginPath();
+    ctx.arc(s.x, s.y, s.r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  drawNebula(t);
+}
+
+function drawNebula(t){
+  ctx.save();
+  ctx.globalAlpha = .08;
+  ctx.translate(W * .5, H * .5);
+  ctx.rotate(Math.sin(t * .00008) * .08);
+
+  const g = ctx.createLinearGradient(-W * .5, -H * .1, W * .5, H * .1);
+  g.addColorStop(0, "rgba(79,151,255,0)");
+  g.addColorStop(.48, "rgba(114,194,255,1)");
+  g.addColorStop(1, "rgba(188,120,255,0)");
+
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.ellipse(0, 0, W * .58, H * .12, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+/* =====================================================
+   CONSTELLATION
+   ===================================================== */
+
+function createConstellation(){
+  let count = randInt(3, 9);
+
+// Tránh câu kế tiếp trùng số sao với câu vừa rồi
+if(lastStarCount !== null){
+  let safeLoop = 0;
+
+  while(count === lastStarCount && safeLoop < 20){
+    count = randInt(3, 9);
+    safeLoop++;
+  }
+}
+
+lastStarCount = count;
+
+  const cx = W * .5;
+  const cy = H * .48;
+
+  const baseRadius = Math.min(W, H) * rand(.17, .24);
+  const points = [];
+  const startAngle = rand(0, Math.PI * 2);
+  const step = Math.PI * 2 / count;
+
+  /*
+    3-5 sao: dễ nhìn hơn, gần hình tròn
+    6-9 sao: đa dạng hình thù để khó quan sát hơn
+  */
+  const shapeType = count >= 6
+    ? ["irregular", "spiky", "oval", "twist", "clustered"][randInt(0, 4)]
+    : "regular";
+
+  const shapeSeed = rand(0, Math.PI * 2);
+
+  for(let i = 0; i < count; i++){
+    let a = startAngle + i * step;
+    let radiusFactor = 1;
+
+    if(shapeType === "regular"){
+      a += rand(-0.06, 0.06);
+      radiusFactor = rand(0.88, 1.08);
+    }
+
+    else if(shapeType === "irregular"){
+      a += rand(-0.20, 0.20);
+      radiusFactor = rand(0.68, 1.28);
+    }
+
+    else if(shapeType === "spiky"){
+      a += rand(-0.10, 0.10);
+      radiusFactor = (i % 2 === 0)
+        ? rand(1.08, 1.34)
+        : rand(0.58, 0.84);
+    }
+
+    else if(shapeType === "oval"){
+      const wave = Math.cos(i * step + shapeSeed);
+      a += rand(-0.10, 0.10);
+      radiusFactor = 0.76 + Math.abs(wave) * 0.46;
+    }
+
+    else if(shapeType === "twist"){
+      a += Math.sin(i * 1.7 + shapeSeed) * 0.22;
+      radiusFactor = 0.72 + Math.abs(Math.cos(i * 1.35 + shapeSeed)) * 0.42;
+    }
+
+    else if(shapeType === "clustered"){
+      a += Math.sin(i * 2.4 + shapeSeed) * 0.16;
+      radiusFactor = 0.62 + Math.abs(Math.sin(i * 1.15 + shapeSeed)) * 0.56;
+    }
+
+    const starSize =
+      count >= 6
+        ? rand(4.6, 7.0)
+        : rand(5.6, 8.6);
+
+    points.push({
+      angle: a,
+      radius: baseRadius * radiusFactor,
+      starSize,
+      glow: rand(.7, 1.3),
+      pulse: rand(0, Math.PI * 2)
+    });
+  }
+
+  constellation = {
+    count,
+    cx,
+    cy,
+    points,
+    rotation: rand(0, Math.PI * 2),
+    birth: performance.now(),
+    scalePulse: rand(0, Math.PI * 2)
+  };
+}
+
+function getDifficulty(){
+  /*
+    questionIndex = số câu đã trả lời xong
+    Câu 1: questionIndex = 0
+    Câu 2: questionIndex = 1
+  */
+
+  const questionNumber = questionIndex + 1;
+
+  // Câu đầu tiên không quay
+  if(questionNumber === 1){
+    return 0;
+  }
+
+  let speedLevel = 0;
+
+  // Câu 2-5: mỗi câu +0.3x
+  if(questionNumber <= 5){
+    speedLevel = (questionNumber - 1) * 0.3;
+  }
+
+  // Câu 6-10: mỗi câu +0.6x
+  else if(questionNumber <= 10){
+    speedLevel = 1.2 + (questionNumber - 5) * 0.6;
+  }
+
+  // Câu 11-15: mỗi câu +1x
+  else if(questionNumber <= 15){
+    speedLevel = 4.2 + (questionNumber - 10) * 1;
+  }
+
+  // Từ câu 16 trở đi: mỗi câu +1.5x
+  else{
+    speedLevel = 9.2 + (questionNumber - 15) * 1.5;
+  }
+
+  return Math.min(speedLevel, 20);
+}
+  
+function drawConstellation(t, dt){
+  if(!constellation) return;
+
+  const speedLevel = getDifficulty();
+
+  const dir = Math.sin(constellation.birth * .01) > 0 ? 1 : -1;
+
+let rotateSpeed = 0;
+
+if(speedLevel > 0){
+  rotateSpeed = (0.00065 + speedLevel * 0.00034) * dir;
+}
+
+constellation.rotation += rotateSpeed * dt;
+
+  const appear = clamp((t - constellation.birth) / 260, 0, 1);
+  const pulseScale = 1 + Math.sin(t * .002 + constellation.scalePulse) * .018;
+
+  const screenPoints = [];
+
+  for(const p of constellation.points){
+    const a = p.angle + constellation.rotation;
+    const x = constellation.cx + Math.cos(a) * p.radius * pulseScale;
+    const y = constellation.cy + Math.sin(a) * p.radius * pulseScale;
+    screenPoints.push({ x, y, p });
+  }
+
+  drawConstellationGlow(screenPoints, appear);
+  drawConstellationLines(screenPoints, appear);
+  drawConstellationStars(screenPoints, t, appear);
+  drawCenterCore(t, appear);
+}
+
+function drawConstellationGlow(points, appear){
+  if(points.length < 2) return;
+
+  ctx.save();
+  ctx.globalAlpha = .14 * appear;
+  ctx.lineWidth = 18;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "#79caff";
+  ctx.shadowColor = "#73c8ff";
+  ctx.shadowBlur = 26;
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+
+  for(let i = 1; i < points.length; i++){
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawConstellationLines(points, appear){
+  ctx.save();
+
+  ctx.globalAlpha = .78 * appear;
+  ctx.lineWidth = 2.2;
+  ctx.lineJoin = "round";
+  ctx.lineCap = "round";
+  ctx.strokeStyle = "rgba(184,225,255,.92)";
+  ctx.shadowColor = "#75cfff";
+  ctx.shadowBlur = 12;
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+
+  for(let i = 1; i < points.length; i++){
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+
+  ctx.restore();
+
+  ctx.save();
+  ctx.globalAlpha = .2 * appear;
+  ctx.lineWidth = 1;
+
+  ctx.setLineDash([6, 8]);
+  ctx.strokeStyle = "#ffffff";
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+
+  for(let i = 1; i < points.length; i++){
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  ctx.restore();
+}
+
+function drawConstellationStars(points, t, appear){
+  for(const item of points){
+    const {x, y, p} = item;
+    const pulse = .78 + Math.sin(t * .004 + p.pulse) * .22;
+    const r = p.starSize * pulse;
+
+    ctx.save();
+    ctx.globalAlpha = appear;
+
+    ctx.shadowColor = "#dff5ff";
+    ctx.shadowBlur = 24 * p.glow;
+
+    const g = ctx.createRadialGradient(x, y, 0, x, y, r * 3.5);
+    g.addColorStop(0, "#ffffff");
+    g.addColorStop(.22, "#dff6ff");
+    g.addColorStop(.45, "rgba(102,194,255,.88)");
+    g.addColorStop(1, "rgba(102,194,255,0)");
+
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(x, y, r * 3.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(x, y, r, 0, Math.PI * 2);
+    ctx.fill();
+
+    drawStarSpark(x, y, r * 2.7, appear);
+
+    ctx.restore();
+  }
+}
+
+function drawStarSpark(x, y, size, appear){
+  ctx.save();
+  ctx.globalAlpha = .58 * appear;
+  ctx.strokeStyle = "#ffffff";
+  ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  ctx.moveTo(x - size, y);
+  ctx.lineTo(x + size, y);
+  ctx.moveTo(x, y - size);
+  ctx.lineTo(x, y + size);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawCenterCore(t, appear){
+  if(!constellation) return;
+
+  const r = Math.min(W,H) * .035;
+  const pulse = 1 + Math.sin(t * .005) * .08;
+
+  ctx.save();
+  ctx.globalAlpha = .18 * appear;
+  ctx.strokeStyle = "#93d9ff";
+  ctx.lineWidth = 1.5;
+  ctx.setLineDash([4, 8]);
+  ctx.beginPath();
+  ctx.arc(constellation.cx, constellation.cy, r * pulse, 0, Math.PI * 2);
+  ctx.stroke();
+  ctx.setLineDash([]);
+  ctx.restore();
+}
+
+/* =====================================================
+   PARTICLES
+   ===================================================== */
+
+function addBurst(x, y, good){
+  const amount = good ? 22 : 12;
+
+  for(let i = 0; i < amount; i++){
+    const a = rand(0, Math.PI * 2);
+    const sp = rand(1.2, good ? 4.2 : 2.8);
+
+    particles.push({
+      x,
+      y,
+      vx: Math.cos(a) * sp,
+      vy: Math.sin(a) * sp,
+      life: rand(360, 640),
+      maxLife: 640,
+      r: rand(1.4, 3.4),
+      good
+    });
+  }
+}
+
+function updateParticles(dt){
+  for(let i = particles.length - 1; i >= 0; i--){
+    const p = particles[i];
+
+    p.life -= dt;
+    p.x += p.vx * dt / 16.67;
+    p.y += p.vy * dt / 16.67;
+    p.vx *= .985;
+    p.vy *= .985;
+
+    if(p.life <= 0){
+      particles.splice(i, 1);
+    }
+  }
+}
+
+function drawParticles(){
+  for(const p of particles){
+    const a = clamp(p.life / p.maxLife, 0, 1);
+
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.fillStyle = p.good ? "#fff2a8" : "#ff7b7b";
+    ctx.shadowColor = p.good ? "#ffd96a" : "#ff4b4b";
+    ctx.shadowBlur = 12;
+
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+
+/* =====================================================
+   GAME FLOW
+   ===================================================== */
+
+function startGame(){
+  running = true;
+  score = 0;
+  combo = 0;
+  totalAnswers = 0;
+correctAnswers = 0;
+remainTime = GAME_TIME;
+startTime = performance.now();
+roundLocked = false;
+questionIndex = 0;
+lastStarCount = null;
+particles = [];
+
+  startOverlay.classList.add("hidden");
+  gameOverOverlay.classList.add("hidden");
+
+  updateUI();
+  setButtonsLocked(false);
+  createConstellation();
+}
+
+function endGame(){
+  running = false;
+  setButtonsLocked(true);
+
+  finalScore.textContent = score;
+const accuracy = totalAnswers > 0
+  ? Math.round((correctAnswers / totalAnswers) * 100)
+  : 0;
+
+animateAccuracyBar(accuracy);
+  if(score >= 900){
+    finalRank.textContent = "Mắt đại bàng luôn rồi đó. Quá bén. 🦅";
+  }else if(score >= 600){
+    finalRank.textContent = "Phản xạ tốt, quan sát ổn áp.";
+  }else if(score >= 350){
+    finalRank.textContent = "Khá ổn. Tập thêm chút là lên trình.";
+  }else{
+    finalRank.textContent = "Chưa nóng máy thôi. Chơi lại là khác ngay.";
+  }
+
+  gameOverOverlay.classList.remove("hidden");
+}
+
+function updateUI(){
+  scoreText.textContent = score;
+  comboText.textContent = combo;
+  timeText.textContent = Math.ceil(remainTime);
+
+  
+}
+
+function setButtonsLocked(lock){
+  document.querySelectorAll(".answer-btn").forEach(btn => {
+    btn.classList.toggle("locked", lock);
+  });
+}
+
+function answer(value){
+  if(!running || roundLocked || !constellation) return;
+
+  roundLocked = true;
+  setButtonsLocked(true);
+
+  const correct = value === constellation.count;
+  totalAnswers++;
+
+if(correct){
+  correctAnswers++;
+}
+
+  if(correct){
+    combo++;
+
+    const comboBonus = Math.min(combo * 2, 30);
+    const speedBonus = Math.floor(getDifficulty() * 2);
+
+    score += 10 + comboBonus + speedBonus;
+
+    showFeedback("✓", "#7CFFB2");
+    addBurst(constellation.cx, constellation.cy, true);
+ }else{
+  combo = 0;
+
+  showFeedback("✕", "#FF6B6B");
+  addBurst(constellation.cx, constellation.cy, false);
+}
+
+  updateUI();
+
+  setTimeout(() => {
+  if(!running) return;
+
+  questionIndex++;
+  createConstellation();
+
+  roundLocked = false;
+  setButtonsLocked(false);
+}, correct ? 320 : 520);
+}
+
+function showFeedback(text, color){
+  feedback.textContent = text;
+  feedback.style.color = color;
+  feedback.classList.add("show");
+
+  setTimeout(() => {
+    feedback.classList.remove("show");
+  }, 230);
+}
+function animateAccuracyBar(targetPercent){
+  let start = null;
+  const duration = 900;
+
+  accuracyPercent.textContent = "0%";
+  accuracyFill.style.width = "0%";
+
+  function step(timestamp){
+    if(!start) start = timestamp;
+
+    const progress = Math.min((timestamp - start) / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = Math.round(targetPercent * eased);
+
+    accuracyPercent.textContent = current + "%";
+    accuracyFill.style.width = current + "%";
+
+    if(progress < 1){
+      requestAnimationFrame(step);
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+  
+/* =====================================================
+   LOOP
+   ===================================================== */
+
+let lastTime = performance.now();
+
+function loop(now){
+  const dt = Math.min(now - lastTime, 34);
+  lastTime = now;
+
+  if(running){
+    const elapsed = (now - startTime) / 1000;
+    remainTime = Math.max(0, GAME_TIME - elapsed);
+
+    if(remainTime <= 0){
+      remainTime = 0;
+      updateUI();
+      endGame();
+    }else{
+      updateUI();
+    }
+  }
+
+  drawBackground(now);
+
+  if(constellation){
+    drawConstellation(now, dt);
+  }else{
+    drawIdleConstellation(now, dt);
+  }
+
+  updateParticles(dt);
+  drawParticles();
+
+  requestAnimationFrame(loop);
+}
+
+function drawIdleConstellation(t, dt){
+  const cx = W * .5;
+  const cy = H * .48;
+  const r = Math.min(W,H) * .21;
+  const count = 7;
+  const rot = t * .00018;
+
+  const points = [];
+
+  for(let i = 0; i < count; i++){
+    const a = rot + i * Math.PI * 2 / count;
+    points.push({
+      x: cx + Math.cos(a) * r,
+      y: cy + Math.sin(a) * r
+    });
+  }
+
+  ctx.save();
+  ctx.globalAlpha = .25;
+  ctx.strokeStyle = "#9bdcff";
+  ctx.lineWidth = 2;
+  ctx.shadowColor = "#75cfff";
+  ctx.shadowBlur = 14;
+
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+
+  for(let i = 1; i < points.length; i++){
+    ctx.lineTo(points[i].x, points[i].y);
+  }
+
+  ctx.closePath();
+  ctx.stroke();
+
+  for(const p of points){
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, 5.5, 0, Math.PI * 2);
+    ctx.fillStyle = "#ffffff";
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+/* =====================================================
+   EVENTS
+   ===================================================== */
+
+answerPanel.addEventListener("click", e => {
+  const btn = e.target.closest(".answer-btn");
+  if(!btn) return;
+
+  const value = Number(btn.dataset.answer);
+  answer(value);
+});
+
+startBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", startGame);
+
+window.addEventListener("keydown", e => {
+  const n = Number(e.key);
+
+  if(n >= 3 && n <= 9){
+    answer(n);
+  }
+
+  if(e.key === "Enter" && !running){
+    startGame();
+  }
+});
+
+resize();
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
