@@ -1,0 +1,1261 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Bóng nảy</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Tahoma, sans-serif;
+  background:#9ee7ff;
+  touch-action:none;
+}
+
+canvas{
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
+  display:block;
+}
+
+/* =========================
+   UI
+========================= */
+
+#ui{
+  position:fixed;
+  inset:0;
+  z-index:5;
+  pointer-events:none;
+}
+
+#topBar{
+  position:absolute;
+  top:10px;
+  left:10px;
+  right:10px;
+  display:flex;
+  justify-content:space-between;
+  gap:8px;
+  align-items:flex-start;
+}
+
+.statBox{
+  min-width:96px;
+  padding:8px 10px;
+  border-radius:16px;
+  background:rgba(255,255,255,0.72);
+  border:2px solid rgba(255,255,255,0.95);
+  box-shadow:0 8px 18px rgba(0,80,130,0.16);
+  color:#11607b;
+  font-weight:900;
+  font-size:13px;
+  line-height:1.35;
+  backdrop-filter:blur(6px);
+}
+
+.statBox span{
+  color:#ff7a00;
+}
+
+/* =========================
+   QUESTION
+========================= */
+
+#questionBox{
+  position:absolute;
+  left:50%;
+  transform:translateX(-50%);
+  width:min(92vw,560px);
+  padding:11px 14px;
+  border-radius:0;
+  text-align:center;
+  background:linear-gradient(180deg,rgba(255,255,255,0.92),rgba(255,255,255,0.72));
+  border:2px solid rgba(255,255,255,0.96);
+  box-shadow:0 10px 22px rgba(0,90,160,0.18);
+  color:#0d6385;
+  font-size:17px;
+  font-weight:1000;
+  text-shadow:0 1px 0 rgba(255,255,255,0.8);
+  line-height:1.2;
+}
+
+/* Cùng định dạng, chỉ khác vị trí */
+#questionBox.question-high{
+  top:70px;
+}
+
+#questionBox.question-low{
+  top:calc(72vh + 18px);
+}
+
+#questionMode{
+  color:#ff5b7e;
+}
+
+/* =========================
+   ANSWER BUTTONS
+========================= */
+
+#answerPad{
+  position:absolute;
+  left:8px;
+  right:8px;
+  bottom:29px;
+  display:grid;
+  grid-template-columns:repeat(7,1fr);
+  gap:6px;
+  pointer-events:auto;
+}
+  
+  footer{
+  position:fixed;
+  left:8px;
+  bottom:4px;
+  z-index:99999;
+
+  padding:3px 7px;
+  border-radius:999px;
+
+  font-size:10px;
+  font-family:Tahoma, sans-serif;
+  font-weight:700;
+}
+
+.answerBtn{
+  height:52px;
+  border:0;
+  border-radius:18px;
+  background:linear-gradient(180deg,#ffffff,#dff8ff);
+  color:#12708e;
+  font-size:22px;
+  font-weight:1000;
+  box-shadow:
+    0 7px 0 #7ecbe3,
+    0 12px 20px rgba(0,79,124,0.22),
+    inset 0 2px 0 rgba(255,255,255,0.9);
+  border:2px solid rgba(255,255,255,0.95);
+  cursor:pointer;
+  transition:transform .08s, filter .12s, opacity .12s;
+}
+
+.answerBtn:active{
+  transform:translateY(5px);
+  box-shadow:
+    0 2px 0 #7ecbe3,
+    0 7px 14px rgba(0,79,124,0.2),
+    inset 0 2px 0 rgba(255,255,255,0.9);
+}
+
+.answerBtn:disabled{
+  opacity:.32;
+  filter:grayscale(.55);
+  pointer-events:none;
+}
+
+/* =========================
+   FEEDBACK
+========================= */
+
+#feedback{
+  position:absolute;
+  left:50%;
+  top:50%;
+  transform:translate(-50%,-50%) scale(.78);
+
+  width:138px;
+  height:138px;
+  border-radius:50%;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:104px;
+  font-weight:1000;
+  line-height:1;
+
+  opacity:0;
+  pointer-events:none;
+
+  background:rgba(255,255,255,.68);
+  border:3px solid rgba(255,255,255,.95);
+  box-shadow:
+    0 0 34px rgba(120,200,255,.42),
+    0 18px 35px rgba(0,80,130,.18),
+    inset 0 2px 0 rgba(255,255,255,.65);
+
+  text-shadow:
+    0 0 14px currentColor,
+    0 4px 0 rgba(255,255,255,.55);
+
+  transition:opacity .14s ease, transform .14s ease;
+}
+
+#feedback.show{
+  opacity:1;
+  transform:translate(-50%,-50%) scale(1.08);
+}
+
+/* =========================
+   START / GAME OVER
+========================= */
+
+.overlay{
+  position:fixed;
+  inset:0;
+  z-index:10;
+  display:flex;
+  justify-content:center;
+  align-items:center;
+  padding:20px;
+  background:
+    radial-gradient(circle at 25% 20%,rgba(255,255,255,.42),transparent 34%),
+    linear-gradient(180deg,rgba(95,211,255,.74),rgba(102,216,145,.66));
+  backdrop-filter:blur(7px);
+}
+
+.overlay.hide{
+  display:none;
+}
+
+.menuCard{
+  width:min(92vw,430px);
+  padding:24px 20px;
+  border-radius:32px;
+  background:rgba(255,255,255,.78);
+  border:3px solid rgba(255,255,255,.95);
+  box-shadow:0 24px 50px rgba(0,95,150,.22);
+  text-align:center;
+  color:#12607f;
+}
+
+.menuCard h1{
+  font-size:31px;
+  color:#ff7a00;
+  text-shadow:0 2px 0 white;
+  margin-bottom:8px;
+  line-height:1.12;
+}
+
+.menuCard p{
+  font-size:14px;
+  line-height:1.55;
+  font-weight:800;
+  color:#347f98;
+  margin:10px 0;
+}
+
+.mainBtn{
+  margin-top:14px;
+  width:100%;
+  height:56px;
+  border:0;
+  border-radius:22px;
+  background:linear-gradient(180deg,#ffdb5c,#ff9d2e);
+  color:#7a3900;
+  font-size:20px;
+  font-weight:1000;
+  box-shadow:
+    0 8px 0 #d97919,
+    0 16px 24px rgba(177,99,0,.22),
+    inset 0 2px 0 rgba(255,255,255,.65);
+  cursor:pointer;
+}
+
+.mainBtn:active{
+  transform:translateY(6px);
+  box-shadow:
+    0 2px 0 #d97919,
+    0 8px 16px rgba(177,99,0,.2);
+}
+
+#gameOverPanel{
+  display:none;
+}
+
+.resultList{
+  margin:14px 0 4px;
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+}
+
+.resultItem{
+  padding:12px 14px;
+  border-radius:18px;
+  background:rgba(255,255,255,.68);
+  border:2px solid rgba(255,255,255,.82);
+  box-shadow:
+    0 8px 18px rgba(0,95,150,.12),
+    inset 0 1px 0 rgba(255,255,255,.65);
+}
+
+.resultLabel{
+  font-size:11px;
+  font-weight:1000;
+  letter-spacing:.8px;
+  color:#4b8ca0;
+  margin-bottom:4px;
+}
+
+.resultValue{
+  font-size:28px;
+  font-weight:1000;
+  color:#ff7a00;
+  text-shadow:0 2px 0 rgba(255,255,255,.9);
+  line-height:1.05;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media(max-width:420px){
+#questionBox{
+  width:min(92vw,390px);
+  font-size:15px;
+  padding:9px 10px;
+}
+
+#questionBox.question-high{
+  top:65px;
+}
+
+#questionBox.question-low{
+  top:calc(72vh + 14px);
+}
+  .statBox{
+    font-size:12px;
+    min-width:84px;
+    padding:7px 8px;
+  }
+
+  .answerBtn{
+    height:48px;
+    border-radius:15px;
+    font-size:20px;
+  }
+
+#feedback{
+  width:118px;
+  height:118px;
+  font-size:92px;
+  }
+}
+</style>
+</head>
+
+<body>
+
+<audio id="soundCorrect" preload="auto" src="../audio/dung.mp3"></audio>
+<audio id="soundWrong" preload="auto" src="../audio/sai.mp3"></audio>
+
+<canvas id="gameCanvas"></canvas>
+
+<div id="ui">
+  <div id="topBar">
+    <div class="statBox">
+      Level: <span id="levelText">1</span><br>
+      Điểm: <span id="scoreText">0</span>
+    </div>
+
+    <div class="statBox" style="text-align:right">
+      Sai: <span id="wrongText">0</span>/3<br>
+      Best: <span id="bestText">0</span>
+    </div>
+  </div>
+
+  <div id="questionBox" class="question-high">
+    Bóng nào nảy <span id="questionMode">CAO NHẤT</span>?
+  </div>
+
+  <div id="feedback"></div>
+
+  <div id="answerPad">
+    <button class="answerBtn" data-num="1">1</button>
+    <button class="answerBtn" data-num="2">2</button>
+    <button class="answerBtn" data-num="3">3</button>
+    <button class="answerBtn" data-num="4">4</button>
+    <button class="answerBtn" data-num="5">5</button>
+    <button class="answerBtn" data-num="6">6</button>
+    <button class="answerBtn" data-num="7">7</button>
+  </div>
+</div>
+
+<div id="startPanel" class="overlay">
+  <div class="menuCard">
+    <h1>BÓNG NẢY</h1>
+    <p>
+      Quan sát các quả bóng đang nảy.<br>
+      Chọn đúng bóng nảy <b>cao nhất</b> hoặc <b>thấp nhất</b>.
+    </p>
+    <button id="startBtn" class="mainBtn">BẮT ĐẦU</button>
+  </div>
+</div>
+
+<div id="gameOverPanel" class="overlay">
+  <div class="menuCard">
+    <h1>KẾT THÚC<br>TRÒ CHƠI</h1>
+    <div class="finalScore">
+  <div class="resultList">
+  <div class="resultItem">
+    <div class="resultLabel">LEVEL</div>
+    <div class="resultValue" id="finalLevel">1</div>
+  </div>
+
+  <div class="resultItem">
+    <div class="resultLabel">ĐIỂM ĐẠT ĐƯỢC</div>
+    <div class="resultValue" id="finalScore">0</div>
+  </div>
+
+  <div class="resultItem">
+    <div class="resultLabel">KỈ LỤC</div>
+    <div class="resultValue" id="finalBest">0</div>
+  </div>
+</div>
+    <button id="restartBtn" class="mainBtn">CHƠI LẠI</button>
+  </div>
+</div>
+</div>
+    <footer>Version:D20260613-H16M57T9912 »»» developed by Tran Gia Bao</footer>
+
+
+<script>
+/* =========================================================
+   BÓNG NẢY QUAN SÁT
+   File game nằm trong /game/
+   Audio nằm ngoài /audio/
+   Đường dẫn:
+   ../audio/dung.mp3
+   ../audio/sai.mp3
+========================================================= */
+
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const levelText = document.getElementById("levelText");
+const scoreText = document.getElementById("scoreText");
+const wrongText = document.getElementById("wrongText");
+const bestText = document.getElementById("bestText");
+
+const questionModeText = document.getElementById("questionMode");
+const questionBox = document.getElementById("questionBox");
+const feedback = document.getElementById("feedback");
+
+const startPanel = document.getElementById("startPanel");
+const gameOverPanel = document.getElementById("gameOverPanel");
+const startBtn = document.getElementById("startBtn");
+const restartBtn = document.getElementById("restartBtn");
+
+const finalScore = document.getElementById("finalScore");
+const finalLevel = document.getElementById("finalLevel");
+const finalBest = document.getElementById("finalBest");
+
+const answerButtons = [...document.querySelectorAll(".answerBtn")];
+
+const soundCorrect = document.getElementById("soundCorrect");
+const soundWrong = document.getElementById("soundWrong");
+
+let W = 0;
+let H = 0;
+let DPR = 1;
+
+let running = false;
+let level = 1;
+let score = 0;
+let wrong = 0;
+let best = Number(localStorage.getItem("bounce_watch_best") || 0);
+
+let balls = [];
+let currentMode = "high";
+let correctNumber = 1;
+
+let locked = false;
+let highlightNumber = 0;
+
+let feedbackTimer = null;
+
+let lastTime = 0;
+let gameTime = 0;
+
+/*
+  roundStartTime dùng để tính chuyển động của lượt hiện tại.
+
+  Điểm sửa quan trọng:
+  - Khi bấm đáp án, KHÔNG reset roundStartTime.
+  - Vì vậy bóng không bị giật lại / khởi tạo lại nhịp nảy.
+  - roundStartTime chỉ đổi khi thực sự sang câu hỏi mới.
+*/
+let roundStartTime = 0;
+const ROUND_SCORE_MAX = 2222;
+const ROUND_SCORE_MIN = 250;
+const ROUND_SCORE_DECAY_SECONDS = 10;
+const COLORS = [
+  ["#ff6b8a","#ffb3c2"],
+  ["#4fc3ff","#b7eeff"],
+  ["#ffd34f","#fff1a5"],
+  ["#7dff86","#caffc6"],
+  ["#b275ff","#e2c4ff"],
+  ["#ff9b45","#ffd1a3"],
+  ["#46e3cf","#b8fff4"]
+];
+
+function resizeCanvas(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2);
+  W = window.innerWidth;
+  H = window.innerHeight;
+
+  canvas.width = Math.floor(W * DPR);
+  canvas.height = Math.floor(H * DPR);
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+
+  ctx.setTransform(DPR,0,0,DPR,0,0);
+}
+
+window.addEventListener("resize", resizeCanvas);
+resizeCanvas();
+
+function rand(min,max){
+  return min + Math.random() * (max - min);
+}
+
+function clamp(v,min,max){
+  return Math.max(min, Math.min(max, v));
+}
+ 
+ function getRoundScore(){
+  const elapsed = Math.max(0, gameTime - roundStartTime);
+  const progress = clamp(elapsed / ROUND_SCORE_DECAY_SECONDS, 0, 1);
+
+  return Math.round(
+    ROUND_SCORE_MAX - (ROUND_SCORE_MAX - ROUND_SCORE_MIN) * progress
+  );
+}
+function pingPong(value, length){
+  if(length <= 0) return 0;
+
+  const cycle = length * 2;
+  let v = value % cycle;
+
+  if(v < 0) v += cycle;
+
+  return v <= length ? v : cycle - v;
+}
+  
+function shuffle(arr){
+  for(let i = arr.length - 1; i > 0; i--){
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
+  }
+  return arr;
+}
+
+function getBallCount(lv){
+  if(lv <= 2) return 3;
+  if(lv <= 5) return 4;
+  if(lv <= 8) return 4;
+  if(lv <= 12) return 5;
+  if(lv <= 15) return 6;
+  return 7;
+}
+
+function isMovingLevel(lv){
+  return lv >= 6;
+}
+
+function isWallBounceLevel(lv){
+  return lv >= 8;
+}
+
+function getBounceSpeed(lv){
+  return 1.45 + lv * 0.075;
+}
+
+function getMoveSpeed(lv){
+  return 0.85 + lv * 0.045;
+}
+
+function getRadius(count){
+  if(W < 390) return count >= 7 ? 18 : count >= 6 ? 20 : 23;
+  return count >= 7 ? 22 : count >= 6 ? 24 : 27;
+}
+
+function makeAmplitudeList(count, lv){
+  const easySpread = lv <= 5 ? 122 : lv <= 15 ? 108 : 96;
+  const minAmp = clamp(52 + lv * 1.2, 52, 82);
+  const maxAmp = minAmp + easySpread;
+
+  const values = [];
+
+  for(let i = 0; i < count; i++){
+    const t = count === 1 ? 0 : i / (count - 1);
+    const jitter = rand(-6, 6);
+    values.push(minAmp + t * (maxAmp - minAmp) + jitter);
+  }
+
+  values.sort((a,b) => a - b);
+
+  for(let i = 1; i < values.length; i++){
+    if(values[i] - values[i - 1] < 18){
+      values[i] = values[i - 1] + 18;
+    }
+  }
+
+  return shuffle(values);
+}
+
+function createRound(){
+  locked = false;
+  highlightNumber = 0;
+
+  feedback.className = "";
+  feedback.innerHTML = "";
+
+  const count = getBallCount(level);
+  const moving = isMovingLevel(level);
+const wallBounce = isWallBounceLevel(level);
+const radius = getRadius(count);
+
+  const floorY = H * 0.72;
+  const safeTop = 125;
+  const maxAllowedAmp = Math.max(70, floorY - safeTop - radius);
+
+  const amps = makeAmplitudeList(count, level).map(a => {
+    return Math.min(a, maxAllowedAmp);
+  });
+
+  balls = [];
+
+  const leftPad = radius + 22;
+  const rightPad = W - radius - 22;
+  const usable = rightPad - leftPad;
+  const slot = usable / count;
+
+  for(let i = 0; i < count; i++){
+    const baseX = leftPad + slot * i + slot / 2;
+
+/*
+  Level 6–7: bóng chỉ lắc qua lại nhẹ quanh vị trí gốc.
+  Từ level 8: bóng dùng cơ chế nảy tường thật.
+*/
+const travel = moving && !wallBounce
+  ? Math.min(slot * 0.32, 46 + level * 3.2)
+  : 0;
+
+const pair = COLORS[i % COLORS.length];
+
+const wallMinX = radius + 14;
+const wallMaxX = W - radius - 14;
+
+/*
+  Tốc độ ngang tăng dần theo level.
+  Dùng xen kẽ hướng trái/phải để các bóng không chạy giống nhau.
+*/
+const wallSpeed = wallBounce
+  ? (58 + level * 7 + i * 5) * (i % 2 === 0 ? 1 : -1)
+  : 0;
+    /*
+      phase cố định trong mỗi lượt.
+      Không bị đổi khi người chơi bấm đáp án.
+    */
+  balls.push({
+  id:i + 1,
+  baseX,
+  x:baseX,
+  y:floorY - radius,
+  radius,
+  amp:amps[i],
+
+  phase:rand(0, Math.PI * 2),
+  movePhase:rand(0, Math.PI * 2),
+  moveDir:Math.random() < 0.5 ? -1 : 1,
+  travel,
+
+  wallBounce,
+  wallMinX,
+  wallMaxX,
+  wallStartX:baseX,
+  wallSpeed,
+
+  color1:pair[0],
+  color2:pair[1]
+});
+  }
+
+  currentMode = Math.random() < 0.5 ? "high" : "low";
+
+  if(currentMode === "high"){
+    correctNumber = balls.reduce((best,b) => {
+      return b.amp > best.amp ? b : best;
+    }, balls[0]).id;
+
+    questionModeText.textContent = "CAO NHẤT";
+    questionModeText.style.color = "#ff5b7e";
+
+    questionBox.classList.remove("question-low");
+    questionBox.classList.add("question-high");
+  }else{
+    correctNumber = balls.reduce((best,b) => {
+      return b.amp < best.amp ? b : best;
+    }, balls[0]).id;
+
+    questionModeText.textContent = "THẤP NHẤT";
+    questionModeText.style.color = "#2aa7ff";
+
+    questionBox.classList.remove("question-high");
+    questionBox.classList.add("question-low");
+  }
+
+  /*
+    Chỉ khi tạo câu hỏi mới thì mới reset thời gian của round.
+    Không gọi dòng này khi người chơi bấm đáp án.
+  */
+  roundStartTime = gameTime;
+
+  updateUI();
+  updateAnswerButtons();
+}
+
+function updateAnswerButtons(){
+  const activeCount = getBallCount(level);
+
+  answerButtons.forEach(btn => {
+    const num = Number(btn.dataset.num);
+    btn.disabled = num > activeCount || locked;
+  });
+}
+
+function updateUI(){
+  levelText.textContent = level;
+  scoreText.textContent = score;
+  wrongText.textContent = wrong;
+  bestText.textContent = best;
+}
+
+function playSound(type){
+  const audio = type === "correct" ? soundCorrect : soundWrong;
+
+  try{
+    audio.pause();
+    audio.currentTime = 0;
+    audio.volume = 1;
+    audio.play().catch(()=>{});
+  }catch(e){}
+}
+
+function unlockAudio(){
+  [soundCorrect, soundWrong].forEach(audio => {
+    try{
+      const oldVolume = audio.volume;
+      audio.volume = 0;
+
+      audio.play().then(() => {
+        audio.pause();
+        audio.currentTime = 0;
+        audio.volume = oldVolume;
+      }).catch(() => {
+        audio.volume = oldVolume;
+      });
+    }catch(e){}
+  });
+}
+
+function chooseAnswer(num){
+  if(!running || locked) return;
+
+  const activeCount = getBallCount(level);
+  if(num > activeCount) return;
+
+  /*
+    Quan trọng:
+    Sau khi bấm đáp án, chỉ khóa nút + hiện feedback.
+    KHÔNG tạo lại bóng ở đây.
+    KHÔNG reset gameTime.
+    KHÔNG reset roundStartTime.
+  */
+  locked = true;
+  updateAnswerButtons();
+
+  const isCorrect = num === correctNumber;
+
+  /*
+    Chỉ highlight bóng đúng.
+    Trạng thái nảy vẫn giữ nguyên và tiếp tục chạy.
+  */
+  highlightNumber = correctNumber;
+
+  if(isCorrect){
+    playSound("correct");
+
+    const earnedScore = getRoundScore();
+
+score += earnedScore;
+level++;
+
+    best = Math.max(best, score);
+    localStorage.setItem("bounce_watch_best", best);
+
+ showFeedback("✓", "#19c96b", 550);
+
+    /*
+      Chỉ sau khi feedback hiện xong mới sang câu hỏi mới.
+      Lúc này mới tạo round mới.
+    */
+    setTimeout(() => {
+      if(running){
+        createRound();
+      }
+    }, 650);
+
+  }else{
+    playSound("wrong");
+
+    wrong++;
+
+    const waitTime = wrong >= 3 ? 550 : 450;
+
+showFeedback("✕", "#ff4d68", waitTime);
+
+if(wrong >= 3){
+  setTimeout(() => {
+    if(running){
+      endGame();
+    }
+  }, waitTime);
+}else{
+  setTimeout(() => {
+    if(running){
+      createRound();
+    }
+  }, waitTime);
+}
+  }
+
+  updateUI();
+}
+
+function showFeedback(text, color, duration){
+  if(feedbackTimer){
+    clearTimeout(feedbackTimer);
+    feedbackTimer = null;
+  }
+
+  feedback.textContent = text;
+  feedback.style.color = color;
+  feedback.classList.add("show");
+
+  feedbackTimer = setTimeout(() => {
+    feedback.classList.remove("show");
+    feedbackTimer = null;
+  }, duration);
+}
+
+answerButtons.forEach(btn => {
+  btn.addEventListener("click", () => {
+    unlockAudio();
+    chooseAnswer(Number(btn.dataset.num));
+  });
+});
+
+startBtn.addEventListener("click", () => {
+  unlockAudio();
+  startGame();
+});
+
+restartBtn.addEventListener("click", () => {
+  unlockAudio();
+  startGame();
+});
+
+function startGame(){
+  level = 1;
+  score = 0;
+  wrong = 0;
+
+  locked = false;
+  running = true;
+  gameTime = 0;
+  roundStartTime = 0;
+  lastTime = performance.now();
+
+  startPanel.classList.add("hide");
+  gameOverPanel.style.display = "none";
+
+  createRound();
+}
+
+function endGame(){
+  running = false;
+
+  finalScore.textContent = score;
+  finalLevel.textContent = level;
+  finalBest.textContent = best;
+
+  gameOverPanel.style.display = "flex";
+}
+
+/* =========================
+   DRAW HELPERS
+========================= */
+
+function roundRect(ctx,x,y,w,h,r){
+  r = Math.min(r, w / 2, h / 2);
+
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function drawBackground(){
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,"#92e7ff");
+  sky.addColorStop(0.55,"#c9f7ff");
+  sky.addColorStop(1,"#9bea8e");
+
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H);
+
+  drawSun();
+  drawCloud(W * 0.18, H * 0.16, 1.05);
+  drawCloud(W * 0.73, H * 0.13, 0.92);
+  drawCloud(W * 0.48, H * 0.23, 0.72);
+
+  drawHills();
+  drawGround();
+}
+
+function drawSun(){
+  const x = W * 0.83;
+  const y = H * 0.13;
+  const r = Math.min(45, W * 0.09);
+
+  const glow = ctx.createRadialGradient(x,y,5,x,y,r * 2.8);
+  glow.addColorStop(0,"rgba(255,240,120,.8)");
+  glow.addColorStop(1,"rgba(255,240,120,0)");
+
+  ctx.fillStyle = glow;
+  ctx.beginPath();
+  ctx.arc(x,y,r * 2.8,0,Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "#ffd85a";
+  ctx.beginPath();
+  ctx.arc(x,y,r,0,Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(255,255,255,.48)";
+  ctx.beginPath();
+  ctx.arc(x - r * .25, y - r * .28, r * .25, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function drawCloud(x,y,s){
+  ctx.save();
+  ctx.translate(x,y);
+  ctx.scale(s,s);
+
+  ctx.fillStyle = "rgba(255,255,255,.86)";
+  ctx.beginPath();
+  ctx.arc(-32,12,22,0,Math.PI * 2);
+  ctx.arc(-10,-2,29,0,Math.PI * 2);
+  ctx.arc(22,5,24,0,Math.PI * 2);
+  ctx.arc(45,15,18,0,Math.PI * 2);
+  ctx.fill();
+
+  ctx.fillStyle = "rgba(210,240,255,.48)";
+  ctx.beginPath();
+  ctx.ellipse(8,23,70,13,0,0,Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawHills(){
+  ctx.fillStyle = "#8bdc7a";
+  ctx.beginPath();
+  ctx.moveTo(0,H * .66);
+  ctx.quadraticCurveTo(W * .22,H * .51,W * .48,H * .65);
+  ctx.quadraticCurveTo(W * .73,H * .78,W,H * .60);
+  ctx.lineTo(W,H);
+  ctx.lineTo(0,H);
+  ctx.closePath();
+  ctx.fill();
+
+  ctx.fillStyle = "#65ca69";
+  ctx.beginPath();
+  ctx.moveTo(0,H * .72);
+  ctx.quadraticCurveTo(W * .25,H * .58,W * .55,H * .73);
+  ctx.quadraticCurveTo(W * .78,H * .84,W,H * .69);
+  ctx.lineTo(W,H);
+  ctx.lineTo(0,H);
+  ctx.closePath();
+  ctx.fill();
+}
+
+function drawGround(){
+  const groundY = H * .72;
+
+  const grass = ctx.createLinearGradient(0,groundY,0,H);
+  grass.addColorStop(0,"#77de63");
+  grass.addColorStop(1,"#39b856");
+
+  ctx.fillStyle = grass;
+  ctx.fillRect(0,groundY,W,H - groundY);
+
+  ctx.strokeStyle = "rgba(255,255,255,.22)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.moveTo(0,groundY + 3);
+  ctx.bezierCurveTo(W * .25,groundY - 8,W * .55,groundY + 14,W,groundY + 1);
+  ctx.stroke();
+
+  for(let i = 0; i < 34; i++){
+    const x = (i * 71 + 19) % W;
+    const y = groundY + 22 + ((i * 37) % Math.max(60, H * .22));
+
+    ctx.strokeStyle = "rgba(25,135,55,.23)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x,y);
+    ctx.quadraticCurveTo(x + 4,y - 13,x + 8,y - 22);
+    ctx.stroke();
+  }
+}
+
+function drawBall(ball, t){
+  const speed = getBounceSpeed(level);
+  const moveSpeed = getMoveSpeed(level);
+
+  /*
+    t là thời gian của lượt hiện tại.
+    Khi trả lời, t vẫn chạy tiếp.
+    Không bị đưa về 0 cho tới round mới.
+  */
+  const bounce = Math.abs(Math.sin(t * speed + ball.phase));
+  const floorY = H * .72;
+
+  if(ball.wallBounce){
+  const length = ball.wallMaxX - ball.wallMinX;
+  const startOffset = ball.wallStartX - ball.wallMinX;
+  const bouncedX = pingPong(startOffset + t * ball.wallSpeed, length);
+
+  ball.x = ball.wallMinX + bouncedX;
+}else{
+  ball.x = ball.baseX + Math.sin(t * moveSpeed * ball.moveDir + ball.movePhase) * ball.travel;
+}
+
+ball.y = floorY - ball.radius - bounce * ball.amp;
+
+  const heightRatio = bounce;
+  const shadowScale = 1 - heightRatio * .42;
+  const shadowAlpha = .22 - heightRatio * .11;
+
+  ctx.save();
+
+  /* Shadow */
+  ctx.fillStyle = `rgba(0,70,70,${shadowAlpha})`;
+  ctx.beginPath();
+  ctx.ellipse(
+    ball.x,
+    floorY + 9,
+    ball.radius * 1.12 * shadowScale,
+    ball.radius * .28 * shadowScale,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  /* Highlight bóng đúng */
+  if(highlightNumber === ball.id){
+    const pulse = 1 + Math.sin(gameTime * 12) * .06;
+
+    ctx.strokeStyle = "rgba(255,255,255,.95)";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius * 1.34 * pulse, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,196,0,.95)";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(ball.x, ball.y, ball.radius * 1.55 * pulse, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  /* Body */
+  const grad = ctx.createRadialGradient(
+    ball.x - ball.radius * .35,
+    ball.y - ball.radius * .42,
+    ball.radius * .12,
+    ball.x,
+    ball.y,
+    ball.radius * 1.15
+  );
+
+  grad.addColorStop(0, "#ffffff");
+  grad.addColorStop(.18, ball.color2);
+  grad.addColorStop(1, ball.color1);
+
+  ctx.fillStyle = grad;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.strokeStyle = "rgba(255,255,255,.8)";
+  ctx.lineWidth = 3;
+  ctx.beginPath();
+  ctx.arc(ball.x, ball.y, ball.radius - 2, 0, Math.PI * 2);
+  ctx.stroke();
+
+  /* Shine */
+  ctx.fillStyle = "rgba(255,255,255,.65)";
+  ctx.beginPath();
+  ctx.arc(
+    ball.x - ball.radius * .34,
+    ball.y - ball.radius * .38,
+    ball.radius * .18,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  /* Bottom soft shade */
+  ctx.fillStyle = "rgba(0,77,105,.22)";
+  ctx.beginPath();
+  ctx.ellipse(
+    ball.x + ball.radius * .18,
+    ball.y + ball.radius * .28,
+    ball.radius * .38,
+    ball.radius * .16,
+    -.25,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  /* Number */
+  ctx.fillStyle = "#ffffff";
+  ctx.strokeStyle = "rgba(0,70,95,.38)";
+  ctx.lineWidth = 4;
+  ctx.font = `900 ${Math.floor(ball.radius * 1.05)}px Tahoma`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.strokeText(ball.id, ball.x, ball.y + 1);
+  ctx.fillText(ball.id, ball.x, ball.y + 1);
+
+  ctx.restore();
+}
+
+/* =========================
+   IDLE MENU BALLS
+========================= */
+
+function drawIdleBalls(t){
+  const floorY = H * .72;
+
+  const demo = [
+    {x:W*.37, c1:"#ff6b8a", c2:"#ffc2cf", p:0, n:1},
+    {x:W*.50, c1:"#4fc3ff", c2:"#b7eeff", p:1.7, n:2},
+    {x:W*.63, c1:"#ffd34f", c2:"#fff1a5", p:3.1, n:3}
+  ];
+
+  demo.forEach(d => {
+    const r = Math.min(32, W * .07);
+    const amp = 80;
+    const y = floorY - r - Math.abs(Math.sin(t * 1.8 + d.p)) * amp;
+
+    ctx.fillStyle = "rgba(0,70,70,.16)";
+    ctx.beginPath();
+    ctx.ellipse(d.x, floorY + 9, r * 1.05, r * .23, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const grad = ctx.createRadialGradient(
+      d.x - r * .35,
+      y - r * .4,
+      r * .1,
+      d.x,
+      y,
+      r * 1.1
+    );
+
+    grad.addColorStop(0,"#fff");
+    grad.addColorStop(.2,d.c2);
+    grad.addColorStop(1,d.c1);
+
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.arc(d.x,y,r,0,Math.PI*2);
+    ctx.fill();
+
+    ctx.fillStyle = "#fff";
+    ctx.strokeStyle = "rgba(0,70,95,.36)";
+    ctx.lineWidth = 4;
+    ctx.font = `900 ${Math.floor(r * 1.05)}px Tahoma`;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.strokeText(d.n,d.x,y+1);
+    ctx.fillText(d.n,d.x,y+1);
+  });
+}
+
+/* =========================
+   LOOP
+========================= */
+
+function loop(now){
+  const dt = Math.min(0.04, (now - lastTime) / 1000 || 0);
+  lastTime = now;
+  gameTime += dt;
+
+  drawBackground();
+
+  if(running){
+    /*
+      Dùng thời gian riêng của round.
+      roundTime chỉ về 0 khi createRound().
+      Khi người chơi bấm đáp án thì roundTime vẫn tiếp tục,
+      nên bóng không bị khởi tạo lại.
+    */
+    const roundTime = gameTime - roundStartTime;
+
+    for(const ball of balls){
+      drawBall(ball, roundTime);
+    }
+  }else{
+    drawIdleBalls(gameTime);
+  }
+
+  requestAnimationFrame(loop);
+}
+
+bestText.textContent = best;
+requestAnimationFrame(loop);
+</script>
+
+</body>
+</html>
