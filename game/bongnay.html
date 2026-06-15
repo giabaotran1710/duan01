@@ -2,7 +2,12 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport"
+content="width=device-width,
+initial-scale=1,
+viewport-fit=cover,
+maximum-scale=1,
+user-scalable=no">
 <title>Bóng nảy</title>
 
 <style>
@@ -100,7 +105,8 @@ canvas{
 }
 
 #questionBox.question-low{
-  top:calc(72vh + 18px);
+  top:auto;
+  bottom:150px;
 }
 
 #questionMode{
@@ -115,7 +121,11 @@ canvas{
   position:absolute;
   left:8px;
   right:8px;
-  bottom:29px;
+
+  bottom:calc(
+    29px + env(safe-area-inset-bottom)
+  );
+
   display:grid;
   grid-template-columns:repeat(5,1fr);
   gap:12px;
@@ -125,7 +135,9 @@ canvas{
   footer{
   position:fixed;
   left:8px;
-  bottom:4px;
+  bottom:calc(
+    4px + env(safe-area-inset-bottom)
+  );
   z-index:99999;
 
   padding:3px 7px;
@@ -337,7 +349,8 @@ canvas{
 }
 
 #questionBox.question-low{
-  top:calc(67vh + 14px);
+  top:auto;
+  bottom:145px;
 }
   .statBox{
     font-size:12px;
@@ -357,6 +370,21 @@ canvas{
   font-size:92px;
   }
 }
+  
+  @supports (-webkit-touch-callout:none){
+
+  #questionBox.question-low{
+    bottom:145px;
+  }
+
+  #answerPad{
+    bottom:35px;
+  }
+
+  footer{
+    bottom:6px;
+  }
+}
 </style>
 </head>
 
@@ -373,7 +401,12 @@ canvas{
       Level: <span id="levelText">1</span><br>
       Điểm: <span id="scoreText">0</span>
     </div>
-
+<div class="statBox"
+     id="modeBtn"
+     style="pointer-events:auto;cursor:pointer;text-align:center">
+  Chế độ<br>
+  <span id="modeText">THƯỜNG</span>
+</div>
     <div class="statBox" style="text-align:right">
       Sai: <span id="wrongText">0</span>/3<br>
       Best: <span id="bestText">0</span>
@@ -455,6 +488,8 @@ const levelText = document.getElementById("levelText");
 const scoreText = document.getElementById("scoreText");
 const wrongText = document.getElementById("wrongText");
 const bestText = document.getElementById("bestText");
+const modeBtn = document.getElementById("modeBtn");
+const modeText = document.getElementById("modeText");
 
 const questionModeText = document.getElementById("questionMode");
 const questionBox = document.getElementById("questionBox");
@@ -478,6 +513,7 @@ soundWrong.volume = 1;
 let W = 0;
 let H = 0;
 let DPR = 1;
+let gameMode = "normal"; // normal | hard | insane
 
 let running = false;
 let level = 1;
@@ -496,7 +532,7 @@ let feedbackTimer = null;
 
 let lastTime = 0;
 let gameTime = 0;
-
+let rainDrops = [];
 /*
   roundStartTime dùng để tính chuyển động của lượt hiện tại.
 
@@ -518,7 +554,43 @@ const COLORS = [
   ["#ff9b45","#ffd1a3"],
   ["#46e3cf","#b8fff4"]
 ];
+  function createRain(){
 
+  rainDrops = [];
+
+  for(let i=0;i<160;i++){
+
+    rainDrops.push({
+      x:Math.random()*W,
+      y:Math.random()*H,
+      speed:12 + Math.random()*10,
+      len:10 + Math.random()*12
+    });
+
+  }
+
+}
+function toggleMode(){
+
+  if(gameMode === "normal"){
+    gameMode = "hard";
+  }
+  else if(gameMode === "hard"){
+    gameMode = "insane";
+  }
+  else{
+    gameMode = "normal";
+  }
+
+  modeText.textContent =
+    gameMode === "normal"
+      ? "THƯỜNG"
+      : gameMode === "hard"
+      ? "KHÓ"
+      : "SIÊU KHÓ";
+
+  startGame();
+}
 function resizeCanvas(){
   DPR = Math.min(window.devicePixelRatio || 1, 2);
   W = window.innerWidth;
@@ -603,7 +675,17 @@ function getRadius(count){
 }
 
 function makeAmplitudeList(count, lv){
-  const easySpread = lv <= 5 ? 122 : lv <= 15 ? 108 : 96;
+  let easySpread;
+
+if(gameMode === "normal"){
+  easySpread = lv <= 5 ? 122 : lv <= 15 ? 108 : 96;
+}
+else if(gameMode === "hard"){
+  easySpread = lv <= 5 ? 70 : lv <= 15 ? 60 : 50;
+}
+else{
+  easySpread = lv <= 5 ? 40 : lv <= 15 ? 34 : 28;
+}
   const minAmp = clamp(52 + lv * 1.2, 52, 82);
   const maxAmp = minAmp + easySpread;
 
@@ -664,7 +746,10 @@ const travel = moving && !wallBounce
   ? Math.min(slot * 0.32, 46 + level * 3.2)
   : 0;
 
-const pair = COLORS[i % COLORS.length];
+const pair =
+  gameMode === "normal"
+    ? COLORS[i % COLORS.length]
+    : ["#000000","#555555"];
 
 const wallMinX = radius + 14;
 const wallMaxX = W - radius - 14;
@@ -869,7 +954,7 @@ answerButtons.forEach(btn => {
     chooseAnswer(Number(btn.dataset.num));
   });
 });
-
+modeBtn.addEventListener("click", toggleMode);
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
 
@@ -881,6 +966,7 @@ function startGame(){
   locked = false;
   running = true;
   gameTime = 0;
+  createRain();
   roundStartTime = 0;
   lastTime = performance.now();
 
@@ -903,7 +989,27 @@ function endGame(){
 /* =========================
    DRAW HELPERS
 ========================= */
+function drawRain(){
 
+  ctx.strokeStyle="rgba(255,255,255,0.35)";
+  ctx.lineWidth=1.5;
+
+  for(const r of rainDrops){
+
+    ctx.beginPath();
+    ctx.moveTo(r.x,r.y);
+    ctx.lineTo(r.x-3,r.y+r.len);
+    ctx.stroke();
+
+    r.y += r.speed;
+
+    if(r.y > H){
+      r.y = -20;
+      r.x = Math.random()*W;
+    }
+  }
+}
+  
 function roundRect(ctx,x,y,w,h,r){
   r = Math.min(r, w / 2, h / 2);
 
@@ -922,20 +1028,39 @@ function roundRect(ctx,x,y,w,h,r){
 
 function drawBackground(){
   const sky = ctx.createLinearGradient(0,0,0,H);
+
+if(gameMode === "insane"){
+
+  sky.addColorStop(0,"#5f6670");
+  sky.addColorStop(0.5,"#7a828d");
+  sky.addColorStop(1,"#9099a3");
+
+}else{
+
   sky.addColorStop(0,"#92e7ff");
   sky.addColorStop(0.55,"#c9f7ff");
   sky.addColorStop(1,"#9bea8e");
 
+}
+
   ctx.fillStyle = sky;
   ctx.fillRect(0,0,W,H);
 
+  if(gameMode !== "insane"){
   drawSun();
+}
   drawCloud(W * 0.18, H * 0.16, 1.05);
   drawCloud(W * 0.73, H * 0.13, 0.92);
   drawCloud(W * 0.48, H * 0.23, 0.72);
 
   drawHills();
   drawGround();
+  if(gameMode === "insane"){
+
+  ctx.fillStyle = "rgba(0,0,0,0.28)";
+  ctx.fillRect(0,0,W,H);
+
+}
 }
 
 function drawSun(){
@@ -968,7 +1093,10 @@ function drawCloud(x,y,s){
   ctx.translate(x,y);
   ctx.scale(s,s);
 
-  ctx.fillStyle = "rgba(255,255,255,.86)";
+  ctx.fillStyle =
+  gameMode === "insane"
+    ? "rgba(120,125,135,.92)"
+    : "rgba(255,255,255,.86)";
   ctx.beginPath();
   ctx.arc(-32,12,22,0,Math.PI * 2);
   ctx.arc(-10,-2,29,0,Math.PI * 2);
@@ -985,7 +1113,10 @@ function drawCloud(x,y,s){
 }
 
 function drawHills(){
-  ctx.fillStyle = "#8bdc7a";
+  ctx.fillStyle =
+  gameMode === "insane"
+    ? "#4f555d"
+    : "#8bdc7a";
   ctx.beginPath();
   ctx.moveTo(0,H * .66);
   ctx.quadraticCurveTo(W * .22,H * .51,W * .48,H * .65);
@@ -995,7 +1126,10 @@ function drawHills(){
   ctx.closePath();
   ctx.fill();
 
-  ctx.fillStyle = "#65ca69";
+  ctx.fillStyle =
+  gameMode === "insane"
+    ? "#3d434a"
+    : "#65ca69";
   ctx.beginPath();
   ctx.moveTo(0,H * .72);
   ctx.quadraticCurveTo(W * .25,H * .58,W * .55,H * .73);
@@ -1010,8 +1144,13 @@ function drawGround(){
   const groundY = H * .72;
 
   const grass = ctx.createLinearGradient(0,groundY,0,H);
+  if(gameMode === "insane"){
+  grass.addColorStop(0,"#505860");
+  grass.addColorStop(1,"#2d3238");
+}else{
   grass.addColorStop(0,"#77de63");
   grass.addColorStop(1,"#39b856");
+}
 
   ctx.fillStyle = grass;
   ctx.fillRect(0,groundY,W,H - groundY);
@@ -1223,6 +1362,9 @@ function loop(now){
   gameTime += dt;
 
   drawBackground();
+  if(gameMode === "insane"){
+  drawRain();
+}
 
   if(running){
     /*
