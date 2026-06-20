@@ -1,0 +1,1290 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Trốn khỏi thiên thạch</title>
+  <style>
+    :root{
+      --bg1:#06111f;
+      --bg2:#0d1c31;
+      --panel:rgba(8,14,25,.66);
+      --text:#eef5ff;
+      --muted:#9eb2cf;
+      --warn:#ffd86b;
+      --good:#92f0ae;
+      --bad:#ff7070;
+      --shadow:rgba(0,0,0,.35);
+    }
+    *{box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; -webkit-user-select:none;}
+    html,body{margin:0; width:100%; height:100%; overflow:hidden; background:radial-gradient(circle at 50% 18%, #163357 0%, var(--bg1) 48%, #020409 100%); font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif; color:var(--text);}
+    #wrap{position:fixed; inset:0; overflow:hidden;}
+
+    canvas {
+      touch-action: none;
+      -webkit-touch-callout: none;
+      user-select: none;
+      -webkit-user-select: none;
+      position:absolute; inset:0; width:100%; height:100%; display:block;
+    }
+
+    .flash{position:absolute; inset:0; z-index:4; pointer-events:none; background:rgba(255,255,255,0); transition:background .08s linear;}
+    .vignette{position:absolute; inset:0; z-index:3; pointer-events:none; box-shadow:inset 0 0 120px rgba(0,0,0,.35), inset 0 0 260px rgba(0,0,0,.18);}
+
+    .hud{position:absolute; top:10px; left:10px; right:10px; z-index:6; display:flex; gap:8px; align-items:flex-start; flex-wrap:wrap; pointer-events:none;}
+    .pill{background:var(--panel); backdrop-filter:blur(10px); border:1px solid rgba(255,255,255,.08); box-shadow:0 10px 30px var(--shadow); border-radius:14px; padding:8px 11px; min-width:84px;}
+    .pill .k{font-size:11px; letter-spacing:.4px; text-transform:uppercase; color:var(--muted);}
+    .pill .v{font-size:18px; font-weight:900; margin-top:2px;}
+
+    /* Ẩn các thành phần không cần thiết */
+    .comboBox, .touchGuide, .portraitNotice, .hint {
+      display: none !important;
+    }
+
+    .centerMsg{
+      position:absolute; inset:0; z-index:7; display:flex; align-items:center; justify-content:center; padding:16px;
+      pointer-events: none;
+    }
+    .centerMsg.show {
+      pointer-events: auto;
+    }
+    .card{width:min(94vw,560px); background:rgba(3,8,16,.54); border:1px solid rgba(255,255,255,.08); backdrop-filter:blur(10px); border-radius:24px; text-align:center; padding:20px 16px; box-shadow:0 18px 50px rgba(0,0,0,.35); opacity:0; transform:translateY(12px) scale(.98); transition:.22s ease; pointer-events:auto;}
+    .centerMsg.show .card{opacity:1; transform:translateY(0) scale(1);}
+    .title{font-size:39px; font-weight:1000; letter-spacing:1px; margin-bottom:8px;font-family:Tahoma;}
+    .subtitle{font-size:13px; line-height:1.55; color:var(--muted);}
+    .startBtn{
+      margin-top:14px; border:none;
+      background:linear-gradient(135deg,#68b4ff,#8a7dff); color:#fff;
+      font-weight:900; font-size:16px; padding:12px 18px; border-radius:14px;
+      box-shadow:0 10px 22px rgba(72,119,255,.35);
+      transition: opacity 0.4s ease;
+    }
+    .startBtn.hidden{ opacity:0; pointer-events:none; }
+    .startBtn:active{transform:translateY(1px) scale(.99);}
+
+    .gameOverBadge{position:absolute; left:50%; top:55%; transform:translate(-50%,-50%); z-index:7; pointer-events:none; text-align:center; opacity:0; transition:.18s ease;}
+    .gameOverBadge.show{opacity:1;}
+    .gameOverBadge .big{font-size:34px; font-weight:950; text-shadow:0 12px 24px rgba(0,0,0,.4);}
+    .gameOverBadge .small{margin-top:6px; font-size:14px; color:#d9e8ff;}
+      footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+#minimap{
+  display:block;
+  width:92px;
+  height:92px;
+  margin:8px 0 0 auto;
+  border-radius:8px;
+  background:rgba(0,10,25,.55);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:
+    0 6px 18px rgba(0,0,0,.35),
+    inset 0 0 0 1px rgba(0,217,255,.12);
+}
+  </style>
+</head>
+<body>
+<div id="wrap">
+  <canvas id="game"></canvas>
+  <div class="flash" id="flash"></div>
+  <div class="vignette"></div>
+
+  <!-- Các div ẩn không hiển thị nhưng vẫn có trong DOM để tránh lỗi JS -->
+  <div class="portraitNotice" style="display:none">Chơi dọc tối ưu</div>
+  <div class="hud">
+    <div class="pill"><div class="k">SINH TỒN</div><div class="v" id="timeVal">0.0s</div></div>
+    <div class="pill"><div class="k">ĐIỂM SỐ</div><div class="v" id="scoreVal">0</div></div>
+    <div class="pill"><div class="k">KỶ LỤC</div><div class="v" id="bestVal">0</div></div>
+    <div class="comboBox" style="display:none">
+      <div class="label">Combo</div>
+      <div class="combo" id="comboVal">x1</div>
+      <div class="note" id="noteVal">Ready</div>
+    </div>
+  </div>
+
+  <div class="centerMsg show" id="menu">
+    <div class="card">
+      <div class="title" id="menuTitle">TRỐN KHỎI THIÊN THẠCH</div>
+      <div class="subtitle" id="menuSub">
+        Chạm giữ bên trái hoặc bên phải để chạy. Vuốt lên để nhảy.<br>
+      </div>
+      <button class="startBtn" id="startBtn">CHƠI NGAY</button>
+    </div>
+  </div>
+
+  <div class="gameOverBadge" id="gameOverBadge">
+    <div class="big">GAME OVER</div>
+    <div class="small" id="finalLine"></div>
+  </div>
+
+  <!-- Các div hướng dẫn đã bị ẩn bằng CSS -->
+  <div class="touchGuide" style="display:none">
+    <div class="side">Giữ nửa trái<br>để chạy trái</div>
+    <div class="side">Giữ nửa phải<br>để chạy phải</div>
+  </div>
+  <div class="hint" style="display:none">Vuốt lên ở bên nào thì nhảy về bên đó. Phím: A/D hoặc ←/→ để chạy, Space/W/↑ để nhảy.</div>
+</div>
+  <footer>Version:D20260620-H16M09T1723 »»» developed by Tran Gia Bao</footer>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+  const flash = document.getElementById('flash');
+  const menu = document.getElementById('menu');
+  const menuTitle = document.getElementById('menuTitle');
+  const menuSub = document.getElementById('menuSub');
+  const startBtn = document.getElementById('startBtn');
+  const timeVal = document.getElementById('timeVal');
+  const scoreVal = document.getElementById('scoreVal');
+  const bestVal = document.getElementById('bestVal');
+  const comboVal = document.getElementById('comboVal');
+  const noteVal = document.getElementById('noteVal');
+  const gameOverBadge = document.getElementById('gameOverBadge');
+  const finalLine = document.getElementById('finalLine');
+
+  const state = {
+    running:false,
+    over:false,
+    t:0,
+    score:0,
+    best:Number(localStorage.getItem('comet_best') || 0),
+    combo:1,
+    comboTimer:0,
+    shake:0,
+    shakeX:0,
+    shakeY:0,
+    flash:0,
+    dangerPulse:0,
+    spawnTimer:0.6,
+    nearMissCooldown:0,
+    slow:1,
+    slowTimer:0,
+    stars:[],
+    comets:[],
+    particles:[],
+    hits:[],
+        blackCometTimer: 30,
+    invincibleTimer: 0,
+    screenWhite: 0,
+        darkSpotlight: 0,
+    keys:{left:false,right:false},
+        touch:{active:false, pointerId:null, startX:0, startY:0, jumped:false, side:null},
+        typingTimer: null,  // để huỷ typing cũ nếu có
+  };
+
+  const player = {
+    x:0,
+    y:0,
+    vx:0,
+    vy:0,
+    onGround:true,
+    face:1,
+    jumpLock:0,
+  };
+
+  let W = 0, H = 0, dpr = 1, groundY = 0;
+
+  const clamp = (v,a,b) => Math.max(a, Math.min(b, v));
+  const rand = (a,b) => a + Math.random() * (b-a);
+
+  function resize() {
+    dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+    W = Math.floor(innerWidth);
+    H = Math.floor(innerHeight);
+    canvas.width = Math.floor(W * dpr);
+    canvas.height = Math.floor(H * dpr);
+    canvas.style.width = W + 'px';
+    canvas.style.height = H + 'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    groundY = Math.floor(H * 0.85);
+    if (!player.x) player.x = W * 0.5;
+    player.y = groundY - 2;
+    syncStars(true);
+  }
+
+  function syncStars(force=false) {
+    const count = Math.floor(clamp(W * H / 17000, 36, 84));
+    if (!force && state.stars.length === count) return;
+    state.stars = Array.from({length:count}, () => ({
+      x: Math.random() * W,
+      y: Math.random() * H * 0.9,
+      r: Math.random() * 1.7 + 0.3,
+      s: Math.random() * 0.6 + 0.14,
+      a: Math.random() * Math.PI * 2,
+    }));
+  }
+
+  function burst(x,y,n,spread,c1,c2) {
+    for (let i=0; i<n; i++) {
+      const ang = Math.random() * Math.PI * 2;
+      const sp = rand(60, spread);
+      state.particles.push({
+        x,y,
+        vx: Math.cos(ang) * sp,
+        vy: Math.sin(ang) * sp - rand(15, 65),
+        life: rand(0.22, 0.9),
+        r: rand(1.2, 3.8) * 0.8,
+        c: Math.random() < 0.5 ? c1 : c2,
+      });
+    }
+  }
+
+  function resetGame() {
+    state.running = true;
+    state.over = false;
+    state.t = 0;
+    state.score = 0;
+    state.combo = 1;
+    state.comboTimer = 0;
+    state.shake = 0;
+    state.shakeX = 0;
+    state.shakeY = 0;
+    state.flash = 0;
+    state.dangerPulse = 0;
+    state.spawnTimer = 0.75;
+    state.nearMissCooldown = 0;
+    state.slow = 1;
+    state.slowTimer = 0;
+    state.comets = [];
+    state.particles = [];
+    state.hits = [];
+    state.keys.left = false;
+    state.keys.right = false;
+    state.touch.active = false;
+    state.touch.jumped = false;
+    state.touch.side = null;
+        state.blackCometTimer = rand(20, 30);
+    state.invincibleTimer = 0;
+    state.screenWhite = 0;
+        state.darkSpotlight = 0;
+    player.x = W * 0.5;
+    player.y = groundY - 2;
+    player.vx = 0;
+    player.vy = 0;
+    player.onGround = true;
+    player.face = 1;
+    player.jumpLock = 0;
+    noteVal.textContent = 'Survive';
+    menu.classList.remove('show');
+        startBtn.style.opacity = '';
+    startBtn.style.pointerEvents = '';
+    if (state.typingTimer) {
+      clearInterval(state.typingTimer);
+      state.typingTimer = null;
+    }
+    gameOverBadge.classList.remove('show');
+  }
+
+  function gameOver() {
+    state.running = false;
+    state.over = true;
+    player.vx = 0;
+    player.vy = 0;
+    state.combo = 1;
+    state.comboTimer = 0;
+    state.flash = 0;
+    state.shake = 0;
+    state.shakeX = 0;
+    state.shakeY = 0;
+    state.dangerPulse = 0;
+    flash.style.background = 'rgba(255,255,255,0)';
+    noteVal.textContent = 'Game Over';
+    finalLine.textContent = `Sống sót ${state.t.toFixed(1)}s · Điểm ${Math.floor(state.score)}`;
+
+    menuTitle.textContent = 'GAME OVER';
+    // Ẩn nút ngay lập tức bằng style inline
+    startBtn.textContent = 'CHƠI LẠI';
+    startBtn.style.opacity = '0';
+    startBtn.style.pointerEvents = 'none';
+    menu.classList.add('show');
+    
+    // Xoá timer typing cũ nếu có
+    if (state.typingTimer) clearInterval(state.typingTimer);
+    // Gọi typing
+    typeWriter(
+      menuSub,
+      `Bạn đã sống sót <b>${state.t.toFixed(1)}s</b> với điểm <b>${Math.floor(state.score)}</b>.<br>Nhấn chơi lại để bắt đầu vòng mới.`,
+      40,
+      () => {
+        // Khi typing xong, hiện nút với transition mượt
+        startBtn.style.opacity = '';
+        startBtn.style.pointerEvents = '';
+      }
+    );
+    if (state.score > state.best) {
+      state.best = Math.floor(state.score);
+      localStorage.setItem('comet_best', state.best);
+      bestVal.textContent = state.best;
+    }
+    state.keys.left = false;
+    state.keys.right = false;
+    state.touch.active = false;
+    state.touch.jumped = false;
+        state.blackCometTimer = rand(20, 30);
+    state.invincibleTimer = 0;
+    state.screenWhite = 0;
+        state.darkSpotlight = 0;
+  }
+  function typeWriter(element, htmlText, speed, callback) {
+    // Xoá nội dung cũ
+    element.innerHTML = '';
+    // Lưu toàn bộ chuỗi HTML gốc
+    const fullText = htmlText;
+    let index = 0;
+    // Hủy timer cũ nếu đang chạy
+    if (state.typingTimer) clearInterval(state.typingTimer);
+    
+    state.typingTimer = setInterval(() => {
+      // Tìm thẻ HTML tiếp theo
+      const nextTag = fullText.indexOf('<', index);
+      if (nextTag === index) {
+        // Đang ở thẻ HTML, tìm dấu > đóng thẻ và thêm cả thẻ vào
+        const closeTag = fullText.indexOf('>', index);
+        if (closeTag !== -1) {
+          element.innerHTML = fullText.substring(0, closeTag + 1);
+          index = closeTag + 1;
+        } else {
+          // Lỗi HTML, dừng
+          element.innerHTML = fullText;
+          index = fullText.length;
+        }
+      } else if (nextTag !== -1) {
+        // Có thẻ HTML phía trước, thêm từng ký tự đến thẻ
+        element.innerHTML = fullText.substring(0, index + 1);
+        index++;
+      } else {
+        // Không còn thẻ HTML, thêm từng ký tự
+        element.innerHTML = fullText.substring(0, index + 1);
+        index++;
+      }
+      
+      if (index >= fullText.length) {
+        clearInterval(state.typingTimer);
+        state.typingTimer = null;
+        if (callback) callback();
+      }
+    }, speed);
+  }
+  
+  function spawnComet() {
+    const size = rand(13, 24);
+    const margin = size + 8; // chỉ chừa đệm tối thiểu
+    const x = rand(margin, W - margin);
+    // Cho phép targetX trải rộng toàn màn hình (kể cả góc)
+    const targetX = clamp(x + rand(-180, 180), size + 8, W - size - 8);
+    const impactY = groundY - rand(6, 20); // rơi ở nhiều độ cao hơn
+    const speed = rand(340, 500) + Math.min(280, state.t * 3.0);
+    const delay = rand(0.18, 0.8);
+    const maxVx = speed * 0.577; // tan(30°) - giới hạn góc rơi
+    let vx = (targetX - x) / Math.max(0.3, delay);
+    if (Math.abs(vx) > maxVx) {
+        vx = Math.sign(vx) * maxVx;
+    }
+    state.comets.push({
+      x,
+      y: -size - rand(40, 120),
+      vx,
+      vy: speed,
+      size,
+      impactY,
+      delay,
+      exploded:false,
+      explodeT:0,
+      nearAwarded:false,
+      warned:false,
+      colorHue:rand(18, 60),
+      trail:[],
+    });
+  }
+  function spawnBlackComet() {
+    const size = rand(38, 55);
+    const vy = rand(300, 480);
+    const delay = rand(0.4, 1.0);
+    const maxVx = vy * 0.577; // giới hạn góc rơi ≤30° so với thẳng đứng
+    const vx = (Math.random() * 2 - 1) * maxVx; // ngẫu nhiên trái/phải
+    const impactX = rand(size + 10, W - size - 10);
+    const x = impactX - vx * delay; // vị trí xuất phát trên trời
+    const impactY = groundY - rand(4, 12);
+    state.comets.push({
+      x: clamp(x, size + 10, W - size - 10), // đảm bảo không ra ngoài
+      y: -size - rand(50, 140),
+      vx,
+      vy,
+      size,
+      impactY,
+      delay,
+      exploded: false,
+      explodeT: 0,
+      nearAwarded: false,
+      warned: false,
+      colorHue: 0,
+      trail: [],
+      isBlack: true,
+    });
+  }
+  function triggerImpact(c) {
+    c.exploded = true;
+
+    // Xử lý thiên thạch đen
+    if (c.isBlack) {
+      // Màn hình trắng xoá 0.5 giây
+      state.screenWhite = 0.5;
+      // Người chơi bất tử 0.5 giây
+      state.invincibleTimer = 0.5;
+      // Xoá tất cả thiên thạch khác
+      state.comets = state.comets.filter(co => co === c || co.exploded);
+      // Vẫn tạo hiệu ứng nổ
+      state.flash = 1;
+      state.shake = Math.max(state.shake, 50);
+      state.dangerPulse = 1;
+      state.hits.push({ x:c.x, y:c.impactY, r:c.size * 2.5, life:1.2 });
+      burst(c.x, c.impactY, 30, 300, '#ffffff', '#cccccc');
+    } else {
+      // Thiên thạch thường
+      state.flash = 1;
+            state.shake = Math.max(state.shake, 18 + Math.min(18, state.t * 0.02));
+      state.dangerPulse = 1;
+      state.hits.push({ x:c.x, y:c.impactY, r:c.size * 2.0, life:1.05 });
+      burst(c.x, c.impactY, 18 + Math.floor(c.size * 0.7), 200, '#ffd37a', '#ff7d4d');
+    }
+
+    const d = Math.hypot(player.x - c.x, player.y - c.impactY);
+    if (d < c.size * 2.0) {
+      if (!c.isBlack || state.invincibleTimer <= 0) {
+        gameOver();
+        return;
+      }
+    }
+
+    if (c.nearAwarded) return;
+    const perfectZone = c.size * 2.7;
+    const nearZone = c.size * 4.6;
+
+    if (d < perfectZone) {
+      state.combo = Math.min(99, state.combo + 2);
+      state.score += 180 * state.combo;
+      state.comboTimer = 1.8;
+      noteVal.textContent = 'PERFECT NEAR!';
+      burst(player.x, player.y - 10, 10, 140, '#e7f6ff', '#8bd2ff');
+    } else if (d < nearZone) {
+      state.combo = Math.min(99, state.combo + 1);
+      state.score += 60 * state.combo;
+      state.comboTimer = 1.5;
+      noteVal.textContent = 'NEAR MISS';
+      burst(player.x, player.y - 10, 6, 110, '#e7f6ff', '#ffd36a');
+    } else {
+      state.combo = 1;
+      state.comboTimer = 0;
+    }
+    c.nearAwarded = true;
+  }
+
+  function jump(dir) {
+    if (!state.running || state.over) return;
+    if (!player.onGround || player.jumpLock > 0) return;
+    player.vy = -570;
+    player.vx = dir * 290 + (state.keys.left || state.keys.right ? dir * 50 : 0);
+    player.onGround = false;
+    player.face = dir || player.face || 1;
+    player.jumpLock = 0.16;
+    state.score += 6;
+    burst(player.x, player.y, 6, 90, '#bfe6ff', '#ffffff');
+    if (navigator.vibrate) navigator.vibrate(15);
+  }
+
+  function moveLeft(down){ state.keys.left = down; if (down) player.face = -1; }
+  function moveRight(down){ state.keys.right = down; if (down) player.face = 1; }
+
+  function handleTouchStart(e) {
+    if (!state.running) return;
+    if (state.touch.active) return;             // đã có ngón điều khiển
+    e.preventDefault();
+    state.touch.active = true;
+    state.touch.pointerId = e.pointerId;        // lưu id ngón đang dùng
+    const x = e.clientX;
+    const y = e.clientY;
+    state.touch.startX = x;
+    state.touch.startY = y;
+    state.touch.jumped = false;
+    state.touch.side = x < W * 0.5 ? 'left' : 'right';
+    if (x < W * 0.5) moveLeft(true);
+    else moveRight(true);
+  }
+
+  function handleTouchMove(e) {
+    if (!state.running || !state.touch.active) return;
+    if (e.pointerId !== state.touch.pointerId) return; // chỉ ngón điều khiển
+    e.preventDefault();
+    const x = e.clientX;
+    const y = e.clientY;
+    if (!state.touch.jumped) {
+      const dy = y - state.touch.startY;
+      const dx = x - state.touch.startX;
+      if (dy < -48 && Math.abs(dy) > Math.abs(dx) * 0.72) {
+        state.touch.jumped = true;
+        const dir = state.touch.side === 'left' ? -1 : 1;
+        jump(dir);
+      }
+    }
+    if (x < W * 0.5) {
+      moveLeft(true);
+      moveRight(false);
+      player.face = -1;
+    } else {
+      moveRight(true);
+      moveLeft(false);
+      player.face = 1;
+    }
+  }
+
+  function handleTouchEnd(e) {
+    if (!state.running) return;
+    if (e.pointerId !== state.touch.pointerId) return; // chỉ kết thúc nếu đúng ngón
+    e.preventDefault();
+    state.touch.active = false;
+    state.touch.pointerId = null;
+    state.touch.jumped = false;
+    state.touch.side = null;
+    moveLeft(false);
+    moveRight(false);
+  }
+
+  function drawBackground(dt) {
+    const sky = ctx.createLinearGradient(0,0,0,H);
+    sky.addColorStop(0, '#12294a');
+    sky.addColorStop(0.45, '#0a1727');
+    sky.addColorStop(1, '#04070b');
+    ctx.fillStyle = sky;
+    ctx.fillRect(0,0,W,H);
+
+    for (const s of state.stars) {
+      s.a += dt * s.s;
+      const tw = 0.5 + 0.5 * Math.sin(s.a);
+      ctx.globalAlpha = 0.16 + tw * 0.8;
+      ctx.fillStyle = '#dcecff';
+      ctx.beginPath();
+      ctx.arc(s.x, s.y, s.r * (0.8 + tw * 0.5), 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+
+    const glow = ctx.createRadialGradient(W*0.5, groundY, 18, W*0.5, groundY, Math.max(W,H));
+    glow.addColorStop(0, 'rgba(114,176,255,.1)');
+    glow.addColorStop(0.2, 'rgba(114,176,255,.03)');
+    glow.addColorStop(1, 'rgba(114,176,255,0)');
+    ctx.fillStyle = glow;
+    ctx.fillRect(0,0,W,H);
+
+    const ground = ctx.createLinearGradient(0, groundY - 24, 0, H);
+    ground.addColorStop(0, '#0f2232');
+    ground.addColorStop(1, '#05070a');
+    ctx.fillStyle = ground;
+    ctx.fillRect(0, groundY, W, H - groundY);
+
+    ctx.strokeStyle = 'rgba(187,219,255,.08)';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    for (let x=0; x<=W; x+=28) {
+      ctx.moveTo(x + 0.5, groundY + 0.5);
+      ctx.lineTo(x + 11, H + 0.5);
+    }
+    ctx.stroke();
+  }
+
+  function drawPlayer() {
+    const x = player.x;
+    const y = player.y;
+    const facing = player.face || 1;
+    const onGround = player.onGround;
+    const speed = Math.abs(player.vx);
+
+    // ── NẰM XUỐNG KHI GAME OVER ────────────────
+    if (state.over) {
+      ctx.save();
+      ctx.translate(x, groundY - 2);       // đặt thân ngay mặt đất
+      ctx.scale(0.7, 0.7);
+      // xoay ngang, đầu hướng theo hướng chạy cuối cùng
+      ctx.rotate(-Math.PI / 2 * facing);
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+      ctx.shadowColor = 'rgba(0,0,0,.32)';
+      ctx.shadowBlur = 8;
+
+      // Đầu
+      ctx.strokeStyle = '#edf6ff';
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.arc(0, -34, 10, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Thân
+      ctx.beginPath();
+      ctx.moveTo(0, -24);
+      ctx.lineTo(0, -6);
+      ctx.stroke();
+
+      // Hai tay duỗi thẳng
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(-20, -24);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -18);
+      ctx.lineTo(20, -24);
+      ctx.stroke();
+
+      // Hai chân duỗi thẳng
+      ctx.beginPath();
+      ctx.moveTo(0, -6);
+      ctx.lineTo(-15, 12);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(0, -6);
+      ctx.lineTo(15, 12);
+      ctx.stroke();
+
+      ctx.restore();
+      return;
+    }
+
+    // ── HOẠT ẢNH BÌNH THƯỜNG ────────────────
+    const isRunning = onGround && speed > 15;
+    const t = state.t;
+    const runCycle = t * 12;
+    const breathe = Math.sin(t * 3) * 0.5;
+    const lean = isRunning ? (player.vx / 300) * 0.25 : 0;
+
+    let armSwing = 0;
+    let legSwing = 0;
+    let legOffset = 0;
+
+    if (isRunning) {
+      armSwing = Math.sin(runCycle) * 0.6;
+      legSwing = Math.sin(runCycle) * 0.7;
+      legOffset = Math.cos(runCycle) * 0.15;
+    } else if (!onGround) {
+      armSwing = -0.9;
+      legSwing = -0.8;
+      legOffset = 0;
+    } else {
+      armSwing = breathe * 0.1;
+      legSwing = 0;
+      legOffset = 0;
+    }
+
+    ctx.save();
+    ctx.translate(x, y);
+    ctx.scale(0.7, 0.7);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.shadowColor = 'rgba(0,0,0,.32)';
+    ctx.shadowBlur = 8;
+
+    ctx.globalAlpha = onGround ? 0.35 : 0.55;
+    ctx.strokeStyle = state.combo >= 4 ? '#ffcf5a' : '#7cc7ff';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(0, -34, 12, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.globalAlpha = 1;
+
+    ctx.rotate(lean);
+
+    ctx.strokeStyle = '#edf6ff';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.arc(0, -34, 10, 0, Math.PI * 2);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(0, -24);
+    ctx.lineTo(0, -6);
+    ctx.stroke();
+
+    const shoulderY = -18;
+    const elbowY = -10;
+    const handY = -2;
+    const armAngle = armSwing * 0.7;
+
+    ctx.save();
+    ctx.translate(0, shoulderY);
+    ctx.rotate(armAngle * facing);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(10 * facing, elbowY - shoulderY);
+    ctx.lineTo(10 * facing + Math.sin(armAngle) * 6 * facing, handY - shoulderY);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(0, shoulderY);
+    ctx.rotate(-armAngle * facing * 1.1);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-8 * facing, elbowY - shoulderY);
+    ctx.lineTo(-8 * facing + Math.sin(-armAngle) * 5 * facing, handY - shoulderY);
+    ctx.stroke();
+    ctx.restore();
+
+    const hipY = -6;
+    const kneeY = 10;
+    const footY = 16;
+    const legAngle = legSwing * 0.9;
+
+    ctx.save();
+    ctx.translate(0, hipY);
+    ctx.rotate(legAngle * facing + legOffset * facing);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(8 * facing, kneeY - hipY);
+    ctx.lineTo(10 * facing, footY - hipY);
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(0, hipY);
+    ctx.rotate(-legAngle * facing - legOffset * facing * 0.8);
+    ctx.beginPath();
+    ctx.moveTo(0, 0);
+    ctx.lineTo(-6 * facing, kneeY - hipY);
+    ctx.lineTo(-8 * facing, footY - hipY);
+    ctx.stroke();
+    ctx.restore();
+
+    if (onGround && isRunning) {
+      ctx.fillStyle = '#edf6ff';
+      ctx.beginPath();
+      ctx.ellipse(10 * facing + 2, footY, 3, 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.ellipse(-8 * facing - 2, footY, 3, 1.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.restore();
+  }
+  function drawComet(c) {
+    if (!c.exploded) {
+      const ang = Math.atan2(c.vy, c.vx);
+      c.trail.push({ x:c.x, y:c.y });
+      if (c.trail.length > 10) c.trail.shift();
+
+      // Vệt đuôi
+      for (let i=0; i<c.trail.length; i++) {
+        const p = c.trail[i];
+        ctx.globalAlpha = (i / c.trail.length) * 0.34;
+        ctx.fillStyle = 'rgba(255,190,120,.72)';
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, c.size * 0.18 * (i / c.trail.length + 0.3), 0, Math.PI * 2);
+        ctx.fill();
+      }
+      ctx.globalAlpha = 1;
+
+      ctx.save();
+      ctx.translate(c.x, c.y);
+      ctx.rotate(ang + Math.PI / 2);
+      
+      // Đường kính cơ bản
+              if (c.isBlack) {
+        // Vẽ thiên thạch đen
+        const baseR = c.size * 1.1;
+        const seed = c.x * 1000 + c.y;
+        
+        function createBlackRockPath(ctx, r, seed) {
+          const points = [];
+          const numVerts = 14;
+          for (let i = 0; i < numVerts; i++) {
+            const angle = (i / numVerts) * Math.PI * 2;
+            const noise = Math.sin(seed + i * 4.1) * 0.25 + Math.cos(seed + i * 1.7) * 0.2;
+            const rr = r * (0.65 + noise);
+            points.push({ x: Math.cos(angle) * rr, y: Math.sin(angle) * rr * 0.75 });
+          }
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+          }
+          ctx.closePath();
+        }
+
+        // Bóng
+        ctx.fillStyle = '#000000';
+        ctx.shadowColor = 'rgba(0,0,0,0.9)';
+        ctx.shadowBlur = 18;
+        createBlackRockPath(ctx, baseR, seed);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+
+        // Thân đen
+        ctx.fillStyle = '#1a1a1a';
+        createBlackRockPath(ctx, baseR * 0.92, seed);
+        ctx.fill();
+
+        // Mảng xám tối
+        ctx.fillStyle = '#2e2e2e';
+        ctx.beginPath();
+        ctx.ellipse(-baseR*0.1, -baseR*0.2, baseR*0.35, baseR*0.22, 0.3, 0, Math.PI*2);
+        ctx.fill();
+
+        // Vết nứt tím
+        ctx.strokeStyle = '#440088';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-baseR*0.5, -baseR*0.1);
+        ctx.lineTo(-baseR*0.2, -baseR*0.45);
+        ctx.lineTo(baseR*0.15, -baseR*0.3);
+        ctx.stroke();
+
+        ctx.beginPath();
+        ctx.moveTo(baseR*0.2, -baseR*0.15);
+        ctx.lineTo(baseR*0.5, baseR*0.2);
+        ctx.stroke();
+
+        // Viền tím
+        ctx.globalAlpha = 0.5;
+        ctx.strokeStyle = 'rgba(120,0,200,0.9)';
+        ctx.lineWidth = 3;
+        createBlackRockPath(ctx, baseR * 1.06, seed);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        // Ánh tím phủ
+        const glowB = ctx.createRadialGradient(0, 0, baseR*0.2, 0, 0, baseR*0.9);
+        glowB.addColorStop(0, 'rgba(80,0,120,0)');
+        glowB.addColorStop(0.6, 'rgba(80,0,120,0.3)');
+        glowB.addColorStop(1, 'rgba(40,0,60,0)');
+        ctx.fillStyle = glowB;
+        createBlackRockPath(ctx, baseR * 0.92, seed);
+        ctx.fill();
+      }
+            const baseR = c.size * 1.1;
+      const seed = c.x * 1000 + c.y;
+      
+      // Hàm tạo hình đá gồ ghề (đa giác)
+      function createRockPath(ctx, r, seed) {
+        const points = [];
+        const numVerts = 12;
+        for (let i = 0; i < numVerts; i++) {
+          const angle = (i / numVerts) * Math.PI * 2;
+          // Dùng seed để sinh nhiễu cố định cho mỗi viên đá
+          const noise = Math.sin(seed + i * 3.7) * 0.2 + Math.cos(seed + i * 1.3) * 0.15;
+          const rr = r * (0.7 + noise);
+          points.push({ x: Math.cos(angle) * rr, y: Math.sin(angle) * rr * 0.75 });
+        }
+        ctx.beginPath();
+        ctx.moveTo(points[0].x, points[0].y);
+        for (let i = 1; i < points.length; i++) {
+          ctx.lineTo(points[i].x, points[i].y);
+        }
+        ctx.closePath();
+      }
+
+      // Bóng đổ
+      ctx.save();
+      ctx.shadowColor = 'rgba(0,0,0,0.6)';
+      ctx.shadowBlur = 14;
+      ctx.fillStyle = '#1a1410';
+      createRockPath(ctx, baseR, seed);
+      ctx.fill();
+      ctx.restore();
+
+      // Thân đá chính (màu nâu xám)
+      ctx.fillStyle = '#4a3c2f';
+      createRockPath(ctx, baseR * 0.95, seed);
+      ctx.fill();
+
+      // Mảng sáng hơn trên bề mặt
+      ctx.fillStyle = '#6b5844';
+      ctx.beginPath();
+      ctx.ellipse(-baseR*0.12, -baseR*0.2, baseR*0.4, baseR*0.25, 0.2, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle = '#8c7560';
+      ctx.beginPath();
+      ctx.ellipse(-baseR*0.0, -baseR*0.32, baseR*0.22, baseR*0.14, -0.1, 0, Math.PI*2);
+      ctx.fill();
+
+      // Vết nứt (dùng đường gấp khúc)
+      ctx.strokeStyle = '#2e241a';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(-baseR*0.5, -baseR*0.15);
+      ctx.lineTo(-baseR*0.2, -baseR*0.5);
+      ctx.lineTo(baseR*0.1, -baseR*0.25);
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(baseR*0.2, -baseR*0.1);
+      ctx.lineTo(baseR*0.45, baseR*0.25);
+      ctx.stroke();
+
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.moveTo(-baseR*0.35, baseR*0.15);
+      ctx.lineTo(-baseR*0.55, baseR*0.4);
+      ctx.stroke();
+
+      // Hố nhỏ
+      ctx.fillStyle = '#33281e';
+      ctx.beginPath();
+      ctx.ellipse(baseR*0.3, -baseR*0.35, baseR*0.1, baseR*0.07, 0.5, 0, Math.PI*2);
+      ctx.fill();
+      ctx.strokeStyle = '#1f1812';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = '#3e3024';
+      ctx.beginPath();
+      ctx.ellipse(-baseR*0.4, baseR*0.3, baseR*0.09, baseR*0.06, -0.4, 0, Math.PI*2);
+      ctx.fill();
+      ctx.stroke();
+
+      // Viền sáng nóng xung quanh
+      ctx.globalAlpha = 0.35;
+      ctx.strokeStyle = 'rgba(255,140,30,0.9)';
+      ctx.lineWidth = 3;
+      createRockPath(ctx, baseR * 1.05, seed);
+      ctx.stroke();
+      ctx.globalAlpha = 1;
+
+      // Ánh sáng cam phủ (cháy)
+      const glow = ctx.createRadialGradient(0, 0, baseR*0.2, 0, 0, baseR*0.9);
+      glow.addColorStop(0, 'rgba(255,100,20,0)');
+      glow.addColorStop(0.7, 'rgba(255,100,20,0.3)');
+      glow.addColorStop(1, 'rgba(255,60,10,0)');
+      ctx.fillStyle = glow;
+      createRockPath(ctx, baseR * 0.95, seed);
+      ctx.fill();
+
+      // Điểm sáng (tia lửa)
+      ctx.fillStyle = '#ffdd99';
+      ctx.beginPath();
+      ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.12, 0, Math.PI*2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.05, 0, Math.PI*2);
+      ctx.fill();
+      
+      ctx.restore();
+      return;
+    }  // dấu } này đóng if (!c.exploded)
+    const t = c.explodeT;
+    const r = c.size * (1 + t * 3.8);
+    const alpha = Math.max(0, 1 - t / 0.8);
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    const g = ctx.createRadialGradient(c.x, c.impactY, 0, c.x, c.impactY, r*1.2);
+    g.addColorStop(0, 'rgba(255,255,255,.95)');
+    g.addColorStop(0.15, 'rgba(255,220,132,.95)');
+    g.addColorStop(0.45, 'rgba(255,128,62,.55)');
+    g.addColorStop(1, 'rgba(255,70,25,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath();
+    ctx.arc(c.x, c.impactY, r*1.2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = `rgba(255,240,180,${alpha * 0.9})`;
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.arc(c.x, c.impactY, r*0.7, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawHits(dt) {
+    for (let i=state.hits.length-1; i>=0; i--) {
+      const h = state.hits[i];
+      h.life -= dt;
+      if (h.life <= 0) { state.hits.splice(i,1); continue; }
+      ctx.save();
+      ctx.globalAlpha = clamp(h.life, 0, 1) * 0.5;
+      ctx.strokeStyle = 'rgba(255,180,110,.9)';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(h.x, h.y, h.r * (1.1 + (1-h.life)*1.4), 0, Math.PI*2);
+      ctx.stroke();
+      ctx.restore();
+    }
+  }
+
+  function drawParticles(dt) {
+    for (let i=state.particles.length-1; i>=0; i--) {
+      const p = state.particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { state.particles.splice(i,1); continue; }
+      p.vy += 720 * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, Math.min(1, p.life));
+      ctx.fillStyle = p.c;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawTarget(c) {
+    if (c.exploded) return;
+    const life = clamp(c.delay / 0.8, 0, 1);
+    const alpha = 0.15 + (1-life) * 0.55;
+    const pulse = 1 + Math.sin(state.t * 6 + c.x * 0.01) * 0.04;
+    ctx.save();
+    ctx.globalAlpha = alpha;
+    ctx.strokeStyle = 'rgba(255,255,255,.9)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(c.x, c.impactY, c.size * 1.1 * pulse, 0, Math.PI*2);
+    ctx.stroke();
+    ctx.globalAlpha = alpha * 0.8;
+    ctx.fillStyle = 'rgba(255,180,100,.18)';
+    ctx.beginPath();
+    ctx.arc(c.x, c.impactY, c.size * 1.8 * pulse, 0, Math.PI*2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawFrame(dt) {
+    ctx.save();
+    ctx.translate(state.shakeX, state.shakeY);
+    drawBackground(dt);
+
+    if (state.dangerPulse > 0) {
+      ctx.save();
+      ctx.globalAlpha = state.dangerPulse * 0.08;
+      ctx.fillStyle = '#ff5a5a';
+      ctx.fillRect(-20,-20,W+40,H+40);
+      ctx.restore();
+    }
+
+    for (const c of state.comets) drawTarget(c);
+    for (const c of state.comets) drawComet(c);
+    drawParticles(dt);
+    drawHits(dt);
+    drawPlayer();
+
+    if (state.combo >= 4) {
+      ctx.save();
+      ctx.globalAlpha = 0.12 + Math.min(0.18, state.combo * 0.01);
+      ctx.strokeStyle = '#ffe48b';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      for (let i=0; i<9; i++) {
+        const yy = groundY + 10 + i * 8;
+        ctx.moveTo(0, yy);
+        ctx.lineTo(W, yy + Math.sin(state.t * 2 + i) * 2);
+      }
+      ctx.stroke();
+      ctx.restore();
+    }
+    // Màn hình trắng xoá
+    if (state.screenWhite > 0) {
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, state.screenWhite * 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(-20, -20, W + 40, H + 40);
+      ctx.restore();
+    }
+        // ── SPOTLIGHT KHI THUA ─────────────────
+    if (state.darkSpotlight > 0) {
+      ctx.save();
+      // Vẽ trong hệ tọa độ gốc (bỏ shake)
+      // Vì shake=0 khi game over, nên không cần reset transform
+      const cx = player.x;
+      const cy = player.y;
+      const radius = 140;
+      const gradient = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, Math.max(W, H) * 1.2);
+      gradient.addColorStop(0, 'rgba(0,0,0,0)');
+      gradient.addColorStop(0.5, 'rgba(0,0,0,0)');
+      gradient.addColorStop(1, `rgba(0,0,0,${state.darkSpotlight})`);
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, W, H);
+      ctx.restore();
+    }
+    ctx.restore();
+  }
+
+  function update(dt) {
+    dt = clamp(dt, 0.001, 0.033);
+
+    state.shake = Math.max(0, state.shake - dt * 20);
+    state.flash = Math.max(0, state.flash - dt * 6);
+    state.dangerPulse = Math.max(0, state.dangerPulse - dt * 2.2);
+    const s = state.shake;
+    state.shakeX = (Math.random() - 0.5) * s;
+    state.shakeY = (Math.random() - 0.5) * s;
+    flash.style.background = state.flash > 0 ? `rgba(255,255,255,${Math.min(0.55, state.flash * 0.22)})` : 'rgba(255,255,255,0)';
+
+    if (!state.running) {
+      state.t += dt * 0.5;
+      // Tăng dần spotlight khi game over (tối đa 0.75)
+      if (state.over && state.darkSpotlight < 0.75) {
+        state.darkSpotlight += dt * 1.2; // mất khoảng 0.6 giây để tối hẳn
+        if (state.darkSpotlight > 0.75) state.darkSpotlight = 0.75;
+      }
+      drawFrame(dt);
+      return;
+    }
+
+    dt *= state.slow;
+    state.t += dt;
+    state.score += dt * 10;
+    state.comboTimer = Math.max(0, state.comboTimer - dt);
+    state.spawnTimer -= dt;
+    state.nearMissCooldown = Math.max(0, state.nearMissCooldown - dt);
+        state.blackCometTimer -= dt;
+    state.invincibleTimer = Math.max(0, state.invincibleTimer - dt);
+    state.screenWhite = Math.max(0, state.screenWhite - dt);
+    state.slowTimer = Math.max(0, state.slowTimer - dt);
+    if (state.slowTimer <= 0) state.slow = 1;
+
+    player.jumpLock = Math.max(0, player.jumpLock - dt);
+
+    if (state.comboTimer <= 0) {
+      state.combo = 1;
+      noteVal.textContent = 'Ready';
+    }
+
+    const spawnBase = clamp(1.05 - state.t * 0.009, 0.35, 1.05);
+    // Hàm đếm thiên thạch đang hoạt động (chưa nổ)
+    const activeComets = () => state.comets.filter(c => !c.exploded).length;
+
+    if (state.blackCometTimer <= 0) {
+      if (activeComets() < 3) {
+        spawnBlackComet();
+      }
+      state.blackCometTimer = rand(20, 30);
+    }
+    if (state.spawnTimer <= 0) {
+      if (activeComets() < 3) {
+        spawnComet();
+        if (state.t > 25 && Math.random() < 0.25 && activeComets() < 3) {
+          spawnComet();
+        }
+        if (state.t > 50 && Math.random() < 0.18 && activeComets() < 3) {
+          spawnComet();
+        }
+      }
+      state.spawnTimer = spawnBase * rand(0.48, 0.92);
+    }
+
+    const accel = player.onGround ? 1850 : 980;
+    const maxSpeed = player.onGround ? 300 : 255;
+    const friction = player.onGround ? 0.84 : 0.988;
+    let ax = 0;
+    if (state.keys.left && !state.keys.right) ax -= accel;
+    if (state.keys.right && !state.keys.left) ax += accel;
+    player.vx += ax * dt;
+    if (!state.keys.left && !state.keys.right) player.vx *= Math.pow(friction, dt * 60);
+    player.vx = clamp(player.vx, -maxSpeed - state.t * 0.8, maxSpeed + state.t * 0.8);
+
+    player.vy += 1500 * dt;
+    player.x += player.vx * dt;
+    player.y += player.vy * dt;
+
+    if (player.x < 12) { player.x = 12; player.vx = Math.max(0, player.vx) * 0.2; }
+    if (player.x > W - 12) { player.x = W - 12; player.vx = Math.min(0, player.vx) * 0.2; }
+
+    if (player.y >= groundY - 2) {
+      if (!player.onGround) burst(player.x, groundY - 2, 5, 70, '#ffffff', '#9ddcff');
+      player.y = groundY - 2;
+      player.vy = 0;
+      player.onGround = true;
+    } else {
+      player.onGround = false;
+    }
+
+    for (let i=state.comets.length-1; i>=0; i--) {
+      const c = state.comets[i];
+      if (!c.exploded) {
+        c.delay -= dt;
+        c.x += c.vx * dt * 0.18;
+        c.y += c.vy * dt;
+        c.y = Math.min(c.y, c.impactY);
+        if (!c.warned && c.y > H * 0.42) c.warned = true;
+        if (c.y >= c.impactY) {
+          triggerImpact(c);
+        } else if (!c.nearAwarded) {
+          const dist = Math.hypot(player.x - c.x, player.y - c.impactY);
+          const warningR = c.size * 7.6;
+          if (dist < warningR && dist > c.size * 2.8 && state.nearMissCooldown <= 0) {
+            state.nearMissCooldown = 0.22;
+            state.combo = Math.min(99, state.combo + 1);
+            state.comboTimer = 1.4;
+            state.score += 30 * state.combo;
+            c.nearAwarded = true;
+            noteVal.textContent = 'NEAR MISS';
+            burst(player.x, player.y - 16, 5, 100, '#dff4ff', '#ffd26b');
+          }
+        }
+      } else {
+        c.explodeT += dt;
+        if (c.explodeT > 0.85) {
+          state.comets.splice(i,1);
+          continue;
+        }
+      }
+    }
+
+    if (state.score > state.best) {
+      state.best = Math.floor(state.score);
+      localStorage.setItem('comet_best', state.best);
+      bestVal.textContent = state.best;
+    }
+
+    timeVal.textContent = state.t.toFixed(1) + 's';
+    scoreVal.textContent = Math.floor(state.score);
+    comboVal.textContent = 'x' + state.combo;
+    comboVal.style.color = state.combo >= 6 ? '#ff7ad1' : state.combo >= 3 ? '#ffcf5a' : '#92f0ae';
+
+    if (state.t > 20 && state.t < 21) noteVal.textContent = 'Meteor rain intensifying';
+    if (state.t > 45 && state.t < 46) noteVal.textContent = 'Combo pressure rising';
+    if (state.t > 70 && state.t < 71) noteVal.textContent = 'Survival mode: extreme';
+
+    drawFrame(dt);
+  }
+
+  function loop(ts) {
+    if (!loop.last) loop.last = ts;
+    const dt = (ts - loop.last) / 1000;
+    loop.last = ts;
+    update(dt);
+    requestAnimationFrame(loop);
+  }
+
+  window.addEventListener('resize', resize);
+  window.addEventListener('keydown', (e) => {
+    if (e.repeat) return;
+    if (e.key === 'a' || e.key === 'ArrowLeft') { state.keys.left = true; player.face = -1; }
+    if (e.key === 'd' || e.key === 'ArrowRight') { state.keys.right = true; player.face = 1; }
+    if (e.key === 'w' || e.key === 'ArrowUp' || e.key === ' ') {
+      if (state.running) {
+        if (player.face < 0) jump(-1);
+        else if (player.face > 0) jump(1);
+        else jump(0);
+      } else {
+        resetGame();
+      }
+      e.preventDefault();
+    }
+    if ((e.key === 'Enter' || e.key === 'Escape') && (!state.running || state.over)) resetGame();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (e.key === 'a' || e.key === 'ArrowLeft') state.keys.left = false;
+    if (e.key === 'd' || e.key === 'ArrowRight') state.keys.right = false;
+  });
+
+  canvas.addEventListener('pointerdown', handleTouchStart);
+  canvas.addEventListener('pointermove', handleTouchMove);
+  canvas.addEventListener('pointerup', handleTouchEnd);
+  canvas.addEventListener('pointercancel', handleTouchEnd);
+
+  startBtn.addEventListener('click', resetGame);
+
+  resize();
+  bestVal.textContent = state.best;
+  drawFrame(0);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
