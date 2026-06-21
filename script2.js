@@ -67,16 +67,15 @@ document.addEventListener('DOMContentLoaded', function () {
     const filterBtns = document.querySelectorAll('.filter-btn');
     let currentGenre = 'all';
 
-    // Lấy HTML của nút gốc (trong #hidden-buttons), loại bỏ id để tránh trùng
     function getButtonHTML(gameId) {
-        const originalBtn = document.getElementById(gameId);
-        if (originalBtn) {
-            let html = originalBtn.outerHTML;
-            html = html.replace(/ id="[^"]*"/, ''); // xóa id
-            return html;
-        }
-        return '';
+    const originalBtn = document.getElementById(gameId);
+    if (originalBtn) {
+        // Trả về nguyên bản, giữ nguyên id để CSS hoạt động
+        return originalBtn.outerHTML;
     }
+    console.warn('Không tìm thấy nút gốc:', gameId);
+    return '';
+}
 
     function getGenreName(genre) {
         const map = {
