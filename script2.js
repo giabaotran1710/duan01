@@ -4,14 +4,38 @@ document.addEventListener('DOMContentLoaded', function () {
     const overlay = document.getElementById('intro-overlay');
     const line1 = document.getElementById('intro-line1');
     const line2 = document.getElementById('intro-line2');
+    const slashLeft = document.querySelector('.slash-part.left');
+    const slashRight = document.querySelector('.slash-part.right');
+    const slashLine = document.querySelector('.slash-line');
+    const petalContainer = document.getElementById('petal-container');
     const contentEl = document.querySelector('.content');
     const utilityContainer = document.querySelector('.utility-container');
+    const utilityBar = document.getElementById('utilityBar');
+    const toggleBtn = document.getElementById('toggleBar');
 
+    // Tạo cánh hoa anh đào
+    function createPetals(count = 30) {
+        for (let i = 0; i < count; i++) {
+            const petal = document.createElement('div');
+            petal.className = 'petal';
+            const size = Math.random() * 12 + 8;
+            petal.style.width = size + 'px';
+            petal.style.height = size + 'px';
+            petal.style.left = Math.random() * 100 + '%';
+            petal.style.animationDuration = Math.random() * 5 + 5 + 's';
+            petal.style.animationDelay = Math.random() * 5 + 's';
+            petal.style.background = `rgba(255, ${150 + Math.random() * 100}, 200, ${0.6 + Math.random() * 0.4})`;
+            petalContainer.appendChild(petal);
+        }
+    }
+    createPetals(35);
+
+    // ========== GÕ CHỮ ==========
     const text1 = 'Thách thức mọi giới hạn của bản thân.';
     let charIndex = 0;
-    const typingSpeed = 70; // ms mỗi ký tự
-    const pauseBeforeLine2 = 500; // sau khi line1 xong, đợi 500ms hiện line2
-    const pauseBeforeFade = 1800; // sau khi line2 hiện, đợi 1.8s rồi fade
+    const typingSpeed = 70;
+    const pauseBeforeLine2 = 500;
+    const pauseBeforeSlash = 1800; // sau khi line2 hiện, chờ rồi chém
 
     function typeLine1() {
         if (charIndex < text1.length) {
@@ -19,31 +43,36 @@ document.addEventListener('DOMContentLoaded', function () {
             charIndex++;
             setTimeout(typeLine1, typingSpeed);
         } else {
-            // Xong line1 -> hiện line2
-            line1.style.borderRight = 'none'; // ẩn con trỏ
+            line1.style.borderRight = 'none';
             setTimeout(() => {
                 line2.style.opacity = '1';
-                // Sau khi line2 hiện, đợi rồi fade toàn bộ overlay
+                // Sau khi line2 hiện, đợi rồi chém
                 setTimeout(() => {
-                    overlay.style.opacity = '0';
-                    // Hiện nội dung chính
-                    contentEl.classList.add('visible');
-                    utilityContainer.classList.add('visible');
-                    // Xóa overlay khỏi DOM sau khi transition kết thúc
-                    setTimeout(() => {
-                        if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                        // Tự động mở menu game
-                        openBar();
-                    }, 800); // bằng với transition duration của overlay
-                }, pauseBeforeFade);
+                    activateSlash();
+                }, pauseBeforeSlash);
             }, pauseBeforeLine2);
         }
+    }
+
+    function activateSlash() {
+        // Hiện vết sáng
+        slashLine.classList.add('active');
+        // Kích hoạt tách màn hình
+        slashLeft.classList.add('slash-active');
+        slashRight.classList.add('slash-active');
+
+        // Sau khi animation kết thúc (0.8s), xóa overlay và mở menu
+        setTimeout(() => {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            // Mở utility bar
+            openBar();
+        }, 800);
     }
 
     // Bắt đầu sau 0.7s
     setTimeout(typeLine1, 700);
 
-    // ========== DỮ LIỆU GAME ==========
+    // ========== DỮ LIỆU GAME (giữ nguyên) ==========
     const games = [
         { id: 'word-game', name: 'Ghép từ', diff: '4/5', genre: ['tri-tue'] },
         { id: 'gamecaro', name: 'Cờ Caro', diff: '3/5', genre: ['chien-thuat', 'co'] },
@@ -106,7 +135,6 @@ document.addEventListener('DOMContentLoaded', function () {
         'comet': 'game/tronkhoithienthach.html',
     };
 
-    // Chuẩn hóa genre thành mảng
     games.forEach(g => {
         if (typeof g.genre === 'string') g.genre = [g.genre];
     });
@@ -127,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function () {
     games.forEach(g => g.genre.forEach(genre => allGenres.add(genre)));
     const sortedGenres = Array.from(allGenres).sort();
 
-    // Xóa nút lọc cứng trong HTML và tạo lại
     filterSection.innerHTML = '';
     const allBtn = document.createElement('button');
     allBtn.className = 'filter-btn active';
@@ -198,8 +225,6 @@ document.addEventListener('DOMContentLoaded', function () {
     renderGames('all');
 
     // ========== TOGGLE BAR ==========
-    const toggleBtn = document.getElementById('toggleBar');
-    const utilityBar = document.getElementById('utilityBar');
     let autoCloseTimer;
 
     function closeBar() {
