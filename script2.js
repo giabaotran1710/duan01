@@ -13,8 +13,8 @@ document.addEventListener('DOMContentLoaded', function () {
     const utilityBar = document.getElementById('utilityBar');
     const toggleBtn = document.getElementById('toggleBar');
 
-    // Tạo cánh hoa anh đào
-    function createPetals(count = 30) {
+    // ========== TẠO CÁNH HOA ANH ĐÀO ==========
+    function createPetals(count = 35) {
         for (let i = 0; i < count; i++) {
             const petal = document.createElement('div');
             petal.className = 'petal';
@@ -23,19 +23,16 @@ document.addEventListener('DOMContentLoaded', function () {
             petal.style.height = size + 'px';
             petal.style.left = Math.random() * 100 + '%';
             petal.style.animationDuration = Math.random() * 5 + 5 + 's';
-            petal.style.animationDelay = Math.random() * 5 + 's';
+            petal.style.animationDelay = Math.random() * 3 + 's'; // rơi ngẫu nhiên
             petal.style.background = `rgba(255, ${150 + Math.random() * 100}, 200, ${0.6 + Math.random() * 0.4})`;
             petalContainer.appendChild(petal);
         }
     }
-    createPetals(35);
 
-    // ========== GÕ CHỮ ==========
+    // ========== DÒNG THỜI GIAN MỚI ==========
     const text1 = 'Thách thức mọi giới hạn của bản thân.';
     let charIndex = 0;
     const typingSpeed = 70;
-    const pauseBeforeLine2 = 500;
-    const pauseBeforeSlash = 1800; // sau khi line2 hiện, chờ rồi chém
 
     function typeLine1() {
         if (charIndex < text1.length) {
@@ -43,34 +40,37 @@ document.addEventListener('DOMContentLoaded', function () {
             charIndex++;
             setTimeout(typeLine1, typingSpeed);
         } else {
+            // Gõ xong -> bỏ con trỏ, hiện dòng 2 ngay lập tức
             line1.style.borderRight = 'none';
+            line2.style.opacity = '1';
+
+            // Sau khi dòng 2 hiện 1 giây, kích hoạt vết chém
             setTimeout(() => {
-                line2.style.opacity = '1';
-                // Sau khi line2 hiện, đợi rồi chém
-                setTimeout(() => {
-                    activateSlash();
-                }, pauseBeforeSlash);
-            }, pauseBeforeLine2);
+                activateSlash();
+            }, 1000);
         }
     }
 
     function activateSlash() {
-        // Hiện vết sáng
         slashLine.classList.add('active');
-        // Kích hoạt tách màn hình
         slashLeft.classList.add('slash-active');
         slashRight.classList.add('slash-active');
 
-        // Sau khi animation kết thúc (0.8s), xóa overlay và mở menu
+        // Sau animation 0.8s, xóa overlay và mở menu
         setTimeout(() => {
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            // Mở utility bar
-            openBar();
+            openBar(); // tự động mở utility bar
         }, 800);
     }
 
-    // Bắt đầu sau 0.7s
-    setTimeout(typeLine1, 700);
+    // 2 giây đầu: chưa có gì
+    setTimeout(() => {
+        createPetals(35);       // hoa bắt đầu rơi
+        // 1 giây sau khi hoa rơi mới bắt đầu gõ chữ
+        setTimeout(() => {
+            typeLine1();
+        }, 1000);
+    }, 2000);
 
     // ========== DỮ LIỆU GAME (giữ nguyên) ==========
     const games = [
