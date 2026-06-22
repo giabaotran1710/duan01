@@ -3,33 +3,33 @@ document.addEventListener('DOMContentLoaded', function () {
     // ========== DỮ LIỆU GAME ==========
     const games = [
         { id: 'word-game', name: 'Ghép từ', diff: '4/5', genre: 'tri-tue' },
-        { id: 'gamecaro', name: 'Cờ Caro', diff: '3/5', genre: 'chien-thuat' },
-        { id: 'memori', name: 'Ghi nhớ màu sắc', diff: '3/5', genre: 'tri-tue' },
-        { id: 'magic', name: 'Tìm bóng', diff: '3/5', genre: 'tri-tue' },
+        { id: 'gamecaro', name: 'Cờ Caro', diff: '3/5', genre: 'chien-thuat','co'},
+        { id: 'memori', name: 'Ghi nhớ màu sắc', diff: '3/5', genre: 'tri-tue', 'ghi-nho' },
+        { id: 'magic', name: 'Tìm bóng', diff: '3/5', genre: 'ghi-nho' },
         { id: 'crab', name: 'Chặn cua', diff: '2/5', genre: 'chien-thuat' },
-        { id: 'reversi', name: 'Reversi', diff: '2/5', genre: 'chien-thuat' },
+        { id: 'reversi', name: 'Reversi', diff: '2/5', genre: 'chien-thuat','co' },
         { id: 'domin', name: 'Minesweeper', diff: '5/5', genre: 'tri-tue' },
         { id: 'haichien', name: 'Hải chiến', diff: '3/5', genre: 'chien-thuat' },
-        { id: 'musicgame', name: 'Nhịp điệu âm nhạc', diff: '4/5', genre: 'hanh-dong' },
-        { id: 'nedan', name: 'Né đạn', diff: '5/5', genre: 'hanh-dong' },
+        { id: 'musicgame', name: 'Nhịp điệu âm nhạc', diff: '4/5', genre: 'phan-xa' },
+        { id: 'nedan', name: 'Né đạn', diff: '5/5', genre: 'phan-xa' },
         { id: 'ghinho', name: 'Ghi nhớ Emoji', diff: '4/5', genre: 'tri-tue' },
         { id: 'thaphaycao', name: 'Thấp hay cao', diff: '2/5', genre: 'giai-tri' },
-        { id: 'codam', name: 'Cờ đam', diff: '2/5', genre: 'chien-thuat' },
-        { id: 'neonreflex', name: 'Neon Reflex', diff: '5/5', genre: 'hanh-dong' },
-        { id: 'dapquai', name: 'Đập quái rừng sâu', diff: '4/5', genre: 'hanh-dong' },
+        { id: 'codam', name: 'Cờ đam', diff: '2/5', genre: 'chien-thuat','co' },
+        { id: 'neonreflex', name: 'Neon Reflex', diff: '5/5', genre: 'phan-xa' },
+        { id: 'dapquai', name: 'Đập quái rừng sâu', diff: '4/5', genre: 'phan-xa' },
         { id: 'unogame', name: 'UNO!', diff: '1/5', genre: 'giai-tri' },
-        { id: 'sieuduoibat', name: 'Siêu đuổi bắt', diff: '5/5', genre: 'hanh-dong' },
-        { id: 'hungbi', name: 'Hứng bi', diff: '4/5', genre: 'hanh-dong' },
+        { id: 'sieuduoibat', name: 'Siêu đuổi bắt', diff: '5/5', genre: 'phan-xa' },
+        { id: 'hungbi', name: 'Hứng bi', diff: '4/5', genre: 'ghi-nho','phan-xa' },
         { id: 'duaxucxac', name: 'Đua xúc xắc bãi biển', diff: '1/5', genre: 'giai-tri' },
-        { id: 'blockjump', name: 'Nhảy! Nhảy và nhảy!', diff: '4/5', genre: 'hanh-dong' },
-        { id: 'bidaBtn', name: 'Bida', diff: '4/5', genre: 'the-thao' },
-        { id: 'khinhkhi', name: 'Khinh khí cầu', diff: '3/5', genre: 'giai-tri' },
-        { id: 'xepbonggai', name: 'Xếp bóng gai', diff: '2/5', genre: 'tri-tue' },
-        { id: 'truottuyet', name: 'Trượt tuyết', diff: '3/5', genre: 'the-thao' },
-        { id: 'demsao', name: 'Quan sát chòm sao', diff: '2/5', genre: 'tri-tue' },
-        { id: 'bongnay', name: 'Bóng nảy', diff: '4/5', genre: 'hanh-dong' },
-        { id: 'echnhayho', name: 'Ếch nhảy hồ', diff: '5/5', genre: 'tri-tue' },
-        { id: 'comet', name: 'Trốn khỏi thiên thạch', diff: '5/5', genre: 'hanh-dong' },
+        { id: 'blockjump', name: 'Nhảy! Nhảy và nhảy!', diff: '4/5', genre: 'giai-tri' },
+        { id: 'bidaBtn', name: 'Bida', diff: '4/5', genre: 'giai-tri' },
+        { id: 'khinhkhi', name: 'Khinh khí cầu', diff: '3/5', genre: 'giai-tri','phan-xa' },
+        { id: 'xepbonggai', name: 'Xếp bóng gai', diff: '2/5', genre: 'giai-tri' },
+        { id: 'truottuyet', name: 'Trượt tuyết', diff: '3/5', genre: 'giai-tri','tri-tue' },
+        { id: 'demsao', name: 'Quan sát chòm sao', diff: '2/5', genre: 'phan-xa','giai-tri' },
+        { id: 'bongnay', name: 'Bóng nảy', diff: '4/5', genre: 'phan-xa' },
+        { id: 'echnhayho', name: 'Ếch nhảy hồ', diff: '5/5', genre: 'ghi-nho' },
+        { id: 'comet', name: 'Trốn khỏi thiên thạch', diff: '5/5', genre: 'phan-xa' },
     ];
 
     const routes = {
@@ -80,10 +80,11 @@ document.addEventListener('DOMContentLoaded', function () {
     function getGenreName(genre) {
         const map = {
             'tri-tue': 'Trí tuệ',
-            'hanh-dong': 'Hành động',
+            'phan-xa': 'Phản xạ',
             'chien-thuat': 'Chiến thuật',
             'giai-tri': 'Giải trí',
-            'the-thao': 'Thể thao'
+            'ghi-nho' : 'Ghi nhớ',
+            'co' : 'Cờ',
         };
         return map[genre] || genre;
     }
