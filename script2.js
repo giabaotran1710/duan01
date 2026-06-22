@@ -287,4 +287,4 @@ document.addEventListener('DOMContentLoaded', function () {
             elLetter.classList.add('pop');
         }, 900);
     }
-});
+}); 
