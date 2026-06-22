@@ -4,9 +4,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const overlay = document.getElementById('intro-overlay');
     const line1 = document.getElementById('intro-line1');
     const line2 = document.getElementById('intro-line2');
-    const slashLeft = document.querySelector('.slash-part.left');
-    const slashRight = document.querySelector('.slash-part.right');
-    const slashLine = document.querySelector('.slash-line');
     const petalContainer = document.getElementById('petal-container');
     const contentEl = document.querySelector('.content');
     const utilityContainer = document.querySelector('.utility-container');
@@ -23,13 +20,13 @@ document.addEventListener('DOMContentLoaded', function () {
             petal.style.height = size + 'px';
             petal.style.left = Math.random() * 100 + '%';
             petal.style.animationDuration = Math.random() * 5 + 5 + 's';
-            petal.style.animationDelay = Math.random() * 3 + 's'; // rơi ngẫu nhiên
+            petal.style.animationDelay = Math.random() * 3 + 's';
             petal.style.background = `rgba(255, ${150 + Math.random() * 100}, 200, ${0.6 + Math.random() * 0.4})`;
             petalContainer.appendChild(petal);
         }
     }
 
-    // ========== DÒNG THỜI GIAN MỚI ==========
+    // ========== DÒNG THỜI GIAN ==========
     const text1 = 'Thách thức mọi giới hạn của bản thân.';
     let charIndex = 0;
     const typingSpeed = 70;
@@ -40,39 +37,31 @@ document.addEventListener('DOMContentLoaded', function () {
             charIndex++;
             setTimeout(typeLine1, typingSpeed);
         } else {
-            // Gõ xong -> bỏ con trỏ, hiện dòng 2 ngay lập tức
+            // Gõ xong -> bỏ con trỏ, hiện dòng 2 ngay
             line1.style.borderRight = 'none';
             line2.style.opacity = '1';
 
-            // Sau khi dòng 2 hiện 1 giây, kích hoạt vết chém
+            // Sau khi dòng 2 hiện 1 giây, bắt đầu fade out overlay
             setTimeout(() => {
-                activateSlash();
+                overlay.style.opacity = '0';
+
+                // Đợi transition kết thúc (1.2s) rồi xóa overlay và mở menu
+                setTimeout(() => {
+                    if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+                    openBar();
+                }, 1200);
             }, 1000);
         }
     }
 
-    function activateSlash() {
-        slashLine.classList.add('active');
-        slashLeft.classList.add('slash-active');
-        slashRight.classList.add('slash-active');
-
-        // Sau animation 0.8s, xóa overlay và mở menu
-        setTimeout(() => {
-            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            openBar(); // tự động mở utility bar
-        }, 800);
-    }
-
-    // 2 giây đầu: chưa có gì
+    // 2 giây đầu: đen hoàn toàn
     setTimeout(() => {
         createPetals(35);       // hoa bắt đầu rơi
-        // 1 giây sau khi hoa rơi mới bắt đầu gõ chữ
-        setTimeout(() => {
-            typeLine1();
-        }, 1000);
+        // 1 giây sau khi hoa rơi -> bắt đầu gõ chữ
+        setTimeout(typeLine1, 1000);
     }, 2000);
 
-    // ========== DỮ LIỆU GAME (giữ nguyên) ==========
+    // ========== DỮ LIỆU GAME ==========
     const games = [
         { id: 'word-game', name: 'Ghép từ', diff: '4/5', genre: ['tri-tue'] },
         { id: 'gamecaro', name: 'Cờ Caro', diff: '3/5', genre: ['chien-thuat', 'co'] },
