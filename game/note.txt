@@ -1,0 +1,2804 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>TRƯỢT TUYẾT</title>
+
+<style>
+*{
+  margin:0;
+  padding:0;
+  box-sizing:border-box;
+  user-select:none;
+  -webkit-user-select:none;
+  -webkit-tap-highlight-color:transparent;
+}
+
+:root{
+  --cyan:#75edff;
+  --ice:#dff9ff;
+  --gold:#ffd166;
+  --green:#59ffad;
+  --text:#ffffff;
+  --muted:rgba(255,255,255,.72);
+  --glass:rgba(255,255,255,.12);
+  --border:rgba(255,255,255,.2);
+}
+
+html,body{
+  width:100%;
+  height:100%;
+  overflow:hidden;
+  font-family:Arial, sans-serif;
+  background:#bfefff;
+  color:white;
+  touch-action:none;
+}
+
+#gameCanvas{
+  position:fixed;
+  inset:0;
+  width:100vw;
+  height:100svh;
+  display:block;
+  z-index:0;
+}
+
+/* Lớp băng phủ lên toàn màn hình */
+.ice-overlay{
+  display:none;
+}
+
+.ice-overlay::before{
+  content:"";
+  position:absolute;
+  inset:0;
+  background:
+    linear-gradient(70deg, transparent 0 42%, rgba(255,255,255,.35) 43%, transparent 45% 100%),
+    linear-gradient(112deg, transparent 0 58%, rgba(255,255,255,.22) 59%, transparent 61% 100%),
+    linear-gradient(18deg, transparent 0 70%, rgba(255,255,255,.18) 71%, transparent 73% 100%);
+  background-size:230px 160px, 310px 220px, 410px 260px;
+  opacity:.34;
+}
+
+.ui{
+  position:fixed;
+  inset:0;
+  z-index:3;
+  pointer-events:none;
+  padding:14px 12px 16px;
+}
+
+.topbar{
+  width:min(94vw,620px);
+  margin:0 auto;
+  display:grid;
+  grid-template-columns:1fr auto 1fr;
+  align-items:center;
+  gap:8px;
+}
+
+.title{
+  justify-self:start;
+  font-size:15px;
+  font-weight:900;
+  letter-spacing:.5px;
+  text-shadow:0 2px 10px rgba(0,80,120,.55);
+  white-space:nowrap;
+}
+
+.badge{
+  justify-self:center;
+  padding:8px 12px;
+  border-radius:999px;
+  background:rgba(0,70,110,.28);
+  border:1px solid rgba(255,255,255,.28);
+  box-shadow:0 8px 26px rgba(0,80,120,.18);
+  font-size:13px;
+  font-weight:900;
+  color:#eaffff;
+  backdrop-filter:blur(8px);
+  white-space:nowrap;
+}
+
+.moves{
+  justify-self:end;
+  color:#fff8cf;
+  font-size:13px;
+  font-weight:900;
+  text-shadow:0 2px 8px rgba(0,0,0,.28);
+  white-space:nowrap;
+}
+
+.bottom-ui{
+  position:absolute;
+  left:50%;
+  bottom:16px;
+  transform:translateX(-50%);
+  width:min(94vw,620px);
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
+  pointer-events:auto;
+}
+
+
+
+
+
+.actions{
+  width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+}
+
+.actions.dev-actions{
+  width:min(96vw,560px);
+  flex-direction:row;
+  flex-wrap:nowrap;
+}
+
+.actions.dev-actions .action-btn{
+  flex:1 1 0;
+  min-width:0;
+  white-space:nowrap;
+}
+
+.actions.single-action{
+  width:min(58vw,260px);
+}
+
+.action-btn{
+  border:none;
+  border-radius:16px;
+  padding:11px 8px;
+  font-size:13px;
+  font-weight:900;
+  color:#06465f;
+  background:rgba(255,255,255,.48);
+  border:1px solid rgba(255,255,255,.42);
+  box-shadow:0 9px 22px rgba(0,80,120,.18);
+  backdrop-filter:blur(8px);
+  touch-action:manipulation;
+}
+
+.action-btn:active{
+  transform:scale(.97);
+}
+
+.action-btn.next{
+  background:linear-gradient(145deg,#92ffc8,#45dc90);
+  color:#07391e;
+}
+
+.action-btn.restart{
+  background:linear-gradient(145deg,#fff2a7,#ffd166);
+  color:#533300;
+}
+
+.action-btn.undo{
+  background:linear-gradient(145deg,#dffaff,#7aefff);
+  color:#06465f;
+}
+
+.modal{
+  position:fixed;
+  inset:0;
+  z-index:10;
+  display:none;
+  align-items:center;
+  justify-content:center;
+  padding:20px;
+  background:rgba(0,34,58,.48);
+  backdrop-filter:blur(10px);
+}
+
+.modal.active{
+  display:flex;
+}
+
+.modal-card{
+  width:min(92vw,390px);
+  padding:22px;
+  border-radius:25px;
+  text-align:center;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(89,255,173,.28), transparent 34%),
+    linear-gradient(160deg, rgba(210,248,255,.96), rgba(119,210,240,.94));
+  border:1px solid rgba(255,255,255,.48);
+  box-shadow:0 22px 70px rgba(0,62,100,.36);
+  color:#07364d;
+}
+
+.modal-card h2{
+  font-size:32px;
+  color:#03854a;
+  margin-bottom:8px;
+  text-shadow:0 0 16px rgba(89,255,173,.45);
+}
+
+.modal-card p{
+  color:#16495e;
+  font-weight:800;
+  margin-bottom:16px;
+  line-height:1.5;
+}
+
+.modal-actions{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:10px;
+}
+
+.win-btn{
+  border:none;
+  border-radius:16px;
+  padding:13px 10px;
+  font-weight:900;
+  color:#06465f;
+  background:rgba(255,255,255,.6);
+  border:1px solid rgba(255,255,255,.5);
+}
+
+.win-btn.primary{
+  color:#07391e;
+  background:linear-gradient(145deg,#92ffc8,#45dc90);
+}
+
+@media (max-height:670px){
+  .ui{padding:10px 10px 12px}
+  .title{font-size:13px}
+  .badge,.moves{font-size:12px;padding:7px 9px}
+  .actions.dev-actions{
+    width:min(98vw,520px);
+    gap:6px;
+  }
+
+  .action-btn.night,
+  .action-btn.dev,
+  .action-btn.restart{
+    font-size:11px;
+    padding:9px 4px;
+  }
+}
+
+ 
+  
+
+  .bottom-ui{
+    bottom:12px;
+  }
+
+  .action-btn{
+    padding:9px 6px;
+    font-size:12px;
+  }
+}
+  
+  
+  .action-btn.night{
+  background:linear-gradient(145deg,#271947,#080b1d);
+  color:#d8d2ff;
+  border:1px solid rgba(180,150,255,.5);
+  text-shadow:0 0 8px rgba(180,150,255,.6);
+}
+
+.action-btn.night.active{
+  background:linear-gradient(145deg,#7d5cff,#251164);
+  color:#ffffff;
+  border:1px solid rgba(230,220,255,.8);
+  box-shadow:0 0 18px rgba(125,92,255,.45);
+}
+
+.action-btn.dev{
+  background:linear-gradient(145deg,#1f3148,#0a1424);
+  color:#9ff6ff;
+  border:1px solid rgba(117,237,255,.5);
+  text-shadow:0 0 8px rgba(117,237,255,.55);
+}
+
+.action-btn.dev.active{
+  background:linear-gradient(145deg,#59ffad,#19b86f);
+  color:#06351f;
+  text-shadow:none;
+}
+
+.dev-hint{
+  position:absolute;
+  left:50%;
+  top:58px;
+  transform:translateX(-50%);
+  z-index:4;
+
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  gap:9px;
+
+  width:min(90vw,360px);
+  padding:9px 12px;
+  border-radius:999px;
+
+  background:rgba(3,30,48,.62);
+  border:1px solid rgba(117,237,255,.42);
+  box-shadow:0 8px 28px rgba(0,70,100,.22);
+  backdrop-filter:blur(8px);
+
+  color:white;
+  font-weight:900;
+  pointer-events:none;
+}
+
+.dev-hint.hidden{
+  display:none;
+}
+
+.dev-arrow{
+  width:28px;
+  height:28px;
+  border-radius:50%;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+
+  background:#75edff;
+  color:#06384c;
+  font-size:18px;
+  font-weight:900;
+  box-shadow:0 0 16px rgba(117,237,255,.7);
+}
+
+.dev-text{
+  font-size:13px;
+  white-space:nowrap;
+}
+
+@media (max-height:670px){
+  .dev-hint{
+    top:48px;
+    padding:7px 10px;
+  }
+
+  .dev-arrow{
+    width:24px;
+    height:24px;
+    font-size:16px;
+  }
+
+  .dev-text{
+    font-size:12px;
+  }
+}
+  footer{
+  position:fixed;
+  left:8px;
+  bottom:4px;
+  z-index:99999;
+
+  padding:3px 7px;
+  border-radius:999px;
+
+  font-size:10px;
+  font-family:Tahoma, sans-serif;
+  font-weight:700;
+
+  color:rgba(0,35,55,.82);
+  background:rgba(255,255,255,.42);
+  border:1px solid rgba(255,255,255,.48);
+  backdrop-filter:blur(6px);
+
+  text-shadow:0 1px 2px rgba(255,255,255,.55);
+  pointer-events:none;
+  white-space:nowrap;
+}
+
+/* Khi bật chế độ khó / ban đêm */
+body.night-mode footer{
+  color:rgba(235,248,255,.92);
+  background:rgba(0,8,24,.48);
+  border:1px solid rgba(160,210,255,.25);
+  text-shadow:0 0 6px rgba(120,210,255,.55);
+}
+
+</style>
+</head>
+
+<body>
+
+<canvas id="gameCanvas"></canvas>
+<div class="ice-overlay"></div>
+
+<div class="ui">
+  <div class="topbar">
+    <div class="title">TRƯỢT TUYẾT</div>
+    <div class="badge" id="levelText">Màn 1</div>
+    <div class="moves" id="movesText">Bước: 0</div>
+  </div>
+
+ 
+
+<div class="bottom-ui">
+  <div class="actions dev-actions">
+    <button class="action-btn dev" id="devBtn">DEV MODE</button>
+    <button class="action-btn night" id="hardNightBtn">CHẾ ĐỘ: DỄ</button>
+    <button class="action-btn restart" id="restartBtn">CHƠI LẠI</button>
+  </div>
+</div>
+
+<div class="dev-hint hidden" id="devHint">
+  <span class="dev-arrow">?</span>
+  <span class="dev-text">Chưa bật chỉ đường</span>
+</div>
+</div>
+
+<div class="modal" id="modal">
+  <div class="modal-card">
+    <h2>WIN!</h2>
+    <p id="winText">Bạn đã tìm được lối ra.</p>
+    <div class="modal-actions">
+      <button class="win-btn" id="modalRestart">Chơi lại</button>
+      <button class="win-btn primary" id="modalNext">Màn sau</button>
+    </div>
+  </div>
+</div>
+ <footer>Version:D20260610-H15M06T0713 »»» developed by Tran Gia Bao</footer>
+
+<script>
+const canvas = document.getElementById("gameCanvas");
+const ctx = canvas.getContext("2d");
+
+const levelText = document.getElementById("levelText");
+const movesText = document.getElementById("movesText");
+
+const modal = document.getElementById("modal");
+const winText = document.getElementById("winText");
+
+const restartBtn = document.getElementById("restartBtn");
+const hardNightBtn = document.getElementById("hardNightBtn");
+const devBtn = document.getElementById("devBtn");
+const devHint = document.getElementById("devHint");
+const modalRestart = document.getElementById("modalRestart");
+const modalNext = document.getElementById("modalNext");
+
+const RANDOM_CONFIG = {
+  // Giữ màn không quá hẹp để tránh tile phình to gây lag
+  minRows: 12,
+  maxRows: 16,
+  minCols: 11,
+  maxCols: 13,
+
+  // Vật cản vừa đủ để có điểm dừng, không nghẹt sân
+  obstacleMin: 0.18,
+  obstacleMax: 0.30,
+
+  // Đây là số bước tối ưu tối thiểu.
+  // Không nên để 21 vì rất dễ sinh màn nghẹt / lag / khó tìm màn hợp lệ.
+  minSolutionMoves: 9,
+
+  // Số lần thử vừa phải cho điện thoại
+  maxGenerateTry: 360
+};
+  
+  const RANDOM_CONFIG_NIGHT = {
+  // Ban đêm khó hơn: sân lớn hơn một chút
+  minRows: 13,
+  maxRows: 17,
+  minCols: 12,
+  maxCols: 14,
+
+  // Vật cản dày hơn nhưng không quá nghẹt
+  obstacleMin: 0.24,
+  obstacleMax: 0.36,
+
+  // Lời giải tối ưu dài hơn
+  minSolutionMoves: 11,
+
+  // Tăng nhẹ số lần thử để tìm màn khó hợp lệ
+  maxGenerateTry: 520
+};
+
+function getRandomConfig(){
+  return hardNightMode ? RANDOM_CONFIG_NIGHT : RANDOM_CONFIG;
+}
+
+let levelNumber = 1;
+let currentRawMap = [];
+
+function randInt(min, max){
+  return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function randFloat(min, max){
+  return Math.random() * (max - min) + min;
+}
+
+function cloneRawMap(raw){
+  return raw.map(row => row);
+}
+
+function findRawChar(raw, target){
+  for(let r = 0; r < raw.length; r++){
+    for(let c = 0; c < raw[r].length; c++){
+      if(raw[r][c] === target){
+        return {r,c};
+      }
+    }
+  }
+
+  return null;
+}
+
+function isRawBlocked(raw, r, c){
+  if(r < 0 || c < 0 || r >= raw.length || c >= raw[0].length){
+    return true;
+  }
+
+  const ch = raw[r][c];
+  return ch === "#" || ch === "X";
+}
+
+function getTargetSolutionMoves(){
+  const cfg = getRandomConfig();
+
+  return Math.min(
+    hardNightMode ? 18 : 14,
+    cfg.minSolutionMoves + Math.floor((levelNumber - 1) * (hardNightMode ? 0.55 : 0.45))
+  );
+}
+
+function getSlideStop(raw, startR, startC, dir){
+  let r = startR;
+  let c = startC;
+  let moved = false;
+  let passExit = false;
+
+  while(true){
+    const nr = r + dir.dy;
+    const nc = c + dir.dx;
+
+    if(isRawBlocked(raw, nr, nc)){
+      break;
+    }
+
+    r = nr;
+    c = nc;
+    moved = true;
+
+    if(raw[r][c] === "E"){
+      passExit = true;
+      break;
+    }
+  }
+
+  return {
+    r,
+    c,
+    moved,
+    passExit
+  };
+}
+
+function getSolutionInfo(raw){
+  const start = findRawChar(raw, "P");
+  const exit = findRawChar(raw, "E");
+
+  if(!start || !exit){
+    return {
+      moves: Infinity,
+      reachableStops: 0,
+      deadEnds: 0
+    };
+  }
+
+  const dirs = [
+    {dx:0, dy:-1},
+    {dx:0, dy:1},
+    {dx:-1, dy:0},
+    {dx:1, dy:0}
+  ];
+
+  const visited = new Set();
+  const queue = [{
+    r:start.r,
+    c:start.c,
+    moves:0
+  }];
+
+  visited.add(start.r + "," + start.c);
+
+  let head = 0;
+  let deadEnds = 0;
+
+  while(head < queue.length){
+    const cur = queue[head++];
+    let validMovesFromHere = 0;
+
+    for(const dir of dirs){
+      const stop = getSlideStop(raw, cur.r, cur.c, dir);
+
+      if(!stop.moved){
+        continue;
+      }
+
+      validMovesFromHere++;
+
+      if(stop.passExit){
+        return {
+          moves: cur.moves + 1,
+          reachableStops: visited.size,
+          deadEnds
+        };
+      }
+
+      const key = stop.r + "," + stop.c;
+
+      if(!visited.has(key)){
+        visited.add(key);
+        queue.push({
+          r:stop.r,
+          c:stop.c,
+          moves:cur.moves + 1
+        });
+      }
+    }
+
+    if(validMovesFromHere <= 1){
+      deadEnds++;
+    }
+  }
+
+  return {
+    moves: Infinity,
+    reachableStops: visited.size,
+    deadEnds
+  };
+}
+
+function getSolutionMoves(raw){
+  return getSolutionInfo(raw).moves;
+}
+
+function wouldCreateTooDenseBlock(chars, r, c){
+  const checks = [
+    [[0,0],[-1,0],[0,-1],[-1,-1]],
+    [[0,0],[-1,0],[0,1],[-1,1]],
+    [[0,0],[1,0],[0,-1],[1,-1]],
+    [[0,0],[1,0],[0,1],[1,1]]
+  ];
+
+  for(const group of checks){
+    let blocked = 0;
+
+    for(const [dr,dc] of group){
+      const rr = r + dr;
+      const cc = c + dc;
+
+      if(rr < 1 || cc < 1 || rr >= chars.length - 1 || cc >= chars[0].length - 1){
+        continue;
+      }
+
+      if(chars[rr][cc] === "#" || chars[rr][cc] === "X"){
+        blocked++;
+      }
+    }
+
+    if(blocked >= 3){
+      return true;
+    }
+  }
+
+  return false;
+}
+
+function countRawObstacles(raw){
+  let count = 0;
+
+  for(let r = 1; r < raw.length - 1; r++){
+    for(let c = 1; c < raw[0].length - 1; c++){
+      if(raw[r][c] === "#" || raw[r][c] === "X"){
+        count++;
+      }
+    }
+  }
+
+  return count;
+}
+
+function getReachableStops(raw, start){
+  const dirs = [
+    {dx:0, dy:-1},
+    {dx:0, dy:1},
+    {dx:-1, dy:0},
+    {dx:1, dy:0}
+  ];
+
+  const visited = new Set();
+  const queue = [{
+    r:start.r,
+    c:start.c,
+    moves:0
+  }];
+
+  visited.add(start.r + "," + start.c);
+
+  let head = 0;
+
+  while(head < queue.length){
+    const cur = queue[head++];
+
+    for(const dir of dirs){
+      let r = cur.r;
+      let c = cur.c;
+      let moved = false;
+
+      while(true){
+        const nr = r + dir.dy;
+        const nc = c + dir.dx;
+
+        if(isRawBlocked(raw, nr, nc)){
+          break;
+        }
+
+        r = nr;
+        c = nc;
+        moved = true;
+      }
+
+      if(!moved){
+        continue;
+      }
+
+      const key = r + "," + c;
+
+      if(!visited.has(key)){
+        visited.add(key);
+        queue.push({
+          r,
+          c,
+          moves: cur.moves + 1
+        });
+      }
+    }
+  }
+
+  return queue;
+}
+
+function findGuaranteedExitCandidates(raw, start){
+  /*
+    EXIT sẽ được chọn từ các ô nằm trên đường trượt
+    xuất phát từ một điểm dừng chắc chắn tới được.
+    Vì vậy màn chắc chắn có đường thắng.
+  */
+
+  const dirs = [
+    {dx:0, dy:-1},
+    {dx:0, dy:1},
+    {dx:-1, dy:0},
+    {dx:1, dy:0}
+  ];
+
+  const stops = getReachableStops(raw, start);
+  const candidateMap = new Map();
+
+  for(const stop of stops){
+    for(const dir of dirs){
+      let r = stop.r;
+      let c = stop.c;
+      let moved = false;
+
+      while(true){
+        const nr = r + dir.dy;
+        const nc = c + dir.dx;
+
+        if(isRawBlocked(raw, nr, nc)){
+          break;
+        }
+
+        r = nr;
+        c = nc;
+        moved = true;
+
+        if(raw[r][c] !== "."){
+          continue;
+        }
+
+        if(r === start.r && c === start.c){
+          continue;
+        }
+
+        const dist = Math.abs(r - start.r) + Math.abs(c - start.c);
+        const winMoves = stop.moves + 1;
+
+        // Tránh màn quá gần / quá dễ
+        if(dist < Math.floor((raw.length + raw[0].length) * 0.35)){
+          continue;
+        }
+
+        const key = r + "," + c;
+
+        const old = candidateMap.get(key);
+
+        if(!old || winMoves > old.winMoves){
+          candidateMap.set(key, {
+            r,
+            c,
+            winMoves,
+            dist
+          });
+        }
+      }
+
+      if(!moved){
+        continue;
+      }
+    }
+  }
+
+  return Array.from(candidateMap.values());
+}
+
+function makeCandidateMap(){
+  const cfg = getRandomConfig();
+
+  const rows = randInt(cfg.minRows, cfg.maxRows);
+  const cols = randInt(cfg.minCols, cfg.maxCols);
+  const obstacleChance = randFloat(cfg.obstacleMin, cfg.obstacleMax);
+
+  const chars = Array.from({length: rows}, () => {
+    return Array.from({length: cols}, () => ".");
+  });
+
+  // Viền ngoài là tường logic
+  for(let r = 0; r < rows; r++){
+    for(let c = 0; c < cols; c++){
+      if(r === 0 || c === 0 || r === rows - 1 || c === cols - 1){
+        chars[r][c] = "#";
+      }
+    }
+  }
+
+  // Vật cản trong sân
+  for(let r = 1; r < rows - 1; r++){
+    for(let c = 1; c < cols - 1; c++){
+      if(Math.random() < obstacleChance){
+        if(wouldCreateTooDenseBlock(chars, r, c)){
+          continue;
+        }
+
+        chars[r][c] = Math.random() < 0.78 ? "#" : "X";
+      }
+    }
+  }
+
+  const floors = [];
+
+  for(let r = 1; r < rows - 1; r++){
+    for(let c = 1; c < cols - 1; c++){
+      if(chars[r][c] === "."){
+        floors.push({r,c});
+      }
+    }
+  }
+
+  if(floors.length < 18){
+    return null;
+  }
+
+  const start = floors[randInt(0, floors.length - 1)];
+  chars[start.r][start.c] = "P";
+
+  const rawWithoutExit = chars.map(row => row.join(""));
+  const target = getTargetSolutionMoves();
+
+  let exitCandidates = findGuaranteedExitCandidates(rawWithoutExit, start);
+
+  if(exitCandidates.length === 0){
+    return null;
+  }
+
+  /*
+    Ưu tiên exit có số bước thắng gần hoặc cao hơn target.
+    Nếu không có, vẫn chọn ứng viên tốt nhất nhưng generateRandomMap sẽ chấm lại.
+  */
+  exitCandidates.sort((a,b)=>{
+    const aGood = a.winMoves >= target ? 1 : 0;
+    const bGood = b.winMoves >= target ? 1 : 0;
+
+    if(aGood !== bGood){
+      return bGood - aGood;
+    }
+
+    if(a.winMoves !== b.winMoves){
+      return b.winMoves - a.winMoves;
+    }
+
+    return b.dist - a.dist;
+  });
+
+  const topCount = Math.min(6, exitCandidates.length);
+  const exit = exitCandidates[randInt(0, topCount - 1)];
+
+  chars[exit.r][exit.c] = "E";
+
+  return chars.map(row => row.join(""));
+}
+
+function scoreMap(raw, info){
+  const obstacles = countRawObstacles(raw);
+  const target = getTargetSolutionMoves();
+
+  let score = 0;
+
+  score += info.moves * 160;
+  score += info.reachableStops * 6;
+  score += info.deadEnds * 10;
+  score += obstacles * 2;
+
+  if(info.moves < target){
+    score -= (target - info.moves) * 300;
+  }
+
+  if(info.reachableStops < 10){
+    score -= 350;
+  }
+
+  return score;
+}
+
+function isValidGeneratedMap(raw){
+  if(!raw || !raw.length){
+    return false;
+  }
+
+  const start = findRawChar(raw, "P");
+  const exit = findRawChar(raw, "E");
+
+  if(!start || !exit){
+    return false;
+  }
+
+  const info = getSolutionInfo(raw);
+
+  return info.moves !== Infinity;
+}
+
+function generateRandomMap(){
+  const cfg = getRandomConfig();
+  const target = getTargetSolutionMoves();
+
+  let bestMap = null;
+  let bestScore = -Infinity;
+
+  let bestFallbackMap = null;
+  let bestFallbackMoves = -1;
+
+  for(let i = 0; i < cfg.maxGenerateTry; i++){
+    const raw = makeCandidateMap();
+
+    if(!isValidGeneratedMap(raw)){
+      continue;
+    }
+
+    const info = getSolutionInfo(raw);
+
+    if(info.moves > bestFallbackMoves){
+      bestFallbackMoves = info.moves;
+      bestFallbackMap = raw;
+    }
+
+    if(info.moves < target){
+      continue;
+    }
+
+    const score = scoreMap(raw, info);
+
+    if(score > bestScore){
+      bestScore = score;
+      bestMap = raw;
+    }
+  }
+
+  if(bestMap && isValidGeneratedMap(bestMap)){
+    return bestMap;
+  }
+
+  if(bestFallbackMap && isValidGeneratedMap(bestFallbackMap)){
+    return bestFallbackMap;
+  }
+
+  /*
+    Fallback cố định, chắc chắn có đường thắng.
+    Không dùng màn không kiểm chứng.
+  */
+  return [
+    "###########",
+    "#P....#...#",
+    "#.##..#.#.#",
+    "#......#..#",
+    "#.####....#",
+    "#....#..#E#",
+    "#.##.#.##.#",
+    "#....#....#",
+    "###########"
+  ];
+}
+let W = 0;
+let H = 0;
+let dpr = 1;
+
+
+let grid = [];
+let rows = 0;
+let cols = 0;
+
+let layout = {
+  x:0,
+  y:0,
+  w:0,
+  h:0,
+  tile:40
+};
+
+let player = {r:0,c:0};
+let playerPx = {x:0,y:0};
+let playerDir = {dx:0,dy:1};
+
+let pathQueue = [];
+let history = [];
+let moves = 0;
+let moving = false;
+let won = false;
+
+let snowflakes = [];
+let iceLines = [];
+let trails = [];
+let winParticles = [];
+let lastTrailX = 0;
+let lastTrailY = 0;
+let lastTime = 0;
+let devUnlocked = false;
+let devMode = false;
+let devSolution = [];
+let restartConfirmOpen = false;
+let ignoreSwipeUntil = 0;
+let hardNightMode = false;
+let nightStars = [];
+function resize(){
+  W = window.innerWidth;
+  H = window.innerHeight;
+  dpr = 1.45;
+
+  canvas.width = Math.floor(W * dpr);
+  canvas.height = Math.floor(H * dpr);
+  canvas.style.width = W + "px";
+  canvas.style.height = H + "px";
+
+  ctx.setTransform(dpr,0,0,dpr,0,0);
+
+  computeLayout();
+  makeSnow();
+makeIceLines();
+makeNightStars();
+
+  if(grid.length){
+    playerPx = cellToPx(player.r, player.c);
+  }
+}
+
+function computeLayout(){
+  /*
+    Sửa lỗi tường vô hình:
+    rows / cols có chứa viền # bên ngoài.
+    Nhưng viền # bên ngoài không được vẽ thành ô riêng.
+    Vì vậy sân hiển thị chỉ nên tính phần chơi thật: rows - 2, cols - 2.
+  */
+
+  const topLimit = H < 670 ? 50 : 62;
+
+  // Giảm số này nếu muốn sân sát nút hơn nữa
+  const bottomLimit = H < 670 ? 58 : 64;
+
+  const fieldPadRatio = 0.44;
+  const totalPadRatio = fieldPadRatio * 2;
+
+  const playableCols = Math.max(1, cols - 2);
+  const playableRows = Math.max(1, rows - 2);
+
+  const availW = W * 0.985;
+  const availH = Math.max(320, H - topLimit - bottomLimit);
+
+  /*
+    Chỉ tính kích thước theo phần sân thật.
+    Không tính 2 hàng/2 cột viền # vô hình.
+  */
+  const tileByW = availW / (playableCols + totalPadRatio);
+  const tileByH = availH / (playableRows + totalPadRatio);
+
+  /*
+  Giới hạn tile để màn hẹp không phình quá lớn gây lag.
+  64 là mức cân bằng: vẫn to, nhưng nhẹ hơn 86 rất nhiều.
+*/
+layout.tile = Math.max(30, Math.min(tileByW, tileByH, 64));
+  layout.w = playableCols * layout.tile;
+  layout.h = playableRows * layout.tile;
+
+  const fieldPad = layout.tile * fieldPadRatio;
+
+  layout.x = (W - layout.w) / 2;
+
+  /*
+    Neo đáy sân gần cụm nút dưới.
+  */
+  layout.y = H - bottomLimit - fieldPad - layout.h;
+
+  const minY = topLimit + fieldPad;
+
+  if(layout.y < minY){
+    layout.y = minY;
+  }
+}
+function makeSnow(){
+  snowflakes = [];
+
+  // Tuyết nhiều làm nặng khi đang trượt
+  const count = Math.min(45, Math.floor(W * H / 17000));
+
+  for(let i=0;i<count;i++){
+    snowflakes.push({
+      x:Math.random() * W,
+      y:Math.random() * H,
+      r:Math.random() * 1.8 + .7,
+      s:Math.random() * 22 + 12,
+      drift:Math.random() * 20 - 10
+    });
+  }
+}
+
+function makeIceLines(){
+  iceLines = [];
+  const count = Math.min(80, Math.floor(W * H / 12500));
+
+  for(let i=0;i<count;i++){
+    iceLines.push({
+      x:Math.random() * W,
+      y:Math.random() * H,
+      len:Math.random() * 90 + 35,
+      a:Math.random() * Math.PI,
+      alpha:Math.random() * .22 + .08
+    });
+  }
+}
+function makeNightStars(){
+  nightStars = [];
+
+  const count = Math.min(70, Math.floor(W * H / 9000));
+
+  for(let i = 0; i < count; i++){
+    nightStars.push({
+      x:Math.random() * W,
+      y:Math.random() * H * .48,
+      r:Math.random() * 1.3 + .4,
+      a:Math.random() * .55 + .25,
+      tw:Math.random() * Math.PI * 2
+    });
+  }
+}
+  
+ function drawNightSky(){
+  if(!hardNightMode){
+    return;
+  }
+
+  ctx.save();
+
+  const night = ctx.createLinearGradient(0,0,0,H);
+  night.addColorStop(0,"rgba(3,8,32,.72)");
+  night.addColorStop(.45,"rgba(10,20,60,.48)");
+  night.addColorStop(1,"rgba(2,8,24,.18)");
+
+  ctx.fillStyle = night;
+  ctx.fillRect(0,0,W,H);
+
+  for(const star of nightStars){
+    const twinkle = star.a + Math.sin(performance.now() / 700 + star.tw) * .16;
+
+    ctx.globalAlpha = Math.max(.18, twinkle);
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(star.x, star.y, star.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+function drawNightOverlay(){
+  if(!hardNightMode){
+    return;
+  }
+
+  ctx.save();
+
+  /*
+    Ban đêm rất tối:
+    - Tầm nhìn chỉ còn quanh nhân vật
+    - Mép ngoài gần như đen
+    - Vật cản xa khó thấy hơn
+  */
+  const radiusNear = layout.tile * .38;
+  const radiusFar = Math.max(W, H) * .34;
+
+  const darkness = ctx.createRadialGradient(
+    playerPx.x,
+    playerPx.y,
+    radiusNear,
+    playerPx.x,
+    playerPx.y,
+    radiusFar
+  );
+
+  darkness.addColorStop(0,"rgba(2,8,28,0)");
+  darkness.addColorStop(.16,"rgba(2,8,28,.22)");
+  darkness.addColorStop(.34,"rgba(2,8,28,.68)");
+  darkness.addColorStop(.62,"rgba(0,3,16,.90)");
+  darkness.addColorStop(1,"rgba(0,1,8,.98)");
+
+  ctx.fillStyle = darkness;
+  ctx.fillRect(0,0,W,H);
+
+  /*
+    Phủ thêm một lớp tối nhẹ toàn màn.
+    Lớp này làm ban đêm nặng đô hơn.
+  */
+  ctx.globalAlpha = .18;
+  ctx.fillStyle = "rgba(0,0,10,1)";
+  ctx.fillRect(0,0,W,H);
+
+  /*
+    Ánh sáng nhỏ sát chân nhân vật.
+  */
+  ctx.globalAlpha = .24;
+  ctx.shadowColor = "rgba(145,220,255,.45)";
+  ctx.shadowBlur = 10;
+  ctx.fillStyle = "rgba(150,230,255,.12)";
+  ctx.beginPath();
+  ctx.ellipse(
+    playerPx.x,
+    playerPx.y + layout.tile * .22,
+    layout.tile * .42,
+    layout.tile * .18,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  ctx.restore();
+}
+function startNewLevel(){
+  currentRawMap = generateRandomMap();
+  loadCurrentLevel();
+}
+
+function loadCurrentLevel(){
+  const raw = cloneRawMap(currentRawMap);
+
+  rows = raw.length;
+  cols = raw[0].length;
+
+  grid = raw.map((line,r)=>{
+    return line.split("").map((ch,c)=>{
+      if(ch === "P"){
+        player = {r,c};
+        return ".";
+      }
+      return ch;
+    });
+  });
+
+  moves = 0;
+  history = [];
+  pathQueue = [];
+  trails = [];
+  winParticles = [];
+  moving = false;
+  won = false;
+
+  // Mặc định nhân vật quay mặt về phía người chơi
+  playerDir = {dx:0,dy:1};
+
+  computeLayout();
+  playerPx = cellToPx(player.r, player.c);
+  lastTrailX = playerPx.x;
+lastTrailY = playerPx.y;
+
+  modal.classList.remove("active");
+  setMsg("Chọn hướng để trượt. Nhân vật sẽ đi thẳng đến khi đụng vật cản.");
+  updateUI();
+updateDevGuide();
+}
+function updateUI(){
+  levelText.textContent = "Màn " + levelNumber;
+  movesText.textContent = "Bước: " + moves;
+  hardNightBtn.classList.toggle("active", hardNightMode);
+hardNightBtn.textContent = hardNightMode ? "CHẾ ĐỘ: KHÓ" : "CHẾ ĐỘ: DỄ";
+  document.body.classList.toggle("night-mode", hardNightMode);
+}
+
+function setMsg(text){
+  // Đã tắt hiển thị message
+}
+
+function cellToPx(r,c){
+  /*
+    Vì viền # ngoài cùng chỉ dùng cho logic chặn,
+    không vẽ thành ô riêng, nên tọa độ hiển thị phải trừ 1.
+    
+    c = 1 là cột chơi đầu tiên
+    r = 1 là hàng chơi đầu tiên
+  */
+  return {
+    x:layout.x + (c - 1) * layout.tile + layout.tile / 2,
+    y:layout.y + (r - 1) * layout.tile + layout.tile / 2
+  };
+}
+
+function isBlocked(r,c){
+  if(r < 0 || c < 0 || r >= rows || c >= cols) return true;
+  return grid[r][c] === "#" || grid[r][c] === "X";
+}
+
+function isExit(r,c){
+  return grid[r][c] === "E";
+}
+  
+ function getCurrentSolutionPath(){
+  if(won){
+    return [];
+  }
+
+  const dirs = [
+    {dx:0, dy:-1, name:"LÊN", arrow:"▲"},
+    {dx:0, dy:1, name:"XUỐNG", arrow:"▼"},
+    {dx:-1, dy:0, name:"TRÁI", arrow:"◀"},
+    {dx:1, dy:0, name:"PHẢI", arrow:"▶"}
+  ];
+
+  const startKey = player.r + "," + player.c;
+  const visited = new Set([startKey]);
+  const parent = new Map();
+
+  const queue = [{
+    r:player.r,
+    c:player.c
+  }];
+
+  let head = 0;
+  let exitKey = null;
+
+  while(head < queue.length){
+    const cur = queue[head++];
+
+    for(const dir of dirs){
+      let r = cur.r;
+      let c = cur.c;
+      let moved = false;
+      let reachedExit = false;
+
+      while(true){
+        const nr = r + dir.dy;
+        const nc = c + dir.dx;
+
+        if(isBlocked(nr,nc)){
+          break;
+        }
+
+        r = nr;
+        c = nc;
+        moved = true;
+
+        if(isExit(r,c)){
+          reachedExit = true;
+          break;
+        }
+      }
+
+      if(!moved){
+        continue;
+      }
+
+      const key = r + "," + c;
+
+      if(!visited.has(key)){
+        visited.add(key);
+        parent.set(key,{
+          prev:cur.r + "," + cur.c,
+          dir
+        });
+
+        if(reachedExit){
+          exitKey = key;
+          break;
+        }
+
+        queue.push({r,c});
+      }
+    }
+
+    if(exitKey){
+      break;
+    }
+  }
+
+  if(!exitKey){
+    return [];
+  }
+
+  const path = [];
+  let key = exitKey;
+
+  while(key !== startKey){
+    const data = parent.get(key);
+
+    if(!data){
+      break;
+    }
+
+    path.unshift(data.dir);
+    key = data.prev;
+  }
+
+  return path;
+}
+
+function updateDevGuide(){
+  if(!devMode){
+    devSolution = [];
+    devHint.classList.add("hidden");
+    devBtn.classList.remove("active");
+    devBtn.textContent = "DEV MODE";
+    return;
+  }
+
+  devSolution = getCurrentSolutionPath();
+
+  devBtn.classList.add("active");
+  devBtn.textContent = "DEV: BẬT";
+
+  if(won){
+    devHint.classList.add("hidden");
+    return;
+  }
+
+  devHint.classList.remove("hidden");
+
+  if(devSolution.length === 0){
+    devHint.innerHTML = `
+      <span class="dev-arrow">!</span>
+      <span class="dev-text">Không tìm thấy đường từ vị trí này</span>
+    `;
+    return;
+  }
+
+  const next = devSolution[0];
+
+  devHint.innerHTML = `
+    <span class="dev-arrow">${next.arrow}</span>
+    <span class="dev-text">Đi ${next.name} · Còn ${devSolution.length} bước</span>
+  `;
+}
+
+function toggleDevMode(){
+  if(!devUnlocked){
+    const pass = prompt("Nhập mật khẩu Developed Mode:");
+
+    if(pass !== "2417"){
+      alert("Sai mật khẩu.");
+      return;
+    }
+
+    devUnlocked = true;
+  }
+
+  devMode = !devMode;
+  updateDevGuide();
+}
+
+function slide(dx,dy){
+  if(moving || won) return;
+
+  let r = player.r;
+  let c = player.c;
+  const path = [];
+
+  while(true){
+    const nr = r + dy;
+    const nc = c + dx;
+
+    if(isBlocked(nr,nc)) break;
+
+    r = nr;
+    c = nc;
+    path.push({r,c});
+
+    if(isExit(r,c)) break;
+  }
+
+  if(path.length === 0){
+    setMsg("Hướng đó bị chặn. Đổi hướng khác.");
+    shakeScreen();
+    vibrate(35);
+    return;
+  }
+
+  history.push({
+    player:{...player},
+    px:{...playerPx},
+    moves,
+    dir:{...playerDir}
+  });
+
+  moves++;
+  updateUI();
+
+  playerDir = {dx,dy};
+  lastTrailX = playerPx.x;
+lastTrailY = playerPx.y;
+  pathQueue = path;
+  moving = true;
+  if(devMode){
+  devHint.classList.add("hidden");
+}
+
+  setMsg("Đang trượt trên băng...");
+  vibrate(12);
+}
+
+function update(dt){
+  updateSnow(dt);
+  updateTrails(dt);
+  updateWinParticles(dt);
+
+  if(moving){
+    movePlayer(dt);
+  }
+}
+
+function movePlayer(dt){
+  if(pathQueue.length === 0){
+    moving = false;
+    setMsg("Đã dừng lại. Chọn hướng tiếp theo.");
+    updateDevGuide();
+    return;
+  }
+
+  const targetCell = pathQueue[0];
+  const target = cellToPx(targetCell.r, targetCell.c);
+
+  const dx = target.x - playerPx.x;
+  const dy = target.y - playerPx.y;
+  const dist = Math.hypot(dx,dy);
+
+  const speed = Math.max(360, layout.tile * 7.4);
+  const step = speed * dt;
+
+  const trailDist = Math.hypot(
+    playerPx.x - lastTrailX,
+    playerPx.y - lastTrailY
+  );
+
+  if(trailDist > layout.tile * .28){
+    trails.push({
+      x:playerPx.x,
+      y:playerPx.y,
+      life:.24,
+      max:.24
+    });
+
+    lastTrailX = playerPx.x;
+    lastTrailY = playerPx.y;
+
+    if(trails.length > 20){
+      trails.shift();
+    }
+  }
+
+  if(dist <= step){
+    playerPx.x = target.x;
+    playerPx.y = target.y;
+    player = {...targetCell};
+    pathQueue.shift();
+
+    if(isExit(player.r, player.c)){
+      moving = false;
+      handleWin();
+      return;
+    }
+
+    if(pathQueue.length === 0){
+      moving = false;
+      setMsg("Đã dừng lại. Chọn hướng tiếp theo.");
+      updateDevGuide();
+      return;
+    }
+  }else{
+    playerPx.x += dx / dist * step;
+    playerPx.y += dy / dist * step;
+  }
+}
+
+function undo(){
+  if(moving || history.length === 0) return;
+
+  const last = history.pop();
+  player = {...last.player};
+  playerPx = {...last.px};
+  playerDir = {...last.dir};
+  moves = last.moves;
+  won = false;
+  pathQueue = [];
+  trails = [];
+
+  modal.classList.remove("active");
+  setMsg("Đã quay lại vị trí trước.");
+  updateUI();
+}
+
+function requestRestart(){
+  if(restartConfirmOpen) return;
+
+  restartConfirmOpen = true;
+  swipeActive = false;
+  moving = false;
+  pathQueue = [];
+
+  const ok = confirm("Bạn có chắc muốn chơi lại màn này không?");
+
+  restartConfirmOpen = false;
+  ignoreSwipeUntil = performance.now() + 700;
+
+  if(ok){
+    restart();
+  }
+}
+function toggleHardNightMode(){
+  if(restartConfirmOpen) return;
+
+  swipeActive = false;
+  pathQueue = [];
+  moving = false;
+
+  const ok = confirm(
+    hardNightMode
+      ? "Tắt Chế độ khó - Ban đêm và sinh màn mới?"
+      : "Bật Chế độ khó - Ban đêm? Màn hiện tại sẽ được đổi sang màn mới."
+  );
+
+  ignoreSwipeUntil = performance.now() + 700;
+
+  if(!ok){
+    return;
+  }
+
+  hardNightMode = !hardNightMode;
+
+  // Khi đổi mode, bắt đầu lại từ màn 1 cho rõ ràng
+  levelNumber = 1;
+  startNewLevel();
+}
+  
+function nextLevel(){
+  levelNumber++;
+  startNewLevel();
+}
+
+function handleWin(){
+  won = true;
+  updateDevGuide();
+  setMsg("Đã tìm thấy lối ra!");
+  vibrate([70,40,90]);
+
+  const p = cellToPx(player.r, player.c);
+  for(let i=0;i<24;i++){
+    winParticles.push({
+      x:p.x,
+      y:p.y,
+      vx:Math.cos(i) * (Math.random() * 160 + 70),
+      vy:Math.sin(i) * (Math.random() * 160 + 70),
+      life:1,
+      max:1,
+      size:Math.random() * 4 + 2
+    });
+  }
+
+  winText.textContent = `Bạn đã hoàn thành Màn ${levelNumber} trong ${moves} bước.`;
+  setTimeout(()=>{
+    modal.classList.add("active");
+  }, 350);
+}
+
+function shakeScreen(){
+  document.body.animate([
+    {transform:"translateX(0)"},
+    {transform:"translateX(-5px)"},
+    {transform:"translateX(5px)"},
+    {transform:"translateX(0)"}
+  ],{
+    duration:180,
+    easing:"linear"
+  });
+}
+
+function vibrate(pattern){
+  if(navigator.vibrate){
+    navigator.vibrate(pattern);
+  }
+}
+
+function updateSnow(dt){
+  for(const f of snowflakes){
+    f.y += f.s * dt;
+    f.x += f.drift * dt;
+
+    if(f.y > H + 10){
+      f.y = -10;
+      f.x = Math.random() * W;
+    }
+
+    if(f.x < -10) f.x = W + 10;
+    if(f.x > W + 10) f.x = -10;
+  }
+}
+
+function updateTrails(dt){
+  for(const t of trails){
+    t.life -= dt;
+  }
+  trails = trails.filter(t=>t.life > 0);
+}
+
+function updateWinParticles(dt){
+  for(const p of winParticles){
+    p.life -= dt;
+    p.x += p.vx * dt;
+    p.y += p.vy * dt;
+    p.vy += 80 * dt;
+  }
+  winParticles = winParticles.filter(p=>p.life > 0);
+}
+
+function draw(){
+  ctx.clearRect(0,0,W,H);
+
+  drawBackground();
+drawNightSky();
+
+  // Bề mặt băng nằm dưới tất cả vật thể chính
+  drawIceField();
+  drawGlassCracks();
+
+  // Dấu trượt nằm trên băng nhưng dưới người
+drawTrails();
+
+// Mũi tên Developed Mode nằm trên đường đi
+drawDevGuide();
+
+// Vật thể trên mặt sân
+drawExit();
+drawObstacles();
+
+// Nhân vật phải nằm trên mặt băng
+drawPlayer();
+
+// Lớp ban đêm phủ lên sân, có ánh sáng quanh nhân vật
+drawNightOverlay();
+
+// Hiệu ứng phía trước
+drawWinParticles();
+drawSnow();
+}
+
+function drawBackground(){
+  const sky = ctx.createLinearGradient(0,0,0,H);
+  sky.addColorStop(0,"#86d9ff");
+  sky.addColorStop(.34,"#dbf8ff");
+  sky.addColorStop(.62,"#f7feff");
+  sky.addColorStop(1,"#c3efff");
+  ctx.fillStyle = sky;
+  ctx.fillRect(0,0,W,H);
+
+  drawMountain(W * .18, H * .18, W * .42, H * .28, "#d8f5ff", "#95cce6");
+  drawMountain(W * .55, H * .13, W * .56, H * .34, "#e8fbff", "#a9d9ef");
+  drawMountain(W * .88, H * .22, W * .45, H * .27, "#d8f5ff", "#8cc7e3");
+
+  const ground = ctx.createLinearGradient(0,H * .32,0,H);
+  ground.addColorStop(0,"rgba(255,255,255,.35)");
+  ground.addColorStop(.35,"#effcff");
+  ground.addColorStop(1,"#d5f5ff");
+  ctx.fillStyle = ground;
+  ctx.fillRect(0,H * .28,W,H);
+
+  const ice = ctx.createLinearGradient(0,H * .24,W,H);
+  ice.addColorStop(0,"rgba(255,255,255,.35)");
+  ice.addColorStop(.42,"rgba(117,237,255,.24)");
+  ice.addColorStop(1,"rgba(255,255,255,.42)");
+  ctx.fillStyle = ice;
+  ctx.fillRect(0,0,W,H);
+
+  for(const line of iceLines){
+    ctx.save();
+    ctx.globalAlpha = line.alpha;
+    ctx.strokeStyle = "rgba(255,255,255,.95)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(line.x, line.y);
+    ctx.lineTo(
+      line.x + Math.cos(line.a) * line.len,
+      line.y + Math.sin(line.a) * line.len
+    );
+    ctx.stroke();
+    ctx.restore();
+  }
+}
+
+function drawMountain(cx, baseY, w, h, light, dark){
+  ctx.save();
+  ctx.beginPath();
+  ctx.moveTo(cx - w / 2, baseY + h);
+  ctx.lineTo(cx, baseY);
+  ctx.lineTo(cx + w / 2, baseY + h);
+  ctx.closePath();
+
+  const grad = ctx.createLinearGradient(cx,baseY,cx,baseY+h);
+  grad.addColorStop(0,light);
+  grad.addColorStop(1,dark);
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.beginPath();
+  ctx.moveTo(cx, baseY);
+  ctx.lineTo(cx - w * .12, baseY + h * .34);
+  ctx.lineTo(cx + w * .08, baseY + h * .26);
+  ctx.closePath();
+  ctx.fillStyle = "rgba(255,255,255,.75)";
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawIceField(){
+  const pad = layout.tile * .44;
+  const x = layout.x - pad;
+  const y = layout.y - pad;
+  const w = layout.w + pad * 2;
+  const h = layout.h + pad * 2;
+
+  ctx.save();
+
+  ctx.shadowColor = "rgba(0,120,170,.14)";
+ctx.shadowBlur = moving ? 6 : 16;
+ctx.shadowOffsetY = moving ? 4 : 8;
+
+  roundRect(ctx,x,y,w,h,layout.tile * .45);
+  const grad = ctx.createLinearGradient(x,y,x+w,y+h);
+  grad.addColorStop(0,"rgba(255,255,255,.46)");
+  grad.addColorStop(.5,"rgba(161,239,255,.34)");
+  grad.addColorStop(1,"rgba(255,255,255,.56)");
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  // Chỉ giữ một viền tuyết chính, tránh bị 2 viền
+  ctx.lineWidth = Math.max(12, layout.tile * .32);
+  ctx.strokeStyle = "rgba(255,255,255,.78)";
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawTrails(){
+  ctx.save();
+  for(const t of trails){
+    const a = t.life / t.max;
+    ctx.globalAlpha = a * .55;
+    ctx.beginPath();
+    ctx.ellipse(t.x, t.y, layout.tile * .26, layout.tile * .09, 0, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(255,255,255,.8)";
+    ctx.fill();
+
+    ctx.globalAlpha = a * .32;
+    ctx.strokeStyle = "rgba(100,215,255,.9)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(t.x - layout.tile * .25, t.y + layout.tile * .15);
+    ctx.lineTo(t.x + layout.tile * .25, t.y - layout.tile * .15);
+    ctx.stroke();
+  }
+  ctx.restore();
+}
+
+function drawExit(){
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      if(grid[r][c] !== "E") continue;
+
+      const p = cellToPx(r,c);
+      const s = layout.tile;
+      const t = performance.now() * 0.006;
+
+      ctx.save();
+
+      /* Ánh sáng mục tiêu dưới chân */
+      ctx.shadowColor = "rgba(255,90,90,.45)";
+      ctx.shadowBlur = 18;
+      ctx.beginPath();
+      ctx.ellipse(
+        p.x,
+        p.y + s * .28,
+        s * .42,
+        s * .18,
+        0,
+        0,
+        Math.PI * 2
+      );
+      ctx.fillStyle = "rgba(255,70,70,.22)";
+      ctx.fill();
+
+      ctx.shadowBlur = 0;
+
+      /* Cột cờ */
+      ctx.lineWidth = Math.max(4, s * .08);
+      ctx.strokeStyle = "#6a4328";
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.moveTo(p.x - s * .12, p.y + s * .34);
+      ctx.lineTo(p.x - s * .12, p.y - s * .40);
+      ctx.stroke();
+
+      /* Đỉnh cột */
+      ctx.beginPath();
+      ctx.arc(p.x - s * .12, p.y - s * .42, s * .045, 0, Math.PI * 2);
+      ctx.fillStyle = "#ffd166";
+      ctx.fill();
+
+      /* Lá cờ đỏ bay */
+      const poleX = p.x - s * .12;
+      const topY = p.y - s * .36;
+      const flagW = s * .48;
+      const flagH = s * .24;
+
+      const wave1 = Math.sin(t + r * 0.7 + c * 0.45) * s * 0.05;
+      const wave2 = Math.sin(t * 1.35 + r * 0.4 + c * 0.3) * s * 0.04;
+      const tailWave = Math.sin(t * 1.6 + r + c) * s * 0.06;
+
+      ctx.beginPath();
+      ctx.moveTo(poleX, topY);
+      ctx.quadraticCurveTo(
+        poleX + flagW * .28,
+        topY + wave1,
+        poleX + flagW * .55,
+        topY + wave2
+      );
+      ctx.quadraticCurveTo(
+        poleX + flagW * .86,
+        topY + tailWave,
+        poleX + flagW,
+        topY + flagH * .34
+      );
+      ctx.quadraticCurveTo(
+        poleX + flagW * .8,
+        topY + flagH * .88 + tailWave * .35,
+        poleX + flagW * .48,
+        topY + flagH * .78 + wave2 * .3
+      );
+      ctx.quadraticCurveTo(
+        poleX + flagW * .2,
+        topY + flagH * .68 + wave1 * .25,
+        poleX,
+        topY + flagH
+      );
+      ctx.closePath();
+
+      const flagGrad = ctx.createLinearGradient(
+        poleX, topY,
+        poleX + flagW, topY + flagH
+      );
+      flagGrad.addColorStop(0, "#ff7a7a");
+      flagGrad.addColorStop(.45, "#ff2d2d");
+      flagGrad.addColorStop(1, "#b80000");
+
+      ctx.fillStyle = flagGrad;
+      ctx.fill();
+
+      /* Nếp gấp lá cờ */
+      ctx.strokeStyle = "rgba(255,255,255,.24)";
+      ctx.lineWidth = Math.max(1, s * .018);
+      ctx.beginPath();
+      ctx.moveTo(poleX + flagW * .18, topY + flagH * .1);
+      ctx.quadraticCurveTo(
+        poleX + flagW * .38,
+        topY + flagH * .32 + wave1 * .25,
+        poleX + flagW * .62,
+        topY + flagH * .18 + wave2 * .18
+      );
+      ctx.stroke();
+
+      ctx.beginPath();
+      ctx.moveTo(poleX + flagW * .16, topY + flagH * .46);
+      ctx.quadraticCurveTo(
+        poleX + flagW * .45,
+        topY + flagH * .58 + wave1 * .15,
+        poleX + flagW * .78,
+        topY + flagH * .48 + tailWave * .18
+      );
+      ctx.stroke();
+
+      /* Chữ EXIT nhỏ trên cờ */
+      ctx.fillStyle = "rgba(255,245,245,.95)";
+      ctx.font = `900 ${Math.max(8, s * .14)}px Arial`;
+      ctx.textAlign = "center";
+      ctx.textBaseline = "middle";
+      ctx.fillText(
+        "",
+        poleX + flagW * .45,
+        topY + flagH * .42
+      );
+
+      ctx.restore();
+    }
+  }
+}
+
+function drawObstacles(){
+  for(let r=0;r<rows;r++){
+    for(let c=0;c<cols;c++){
+      const ch = grid[r][c];
+      const boundary = r === 0 || c === 0 || r === rows - 1 || c === cols - 1;
+
+      if(ch === "#" && boundary) continue;
+
+      const p = cellToPx(r,c);
+      const s = layout.tile;
+
+      if(ch === "#"){
+        drawSnowMound(p.x, p.y, s);
+      }
+
+      if(ch === "X"){
+        drawPineTree(p.x, p.y, s);
+      }
+    }
+  }
+}
+  
+
+function drawOuterSnowRim(){
+  const pad = layout.tile * .44;
+  const x = layout.x - pad;
+  const y = layout.y - pad;
+  const w = layout.w + pad * 2;
+  const h = layout.h + pad * 2;
+
+  ctx.save();
+  ctx.lineWidth = Math.max(16, layout.tile * .45);
+  ctx.strokeStyle = "rgba(255,255,255,.82)";
+  ctx.shadowColor = "rgba(0,90,130,.18)";
+  ctx.shadowBlur = 16;
+  roundRect(ctx,x,y,w,h,layout.tile * .45);
+  ctx.stroke();
+
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = "rgba(80,170,210,.35)";
+  roundRect(ctx,x,y,w,h,layout.tile * .45);
+  ctx.stroke();
+  ctx.restore();
+}
+
+function drawSnowMound(x,y,s){
+  ctx.save();
+
+  ctx.shadowColor = "rgba(0,80,120,.2)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 5;
+
+  const grad = ctx.createLinearGradient(x,y-s*.38,x,y+s*.38);
+  grad.addColorStop(0,"#ffffff");
+  grad.addColorStop(.58,"#dff7ff");
+  grad.addColorStop(1,"#a9ddea");
+
+  ctx.fillStyle = grad;
+
+  ctx.beginPath();
+  ctx.ellipse(x - s * .16, y + s * .07, s * .34, s * .24, -.2, 0, Math.PI * 2);
+  ctx.ellipse(x + s * .12, y + s * .04, s * .38, s * .28, .18, 0, Math.PI * 2);
+  ctx.ellipse(x, y - s * .09, s * .28, s * .24, 0, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+  ctx.strokeStyle = "rgba(80,170,210,.22)";
+  ctx.lineWidth = 2;
+  ctx.beginPath();
+  ctx.arc(x, y + s * .07, s * .38, Math.PI * .1, Math.PI * .9);
+  ctx.stroke();
+
+  ctx.restore();
+}
+
+function drawPineTree(x,y,s){
+  ctx.save();
+
+  ctx.shadowColor = "rgba(0,80,70,.25)";
+  ctx.shadowBlur = 10;
+  ctx.shadowOffsetY = 6;
+
+  ctx.fillStyle = "#7b4d2d";
+  roundRect(ctx, x - s * .06, y + s * .17, s * .12, s * .24, s * .03);
+  ctx.fill();
+
+  drawTreeLayer(x, y - s * .28, s * .34, "#0a6a4a");
+  drawTreeLayer(x, y - s * .08, s * .43, "#0b7e59");
+  drawTreeLayer(x, y + s * .14, s * .52, "#0a5e43");
+
+  ctx.shadowBlur = 0;
+  ctx.fillStyle = "rgba(255,255,255,.88)";
+  ctx.beginPath();
+  ctx.ellipse(x - s * .1, y - s * .09, s * .16, s * .04, -.25, 0, Math.PI * 2);
+  ctx.ellipse(x + s * .09, y + s * .1, s * .18, s * .05, .22, 0, Math.PI * 2);
+  ctx.fill();
+
+  ctx.restore();
+}
+
+function drawTreeLayer(x,y,size,color){
+  ctx.beginPath();
+  ctx.moveTo(x, y - size * .54);
+  ctx.lineTo(x - size * .48, y + size * .38);
+  ctx.lineTo(x + size * .48, y + size * .38);
+  ctx.closePath();
+  ctx.fillStyle = color;
+  ctx.fill();
+}
+function drawPlayer(){
+  const s = layout.tile * .88;
+
+  /*
+    Logic góc nhìn đúng:
+    đi lên    dy < 0 -> thấy sau lưng
+    đi xuống  dy > 0 -> thấy mặt trước
+    đi ngang        -> thấy mặt cắt nghiêng
+  */
+  const facing =
+    playerDir.dx < 0 ? "left" :
+    playerDir.dx > 0 ? "right" :
+    playerDir.dy < 0 ? "back" :
+    "front";
+
+  ctx.save();
+
+  /* Bóng đổ dưới chân */
+  ctx.globalAlpha = .34;
+  ctx.fillStyle = "rgba(0,75,105,.34)";
+  ctx.beginPath();
+  ctx.ellipse(
+    playerPx.x,
+    playerPx.y + s * .42,
+    s * .42,
+    s * .13,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  /* Phản sáng trên mặt băng */
+  ctx.globalAlpha = .42;
+  ctx.fillStyle = "rgba(255,255,255,.72)";
+  ctx.beginPath();
+  ctx.ellipse(
+    playerPx.x,
+    playerPx.y + s * .39,
+    s * .3,
+    s * .045,
+    0,
+    0,
+    Math.PI * 2
+  );
+  ctx.fill();
+
+  ctx.globalAlpha = 1;
+  ctx.translate(playerPx.x, playerPx.y);
+  ctx.lineCap = "round";
+  ctx.lineJoin = "round";
+
+  if(facing === "front"){
+    drawPlayerFront();
+  }else if(facing === "back"){
+    drawPlayerBack();
+  }else{
+    if(facing === "left"){
+      ctx.scale(-1,1);
+    }
+    drawPlayerSide();
+  }
+
+  ctx.restore();
+
+  function drawSkisVertical(){
+    ctx.strokeStyle = "#063e52";
+    ctx.lineWidth = Math.max(3, s * .07);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .21, -s * .03);
+    ctx.lineTo(-s * .27, s * .55);
+    ctx.moveTo(s * .21, -s * .03);
+    ctx.lineTo(s * .27, s * .55);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,.9)";
+    ctx.lineWidth = Math.max(1.3, s * .025);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .21, -s * .03);
+    ctx.lineTo(-s * .27, s * .55);
+    ctx.moveTo(s * .21, -s * .03);
+    ctx.lineTo(s * .27, s * .55);
+    ctx.stroke();
+  }
+
+  function drawSkisHorizontal(){
+    ctx.strokeStyle = "#063e52";
+    ctx.lineWidth = Math.max(3, s * .07);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .52, s * .4);
+    ctx.lineTo(s * .54, s * .36);
+    ctx.moveTo(-s * .48, s * .51);
+    ctx.lineTo(s * .5, s * .47);
+    ctx.stroke();
+
+    ctx.strokeStyle = "rgba(255,255,255,.9)";
+    ctx.lineWidth = Math.max(1.3, s * .025);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .52, s * .4);
+    ctx.lineTo(s * .54, s * .36);
+    ctx.moveTo(-s * .48, s * .51);
+    ctx.lineTo(s * .5, s * .47);
+    ctx.stroke();
+  }
+
+  function drawPlayerFront(){
+    drawSkisVertical();
+
+    /* Chân */
+    ctx.strokeStyle = "#14324a";
+    ctx.lineWidth = Math.max(5, s * .12);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .1, s * .08);
+    ctx.lineTo(-s * .23, s * .35);
+    ctx.moveTo(s * .1, s * .08);
+    ctx.lineTo(s * .23, s * .35);
+    ctx.stroke();
+
+    /* Thân áo mặt trước */
+    const jacket = ctx.createLinearGradient(0, -s * .34, 0, s * .18);
+    jacket.addColorStop(0, "#ff6684");
+    jacket.addColorStop(1, "#b71845");
+
+    ctx.fillStyle = jacket;
+    ctx.shadowColor = "rgba(0,70,100,.28)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+
+    roundRect(ctx, -s * .24, -s * .32, s * .48, s * .5, s * .13);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    /* Khóa áo giữa ngực */
+    ctx.strokeStyle = "rgba(255,255,255,.55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * .27);
+    ctx.lineTo(0, s * .16);
+    ctx.stroke();
+
+    /* Tay */
+    ctx.strokeStyle = "#b71845";
+    ctx.lineWidth = Math.max(5, s * .11);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .2, -s * .16);
+    ctx.lineTo(-s * .39, s * .08);
+    ctx.moveTo(s * .2, -s * .16);
+    ctx.lineTo(s * .39, s * .08);
+    ctx.stroke();
+
+    /* Gậy trượt */
+    ctx.strokeStyle = "#063e52";
+    ctx.lineWidth = Math.max(2, s * .035);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .39, s * .08);
+    ctx.lineTo(-s * .5, s * .36);
+    ctx.moveTo(s * .39, s * .08);
+    ctx.lineTo(s * .5, s * .36);
+    ctx.stroke();
+
+    /* Đầu */
+    ctx.fillStyle = "#ffd2a6";
+    ctx.beginPath();
+    ctx.arc(0, -s * .5, s * .18, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Mặt trước */
+    ctx.fillStyle = "#16324a";
+    ctx.beginPath();
+    ctx.arc(-s * .06, -s * .51, s * .018, 0, Math.PI * 2);
+    ctx.arc(s * .06, -s * .51, s * .018, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.strokeStyle = "#b56d4f";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(0, -s * .49);
+    ctx.lineTo(s * .018, -s * .46);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#9b4b55";
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.arc(0, -s * .44, s * .045, 0, Math.PI);
+    ctx.stroke();
+
+    /* Mũ */
+    ctx.fillStyle = "#074a66";
+    ctx.beginPath();
+    ctx.arc(0, -s * .55, s * .19, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(s * .14, -s * .64, s * .055, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Khăn */
+    ctx.fillStyle = "#ffd166";
+    roundRect(ctx, -s * .19, -s * .37, s * .38, s * .08, s * .04);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(s * .1, -s * .34);
+    ctx.lineTo(s * .4, -s * .22);
+    ctx.lineTo(s * .13, -s * .24);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  function drawPlayerBack(){
+    drawSkisVertical();
+
+    /* Chân */
+    ctx.strokeStyle = "#14324a";
+    ctx.lineWidth = Math.max(5, s * .12);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .1, s * .08);
+    ctx.lineTo(-s * .23, s * .35);
+    ctx.moveTo(s * .1, s * .08);
+    ctx.lineTo(s * .23, s * .35);
+    ctx.stroke();
+
+    /* Lưng áo */
+    const jacket = ctx.createLinearGradient(0, -s * .34, 0, s * .18);
+    jacket.addColorStop(0, "#d73860");
+    jacket.addColorStop(1, "#8f1235");
+
+    ctx.fillStyle = jacket;
+    ctx.shadowColor = "rgba(0,70,100,.28)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+
+    roundRect(ctx, -s * .25, -s * .32, s * .5, s * .5, s * .13);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    /* Mảng lưng */
+    ctx.fillStyle = "rgba(90,0,35,.22)";
+    roundRect(ctx, -s * .14, -s * .22, s * .28, s * .28, s * .07);
+    ctx.fill();
+
+    ctx.strokeStyle = "rgba(255,255,255,.25)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, -s * .08, s * .13, Math.PI * .1, Math.PI * .9);
+    ctx.stroke();
+
+    /* Tay sau lưng */
+    ctx.strokeStyle = "#8f1235";
+    ctx.lineWidth = Math.max(5, s * .11);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .2, -s * .15);
+    ctx.lineTo(-s * .38, s * .09);
+    ctx.moveTo(s * .2, -s * .15);
+    ctx.lineTo(s * .38, s * .09);
+    ctx.stroke();
+
+    /* Gậy trượt */
+    ctx.strokeStyle = "#063e52";
+    ctx.lineWidth = Math.max(2, s * .035);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .38, s * .09);
+    ctx.lineTo(-s * .5, s * .37);
+    ctx.moveTo(s * .38, s * .09);
+    ctx.lineTo(s * .5, s * .37);
+    ctx.stroke();
+
+    /* Sau đầu */
+    ctx.fillStyle = "#ffd2a6";
+    ctx.beginPath();
+    ctx.arc(0, -s * .5, s * .18, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Tóc / gáy */
+    ctx.fillStyle = "#3a2218";
+    ctx.beginPath();
+    ctx.arc(0, -s * .5, s * .18, Math.PI * .05, Math.PI * .95);
+    ctx.fill();
+
+    /* Mũ nhìn từ sau */
+    ctx.fillStyle = "#074a66";
+    ctx.beginPath();
+    ctx.arc(0, -s * .55, s * .2, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(-s * .13, -s * .64, s * .055, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Khăn sau cổ */
+    ctx.fillStyle = "#dcae45";
+    roundRect(ctx, -s * .2, -s * .37, s * .4, s * .08, s * .04);
+    ctx.fill();
+  }
+
+  function drawPlayerSide(){
+    drawSkisHorizontal();
+
+    /* Chân khi nhìn ngang */
+    ctx.strokeStyle = "#14324a";
+    ctx.lineWidth = Math.max(5, s * .12);
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .02, s * .08);
+    ctx.lineTo(s * .2, s * .34);
+    ctx.moveTo(-s * .1, s * .08);
+    ctx.lineTo(-s * .28, s * .44);
+    ctx.stroke();
+
+    /* Thân nghiêng về hướng trượt */
+    ctx.save();
+    ctx.rotate(-0.12);
+
+    const jacket = ctx.createLinearGradient(0, -s * .34, 0, s * .16);
+    jacket.addColorStop(0, "#ff6684");
+    jacket.addColorStop(1, "#b71845");
+
+    ctx.fillStyle = jacket;
+    ctx.shadowColor = "rgba(0,70,100,.28)";
+    ctx.shadowBlur = 8;
+    ctx.shadowOffsetY = 4;
+
+    roundRect(ctx, -s * .18, -s * .31, s * .38, s * .5, s * .12);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+    ctx.shadowOffsetY = 0;
+
+    /* Tay bên hông */
+    ctx.strokeStyle = "#b71845";
+    ctx.lineWidth = Math.max(5, s * .11);
+
+    ctx.beginPath();
+    ctx.moveTo(s * .12, -s * .15);
+    ctx.lineTo(s * .34, s * .08);
+    ctx.stroke();
+
+    ctx.strokeStyle = "#063e52";
+    ctx.lineWidth = Math.max(2, s * .035);
+
+    ctx.beginPath();
+    ctx.moveTo(s * .34, s * .08);
+    ctx.lineTo(s * .48, s * .36);
+    ctx.stroke();
+
+    /* Đầu nhìn nghiêng */
+    ctx.fillStyle = "#ffd2a6";
+    ctx.beginPath();
+    ctx.arc(s * .02, -s * .5, s * .18, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Mũ */
+    ctx.fillStyle = "#074a66";
+    ctx.beginPath();
+    ctx.arc(s * .02, -s * .55, s * .19, Math.PI, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(s * .15, -s * .64, s * .055, 0, Math.PI * 2);
+    ctx.fill();
+
+    /* Mặt cắt: một mắt + mũi */
+    ctx.fillStyle = "#16324a";
+    ctx.beginPath();
+    ctx.arc(s * .08, -s * .51, s * .018, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = "#f2b286";
+    ctx.beginPath();
+    ctx.moveTo(s * .17, -s * .49);
+    ctx.lineTo(s * .27, -s * .46);
+    ctx.lineTo(s * .17, -s * .43);
+    ctx.closePath();
+    ctx.fill();
+
+    /* Khăn bay ngược về sau */
+    ctx.fillStyle = "#ffd166";
+    roundRect(ctx, -s * .16, -s * .37, s * .34, s * .08, s * .04);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(-s * .1, -s * .34);
+    ctx.lineTo(-s * .42, -s * .22);
+    ctx.lineTo(-s * .12, -s * .24);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.restore();
+  }
+}
+function drawDevGuide(){
+  if(!devMode || moving || won || devSolution.length === 0){
+    return;
+  }
+
+  /*
+    Chỉ vẽ 1 mũi tên gần nhân vật.
+    Mũi tên nằm trên ô kế tiếp theo hướng cần trượt,
+    không đặt ở điểm cuối / vật cản.
+  */
+
+  const next = devSolution[0];
+
+  const nearR = player.r + next.dy;
+  const nearC = player.c + next.dx;
+
+  if(isBlocked(nearR, nearC)){
+    return;
+  }
+
+  const p = cellToPx(nearR, nearC);
+  const s = layout.tile;
+
+  const radius = Math.min(25, s * .32);
+  const fontSize = Math.min(25, s * .38);
+  const pulse = 0.92 + Math.sin(performance.now() / 230) * .08;
+
+  ctx.save();
+
+  ctx.globalAlpha = .96;
+
+  ctx.shadowColor = "rgba(117,237,255,.85)";
+  ctx.shadowBlur = 15;
+
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, radius * pulse, 0, Math.PI * 2);
+  ctx.fillStyle = "rgba(117,237,255,.86)";
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  ctx.lineWidth = Math.max(2, s * .035);
+  ctx.strokeStyle = "rgba(255,255,255,.9)";
+  ctx.stroke();
+
+  ctx.fillStyle = "#06384c";
+  ctx.font = `900 ${fontSize}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(next.arrow, p.x, p.y + 1);
+
+  ctx.restore();
+}
+  
+function drawSnow(){
+  ctx.save();
+  ctx.fillStyle = hardNightMode
+    ? "rgba(190,225,255,.72)"
+    : "rgba(255,255,255,.88)";
+
+  for(const f of snowflakes){
+    ctx.globalAlpha = .45 + f.r * .18;
+    ctx.beginPath();
+    ctx.arc(f.x, f.y, f.r, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function drawGlassCracks(){
+  ctx.save();
+  ctx.globalAlpha = .24;
+  ctx.strokeStyle = "rgba(255,255,255,.9)";
+  ctx.lineWidth = 1;
+
+  for(let i=0;i<iceLines.length;i+=4){
+    const l = iceLines[i];
+    ctx.beginPath();
+    ctx.moveTo(l.x, l.y);
+    ctx.lineTo(l.x + Math.cos(l.a) * l.len, l.y + Math.sin(l.a) * l.len);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+}
+
+function drawWinParticles(){
+  ctx.save();
+
+  for(const p of winParticles){
+    const a = p.life / p.max;
+    ctx.globalAlpha = a;
+    ctx.fillStyle = a > .5 ? "#59ffad" : "#ffffff";
+    ctx.beginPath();
+    ctx.arc(p.x, p.y, p.size * a, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+
+function roundRect(ctx,x,y,w,h,r){
+  r = Math.min(r, w / 2, h / 2);
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+  ctx.lineTo(x + r, y + h);
+  ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+  ctx.lineTo(x, y + r);
+  ctx.quadraticCurveTo(x, y, x + r, y);
+  ctx.closePath();
+}
+
+function loop(time){
+  const dt = Math.min(.033, (time - lastTime) / 1000 || 0);
+  lastTime = time;
+
+  update(dt);
+  draw();
+
+  requestAnimationFrame(loop);
+}
+
+hardNightBtn.addEventListener("click",(e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+  toggleHardNightMode();
+});
+
+devBtn.addEventListener("click",(e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+  toggleDevMode();
+});
+restartBtn.addEventListener("click",(e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+  requestRestart();
+});
+  
+modalRestart.addEventListener("click",(e)=>{
+  e.preventDefault();
+  e.stopPropagation();
+  requestRestart();
+});
+modalNext.addEventListener("click", nextLevel);
+
+window.addEventListener("keydown",(e)=>{
+  const key = e.key.toLowerCase();
+
+  if(key === "arrowup" || key === "w") slide(0,-1);
+  if(key === "arrowdown" || key === "s") slide(0,1);
+  if(key === "arrowleft" || key === "a") slide(-1,0);
+  if(key === "arrowright" || key === "d") slide(1,0);
+  
+if(key === "r") requestRestart();
+});
+
+let swipeStartX = 0;
+let swipeStartY = 0;
+let swipeActive = false;
+
+canvas.addEventListener("pointerdown",(e)=>{
+  if(performance.now() < ignoreSwipeUntil) return;
+  if(restartConfirmOpen) return;
+  if(moving || won) return;
+
+  e.preventDefault();
+
+  swipeActive = true;
+  swipeStartX = e.clientX;
+  swipeStartY = e.clientY;
+
+  if(canvas.setPointerCapture){
+    canvas.setPointerCapture(e.pointerId);
+  }
+}, {passive:false});
+  
+canvas.addEventListener("pointerup",(e)=>{
+  if(performance.now() < ignoreSwipeUntil) return;
+  if(restartConfirmOpen) return;
+  if(!swipeActive) return;
+
+  e.preventDefault();
+
+  swipeActive = false;
+
+  const dx = e.clientX - swipeStartX;
+  const dy = e.clientY - swipeStartY;
+
+  if(Math.hypot(dx,dy) < 34) return;
+
+  if(Math.abs(dx) > Math.abs(dy)){
+    slide(dx > 0 ? 1 : -1, 0);
+  }else{
+    slide(0, dy > 0 ? 1 : -1);
+  }
+}, {passive:false});
+
+canvas.addEventListener("pointercancel",()=>{
+  swipeActive = false;
+});
+
+window.addEventListener("resize", resize);
+
+resize();
+startNewLevel();
+requestAnimationFrame(loop);
+  function restart(){
+  // Chặn mọi cú chạm dư sau khi bấm Chơi lại
+  swipeActive = false;
+  pathQueue = [];
+  moving = false;
+  won = false;
+
+  ignoreSwipeUntil = performance.now() + 500;
+
+  loadCurrentLevel();
+
+  // Ép chắc chắn nhân vật đứng đúng vị trí P sau reset
+  playerPx = cellToPx(player.r, player.c);
+  lastTrailX = playerPx.x;
+  lastTrailY = playerPx.y;
+}
+</script>
+
+</body>
+</html>
