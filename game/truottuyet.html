@@ -5,6 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <title>TRƯỢT TUYẾT</title>
 
+<!-- Font Awesome cho icon -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+
 <style>
 *{
   margin:0;
@@ -102,13 +105,37 @@ html,body{
   white-space:nowrap;
 }
 
+/* Khu vực hiển thị bước + nút âm thanh */
 .moves{
   justify-self:end;
+  display:flex;
+  align-items:center;
+  gap:6px;
   color:#fff8cf;
   font-size:13px;
   font-weight:900;
   text-shadow:0 2px 8px rgba(0,0,0,.28);
   white-space:nowrap;
+  pointer-events:auto; /* Cho phép nhấn nút */
+}
+
+/* Nút bật/tắt nhạc */
+.audio-btn{
+  background:none;
+  border:none;
+  color:inherit;
+  font-size:16px;
+  cursor:pointer;
+  padding:2px 4px;
+  line-height:1;
+  text-shadow: inherit;
+  opacity:0.9;
+  transition: opacity 0.2s;
+  touch-action:manipulation;
+}
+
+.audio-btn:active{
+  opacity:0.7;
 }
 
 .bottom-ui{
@@ -123,10 +150,6 @@ html,body{
   gap:10px;
   pointer-events:auto;
 }
-
-
-
-
 
 .actions{
   width:100%;
@@ -266,9 +289,6 @@ html,body{
   }
 }
 
- 
-  
-
   .bottom-ui{
     bottom:12px;
   }
@@ -277,9 +297,7 @@ html,body{
     padding:9px 6px;
     font-size:12px;
   }
-}
-  
-  
+
   .action-btn.night{
   background:linear-gradient(145deg,#271947,#080b1d);
   color:#d8d2ff;
@@ -373,7 +391,8 @@ html,body{
     font-size:12px;
   }
 }
-  footer{
+
+footer{
   position:fixed;
   left:8px;
   bottom:4px;
@@ -404,6 +423,10 @@ body.night-mode footer{
   text-shadow:0 0 6px rgba(120,210,255,.55);
 }
 
+/* Nút âm thanh trong chế độ ban đêm giữ nguyên màu trắng */
+body.night-mode .audio-btn{
+  color: #e0f0ff;
+}
 </style>
 </head>
 
@@ -416,10 +439,13 @@ body.night-mode footer{
   <div class="topbar">
     <div class="title">TRƯỢT TUYẾT</div>
     <div class="badge" id="levelText">Màn 1</div>
-    <div class="moves" id="movesText">Bước: 0</div>
+    <div class="moves" id="movesContainer">
+      <span id="movesText">Bước: 0</span>
+      <button class="audio-btn" id="audioBtn" aria-label="Bật/tắt âm thanh">
+        <i class="fas fa-volume-up"></i>
+      </button>
+    </div>
   </div>
-
- 
 
 <div class="bottom-ui">
   <div class="actions dev-actions">
@@ -445,7 +471,10 @@ body.night-mode footer{
     </div>
   </div>
 </div>
- <footer>Version:D20260610-H15M06T0713 »»» developed by Tran Gia Bao</footer>
+<footer>Version:D20260610-H15M06T0713 »»» developed by Tran Gia Bao</footer>
+
+<!-- Audio nền -->
+<audio id="bgm" src="../audio/noelsound.mp3" loop preload="auto"></audio>
 
 <script>
 const canvas = document.getElementById("gameCanvas");
@@ -463,6 +492,47 @@ const devBtn = document.getElementById("devBtn");
 const devHint = document.getElementById("devHint");
 const modalRestart = document.getElementById("modalRestart");
 const modalNext = document.getElementById("modalNext");
+
+/* ---------- Audio ---------- */
+/* ---------- Audio (đã sửa) ---------- */
+const bgm = document.getElementById("bgm");
+let isMuted = false;  // Mặc định đang bật tiếng (icon volume-up)
+
+// Đảm bảo audio có thể phát khi người dùng tương tác
+function unlockAudio() {
+  if (bgm.paused && !isMuted) {
+    bgm.play().catch(() => {}); // thử phát, bỏ qua lỗi
+  }
+}
+document.addEventListener("pointerdown", unlockAudio, { once: true });
+document.addEventListener("keydown", unlockAudio, { once: true });
+
+function toggleMute() {
+  isMuted = !isMuted;
+  if (isMuted) {
+    bgm.pause();
+  } else {
+    bgm.play().catch(e => console.warn("Không thể phát nhạc:", e));
+  }
+  updateAudioButton();
+}
+
+function updateAudioButton() {
+  const icon = document.querySelector("#audioBtn i");
+  if (!icon) return;
+  icon.className = isMuted ? "fas fa-volume-mute" : "fas fa-volume-up";
+}
+
+// Gán sự kiện click cho nút (chỉ 1 lần, không bao giờ mất)
+document.getElementById("audioBtn").addEventListener("click", (e) => {
+  e.preventDefault();
+  e.stopPropagation();
+  toggleMute();
+});
+
+// Khi trang load, đảm bảo icon đúng (chưa mute)
+updateAudioButton();
+/* ---------- Hết Audio ---------- */
 
 const RANDOM_CONFIG = {
   // Giữ màn không quá hẹp để tránh tile phình to gây lag
@@ -482,7 +552,7 @@ const RANDOM_CONFIG = {
   // Số lần thử vừa phải cho điện thoại
   maxGenerateTry: 360
 };
-  
+
   const RANDOM_CONFIG_NIGHT = {
   // Ban đêm khó hơn: sân lớn hơn một chút
   minRows: 13,
@@ -1188,7 +1258,7 @@ function makeNightStars(){
     });
   }
 }
-  
+
  function drawNightSky(){
   if(!hardNightMode){
     return;
@@ -1355,7 +1425,7 @@ function isBlocked(r,c){
 function isExit(r,c){
   return grid[r][c] === "E";
 }
-  
+
  function getCurrentSolutionPath(){
   if(won){
     return [];
@@ -1690,7 +1760,7 @@ function toggleHardNightMode(){
   levelNumber = 1;
   startNewLevel();
 }
-  
+
 function nextLevel(){
   levelNumber++;
   startNewLevel();
@@ -2075,7 +2145,7 @@ function drawObstacles(){
     }
   }
 }
-  
+
 
 function drawOuterSnowRim(){
   const pad = layout.tile * .44;
@@ -2623,7 +2693,7 @@ function drawDevGuide(){
 
   ctx.restore();
 }
-  
+
 function drawSnow(){
   ctx.save();
   ctx.fillStyle = hardNightMode
@@ -2713,7 +2783,7 @@ restartBtn.addEventListener("click",(e)=>{
   e.stopPropagation();
   requestRestart();
 });
-  
+
 modalRestart.addEventListener("click",(e)=>{
   e.preventDefault();
   e.stopPropagation();
@@ -2728,7 +2798,7 @@ window.addEventListener("keydown",(e)=>{
   if(key === "arrowdown" || key === "s") slide(0,1);
   if(key === "arrowleft" || key === "a") slide(-1,0);
   if(key === "arrowright" || key === "d") slide(1,0);
-  
+
 if(key === "r") requestRestart();
 });
 
@@ -2751,7 +2821,7 @@ canvas.addEventListener("pointerdown",(e)=>{
     canvas.setPointerCapture(e.pointerId);
   }
 }, {passive:false});
-  
+
 canvas.addEventListener("pointerup",(e)=>{
   if(performance.now() < ignoreSwipeUntil) return;
   if(restartConfirmOpen) return;
