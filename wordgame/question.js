@@ -645,7 +645,6 @@ const words = [
 "Bìm bịp","Bồ câu","Cạy cục","Chảnh chọe","Chèo queo","Chình ình","Cỏn con","Cù lần","Dãi dầu","Dở dang","Đực rựa","Ghẻ lạnh","Hằn học","Hấp tấp","Hì hục","Híp mắt","Hiu quạnh","Hò hét","Hờ hững","Hục hặc","Hừng hực","Kèo nèo","Khệnh khạng","Khò khè","Khù khờ","Lạch bạch","Lam lũ","Lào thào","Le te","Lè nhè","Lép xép","Lẹt đẹt","Lêu lổng","Linh tinh","Lô nhô","Lồ lộ","Lơ mơ","Lơ ngơ","Lởm chởm","Lù đù","Lục cục","Lưng chừng","Lừng lững","Mập mờ","Mếu máo","Mơ màng","Mờ mịt","Mù mịt","Mừng rỡ","Ngả nghiêng","Nghênh ngang","Nghi ngút","Ngo ngoe","Nhằng nhịt","Nhấp nháy","Nhâm nhi","Nhập nhằng","Nhẹ tênh","Nhức nhối","Phè phè","Phì phà",""Phơi phới","Rệu rạo",
 "Chèo bẻo","Chìa vôi","Chiền chiện","Chích chòe","Cuốc cuốc","Đa đa","Đom đóm","Le le","Lích chích","Nhông nhông","Sáo sậu","Tắc kè","Tích tắc","Tò vò","Tu hú","Vạc vạc",
 "Bần bật","Chan chát","Chèm bẹp","Chình ình","Đành đạch",
-// === CÁC TỪ DỄ MỚI THÊM ===
 "Ông bà","Cha mẹ","Anh em","Chị em","Vợ chồng","Con cháu","Họ hàng","Hàng xóm","Bạn bè","Thầy cô","Học trò","Bạn học","Đồng nghiệp",
 "Anh trai","Em gái","Ông nội","Bà ngoại","Chú bác","Cậu mợ","Cô dì","Cháu chắt",
 "Xe cộ","Đường sá","Cây cỏ","Hoa lá","Rau xanh","Trái chín","Quả ngọt","Thịt cá","Cơm canh","Áo quần","Giày dép","Mũ nón","Túi xách","Ví tiền","Điện nước","Nhà cửa","Giấy bút","Bút vở",
