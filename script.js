@@ -220,22 +220,24 @@ document.addEventListener('DOMContentLoaded', function () {
     let autoCloseTimer;
 
     function closeBar() {
-        utilityBar.classList.remove('show');
-        contentEl.classList.remove('hide');
-        toggleBtn.classList.remove('active');
-        if (autoCloseTimer) {
-            clearTimeout(autoCloseTimer);
-            autoCloseTimer = null;
-        }
+    utilityBar.classList.remove('show');
+    contentEl.classList.remove('hide');
+    toggleBtn.classList.remove('active');
+    toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad"></i>';
+    if (autoCloseTimer) {
+        clearTimeout(autoCloseTimer);
+        autoCloseTimer = null;
     }
+}
 
     function openBar() {
-        utilityBar.classList.add('show');
-        contentEl.classList.add('hide');
-        toggleBtn.classList.add('active');
-        if (autoCloseTimer) clearTimeout(autoCloseTimer);
-        autoCloseTimer = setTimeout(closeBar, 30000);
-    }
+    utilityBar.classList.add('show');
+    contentEl.classList.add('hide');
+    toggleBtn.classList.add('active');
+    toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+    if (autoCloseTimer) clearTimeout(autoCloseTimer);
+    autoCloseTimer = setTimeout(closeBar, 30000);
+}
 
     toggleBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -370,3 +372,4 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
 });
+
