@@ -1,0 +1,1217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Sudoku</title>
+  <style>
+    :root {
+      --bg: #0f1220;
+      --panel: #171b2f;
+      --panel2: #1f2440;
+      --line: #3b4266;
+      --line2: #5c658f;
+      --text: #eef2ff;
+      --muted: #aeb7dd;
+      --accent: #7c9cff;
+      --accent2: #59d6b5;
+      --danger: #ff6b81;
+      --warn: #ffca5f;
+      --cell: #101428;
+      --cell2: #151a31;
+      --fixed: #e9ecff;
+      --user: #8fe3ff;
+      --correct: #9cffb4;
+      --shadow: 0 12px 35px rgba(0,0,0,.35);
+      --radius: 22px;
+    }
+    * { box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+    body {
+      margin: 0;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Arial, sans-serif;
+      background:
+        radial-gradient(circle at top, rgba(124,156,255,.16), transparent 35%),
+        radial-gradient(circle at bottom right, rgba(89,214,181,.12), transparent 30%),
+        linear-gradient(180deg, #0c0f1b, #11162a 40%, #0c1020);
+      color: var(--text);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+    }
+    .app {
+      width: min(100%, 700px);
+      display: grid;
+      gap: 14px;
+      grid-template-columns: 1fr;
+    }
+    .topbar, .panel, .footer {
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: var(--shadow);
+      border-radius: var(--radius);
+      backdrop-filter: blur(10px);
+    }
+    .topbar {
+      padding: 14px 18px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+    .topbar h1 {
+      margin: 0;
+      font-size: clamp(24px, 4vw, 32px);
+      letter-spacing: 0.3px;
+      flex-shrink: 0;
+    }
+    .title-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .help-btn {
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      background: rgba(255,255,255,.1);
+      border: 1px solid rgba(255,255,255,.15);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 16px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: 0.18s ease;
+    }
+    .help-btn:hover { background: rgba(255,255,255,.2); }
+    .mode-strip {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+    .mode-group {
+      display: flex;
+      gap: 6px;
+      padding: 4px;
+      border-radius: 16px;
+      background: rgba(255,255,255,.05);
+      border: 1px solid rgba(255,255,255,.08);
+    }
+  footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; opacity: 0.7; font-family: Tahoma; }
+
+    .mode-btn {
+      border: none;
+      outline: none;
+      cursor: pointer;
+      padding: 8px 14px;
+      border-radius: 12px;
+      background: rgba(255,255,255,.06);
+      color: var(--text);
+      font-weight: 700;
+      font-size: 13px;
+      transition: 0.18s ease;
+      white-space: nowrap;
+    }
+    .mode-btn.active {
+      background: linear-gradient(180deg, rgba(124,156,255,.98), rgba(92,112,255,.98));
+      color: #fff;
+      box-shadow: 0 10px 20px rgba(92,112,255,.22);
+    }
+    .panel {
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+    .board-shell {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(180deg, rgba(255,255,255,.05), rgba(255,255,255,.02));
+      border-radius: 24px;
+      padding: 10px;
+      border: 1px solid rgba(255,255,255,.08);
+    }
+    #board {
+      display: grid;
+      gap: 2px;
+      width: min(100%, 520px);
+      aspect-ratio: 1/1;
+      touch-action: none;
+      background: rgba(255,255,255,.08);
+      padding: 2px;
+      border-radius: 18px;
+    }
+    .cell {
+      width: 100%;
+      height: 100%;
+      aspect-ratio: 1 / 1;
+      border: none;
+      outline: none;
+      background: linear-gradient(180deg, var(--cell), var(--cell2));
+      color: var(--user);
+      font-size: clamp(20px, 4vw, 32px);
+      font-weight: 800;
+      text-align: center;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      caret-color: transparent;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,.05);
+      transition: background 0.15s, transform 0.15s, box-shadow 0.15s, outline-color 0.15s;
+      user-select: none;
+      cursor: pointer;
+      overflow: hidden;
+    }
+    .cell.fixed {
+      color: var(--fixed);
+      cursor: default;
+    }
+    .cell.selected {
+      outline: 2px solid rgba(124,156,255,.95);
+      box-shadow: inset 0 0 0 1px rgba(124,156,255,.35), 0 0 0 2px rgba(124,156,255,.18);
+      z-index: 2;
+    }
+    .cell.bad {
+      background: linear-gradient(180deg, rgba(255,107,129,.28), rgba(255,107,129,.18));
+      color: #ffd6db;
+    }
+    .subgrid-bold-top { border-top: 2px solid rgba(255,255,255,.28); }
+    .subgrid-bold-left { border-left: 2px solid rgba(255,255,255,.28); }
+    .status-panel {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      padding: 10px 14px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255,255,255,.06), rgba(255,255,255,.03));
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: 0 12px 35px rgba(0,0,0,.35);
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .seg-display {
+      display: flex;
+      gap: 8px;
+      padding: 6px 10px;
+      border-radius: 14px;
+      background: #0a0d18;
+      border: 1px solid rgba(255,255,255,.08);
+      box-shadow: inset 0 0 18px rgba(0,0,0,.85), 0 0 18px rgba(0,0,0,.2);
+    }
+    .seg-digit {
+      width: 30px;
+      height: 48px;
+      position: relative;
+    }
+    .seg {
+      position: absolute;
+      background: rgba(255,40,40,.035);
+      box-shadow: inset 0 0 2px rgba(255,40,40,.08);
+      border-radius: 999px;
+      transition: opacity 0.15s, background 0.15s, box-shadow 0.15s;
+    }
+    .seg.on {
+      background: #ff3b3b;
+      box-shadow: 0 0 8px rgba(255,59,59,.9), 0 0 18px rgba(255,59,59,.55);
+    }
+    .seg.a,.seg.d,.seg.g { left: 6px; width: 18px; height: 4px; }
+    .seg.b,.seg.c,.seg.e,.seg.f { width: 4px; height: 18px; }
+    .seg.a { top: 2px; }
+    .seg.b { top: 6px; right: 2px; }
+    .seg.c { bottom: 6px; right: 2px; }
+    .seg.d { bottom: 2px; }
+    .seg.e { bottom: 6px; left: 2px; }
+    .seg.f { top: 6px; left: 2px; }
+    .seg.g { top: 22px; }
+    .aux-leds {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .aux-led {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      letter-spacing: 0.3px;
+      color: rgba(238,242,255,.72);
+    }
+    .aux-led .dot {
+      width: 9px; height: 9px; border-radius: 50%;
+      background: rgba(255,255,255,.16);
+      box-shadow: inset 0 0 0 1px rgba(255,255,255,.12);
+    }
+    .aux-led.on {
+      color: #fff;
+    }
+    .aux-led.on .dot {
+      background: #59d6b5;
+      box-shadow: 0 0 8px rgba(89,214,181,.95), 0 0 18px rgba(89,214,181,.55);
+    }
+    .numpad {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 4px;
+    }
+    .numpad button {
+      padding: 14px 0;
+      border-radius: 14px;
+      background: rgba(255,255,255,.07);
+      color: var(--text);
+      border: 1px solid rgba(255,255,255,.08);
+      font-weight: 800;
+      font-size: 18px;
+      cursor: pointer;
+      transition: 0.18s ease;
+    }
+    .numpad button:active { transform: scale(0.96); }
+    .footer {
+      padding: 12px 14px;
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      font-size: 13px;
+      color: var(--muted);
+    }
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 22px;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(15,18,32,.96);
+      color: white;
+      padding: 12px 16px;
+      border: 1px solid rgba(255,255,255,.12);
+      border-radius: 999px;
+      box-shadow: var(--shadow);
+      opacity: 0;
+      pointer-events: none;
+      transition: 0.22s ease;
+      z-index: 99;
+      max-width: min(92vw, 520px);
+      text-align: center;
+      font-size: 14px;
+    }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,.5);
+      display: none;
+      align-items: center;
+      justify-content: center;
+      padding: 16px;
+      z-index: 100;
+    }
+    .modal-backdrop.show { display: flex; }
+    .modal {
+      width: min(100%, 480px);
+      background: linear-gradient(180deg, #171b2f, #11162a);
+      border: 1px solid rgba(255,255,255,.1);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 18px;
+      text-align: center;
+    }
+    .modal h2 { margin: 4px 0 8px; }
+    .modal p { color: var(--muted); margin: 0 0 14px; line-height: 1.5; text-align: left; }
+    .modal .actions { display: flex; gap: 10px; justify-content: center; flex-wrap: wrap; }
+    .tiny { font-size: 12px; color: var(--muted); }
+
+    /* Cell wrap & killer cages */
+    .cell-wrap {
+      position: relative;
+      border: 1px solid transparent;
+    }
+    .cell-wrap.killer .cell {
+      background: linear-gradient(180deg, #12162a, #0f1324);
+    }
+    .cell-wrap.cage-top { border-top: 2px dashed var(--accent); }
+    .cell-wrap.cage-right { border-right: 2px dashed var(--accent); }
+    .cell-wrap.cage-bottom { border-bottom: 2px dashed var(--accent); }
+    .cell-wrap.cage-left { border-left: 2px dashed var(--accent); }
+    .cage-sum {
+      position: absolute;
+      top: 2px;
+      left: 3px;
+      z-index: 3;
+      font-size: 10px;
+      line-height: 1;
+      color: var(--accent2);
+      pointer-events: none;
+      font-weight: 700;
+      text-shadow: 0 1px 2px rgba(0,0,0,.8);
+    }
+    @media (max-width: 500px) {
+      .numpad { grid-template-columns: repeat(5, 1fr); }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div class="title-row">
+      <h1>Sudoku</h1>
+      <button class="help-btn" id="helpBtn">?</button>
+    </div>
+    <div class="mode-strip">
+      <div class="mode-group" id="variantGroup">
+        <button class="mode-btn active" data-variant="classic">Classic</button>
+        <button class="mode-btn" data-variant="killer">Killer</button>
+        <button class="mode-btn" data-variant="onc">ONC</button>
+        <button class="mode-btn" data-variant="rotate">Rotate</button>
+      </div>
+      <button class="btn" id="newBtn" style="padding:8px 14px;font-size:14px;">Màn mới</button>
+      <button class="btn warn" id="checkBtn" style="padding:8px 14px;font-size:14px;">Kiểm tra (<span id="checkLeft">10</span>/10)</button>
+    </div>
+  </div>
+  <div class="panel">
+    <div class="status-panel" id="ledPanel">
+      <div class="seg-display" id="segDisplay">
+        <div class="seg-digit" data-digit="0"></div>
+        <div class="seg-digit" data-digit="1"></div>
+        <div class="seg-digit" data-digit="2"></div>
+      </div>
+      <div class="aux-leds">
+        <div class="aux-led" id="ledMode"><span class="dot"></span><span>MODE</span></div>
+        <div class="aux-led" id="ledCheck"><span class="dot"></span><span>CHECK</span></div>
+        <div class="aux-led" id="ledDifficulty"><span class="dot"></span><span>DIFFICULTY</span></div>
+      </div>
+    </div>
+    <div class="board-shell">
+      <div id="board" aria-label="Sudoku board"></div>
+    </div>
+    <div class="numpad" id="numpad">
+      <button data-value="1">1</button>
+      <button data-value="2">2</button>
+      <button data-value="3">3</button>
+      <button data-value="4">4</button>
+      <button data-value="5">5</button>
+      <button data-value="6">6</button>
+      <button data-value="7">7</button>
+      <button data-value="8">8</button>
+      <button data-value="9">9</button>
+      <button id="eraseBtn">⌫</button>
+    </div>
+    <div class="footer">
+      <span>Gợi ý: Các cột, hàng và nhóm không thể xuất hiện các con số trùng lặp.</span>
+      <span class="tiny" id="statusText"></span>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<div class="modal-backdrop" id="winModal">
+  <div class="modal">
+    <h2>Hoàn thành 🎉</h2>
+    <p id="winText">Bạn đã giải xong ván Sudoku.</p>
+    <div class="actions">
+      <button class="btn good" id="playAgainBtn">Chơi ván mới</button>
+      <button class="btn secondary" id="closeWinBtn">Đóng</button>
+    </div>
+  </div>
+</div>
+<div class="modal-backdrop" id="helpModal">
+  <div class="modal">
+    <h2>📖 Hướng dẫn các chế độ</h2>
+    <p><strong>Classic:</strong> Sudoku truyền thống. Điền số 1-9 sao cho mỗi hàng, cột và khối 3×3 không trùng số.</p>
+    <p><strong>Killer:</strong> Thêm lồng (cage) với tổng cho trước. Các số trong cùng lồng phải khác nhau và có tổng bằng số hiển thị.</p>
+    <p><strong>ONC:</strong> Giống Classic nhưng chặn không cho nhập số trùng trong hàng/cột/khối — bạn sẽ thấy cảnh báo ngay lập tức.</p>
+    <p><strong>Rotate:</strong> Nhập số 1 để xoay toàn bàn cờ theo chiều thuận, nhập số 9 để xoay ngược lại. Các số đã điền sẽ di chuyển theo vòng xoay.</p>
+    <div class="actions">
+      <button class="btn secondary" id="closeHelpBtn">Đã hiểu</button>
+    </div>
+  </div>
+</div>
+  <footer> Version:D20260627-H11M31T2991    »»»   developed by Tran Gia Bao</footer>
+
+<script>
+(() => {
+  'use strict';
+
+  const $ = (id) => document.getElementById(id);
+
+  const el = {
+    board: $('board'),
+    statusText: $('statusText'),
+    toast: $('toast'),
+    winModal: $('winModal'),
+    winText: $('winText'),
+    helpModal: $('helpModal'),
+    newBtn: $('newBtn'),
+    playAgainBtn: $('playAgainBtn'),
+    closeWinBtn: $('closeWinBtn'),
+    closeHelpBtn: $('closeHelpBtn'),
+    helpBtn: $('helpBtn'),
+    checkBtn: $('checkBtn'),
+    eraseBtn: $('eraseBtn'),
+    numpad: $('numpad'),
+    ledPanel: $('ledPanel'),
+  };
+
+  const state = {
+    size: 9,
+    boxRows: 3,
+    boxCols: 3,
+    variant: 'classic',
+    killerCages: [],
+    cageOf: [],
+    digits: 9,
+    puzzle: [],
+    solution: [],
+    fixed: [],
+    checkLeft: 10,
+    cells: [],
+    selected: null,
+    history: [],
+    mistakes: 0,
+    startTime: 0,
+    timer: null,
+    elapsedSec: 0,
+    won: false,
+  };
+
+  const SEG_MAP = {
+    '0': ['a','b','c','d','e','f'],
+    '1': ['b','c'],
+    '2': ['a','b','g','e','d'],
+    '3': ['a','b','c','d','g'],
+    '4': ['f','g','b','c'],
+    '5': ['a','f','g','c','d'],
+    '6': ['a','f','e','d','c','g'],
+    '7': ['a','b','c'],
+    '8': ['a','b','c','d','e','f','g'],
+    '9': ['a','b','c','d','f','g'],
+    'A': ['a','b','c','e','f','g'],
+    'C': ['a','f','e','d'],
+    'E': ['a','f','g','e','d'],
+    'F': ['a','f','g','e'],
+    'H': ['f','e','g','b','c'],
+    'I': ['b','c'],
+    'L': ['f','e','d'],
+    'N': ['a','b','c','e','f'],
+    'O': ['a','b','c','d','e','f'],
+    'P': ['a','b','e','f','g'],
+    'R': ['e','g'],
+    'S': ['a','f','g','c','d'],
+    'U': ['b','c','d','e','f'],
+    'Y': ['f','g','b','c','d']
+  };
+
+  const digitsEls = [...document.querySelectorAll('.seg-digit')];
+  const ledMode = document.getElementById('ledMode');
+  const ledCheck = document.getElementById('ledCheck');
+  const ledDifficulty = document.getElementById('ledDifficulty');
+
+  function buildDigit(el) {
+    el.innerHTML = '';
+    ['a','b','c','d','e','f','g'].forEach(k => {
+      const s = document.createElement('span');
+      s.className = `seg ${k}`;
+      el.appendChild(s);
+    });
+  }
+  digitsEls.forEach(buildDigit);
+
+  function setDigit(index, ch) {
+    const el = digitsEls[index];
+    const active = new Set((SEG_MAP[ch] || []).map(x => x.toLowerCase()));
+    [...el.querySelectorAll('.seg')].forEach(seg => {
+      seg.classList.toggle('on', active.has(seg.classList[1]));
+    });
+  }
+
+  function setPanel(code, lights = {}) {
+    const text = (code || '---').toUpperCase().padEnd(3, '-').slice(0, 3);
+    setDigit(0, text[0]);
+    setDigit(1, text[1]);
+    setDigit(2, text[2]);
+    ledMode.classList.toggle('on', !!lights.mode);
+    ledCheck.classList.toggle('on', !!lights.check);
+    ledDifficulty.classList.toggle('on', !!lights.difficulty);
+  }
+
+  function updateCheckButton() {
+    const span = document.getElementById("checkLeft");
+    if (span) span.textContent = state.checkLeft;
+  }
+
+  function showToast(msg, ms = 1800) {
+    if (!el.toast) return;
+    el.toast.textContent = msg;
+    el.toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(() => el.toast.classList.remove('show'), ms);
+  }
+
+  function fmtTime(sec) {
+    const m = Math.floor(sec / 60).toString().padStart(2, '0');
+    const s = (sec % 60).toString().padStart(2, '0');
+    return `${m}:${s}`;
+  }
+
+  let panelTimer = null;
+  let blinkTimer = null;
+
+  function restoreModePanel() {
+    clearTimeout(panelTimer);
+    clearInterval(blinkTimer);
+    let code;
+    if (state.variant === 'classic') code = 'CLS';
+    else if (state.variant === 'killer') code = 'ILR';
+    else if (state.variant === 'onc') code = 'ONC';
+    else if (state.variant === 'rotate') code = 'RAE';
+    else code = 'CLS';
+    const isHard = state.variant === 'killer' || state.variant === 'onc' || state.variant === 'rotate';
+    setPanel(code, {
+      mode: true,
+      check: false,
+      difficulty: isHard
+    });
+  }
+
+  function showErrorPanel() {
+    clearTimeout(panelTimer);
+    clearInterval(blinkTimer);
+    setPanel("ERR", { mode: false, check: true, difficulty: false });
+    panelTimer = setTimeout(() => { restoreModePanel(); }, 2000);
+  }
+
+  function deepCopyGrid(g) { return g.map(row => row.slice()); }
+  function makeEmptyGrid(n) { return Array.from({ length: n }, () => Array(n).fill(0)); }
+  function randInt(max) { return Math.floor(Math.random() * max); }
+  function shuffle(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = randInt(i + 1);
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function isValid(grid, r, c, val) {
+    for (let i = 0; i < state.size; i++) {
+      if (grid[r][i] === val) return false;
+      if (grid[i][c] === val) return false;
+    }
+    const br = Math.floor(r / state.boxRows) * state.boxRows;
+    const bc = Math.floor(c / state.boxCols) * state.boxCols;
+    for (let rr = 0; rr < state.boxRows; rr++) {
+      for (let cc = 0; cc < state.boxCols; cc++) {
+        if (grid[br + rr][bc + cc] === val) return false;
+      }
+    }
+    return true;
+  }
+
+  function solveCount(grid, limit = 2) {
+    const board = deepCopyGrid(grid);
+    let solutions = 0;
+    function pickNextCell() {
+      let best = null;
+      for (let r = 0; r < state.size; r++) {
+        for (let c = 0; c < state.size; c++) {
+          if (board[r][c] !== 0) continue;
+          const opts = [];
+          for (let v = 1; v <= state.digits; v++) {
+            if (isValid(board, r, c, v)) opts.push(v);
+          }
+          if (opts.length === 0) return { r, c, opts };
+          if (!best || opts.length < best.opts.length) {
+            best = { r, c, opts };
+            if (opts.length === 1) return best;
+          }
+        }
+      }
+      return best;
+    }
+    function backtrack() {
+      if (solutions >= limit) return;
+      const next = pickNextCell();
+      if (!next) { solutions++; return; }
+      const { r, c, opts } = next;
+      if (opts.length === 0) return;
+      for (const v of shuffle(opts.slice())) {
+        board[r][c] = v;
+        backtrack();
+        if (solutions >= limit) return;
+        board[r][c] = 0;
+      }
+    }
+    backtrack();
+    return solutions;
+  }
+
+  function generateSolved() {
+    const grid = makeEmptyGrid(state.size);
+    const numbers = [...Array(state.digits)].map((_, i) => i + 1);
+    const order = [];
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) order.push([r, c]);
+    }
+    function fill(idx = 0) {
+      if (idx >= order.length) return true;
+      const [r, c] = order[idx];
+      const nums = shuffle(numbers.slice());
+      for (const v of nums) {
+        if (isValid(grid, r, c, v)) {
+          grid[r][c] = v;
+          if (fill(idx + 1)) return true;
+          grid[r][c] = 0;
+        }
+      }
+      return false;
+    }
+    fill();
+    return grid;
+  }
+
+  function generatePuzzle() {
+    state.solution = generateSolved();
+    state.killerCages = [];
+    state.cageOf = [];
+    if (state.variant === 'killer') {
+      state.killerCages = buildKillerCages(state.solution);
+      buildCageMap();
+      state.puzzle = makeEmptyGrid(state.size);
+      state.fixed = Array.from({ length: state.size }, () => Array(state.size).fill(false));
+      return;
+    }
+    state.puzzle = deepCopyGrid(state.solution);
+    const total = state.size * state.size;
+    const targetGivens = 28;
+    const positions = shuffle([...Array(total)].map((_, i) => i));
+    let toRemove = total - targetGivens;
+    for (const pos of positions) {
+      if (toRemove <= 0) break;
+      const r = Math.floor(pos / state.size);
+      const c = pos % state.size;
+      const backup = state.puzzle[r][c];
+      state.puzzle[r][c] = 0;
+      const count = solveCount(state.puzzle, 2);
+      if (count !== 1) {
+        state.puzzle[r][c] = backup;
+      } else {
+        toRemove--;
+      }
+    }
+    state.fixed = state.puzzle.map(row => row.map(v => v !== 0));
+  }
+
+  function buildKillerCages(solution) {
+    const size = state.size;
+    const remaining = new Set();
+    for (let r = 0; r < size; r++) {
+      for (let c = 0; c < size; c++) remaining.add(`${r},${c}`);
+    }
+    const cages = [];
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    function key(r,c) { return `${r},${c}`; }
+    function has(r,c) { return r>=0 && r<size && c>=0 && c<size; }
+    while (remaining.size) {
+      const first = [...remaining][Math.floor(Math.random()*remaining.size)];
+      const [sr, sc] = first.split(',').map(Number);
+      const cage = [{r:sr, c:sc}];
+      const values = new Set([solution[sr][sc]]);
+      remaining.delete(first);
+      const targetSize = 1 + Math.floor(Math.random()*4);
+      while (cage.length < targetSize) {
+        const frontier = [];
+        for (const cell of cage) {
+          for (const [dr,dc] of dirs) {
+            const nr = cell.r + dr;
+            const nc = cell.c + dc;
+            const k = key(nr,nc);
+            if (!has(nr,nc)) continue;
+            if (!remaining.has(k)) continue;
+            if (values.has(solution[nr][nc])) continue;
+            frontier.push({r:nr, c:nc, k});
+          }
+        }
+        if (!frontier.length) break;
+        const pick = frontier[Math.floor(Math.random()*frontier.length)];
+        cage.push({r:pick.r, c:pick.c});
+        values.add(solution[pick.r][pick.c]);
+        remaining.delete(pick.k);
+      }
+      cages.push({
+        cells: cage,
+        sum: cage.reduce((s, cell) => s + solution[cell.r][cell.c], 0)
+      });
+    }
+    return cages;
+  }
+
+  function buildCageMap() {
+    state.cageOf = Array.from({length: state.size}, () => Array(state.size).fill(-1));
+    state.killerCages.forEach((cage, idx) => {
+      cage.cells.forEach(cell => { state.cageOf[cell.r][cell.c] = idx; });
+    });
+  }
+
+  function applyKillerBorders() {
+    if (!el.board || state.variant !== 'killer' || !state.killerCages.length) return;
+    const wraps = el.board.querySelectorAll('.cell-wrap');
+    wraps.forEach(wrap => {
+      wrap.classList.remove('killer','cage-top','cage-right','cage-bottom','cage-left');
+      wrap.querySelector('.cage-sum')?.remove();
+    });
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        const idx = state.cageOf?.[r]?.[c];
+        const wrap = state.cells?.[r]?.[c]?.closest('.cell-wrap');
+        if (!wrap || idx == null || idx < 0) continue;
+        wrap.classList.add('killer');
+        const cage = state.killerCages[idx];
+        const first = cage.cells[0];
+        if (first.r === r && first.c === c) {
+          const sumEl = document.createElement("span");
+          sumEl.className = "cage-sum";
+          sumEl.textContent = cage.sum;
+          wrap.appendChild(sumEl);
+        }
+        const up = r > 0 ? state.cageOf[r-1][c] : -1;
+        const down = r < state.size-1 ? state.cageOf[r+1][c] : -1;
+        const left = c > 0 ? state.cageOf[r][c-1] : -1;
+        const right = c < state.size-1 ? state.cageOf[r][c+1] : -1;
+        if (up !== idx) wrap.classList.add('cage-top');
+        if (right !== idx) wrap.classList.add('cage-right');
+        if (down !== idx) wrap.classList.add('cage-bottom');
+        if (left !== idx) wrap.classList.add('cage-left');
+      }
+    }
+  }
+
+  function currentBoard() {
+    const out = makeEmptyGrid(state.size);
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        const cell = state.cells?.[r]?.[c];
+        out[r][c] = cell && cell.textContent ? Number(cell.textContent) : 0;
+      }
+    }
+    return out;
+  }
+
+  function getCellValue(r, c) {
+    const cell = state.cells?.[r]?.[c];
+    if (!cell) return 0;
+    const v = cell.textContent;
+    return v ? Number(v) : 0;
+  }
+
+  function rotateMatrix(matrix, clockwise) {
+    const n = matrix.length;
+    const rotated = Array.from({ length: n }, () => new Array(n));
+    for (let r = 0; r < n; r++) {
+      for (let c = 0; c < n; c++) {
+        if (clockwise) {
+          rotated[c][n - 1 - r] = matrix[r][c];
+        } else {
+          rotated[n - 1 - c][r] = matrix[r][c];
+        }
+      }
+    }
+    return rotated;
+  }
+
+  function doRotate(clockwise) {
+    const cur = currentBoard();
+    const rotatedCur = rotateMatrix(cur, clockwise);
+    const rotatedSol = rotateMatrix(state.solution, clockwise);
+    const rotatedFixed = rotateMatrix(state.fixed, clockwise);
+    state.puzzle = rotatedCur;
+    state.solution = rotatedSol;
+    state.fixed = rotatedFixed;
+    state.history = [];
+    state.selected = null;
+    renderBoard(state.puzzle);
+    showToast(clockwise ? "Đã xoay bàn cờ theo chiều thuận" : "Đã xoay bàn cờ theo chiều nghịch");
+  }
+
+  function renderBoard(grid) {
+    if (!el.board) return;
+    el.board.innerHTML = '';
+    el.board.style.gridTemplateColumns = `repeat(${state.size}, 1fr)`;
+    if (state.variant === "killer") {
+      el.board.classList.add("killer");
+    } else {
+      el.board.classList.remove("killer");
+    }
+    state.cells = Array.from({ length: state.size }, () => Array(state.size).fill(null));
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        const wrap = document.createElement('div');
+        wrap.className = 'cell-wrap';
+        const cell = document.createElement('div');
+        cell.className = 'cell';
+        if (r % state.boxRows === 0) cell.classList.add('subgrid-bold-top');
+        if (c % state.boxCols === 0) cell.classList.add('subgrid-bold-left');
+        if (state.fixed[r][c] && grid[r][c] !== 0) {
+          cell.textContent = String(grid[r][c]);
+          cell.classList.add('fixed');
+        } else {
+          if (grid[r][c] !== 0) cell.textContent = String(grid[r][c]);
+          cell.addEventListener('click', () => {
+            if (state.fixed[r][c]) return;
+            state.selected = { r, c };
+            renderHighlights();
+            if (el.statusText) {
+              el.statusText.textContent = `Ô (${r+1},${c+1})`;
+            }
+          });
+        }
+        cell.dataset.r = r;
+        cell.dataset.c = c;
+        wrap.appendChild(cell);
+        el.board.appendChild(wrap);
+        state.cells[r][c] = cell;
+      }
+    }
+    applyKillerBorders();
+    renderHighlights();
+  }
+
+  function renderHighlights() {
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        const cell = state.cells[r][c];
+        if (!cell) continue;
+        cell.classList.remove("selected");
+      }
+    }
+    if (!state.selected) return;
+    const { r, c } = state.selected;
+    state.cells[r][c].classList.add("selected");
+  }
+
+  function setCellValue(r, c, val, record = true) {
+    if (state.fixed[r][c]) return false;
+    const cell = state.cells[r][c];
+    if (!cell) return false;
+    cell.classList.remove("bad");
+    const prev = getCellValue(r, c);
+    if (prev === val) return true;
+    if (record) {
+      state.history.push({ r, c, prev, next: val });
+    }
+    if (val === 0) {
+      cell.textContent = "";
+    } else {
+      cell.textContent = String(val);
+    }
+    renderHighlights();
+    checkCompletion();
+    return true;
+  }
+
+  function checkBoard() {
+    if (state.checkLeft <= 0) {
+      showToast("Đã hết lượt kiểm tra.");
+      return;
+    }
+    const board = currentBoard();
+    let hasInput = false;
+    for (let r = 0; r < state.size && !hasInput; r++) {
+      for (let c = 0; c < state.size; c++) {
+        if (!state.fixed[r][c] && board[r][c] !== 0) { hasInput = true; break; }
+      }
+    }
+    if (!hasInput) {
+      showToast("Hãy điền ít nhất một số trước khi kiểm tra.");
+      showErrorPanel();
+      return;
+    }
+    state.checkLeft--;
+    updateCheckButton();
+    showCheckPanel(state.checkLeft);
+    const badCells = new Set();
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        const cell = state.cells[r][c];
+        if (!cell) continue;
+        cell.classList.remove("bad");
+        if (state.fixed[r][c]) continue;
+        const value = getCellValue(r, c);
+        if (value === 0) continue;
+        if (value !== state.solution[r][c]) {
+          badCells.add(`${r},${c}`);
+          cell.classList.add("bad");
+          clearTimeout(cell.badTimer);
+          cell.badTimer = setTimeout(() => cell.classList.remove("bad"), 5000);
+        }
+      }
+    }
+    if (state.variant === "killer") {
+      const killerCheck = validateKillerBoard(board);
+      killerCheck.badCells.forEach(cell => badCells.add(cell));
+      killerCheck.badCells.forEach(key => {
+        const [r, c] = key.split(",").map(Number);
+        const cell = state.cells[r]?.[c];
+        if (cell) {
+          cell.classList.add("bad");
+          clearTimeout(cell.badTimer);
+          cell.badTimer = setTimeout(() => cell.classList.remove("bad"), 5000);
+        }
+      });
+    }
+    const wrong = badCells.size;
+    if (wrong === 0) {
+      showToast("✓ Không phát hiện lỗi.");
+      clearTimeout(panelTimer);
+      clearInterval(blinkTimer);
+      panelTimer = setTimeout(() => { restoreModePanel(); }, 1500);
+    } else {
+      showToast("Có " + wrong + " ô sai.");
+      setTimeout(() => { showWrongPanel(wrong); }, 1500);
+    }
+  }
+
+  function validateKillerBoard(board) {
+    let badCount = 0;
+    const badCells = new Set();
+    for (const cage of state.killerCages) {
+      const vals = [];
+      let filled = true;
+      for (const cell of cage.cells) {
+        const v = board[cell.r][cell.c];
+        if (v === 0) filled = false;
+        vals.push(v);
+      }
+      const nonZero = vals.filter(v => v !== 0);
+      const sum = nonZero.reduce((a,b) => a + b, 0);
+      const unique = new Set(nonZero);
+      if (unique.size !== nonZero.length) {
+        badCount++;
+        cage.cells.forEach(cell => badCells.add(`${cell.r},${cell.c}`));
+        continue;
+      }
+      if (sum > cage.sum) {
+        badCount++;
+        cage.cells.forEach(cell => badCells.add(`${cell.r},${cell.c}`));
+        continue;
+      }
+      if (filled && sum !== cage.sum) {
+        badCount++;
+        cage.cells.forEach(cell => badCells.add(`${cell.r},${cell.c}`));
+      }
+    }
+    return { badCount, badCells };
+  }
+
+  function showCheckPanel(left) {
+    clearTimeout(panelTimer);
+    clearInterval(blinkTimer);
+    const txt = String(left).padStart(2,"0")+"L";
+    setPanel(txt, { mode: false, check: true, difficulty: false });
+  }
+
+  function showWrongPanel(count) {
+    clearTimeout(panelTimer);
+    clearInterval(blinkTimer);
+    const txt = String(count).padStart(3,"0");
+    setPanel(txt, { mode: false, check: true, difficulty: false });
+    const segs = document.querySelectorAll(".seg");
+    let on = true;
+    blinkTimer = setInterval(() => {
+      on = !on;
+      segs.forEach(seg => {
+        if (seg.classList.contains("on")) seg.style.opacity = on ? "1" : "0.15";
+      });
+    }, 300);
+    panelTimer = setTimeout(() => {
+      clearInterval(blinkTimer);
+      segs.forEach(seg => { seg.style.opacity = "1"; });
+      restoreModePanel();
+    }, 5000);
+  }
+
+  function checkCompletion() {
+    if (state.won) return;
+    const b = currentBoard();
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        if (b[r][c] === 0) return;
+      }
+    }
+    for (let r = 0; r < state.size; r++) {
+      for (let c = 0; c < state.size; c++) {
+        if (b[r][c] !== state.solution[r][c]) return;
+      }
+    }
+    state.won = true;
+    stopTimer();
+    if (el.statusText) el.statusText.textContent = 'Đã giải xong!';
+    if (el.winText) el.winText.textContent = `Thời gian: ${fmtTime(state.elapsedSec)}`;
+    openWinModal();
+    showToast('Chiến thắng 🎉');
+  }
+
+  function openWinModal(keepText = false) {
+    if (!el.winModal) return;
+    el.winModal.classList.add('show');
+    if (!keepText && el.winText) el.winText.textContent = `Thời gian: ${fmtTime(state.elapsedSec)}`;
+  }
+
+  function closeWinModal() {
+    if (el.winModal) el.winModal.classList.remove('show');
+  }
+
+  function startTimer() {
+    stopTimer();
+    state.timer = setInterval(() => {
+      if (state.won) return;
+      state.elapsedSec = Math.floor((Date.now() - state.startTime) / 1000);
+    }, 250);
+  }
+
+  function stopTimer() {
+    if (state.timer) {
+      clearInterval(state.timer);
+      state.timer = null;
+    }
+  }
+
+  const variantButtons = [...document.querySelectorAll('[data-variant]')];
+
+  function syncModeButtons() {
+    variantButtons.forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.variant === state.variant);
+    });
+  }
+
+  function setVariant(v, newGame = true) {
+    state.variant = v;
+    syncModeButtons();
+    restoreModePanel();
+    if (newGame) newGameStart();
+  }
+
+  variantButtons.forEach(btn => {
+    btn.addEventListener('click', () => setVariant(btn.dataset.variant, true));
+  });
+
+  function newGameStart() {
+    stopTimer();
+    state.elapsedSec = 0;
+    state.mistakes = 0;
+    state.history = [];
+    state.checkLeft = 10;
+    updateCheckButton();
+    restoreModePanel();
+    clearTimeout(panelTimer);
+    clearInterval(blinkTimer);
+    state.won = false;
+    state.selected = null;
+    generatePuzzle();
+    renderBoard(state.puzzle);
+    state.startTime = Date.now();
+    startTimer();
+    if (el.statusText) el.statusText.textContent = 'Chọn một ô để nhập số.';
+  }
+
+  function newGameHandlers() {
+    if (el.newBtn) el.newBtn.addEventListener('click', () => newGameStart());
+    if (el.playAgainBtn) {
+      el.playAgainBtn.addEventListener('click', () => {
+        closeWinModal();
+        newGameStart();
+      });
+    }
+    if (el.closeWinBtn) el.closeWinBtn.addEventListener('click', closeWinModal);
+    if (el.winModal) {
+      el.winModal.addEventListener('click', (e) => {
+        if (e.target === el.winModal) closeWinModal();
+      });
+    }
+    if (el.helpBtn) {
+      el.helpBtn.addEventListener('click', () => {
+        if (el.helpModal) el.helpModal.classList.add('show');
+      });
+    }
+    if (el.closeHelpBtn) {
+      el.closeHelpBtn.addEventListener('click', () => {
+        if (el.helpModal) el.helpModal.classList.remove('show');
+      });
+    }
+    if (el.helpModal) {
+      el.helpModal.addEventListener('click', (e) => {
+        if (e.target === el.helpModal) el.helpModal.classList.remove('show');
+      });
+    }
+    if (el.checkBtn) {
+      el.checkBtn.addEventListener('click', () => { checkBoard(); });
+    }
+    if (el.eraseBtn) {
+      el.eraseBtn.addEventListener('click', () => {
+        if (state.selected) setCellValue(state.selected.r, state.selected.c, 0, true);
+      });
+    }
+    if (el.numpad) {
+      el.numpad.addEventListener('click', (e) => {
+        const btn = e.target.closest('button');
+        if (!btn || !state.selected) return;
+        const val = btn.dataset.value;
+        if (val) {
+          const num = Number(val);
+          if (num >= 1 && num <= 9) {
+            if (state.variant === 'onc') {
+              const board = currentBoard();
+              board[state.selected.r][state.selected.c] = 0;
+              if (!isValid(board, state.selected.r, state.selected.c, num)) {
+                showToast("Số này đã có trong hàng/cột/khối.");
+                return;
+              }
+            }
+            setCellValue(state.selected.r, state.selected.c, num, true);
+            if (state.variant === 'rotate' && (num === 1 || num === 9)) {
+              doRotate(num === 1);
+            }
+          }
+        }
+      });
+    }
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        if (el.winModal.classList.contains('show')) closeWinModal();
+        if (el.helpModal.classList.contains('show')) el.helpModal.classList.remove('show');
+      }
+      if (state.won) return;
+      if (!state.selected) return;
+      const n = Number(e.key);
+      if (Number.isInteger(n) && n >= 1 && n <= 9) {
+        if (state.variant === 'onc') {
+          const board = currentBoard();
+          board[state.selected.r][state.selected.c] = 0;
+          if (!isValid(board, state.selected.r, state.selected.c, n)) {
+            showToast("Số này đã có trong hàng/cột/khối.");
+            return;
+          }
+        }
+        setCellValue(state.selected.r, state.selected.c, n, true);
+        if (state.variant === 'rotate' && (n === 1 || n === 9)) {
+          doRotate(n === 1);
+        }
+      } else if (e.key === 'Backspace' || e.key === 'Delete') {
+        setCellValue(state.selected.r, state.selected.c, 0, true);
+      } else if (e.key === 'Enter') {
+        checkBoard();
+      }
+    });
+  }
+
+  newGameHandlers();
+  setPanel('CLS', { mode: true, check: false, difficulty: false });
+  newGameStart();
+})();
+</script>
+</body>
+</html>
