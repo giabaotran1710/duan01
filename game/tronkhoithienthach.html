@@ -140,10 +140,49 @@
   const gameOverBadge = document.getElementById('gameOverBadge');
   const finalLine = document.getElementById('finalLine');
 
-  // ==== KHỞI TẠO ÂM THANH ====
+  // ==== KHỞI TẠO ÂM THANH (đường dẫn: ../audio/comet.mp3) ====
   const audio = new Audio('../audio/comet.mp3');
   audio.loop = true;
   audio.volume = 0.7;
+  audio.preload = 'auto';
+  let audioReady = false;
+
+  audio.addEventListener('canplaythrough', () => {
+    audioReady = true;
+    console.log('✅ Âm thanh đã sẵn sàng');
+  });
+  audio.addEventListener('error', (e) => {
+    console.error('❌ Lỗi tải âm thanh:', e);
+    console.warn('⚠️ Kiểm tra đường dẫn: ../audio/comet.mp3');
+  });
+
+  function playMusic() {
+    if (!audioReady) {
+      console.warn('⏳ Âm thanh chưa tải xong, thử lại sau 500ms');
+      audio.load();
+      setTimeout(() => {
+        if (audioReady) {
+          audio.currentTime = 0;
+          audio.play().catch(e => console.warn('Phát nhạc thất bại:', e));
+        } else {
+          // Thử phát dù chưa ready, có thể vẫn được
+          audio.play().catch(e => console.warn('Phát nhạc thất bại (chưa ready):', e));
+        }
+      }, 500);
+      return;
+    }
+    audio.currentTime = 0;
+    audio.play().catch(err => {
+      console.warn('🔇 Phát nhạc bị chặn hoặc lỗi:', err);
+      // Thử lại sau 0.5s
+      setTimeout(() => audio.play().catch(() => {}), 500);
+    });
+  }
+
+  function stopMusic() {
+    audio.pause();
+    audio.currentTime = 0;
+  }
 
   const state = {
     running:false,
@@ -166,13 +205,13 @@
     comets:[],
     particles:[],
     hits:[],
-        blackCometTimer: 30,
+    blackCometTimer: 30,
     invincibleTimer: 0,
     screenWhite: 0,
-        darkSpotlight: 0,
+    darkSpotlight: 0,
     keys:{left:false,right:false},
-        touch:{active:false, pointerId:null, startX:0, startY:0, jumped:false, side:null},
-        typingTimer: null,  // để huỷ typing cũ nếu có
+    touch:{active:false, pointerId:null, startX:0, startY:0, jumped:false, side:null},
+    typingTimer: null,
   };
 
   const player = {
@@ -256,10 +295,10 @@
     state.touch.active = false;
     state.touch.jumped = false;
     state.touch.side = null;
-        state.blackCometTimer = rand(20, 30);
+    state.blackCometTimer = rand(20, 30);
     state.invincibleTimer = 0;
     state.screenWhite = 0;
-        state.darkSpotlight = 0;
+    state.darkSpotlight = 0;
     player.x = W * 0.5;
     player.y = groundY - 2;
     player.vx = 0;
@@ -269,7 +308,7 @@
     player.jumpLock = 0;
     noteVal.textContent = 'Survive';
     menu.classList.remove('show');
-        startBtn.style.opacity = '';
+    startBtn.style.opacity = '';
     startBtn.style.pointerEvents = '';
     if (state.typingTimer) {
       clearInterval(state.typingTimer);
@@ -278,11 +317,7 @@
     gameOverBadge.classList.remove('show');
 
     // ==== PHÁT NHẠC KHI BẮT ĐẦU ====
-    audio.currentTime = 0;
-    audio.play().catch(err => {
-      // Bỏ qua lỗi nếu trình duyệt chặn autoplay
-      console.log('Audio play was blocked:', err);
-    });
+    playMusic();
   }
 
   function gameOver() {
@@ -302,21 +337,17 @@
     finalLine.textContent = `Sống sót ${state.t.toFixed(1)}s · Điểm ${Math.floor(state.score)}`;
 
     menuTitle.textContent = 'GAME OVER';
-    // Ẩn nút ngay lập tức bằng style inline
     startBtn.textContent = 'CHƠI LẠI';
     startBtn.style.opacity = '0';
     startBtn.style.pointerEvents = 'none';
     menu.classList.add('show');
     
-    // Xoá timer typing cũ nếu có
     if (state.typingTimer) clearInterval(state.typingTimer);
-    // Gọi typing
     typeWriter(
       menuSub,
       `Bạn đã sống sót <b>${state.t.toFixed(1)}s</b> với điểm <b>${Math.floor(state.score)}</b>.<br>Nhấn chơi lại để bắt đầu vòng mới.`,
       40,
       () => {
-        // Khi typing xong, hiện nút với transition mượt
         startBtn.style.opacity = '';
         startBtn.style.pointerEvents = '';
       }
@@ -330,48 +361,38 @@
     state.keys.right = false;
     state.touch.active = false;
     state.touch.jumped = false;
-        state.blackCometTimer = rand(20, 30);
+    state.blackCometTimer = rand(20, 30);
     state.invincibleTimer = 0;
     state.screenWhite = 0;
-        state.darkSpotlight = 0;
+    state.darkSpotlight = 0;
 
     // ==== DỪNG NHẠC KHI GAME OVER ====
-    audio.pause();
-    audio.currentTime = 0;
+    stopMusic();
   }
+
   function typeWriter(element, htmlText, speed, callback) {
-    // Xoá nội dung cũ
     element.innerHTML = '';
-    // Lưu toàn bộ chuỗi HTML gốc
     const fullText = htmlText;
     let index = 0;
-    // Hủy timer cũ nếu đang chạy
     if (state.typingTimer) clearInterval(state.typingTimer);
-    
     state.typingTimer = setInterval(() => {
-      // Tìm thẻ HTML tiếp theo
       const nextTag = fullText.indexOf('<', index);
       if (nextTag === index) {
-        // Đang ở thẻ HTML, tìm dấu > đóng thẻ và thêm cả thẻ vào
         const closeTag = fullText.indexOf('>', index);
         if (closeTag !== -1) {
           element.innerHTML = fullText.substring(0, closeTag + 1);
           index = closeTag + 1;
         } else {
-          // Lỗi HTML, dừng
           element.innerHTML = fullText;
           index = fullText.length;
         }
       } else if (nextTag !== -1) {
-        // Có thẻ HTML phía trước, thêm từng ký tự đến thẻ
         element.innerHTML = fullText.substring(0, index + 1);
         index++;
       } else {
-        // Không còn thẻ HTML, thêm từng ký tự
         element.innerHTML = fullText.substring(0, index + 1);
         index++;
       }
-      
       if (index >= fullText.length) {
         clearInterval(state.typingTimer);
         state.typingTimer = null;
@@ -382,14 +403,13 @@
   
   function spawnComet() {
     const size = rand(13, 24);
-    const margin = size + 8; // chỉ chừa đệm tối thiểu
+    const margin = size + 8;
     const x = rand(margin, W - margin);
-    // Cho phép targetX trải rộng toàn màn hình (kể cả góc)
     const targetX = clamp(x + rand(-180, 180), size + 8, W - size - 8);
-    const impactY = groundY - rand(6, 20); // rơi ở nhiều độ cao hơn
+    const impactY = groundY - rand(6, 20);
     const speed = rand(340, 500) + Math.min(280, state.t * 3.0);
     const delay = rand(0.18, 0.8);
-    const maxVx = speed * 0.577; // tan(30°) - giới hạn góc rơi
+    const maxVx = speed * 0.577;
     let vx = (targetX - x) / Math.max(0.3, delay);
     if (Math.abs(vx) > maxVx) {
         vx = Math.sign(vx) * maxVx;
@@ -410,17 +430,18 @@
       trail:[],
     });
   }
+
   function spawnBlackComet() {
     const size = rand(38, 55);
     const vy = rand(300, 480);
     const delay = rand(0.4, 1.0);
-    const maxVx = vy * 0.577; // giới hạn góc rơi ≤30° so với thẳng đứng
-    const vx = (Math.random() * 2 - 1) * maxVx; // ngẫu nhiên trái/phải
+    const maxVx = vy * 0.577;
+    const vx = (Math.random() * 2 - 1) * maxVx;
     const impactX = rand(size + 10, W - size - 10);
-    const x = impactX - vx * delay; // vị trí xuất phát trên trời
+    const x = impactX - vx * delay;
     const impactY = groundY - rand(4, 12);
     state.comets.push({
-      x: clamp(x, size + 10, W - size - 10), // đảm bảo không ra ngoài
+      x: clamp(x, size + 10, W - size - 10),
       y: -size - rand(50, 140),
       vx,
       vy,
@@ -436,27 +457,21 @@
       isBlack: true,
     });
   }
+
   function triggerImpact(c) {
     c.exploded = true;
-
-    // Xử lý thiên thạch đen
     if (c.isBlack) {
-      // Màn hình trắng xoá 0.5 giây
       state.screenWhite = 0.5;
-      // Người chơi bất tử 0.5 giây
       state.invincibleTimer = 0.5;
-      // Xoá tất cả thiên thạch khác
       state.comets = state.comets.filter(co => co === c || co.exploded);
-      // Vẫn tạo hiệu ứng nổ
       state.flash = 1;
       state.shake = Math.max(state.shake, 50);
       state.dangerPulse = 1;
       state.hits.push({ x:c.x, y:c.impactY, r:c.size * 2.5, life:1.2 });
       burst(c.x, c.impactY, 30, 300, '#ffffff', '#cccccc');
     } else {
-      // Thiên thạch thường
       state.flash = 1;
-            state.shake = Math.max(state.shake, 18 + Math.min(18, state.t * 0.02));
+      state.shake = Math.max(state.shake, 18 + Math.min(18, state.t * 0.02));
       state.dangerPulse = 1;
       state.hits.push({ x:c.x, y:c.impactY, r:c.size * 2.0, life:1.05 });
       burst(c.x, c.impactY, 18 + Math.floor(c.size * 0.7), 200, '#ffd37a', '#ff7d4d');
@@ -511,10 +526,10 @@
 
   function handleTouchStart(e) {
     if (!state.running) return;
-    if (state.touch.active) return;             // đã có ngón điều khiển
+    if (state.touch.active) return;
     e.preventDefault();
     state.touch.active = true;
-    state.touch.pointerId = e.pointerId;        // lưu id ngón đang dùng
+    state.touch.pointerId = e.pointerId;
     const x = e.clientX;
     const y = e.clientY;
     state.touch.startX = x;
@@ -527,7 +542,7 @@
 
   function handleTouchMove(e) {
     if (!state.running || !state.touch.active) return;
-    if (e.pointerId !== state.touch.pointerId) return; // chỉ ngón điều khiển
+    if (e.pointerId !== state.touch.pointerId) return;
     e.preventDefault();
     const x = e.clientX;
     const y = e.clientY;
@@ -553,7 +568,7 @@
 
   function handleTouchEnd(e) {
     if (!state.running) return;
-    if (e.pointerId !== state.touch.pointerId) return; // chỉ kết thúc nếu đúng ngón
+    if (e.pointerId !== state.touch.pointerId) return;
     e.preventDefault();
     state.touch.active = false;
     state.touch.pointerId = null;
@@ -563,6 +578,7 @@
     moveRight(false);
   }
 
+  // ----- VẼ GAME (giữ nguyên) -----
   function drawBackground(dt) {
     const sky = ctx.createLinearGradient(0,0,0,H);
     sky.addColorStop(0, '#12294a');
@@ -612,32 +628,25 @@
     const onGround = player.onGround;
     const speed = Math.abs(player.vx);
 
-    // ── NẰM XUỐNG KHI GAME OVER ────────────────
     if (state.over) {
       ctx.save();
-      ctx.translate(x, groundY - 2);       // đặt thân ngay mặt đất
+      ctx.translate(x, groundY - 2);
       ctx.scale(0.7, 0.7);
-      // xoay ngang, đầu hướng theo hướng chạy cuối cùng
       ctx.rotate(-Math.PI / 2 * facing);
       ctx.lineCap = 'round';
       ctx.lineJoin = 'round';
       ctx.shadowColor = 'rgba(0,0,0,.32)';
       ctx.shadowBlur = 8;
 
-      // Đầu
       ctx.strokeStyle = '#edf6ff';
       ctx.lineWidth = 4;
       ctx.beginPath();
       ctx.arc(0, -34, 10, 0, Math.PI * 2);
       ctx.stroke();
-
-      // Thân
       ctx.beginPath();
       ctx.moveTo(0, -24);
       ctx.lineTo(0, -6);
       ctx.stroke();
-
-      // Hai tay duỗi thẳng
       ctx.beginPath();
       ctx.moveTo(0, -18);
       ctx.lineTo(-20, -24);
@@ -646,8 +655,6 @@
       ctx.moveTo(0, -18);
       ctx.lineTo(20, -24);
       ctx.stroke();
-
-      // Hai chân duỗi thẳng
       ctx.beginPath();
       ctx.moveTo(0, -6);
       ctx.lineTo(-15, 12);
@@ -661,17 +668,13 @@
       return;
     }
 
-    // ── HOẠT ẢNH BÌNH THƯỜNG ────────────────
     const isRunning = onGround && speed > 15;
     const t = state.t;
     const runCycle = t * 12;
     const breathe = Math.sin(t * 3) * 0.5;
     const lean = isRunning ? (player.vx / 300) * 0.25 : 0;
 
-    let armSwing = 0;
-    let legSwing = 0;
-    let legOffset = 0;
-
+    let armSwing = 0, legSwing = 0, legOffset = 0;
     if (isRunning) {
       armSwing = Math.sin(runCycle) * 0.6;
       legSwing = Math.sin(runCycle) * 0.7;
@@ -709,15 +712,12 @@
     ctx.beginPath();
     ctx.arc(0, -34, 10, 0, Math.PI * 2);
     ctx.stroke();
-
     ctx.beginPath();
     ctx.moveTo(0, -24);
     ctx.lineTo(0, -6);
     ctx.stroke();
 
-    const shoulderY = -18;
-    const elbowY = -10;
-    const handY = -2;
+    const shoulderY = -18, elbowY = -10, handY = -2;
     const armAngle = armSwing * 0.7;
 
     ctx.save();
@@ -740,9 +740,7 @@
     ctx.stroke();
     ctx.restore();
 
-    const hipY = -6;
-    const kneeY = 10;
-    const footY = 16;
+    const hipY = -6, kneeY = 10, footY = 16;
     const legAngle = legSwing * 0.9;
 
     ctx.save();
@@ -777,13 +775,13 @@
 
     ctx.restore();
   }
+
   function drawComet(c) {
     if (!c.exploded) {
       const ang = Math.atan2(c.vy, c.vx);
       c.trail.push({ x:c.x, y:c.y });
       if (c.trail.length > 10) c.trail.shift();
 
-      // Vệt đuôi
       for (let i=0; i<c.trail.length; i++) {
         const p = c.trail[i];
         ctx.globalAlpha = (i / c.trail.length) * 0.34;
@@ -798,9 +796,7 @@
       ctx.translate(c.x, c.y);
       ctx.rotate(ang + Math.PI / 2);
       
-      // Đường kính cơ bản
-              if (c.isBlack) {
-        // Vẽ thiên thạch đen
+      if (c.isBlack) {
         const baseR = c.size * 1.1;
         const seed = c.x * 1000 + c.y;
         
@@ -821,7 +817,6 @@
           ctx.closePath();
         }
 
-        // Bóng
         ctx.fillStyle = '#000000';
         ctx.shadowColor = 'rgba(0,0,0,0.9)';
         ctx.shadowBlur = 18;
@@ -829,18 +824,15 @@
         ctx.fill();
         ctx.shadowBlur = 0;
 
-        // Thân đen
         ctx.fillStyle = '#1a1a1a';
         createBlackRockPath(ctx, baseR * 0.92, seed);
         ctx.fill();
 
-        // Mảng xám tối
         ctx.fillStyle = '#2e2e2e';
         ctx.beginPath();
         ctx.ellipse(-baseR*0.1, -baseR*0.2, baseR*0.35, baseR*0.22, 0.3, 0, Math.PI*2);
         ctx.fill();
 
-        // Vết nứt tím
         ctx.strokeStyle = '#440088';
         ctx.lineWidth = 2;
         ctx.beginPath();
@@ -848,13 +840,11 @@
         ctx.lineTo(-baseR*0.2, -baseR*0.45);
         ctx.lineTo(baseR*0.15, -baseR*0.3);
         ctx.stroke();
-
         ctx.beginPath();
         ctx.moveTo(baseR*0.2, -baseR*0.15);
         ctx.lineTo(baseR*0.5, baseR*0.2);
         ctx.stroke();
 
-        // Viền tím
         ctx.globalAlpha = 0.5;
         ctx.strokeStyle = 'rgba(120,0,200,0.9)';
         ctx.lineWidth = 3;
@@ -862,7 +852,6 @@
         ctx.stroke();
         ctx.globalAlpha = 1;
 
-        // Ánh tím phủ
         const glowB = ctx.createRadialGradient(0, 0, baseR*0.2, 0, 0, baseR*0.9);
         glowB.addColorStop(0, 'rgba(80,0,120,0)');
         glowB.addColorStop(0.6, 'rgba(80,0,120,0.3)');
@@ -870,139 +859,127 @@
         ctx.fillStyle = glowB;
         createBlackRockPath(ctx, baseR * 0.92, seed);
         ctx.fill();
-      }
-            const baseR = c.size * 1.1;
-      const seed = c.x * 1000 + c.y;
-      
-      // Hàm tạo hình đá gồ ghề (đa giác)
-      function createRockPath(ctx, r, seed) {
-        const points = [];
-        const numVerts = 12;
-        for (let i = 0; i < numVerts; i++) {
-          const angle = (i / numVerts) * Math.PI * 2;
-          // Dùng seed để sinh nhiễu cố định cho mỗi viên đá
-          const noise = Math.sin(seed + i * 3.7) * 0.2 + Math.cos(seed + i * 1.3) * 0.15;
-          const rr = r * (0.7 + noise);
-          points.push({ x: Math.cos(angle) * rr, y: Math.sin(angle) * rr * 0.75 });
+      } else {
+        const baseR = c.size * 1.1;
+        const seed = c.x * 1000 + c.y;
+        
+        function createRockPath(ctx, r, seed) {
+          const points = [];
+          const numVerts = 12;
+          for (let i = 0; i < numVerts; i++) {
+            const angle = (i / numVerts) * Math.PI * 2;
+            const noise = Math.sin(seed + i * 3.7) * 0.2 + Math.cos(seed + i * 1.3) * 0.15;
+            const rr = r * (0.7 + noise);
+            points.push({ x: Math.cos(angle) * rr, y: Math.sin(angle) * rr * 0.75 });
+          }
+          ctx.beginPath();
+          ctx.moveTo(points[0].x, points[0].y);
+          for (let i = 1; i < points.length; i++) {
+            ctx.lineTo(points[i].x, points[i].y);
+          }
+          ctx.closePath();
         }
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.6)';
+        ctx.shadowBlur = 14;
+        ctx.fillStyle = '#1a1410';
+        createRockPath(ctx, baseR, seed);
+        ctx.fill();
+        ctx.restore();
+
+        ctx.fillStyle = '#4a3c2f';
+        createRockPath(ctx, baseR * 0.95, seed);
+        ctx.fill();
+
+        ctx.fillStyle = '#6b5844';
         ctx.beginPath();
-        ctx.moveTo(points[0].x, points[0].y);
-        for (let i = 1; i < points.length; i++) {
-          ctx.lineTo(points[i].x, points[i].y);
-        }
-        ctx.closePath();
+        ctx.ellipse(-baseR*0.12, -baseR*0.2, baseR*0.4, baseR*0.25, 0.2, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#8c7560';
+        ctx.beginPath();
+        ctx.ellipse(-baseR*0.0, -baseR*0.32, baseR*0.22, baseR*0.14, -0.1, 0, Math.PI*2);
+        ctx.fill();
+
+        ctx.strokeStyle = '#2e241a';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.moveTo(-baseR*0.5, -baseR*0.15);
+        ctx.lineTo(-baseR*0.2, -baseR*0.5);
+        ctx.lineTo(baseR*0.1, -baseR*0.25);
+        ctx.stroke();
+        ctx.beginPath();
+        ctx.moveTo(baseR*0.2, -baseR*0.1);
+        ctx.lineTo(baseR*0.45, baseR*0.25);
+        ctx.stroke();
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.moveTo(-baseR*0.35, baseR*0.15);
+        ctx.lineTo(-baseR*0.55, baseR*0.4);
+        ctx.stroke();
+
+        ctx.fillStyle = '#33281e';
+        ctx.beginPath();
+        ctx.ellipse(baseR*0.3, -baseR*0.35, baseR*0.1, baseR*0.07, 0.5, 0, Math.PI*2);
+        ctx.fill();
+        ctx.strokeStyle = '#1f1812';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+        ctx.fillStyle = '#3e3024';
+        ctx.beginPath();
+        ctx.ellipse(-baseR*0.4, baseR*0.3, baseR*0.09, baseR*0.06, -0.4, 0, Math.PI*2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.globalAlpha = 0.35;
+        ctx.strokeStyle = 'rgba(255,140,30,0.9)';
+        ctx.lineWidth = 3;
+        createRockPath(ctx, baseR * 1.05, seed);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+
+        const glow = ctx.createRadialGradient(0, 0, baseR*0.2, 0, 0, baseR*0.9);
+        glow.addColorStop(0, 'rgba(255,100,20,0)');
+        glow.addColorStop(0.7, 'rgba(255,100,20,0.3)');
+        glow.addColorStop(1, 'rgba(255,60,10,0)');
+        ctx.fillStyle = glow;
+        createRockPath(ctx, baseR * 0.95, seed);
+        ctx.fill();
+
+        ctx.fillStyle = '#ffdd99';
+        ctx.beginPath();
+        ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.12, 0, Math.PI*2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.05, 0, Math.PI*2);
+        ctx.fill();
       }
-
-      // Bóng đổ
-      ctx.save();
-      ctx.shadowColor = 'rgba(0,0,0,0.6)';
-      ctx.shadowBlur = 14;
-      ctx.fillStyle = '#1a1410';
-      createRockPath(ctx, baseR, seed);
-      ctx.fill();
-      ctx.restore();
-
-      // Thân đá chính (màu nâu xám)
-      ctx.fillStyle = '#4a3c2f';
-      createRockPath(ctx, baseR * 0.95, seed);
-      ctx.fill();
-
-      // Mảng sáng hơn trên bề mặt
-      ctx.fillStyle = '#6b5844';
-      ctx.beginPath();
-      ctx.ellipse(-baseR*0.12, -baseR*0.2, baseR*0.4, baseR*0.25, 0.2, 0, Math.PI*2);
-      ctx.fill();
-
-      ctx.fillStyle = '#8c7560';
-      ctx.beginPath();
-      ctx.ellipse(-baseR*0.0, -baseR*0.32, baseR*0.22, baseR*0.14, -0.1, 0, Math.PI*2);
-      ctx.fill();
-
-      // Vết nứt (dùng đường gấp khúc)
-      ctx.strokeStyle = '#2e241a';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.moveTo(-baseR*0.5, -baseR*0.15);
-      ctx.lineTo(-baseR*0.2, -baseR*0.5);
-      ctx.lineTo(baseR*0.1, -baseR*0.25);
-      ctx.stroke();
-
-      ctx.beginPath();
-      ctx.moveTo(baseR*0.2, -baseR*0.1);
-      ctx.lineTo(baseR*0.45, baseR*0.25);
-      ctx.stroke();
-
-      ctx.lineWidth = 1.5;
-      ctx.beginPath();
-      ctx.moveTo(-baseR*0.35, baseR*0.15);
-      ctx.lineTo(-baseR*0.55, baseR*0.4);
-      ctx.stroke();
-
-      // Hố nhỏ
-      ctx.fillStyle = '#33281e';
-      ctx.beginPath();
-      ctx.ellipse(baseR*0.3, -baseR*0.35, baseR*0.1, baseR*0.07, 0.5, 0, Math.PI*2);
-      ctx.fill();
-      ctx.strokeStyle = '#1f1812';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-
-      ctx.fillStyle = '#3e3024';
-      ctx.beginPath();
-      ctx.ellipse(-baseR*0.4, baseR*0.3, baseR*0.09, baseR*0.06, -0.4, 0, Math.PI*2);
-      ctx.fill();
-      ctx.stroke();
-
-      // Viền sáng nóng xung quanh
-      ctx.globalAlpha = 0.35;
-      ctx.strokeStyle = 'rgba(255,140,30,0.9)';
-      ctx.lineWidth = 3;
-      createRockPath(ctx, baseR * 1.05, seed);
-      ctx.stroke();
-      ctx.globalAlpha = 1;
-
-      // Ánh sáng cam phủ (cháy)
-      const glow = ctx.createRadialGradient(0, 0, baseR*0.2, 0, 0, baseR*0.9);
-      glow.addColorStop(0, 'rgba(255,100,20,0)');
-      glow.addColorStop(0.7, 'rgba(255,100,20,0.3)');
-      glow.addColorStop(1, 'rgba(255,60,10,0)');
-      ctx.fillStyle = glow;
-      createRockPath(ctx, baseR * 0.95, seed);
-      ctx.fill();
-
-      // Điểm sáng (tia lửa)
-      ctx.fillStyle = '#ffdd99';
-      ctx.beginPath();
-      ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.12, 0, Math.PI*2);
-      ctx.fill();
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(-baseR*0.05, -baseR*0.45, baseR*0.05, 0, Math.PI*2);
-      ctx.fill();
       
       ctx.restore();
       return;
-    }  // dấu } này đóng if (!c.exploded)
-    const t = c.explodeT;
-    const r = c.size * (1 + t * 3.8);
-    const alpha = Math.max(0, 1 - t / 0.8);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    const g = ctx.createRadialGradient(c.x, c.impactY, 0, c.x, c.impactY, r*1.2);
-    g.addColorStop(0, 'rgba(255,255,255,.95)');
-    g.addColorStop(0.15, 'rgba(255,220,132,.95)');
-    g.addColorStop(0.45, 'rgba(255,128,62,.55)');
-    g.addColorStop(1, 'rgba(255,70,25,0)');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(c.x, c.impactY, r*1.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = `rgba(255,240,180,${alpha * 0.9})`;
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.arc(c.x, c.impactY, r*0.7, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.restore();
+    } else {
+      const t = c.explodeT;
+      const r = c.size * (1 + t * 3.8);
+      const alpha = Math.max(0, 1 - t / 0.8);
+      ctx.save();
+      ctx.globalAlpha = alpha;
+      const g = ctx.createRadialGradient(c.x, c.impactY, 0, c.x, c.impactY, r*1.2);
+      g.addColorStop(0, 'rgba(255,255,255,.95)');
+      g.addColorStop(0.15, 'rgba(255,220,132,.95)');
+      g.addColorStop(0.45, 'rgba(255,128,62,.55)');
+      g.addColorStop(1, 'rgba(255,70,25,0)');
+      ctx.fillStyle = g;
+      ctx.beginPath();
+      ctx.arc(c.x, c.impactY, r*1.2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = `rgba(255,240,180,${alpha * 0.9})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.arc(c.x, c.impactY, r*0.7, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   function drawHits(dt) {
@@ -1092,7 +1069,6 @@
       ctx.stroke();
       ctx.restore();
     }
-    // Màn hình trắng xoá
     if (state.screenWhite > 0) {
       ctx.save();
       ctx.globalAlpha = Math.min(1, state.screenWhite * 2);
@@ -1100,13 +1076,9 @@
       ctx.fillRect(-20, -20, W + 40, H + 40);
       ctx.restore();
     }
-        // ── SPOTLIGHT KHI THUA ─────────────────
     if (state.darkSpotlight > 0) {
       ctx.save();
-      // Vẽ trong hệ tọa độ gốc (bỏ shake)
-      // Vì shake=0 khi game over, nên không cần reset transform
-      const cx = player.x;
-      const cy = player.y;
+      const cx = player.x, cy = player.y;
       const radius = 140;
       const gradient = ctx.createRadialGradient(cx, cy, radius * 0.3, cx, cy, Math.max(W, H) * 1.2);
       gradient.addColorStop(0, 'rgba(0,0,0,0)');
@@ -1132,9 +1104,8 @@
 
     if (!state.running) {
       state.t += dt * 0.5;
-      // Tăng dần spotlight khi game over (tối đa 0.75)
       if (state.over && state.darkSpotlight < 0.75) {
-        state.darkSpotlight += dt * 1.2; // mất khoảng 0.6 giây để tối hẳn
+        state.darkSpotlight += dt * 1.2;
         if (state.darkSpotlight > 0.75) state.darkSpotlight = 0.75;
       }
       drawFrame(dt);
@@ -1147,7 +1118,7 @@
     state.comboTimer = Math.max(0, state.comboTimer - dt);
     state.spawnTimer -= dt;
     state.nearMissCooldown = Math.max(0, state.nearMissCooldown - dt);
-        state.blackCometTimer -= dt;
+    state.blackCometTimer -= dt;
     state.invincibleTimer = Math.max(0, state.invincibleTimer - dt);
     state.screenWhite = Math.max(0, state.screenWhite - dt);
     state.slowTimer = Math.max(0, state.slowTimer - dt);
@@ -1161,7 +1132,6 @@
     }
 
     const spawnBase = clamp(1.05 - state.t * 0.009, 0.35, 1.05);
-    // Hàm đếm thiên thạch đang hoạt động (chưa nổ)
     const activeComets = () => state.comets.filter(c => !c.exploded).length;
 
     if (state.blackCometTimer <= 0) {
