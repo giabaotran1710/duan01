@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover, maximum-scale=1.0, minimum-scale=1.0">
+    <title>Gà năng động</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; }
+        body { background: #1a1a2e; display:flex; justify-content:center; align-items:center; height:100vh; width:100vw; overflow:hidden; font-family:'Segoe UI', Arial, sans-serif; touch-action:manipulation; position:fixed; top:0; left:0; }
+        #gameContainer { position:relative; width:100vw; height:100vh; max-width:100vw; max-height:100vh; overflow:hidden; background:#000; }
+        canvas { display:block; width:100%; height:100%; }
+    footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; opacity: 0.7; font-family: Tahoma; }
+
+    </style>
+</head>
+<body>
+<div id="gameContainer"><canvas id="gameCanvas"></canvas></div>
+   <footer> Version:D20260630-H22M52T6113    »»»   developed by Tran Gia Bao</footer>
+
+<script>
+(function() {
+    const chickenGif = new Image();
+chickenGif.src = '../picture/chicken.gif';
+let chickenGifReady = false;
+
+chickenGif.onload = () => {
+    chickenGifReady = true;
+};
+chickenGif.onerror = () => {
+    console.log('Không tải được GIF gà:', chickenGif.src);
+};
+
+    let isBlocked = false;
+    const STAMINA_MAX = 6;
+    const STAMINA_REGEN_TIME = 0.65;
+    const GRAVITY = 2000;
+    const JUMP_VELOCITY = -570;
+    const GAME_SPEED_INITIAL = 320;
+    const GAME_SPEED_MAX = 1000;
+    const GAME_SPEED_INCREMENT = 4;
+    const GROUND_RATIO = 0.62;
+    const BG_SCALE = 0.8;
+    const SIZE_SCALE = 0.75;
+
+    let canvasWidth, canvasHeight, groundY;
+    let gameState = 'waiting', score = 0, gameSpeed = GAME_SPEED_INITIAL, stamina = STAMINA_MAX, staminaTimer = 0;
+    let chicken, obstacles = [], holes = [], items = [], eagles = [], platforms = [], spikes = [];
+    let bgElements, weatherManager, lastTime = 0, frameCount = 0;
+    let bestScore = parseInt(localStorage.getItem('chickenRunBest_v25') || '0');
+    let hasStartedPlaying = false, gameOverAnimTimer = 0;
+    let restartButton = { x: 0, y: 0, w: 200, h: 65 };
+
+    // --- Weather Manager ---
+    class WeatherManager {
+        constructor() {
+            this.raindrops = [];
+            this.leaves = [];
+            this.init();
+        }
+        init() {
+            this.raindrops = [];
+            this.leaves = [];
+            // Tạo hạt mưa
+            for (let i = 0; i < 120; i++) {
+                this.raindrops.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * canvasHeight,
+                    speed: 500 + Math.random() * 400,
+                    length: 10 + Math.random() * 20,
+                    opacity: 0.1 + Math.random() * 0.2
+                });
+            }
+            // Tạo lá bay
+            for (let i = 0; i < 18; i++) {
+                this.leaves.push({
+                    x: Math.random() * canvasWidth,
+                    y: Math.random() * canvasHeight,
+                    speed: 40 + Math.random() * 80,
+                    rotation: Math.random() * Math.PI * 2,
+                    rotSpeed: (Math.random() - 0.5) * 2,
+                    size: 4 + Math.random() * 6,
+                    opacity: 0.5 + Math.random() * 0.3,
+                    sway: Math.random() * Math.PI * 2,
+                    swaySpeed: 1 + Math.random() * 2
+                });
+            }
+        }
+        update(dt) {
+            // Cập nhật mưa
+            for (let drop of this.raindrops) {
+                drop.y += drop.speed * dt;
+                drop.x -= 30 * dt; // Gió nhẹ đẩy mưa
+                if (drop.y > canvasHeight) {
+                    drop.y = -10;
+                    drop.x = Math.random() * canvasWidth;
+                }
+                if (drop.x < -20) drop.x = canvasWidth + 20;
+            }
+            // Cập nhật lá
+            for (let leaf of this.leaves) {
+                leaf.x -= leaf.speed * dt;
+                leaf.y += Math.sin(leaf.sway) * 20 * dt;
+                leaf.sway += leaf.swaySpeed * dt;
+                leaf.rotation += leaf.rotSpeed * dt;
+                if (leaf.x < -20) {
+                    leaf.x = canvasWidth + 20;
+                    leaf.y = Math.random() * canvasHeight;
+                }
+            }
+        }
+        draw(ctx) {
+            // Vẽ sương mù nhẹ
+            ctx.fillStyle = 'rgba(200,220,230,0.04)';
+            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            // Thêm vài đám sương mù loang lổ
+            for (let i = 0; i < 3; i++) {
+                let fogX = (i * canvasWidth * 0.4 + frameCount * 10) % (canvasWidth + 200) - 100;
+                let fogY = groundY - 100 - i * 40;
+                let gradient = ctx.createRadialGradient(fogX, fogY, 50, fogX, fogY, 300);
+                gradient.addColorStop(0, 'rgba(220,230,240,0.08)');
+                gradient.addColorStop(1, 'rgba(220,230,240,0)');
+                ctx.fillStyle = gradient;
+                ctx.fillRect(fogX - 300, fogY - 300, 600, 600);
+            }
+            // Vẽ mưa
+            for (let drop of this.raindrops) {
+                ctx.strokeStyle = `rgba(180,200,220,${drop.opacity})`;
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                ctx.moveTo(drop.x, drop.y);
+                ctx.lineTo(drop.x + 2, drop.y + drop.length);
+                ctx.stroke();
+            }
+            // Vẽ lá bay
+            for (let leaf of this.leaves) {
+                ctx.save();
+                ctx.translate(leaf.x, leaf.y);
+                ctx.rotate(leaf.rotation);
+                ctx.fillStyle = `rgba(180,150,100,${leaf.opacity})`;
+                ctx.beginPath();
+                ctx.ellipse(0, 0, leaf.size, leaf.size * 0.4, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.strokeStyle = 'rgba(120,90,60,0.3)';
+                ctx.lineWidth = 0.5;
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+    }
+
+    // --- Chicken class ---
+    class Chicken {
+        constructor() {
+            this.width = 44 * SIZE_SCALE; this.height = 48 * SIZE_SCALE;
+            this.x = canvasWidth * 0.16; this.y = groundY - this.height;
+            this.velocityY = 0; this.isOnGround = true; this.currentPlatform = null;
+            this.airJumpsUsed = 0; this.animFrame = 0; this.animTimer = 0;
+            this.eyeBlinkTimer = 0; this.isBlinking = false;
+            this.trailParticles = []; this.jumpCooldown = 0;
+            this.shieldTimer = 0; this.invincibleTimer = 0;
+            this.wingFlapPhase = 0; this.fallingInHole = false; this.fallTimer = 0;
+        }
+        update(dt) {
+            if (this.fallingInHole) { this.fallTimer += dt; this.y += 400 * dt; this.wingFlapPhase += dt * 10; if (this.y > canvasHeight + 50) gameOver(); return; }
+            if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
+            if (this.shieldTimer > 0) this.shieldTimer -= dt;
+            if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
+            if (this.currentPlatform) {
+                let p = this.currentPlatform;
+                if (!p.active || p.x + p.width < this.x || p.x > this.x + this.width) { this.currentPlatform = null; this.isOnGround = false; }
+                else { this.y = p.y - this.height; this.velocityY = 0; }
+            }
+            if (!this.currentPlatform || !this.isOnGround) {
+                if (!this.isOnGround) {
+                    this.velocityY += GRAVITY * dt; this.y += this.velocityY * dt;
+                    if (this.y >= groundY - this.height) { this.y = groundY - this.height; this.velocityY = 0; this.isOnGround = true; this.currentPlatform = null; this.airJumpsUsed = 0; this.spawnLandingDust(); }
+                    else {
+                        for (let p of platforms) {
+                            if (p.active && this.velocityY > 0 && this.x + this.width > p.x && this.x < p.x + p.width && this.y + this.height >= p.y && this.y + this.height - this.velocityY * dt <= p.y + 5) {
+                                this.y = p.y - this.height; this.velocityY = 0; this.isOnGround = true; this.currentPlatform = p; this.airJumpsUsed = 0; this.spawnLandingDust(); break;
+                            }
+                        }
+                    }
+                }
+                this.wingFlapPhase += this.isOnGround ? 0 : dt * 12;
+            }
+            this.animTimer += dt; if (this.isOnGround && this.animTimer > 0.08) { this.animTimer = 0; this.animFrame = (this.animFrame + 1) % 4; } if (!this.isOnGround) this.animFrame = 4;
+            this.eyeBlinkTimer += dt; if (this.eyeBlinkTimer > 2.5 + Math.random()*2) { this.isBlinking = true; this.eyeBlinkTimer = 0; } if (this.isBlinking && this.eyeBlinkTimer > 0.1) { this.isBlinking = false; this.eyeBlinkTimer = 0; }
+            for (let i=this.trailParticles.length-1; i>=0; i--) { let p=this.trailParticles[i]; p.life-=dt; p.y+=p.vy*dt; p.x+=p.vx*dt; if(p.life<=0) this.trailParticles.splice(i,1); }
+            if (this.isOnGround && gameState==='playing' && Math.random()<0.6) {
+                this.trailParticles.push({ x: this.x+5*SIZE_SCALE+Math.random()*10*SIZE_SCALE, y: this.y+this.height-2*SIZE_SCALE, vx:-20*SIZE_SCALE-Math.random()*35*SIZE_SCALE, vy:-15*SIZE_SCALE-Math.random()*30*SIZE_SCALE, life:0.25+Math.random()*0.35, size:1.5*SIZE_SCALE+Math.random()*3*SIZE_SCALE, color:'rgba(170,140,110,0.7)' });
+            }
+        }
+        spawnLandingDust() { for (let i=0; i<10; i++) this.trailParticles.push({ x:this.x+Math.random()*this.width, y:this.y+this.height, vx:(Math.random()-0.5)*70*SIZE_SCALE, vy:-50*SIZE_SCALE-Math.random()*70*SIZE_SCALE, life:0.3+Math.random()*0.5, size:2*SIZE_SCALE+Math.random()*5*SIZE_SCALE, color:'rgba(190,160,130,0.8)' }); }
+        jump() {
+            if (this.fallingInHole || gameState==='falling' || gameState==='gameover') return false;
+            if (stamina <= 0 || this.jumpCooldown > 0) return false;
+            if (this.isOnGround) { this.velocityY = JUMP_VELOCITY; this.isOnGround = false; this.currentPlatform = null; this.airJumpsUsed = 0; }
+            else { this.velocityY = JUMP_VELOCITY * 0.85; this.airJumpsUsed++; }
+            stamina--; this.jumpCooldown = 0.08;
+            for (let i=0; i<12; i++) this.trailParticles.push({ x:this.x+Math.random()*this.width, y:this.y+this.height, vx:(Math.random()-0.5)*90*SIZE_SCALE, vy:-90*SIZE_SCALE-Math.random()*110*SIZE_SCALE, life:0.2+Math.random()*0.35, size:2*SIZE_SCALE+Math.random()*5*SIZE_SCALE, color:'rgba(255,230,160,0.9)' });
+            return true;
+        }
+        getCollisionBox() { const m=8*SIZE_SCALE, n=6*SIZE_SCALE; return { x:this.x+m, y:this.y+n, width:this.width-2*m, height:this.height-2*n }; }
+        draw(ctx) {
+    ctx.save();
+
+    // Nếu GIF chưa load xong thì tạm chưa vẽ
+    if (!chickenGifReady) {
+        ctx.restore();
+        return;
+    }
+
+    // Vẽ bóng dưới chân để vẫn nhìn “nằm” đúng trên mặt đất
+    const cx = this.x + this.width / 2;
+    const shadowY = this.currentPlatform ? this.currentPlatform.y : groundY;
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.beginPath();
+    ctx.ellipse(cx, shadowY, this.width * 0.4, 4 * SIZE_SCALE, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Vẽ hiệu ứng shield / invincible nếu cần
+    if (this.shieldTimer > 0 || this.invincibleTimer > 0) {
+        ctx.fillStyle = `rgba(100,200,255,${0.35 + Math.sin(frameCount * 0.2) * 0.15})`;
+        ctx.beginPath();
+        ctx.arc(cx, this.y + this.height / 2, this.width * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+    }
+
+    // Vẽ GIF
+    ctx.drawImage(chickenGif, this.x, this.y, this.width, this.height);
+
+    ctx.restore();
+}
+
+    // Obstacle, Hole, Spike, Platform, Item, Eagle, BackgroundManager giữ nguyên
+    class Obstacle {
+        constructor(type, platform = null) {
+            this.type = type; this.platform = platform;
+            if (type==='haystack') { this.width=48*SIZE_SCALE; this.height=40*SIZE_SCALE; }
+            else if (type==='crate') { this.width=42*SIZE_SCALE; this.height=88*SIZE_SCALE; }
+            else if (type==='crate_triple') { this.width=42*SIZE_SCALE; this.height=132*SIZE_SCALE; }
+            else if (type==='crate_triangle') { this.width=70*SIZE_SCALE; this.height=70*SIZE_SCALE; }
+            this.x = platform ? platform.x + platform.width + 20*SIZE_SCALE : canvasWidth+50*SIZE_SCALE;
+            this.y = platform ? platform.y - this.height : groundY-this.height;
+            this.passed=false;
+        }
+        update(dt) { this.x -= gameSpeed*dt; }
+        isOffScreen() { return this.x < -this.width-20*SIZE_SCALE; }
+        getCollisionBox() { const m=5*SIZE_SCALE; return { x:this.x+m, y:this.y+m, width:this.width-2*m, height:this.height-2*m }; }
+        draw(ctx) {
+            ctx.save(); const x=this.x, y=this.y;
+            if (this.type==='haystack') {
+                const cx=x+this.width/2, cy=y+this.height/2;
+                ctx.fillStyle='rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx, y+this.height+2*SIZE_SCALE, this.width*0.45, 6*SIZE_SCALE,0,0,Math.PI*2); ctx.fill();
+                let grad=ctx.createLinearGradient(x,0,x+this.width,0); grad.addColorStop(0,'#D4A030'); grad.addColorStop(0.3,'#F0D060'); grad.addColorStop(0.6,'#E8C848'); grad.addColorStop(1,'#B88828');
+                ctx.fillStyle=grad; ctx.beginPath(); ctx.ellipse(cx,cy,this.width/2-2*SIZE_SCALE,this.height/2-2*SIZE_SCALE,0,0,Math.PI*2); ctx.fill();
+                ctx.strokeStyle='#8B6914'; ctx.lineWidth=2.5*SIZE_SCALE; ctx.stroke();
+                for (let i=0; i<5; i++) { let lx=x+6*SIZE_SCALE+i*(this.width/7); ctx.strokeStyle='#B88828'; ctx.lineWidth=0.9*SIZE_SCALE; ctx.beginPath(); ctx.moveTo(lx,y+4*SIZE_SCALE); ctx.quadraticCurveTo(lx+2*SIZE_SCALE,cy+Math.sin(i)*3*SIZE_SCALE,lx,y+this.height-4*SIZE_SCALE); ctx.stroke(); }
+                ctx.strokeStyle='#A07830'; ctx.lineWidth=1*SIZE_SCALE; ctx.setLineDash([8*SIZE_SCALE,4*SIZE_SCALE]);
+                for (let j=0; j<3; j++) { let ly=y+8*SIZE_SCALE+j*(this.height/3.5); ctx.beginPath(); ctx.moveTo(x+3*SIZE_SCALE,ly); ctx.quadraticCurveTo(cx,ly+(j%2?2:-2)*SIZE_SCALE,x+this.width-3*SIZE_SCALE,ly); ctx.stroke(); } ctx.setLineDash([]);
+                for (let i=0; i<5; i++) { let sx=x+4*SIZE_SCALE+Math.random()*(this.width-8*SIZE_SCALE), sy=y+3*SIZE_SCALE+Math.random()*(this.height-5*SIZE_SCALE); ctx.strokeStyle='#E8C860'; ctx.lineWidth=0.8*SIZE_SCALE; ctx.beginPath(); ctx.moveTo(sx,sy); ctx.lineTo(sx+(Math.random()-0.5)*12*SIZE_SCALE,sy+(Math.random()-0.5)*8*SIZE_SCALE); ctx.stroke(); }
+            } else if (this.type==='crate' || this.type==='crate_triple') {
+                let layers = this.type==='crate'?2:3, crateH = this.height/layers;
+                for (let i=0; i<layers; i++) {
+                    let cy=y+i*crateH;
+                    let crateGrad=ctx.createLinearGradient(x,cy,x+this.width,cy); crateGrad.addColorStop(0,'#8B6340'); crateGrad.addColorStop(0.3,'#C49A6C'); crateGrad.addColorStop(0.5,'#D4AA7A'); crateGrad.addColorStop(0.7,'#B88458'); crateGrad.addColorStop(1,'#7A4E30');
+                    ctx.fillStyle=crateGrad; ctx.fillRect(x+2*SIZE_SCALE,cy+3*SIZE_SCALE,this.width-4*SIZE_SCALE,crateH-6*SIZE_SCALE);
+                    ctx.strokeStyle='#5D3A1F'; ctx.lineWidth=2.5*SIZE_SCALE; ctx.strokeRect(x+2*SIZE_SCALE,cy+3*SIZE_SCALE,this.width-4*SIZE_SCALE,crateH-6*SIZE_SCALE);
+                    ctx.strokeStyle='#8B5E3C'; ctx.lineWidth=0.8*SIZE_SCALE;
+                    for (let vx=x+8*SIZE_SCALE; vx<x+this.width-4*SIZE_SCALE; vx+=9*SIZE_SCALE) { ctx.beginPath(); ctx.moveTo(vx,cy+4*SIZE_SCALE); ctx.lineTo(vx,cy+crateH-4*SIZE_SCALE); ctx.stroke(); }
+                    for (let j=0; j<3; j++) { let ly=cy+8*SIZE_SCALE+j*(crateH/3.5); ctx.beginPath(); ctx.moveTo(x+4*SIZE_SCALE,ly); ctx.lineTo(x+this.width-4*SIZE_SCALE,ly); ctx.stroke(); }
+                    for (let c=0; c<4; c++) { let nx=c%2===0?x+7*SIZE_SCALE:x+this.width-7*SIZE_SCALE, ny=c<2?cy+6*SIZE_SCALE:cy+crateH-9*SIZE_SCALE; ctx.fillStyle='#3A3A3A'; ctx.beginPath(); ctx.arc(nx,ny,2.8*SIZE_SCALE,0,Math.PI*2); ctx.fill(); ctx.strokeStyle='#999'; ctx.lineWidth=0.8*SIZE_SCALE; ctx.stroke(); }
+                    ctx.strokeStyle='#4A2A15'; ctx.lineWidth=3*SIZE_SCALE; ctx.strokeRect(x,cy,this.width,crateH);
+                }
+            } else if (this.type==='crate_triangle') {
+                let bw=28*SIZE_SCALE, bh=28*SIZE_SCALE;
+                let positions=[ [x+2*SIZE_SCALE, y+this.height-bh], [x+this.width-bw-2*SIZE_SCALE, y+this.height-bh], [x+this.width/2-bw/2, y+this.height-bh*2+2*SIZE_SCALE] ];
+                for (let pos of positions) {
+                    let crateGrad=ctx.createLinearGradient(pos[0],pos[1],pos[0]+bw,pos[1]); crateGrad.addColorStop(0,'#8B6340'); crateGrad.addColorStop(0.5,'#D4AA7A'); crateGrad.addColorStop(1,'#7A4E30');
+                    ctx.fillStyle=crateGrad; ctx.fillRect(pos[0],pos[1],bw,bh);
+                    ctx.strokeStyle='#4A2A15'; ctx.lineWidth=2*SIZE_SCALE; ctx.strokeRect(pos[0],pos[1],bw,bh);
+                    ctx.strokeStyle='#8B5E3C'; ctx.lineWidth=0.8*SIZE_SCALE;
+                    for (let vx=pos[0]+4*SIZE_SCALE; vx<pos[0]+bw-4*SIZE_SCALE; vx+=6*SIZE_SCALE) { ctx.beginPath(); ctx.moveTo(vx,pos[1]+2*SIZE_SCALE); ctx.lineTo(vx,pos[1]+bh-2*SIZE_SCALE); ctx.stroke(); }
+                }
+            }
+            ctx.restore();
+        }
+    }
+
+    class Hole {
+        constructor() { this.isLarge = Math.random()<0.35; this.width = this.isLarge ? (130+Math.random()*70)*SIZE_SCALE : (90+Math.random()*50)*SIZE_SCALE; if (Math.random()<0.2) this.width = 400 + Math.random()*1600; this.x = canvasWidth+60*SIZE_SCALE; this.y = groundY; this.passed=false; this.depth = canvasHeight-groundY+15*SIZE_SCALE; }
+        update(dt) { this.x -= gameSpeed*dt; }
+        isOffScreen() { return this.x < -this.width-20*SIZE_SCALE; }
+        getCollisionZone() { return { x:this.x+8*SIZE_SCALE, y:this.y, width:this.width-16*SIZE_SCALE, height:this.depth }; }
+        draw(ctx) { let x=this.x, y=this.y; ctx.fillStyle='#0a0500'; ctx.beginPath(); ctx.rect(x,y,this.width,this.depth); ctx.fill(); let grad=ctx.createLinearGradient(0,y,0,y+this.depth); grad.addColorStop(0,'#1a0a00'); grad.addColorStop(1,'#000'); ctx.fillStyle=grad; ctx.beginPath(); ctx.rect(x+6*SIZE_SCALE,y,this.width-12*SIZE_SCALE,this.depth); ctx.fill(); }
+    }
+
+    class Spike {
+        constructor() { this.x = canvasWidth+30*SIZE_SCALE; this.y = groundY; this.width = 30*SIZE_SCALE; this.height = 18*SIZE_SCALE; this.passed=false; }
+        update(dt) { this.x -= gameSpeed*dt; }
+        isOffScreen() { return this.x < -this.width-20*SIZE_SCALE; }
+        getCollisionBox() { return { x:this.x-2*SIZE_SCALE, y:this.y-this.height, width:this.width+4*SIZE_SCALE, height:this.height }; }
+        draw(ctx) { ctx.fillStyle='#6D4C41'; for (let i=0; i<3; i++) { let sx=this.x + i*10*SIZE_SCALE; ctx.beginPath(); ctx.moveTo(sx, this.y); ctx.lineTo(sx+5*SIZE_SCALE, this.y-this.height); ctx.lineTo(sx+10*SIZE_SCALE, this.y); ctx.fill(); } }
+    }
+
+    class Platform {
+        constructor(x, y, width) { this.width = width || (120 + Math.random()*100)*SIZE_SCALE; this.height = 15*SIZE_SCALE; this.x = x || canvasWidth+30*SIZE_SCALE; this.y = y || groundY - 80*SIZE_SCALE - Math.random()*50*SIZE_SCALE; this.active = true; }
+        update(dt) { this.x -= gameSpeed*dt; }
+        isOffScreen() { return this.x < -this.width-20*SIZE_SCALE; }
+        draw(ctx) { ctx.fillStyle='#8B5A2B'; ctx.fillRect(this.x, this.y, this.width, this.height); ctx.fillStyle='#6B4226'; ctx.fillRect(this.x, this.y, this.width, this.height*0.3); ctx.fillStyle='#4CAF50'; for (let gx=this.x; gx<this.x+this.width; gx+=8*SIZE_SCALE) ctx.fillRect(gx, this.y-2*SIZE_SCALE, 4*SIZE_SCALE, 3*SIZE_SCALE); }
+    }
+
+    class Item {
+        constructor(type) { this.type=type; this.width=24*SIZE_SCALE; this.height=24*SIZE_SCALE; this.x=canvasWidth+30*SIZE_SCALE; this.y=groundY-this.height-5*SIZE_SCALE-Math.random()*25*SIZE_SCALE; this.collected=false; this.bobOffset=0; }
+        update(dt) { this.x-=gameSpeed*dt; this.bobOffset=Math.sin(frameCount*0.06+this.x*0.01)*2*SIZE_SCALE; }
+        isOffScreen() { return this.x<-this.width-20*SIZE_SCALE; }
+        getCollisionBox() { return { x:this.x, y:this.y+this.bobOffset, width:this.width, height:this.height }; }
+        draw(ctx) { const y=this.y+this.bobOffset; if (this.type==='gold') { ctx.fillStyle='#FFD700'; ctx.shadowColor='#FFA000'; ctx.shadowBlur=6*SIZE_SCALE; ctx.beginPath(); ctx.arc(this.x+this.width/2,y+this.height/2,this.width*0.4,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFF8E1'; ctx.beginPath(); ctx.arc(this.x+this.width/2-2*SIZE_SCALE,y+this.height/2-2*SIZE_SCALE,this.width*0.12,0,Math.PI*2); ctx.fill(); ctx.shadowBlur=0; } else if (this.type==='stamina') { ctx.fillStyle='#00E5FF'; ctx.shadowColor='#0066CC'; ctx.shadowBlur=5*SIZE_SCALE; ctx.beginPath(); ctx.roundRect(this.x,y,this.width,this.height,4*SIZE_SCALE); ctx.fill(); ctx.fillStyle='#FFF'; ctx.font=`bold ${12*SIZE_SCALE}px "Segoe UI"`; ctx.textAlign='center'; ctx.fillText('⚡',this.x+this.width/2,y+this.height/2+4*SIZE_SCALE); ctx.shadowBlur=0; } else if (this.type==='shield') { ctx.fillStyle='#80D8FF'; ctx.shadowColor='#0091EA'; ctx.shadowBlur=5*SIZE_SCALE; ctx.beginPath(); ctx.arc(this.x+this.width/2,y+this.height/2,this.width*0.45,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFF'; ctx.font=`bold ${12*SIZE_SCALE}px "Segoe UI"`; ctx.textAlign='center'; ctx.fillText('🛡️',this.x+this.width/2,y+this.height/2+4*SIZE_SCALE); ctx.shadowBlur=0; } }
+    }
+
+    class Eagle {
+        constructor() { this.width=70*SIZE_SCALE; this.height=50*SIZE_SCALE; this.x=canvasWidth+200*SIZE_SCALE; this.y=groundY*(0.15+Math.random()*0.5); this.speed=gameSpeed*2.8; this.passed=false; this.warning=3.0; this.active=false; }
+        update(dt) { if(this.warning>0){this.warning-=dt; this.x-=gameSpeed*0.3*dt;} else {this.active=true; this.x-=this.speed*dt;} }
+        isOffScreen() { return this.x<-this.width-30*SIZE_SCALE; }
+        getCollisionBox() { return { x:this.x+10*SIZE_SCALE, y:this.y+5*SIZE_SCALE, width:this.width-20*SIZE_SCALE, height:this.height-10*SIZE_SCALE }; }
+        draw(ctx) { const x=this.x, y=this.y; ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(x+this.width/2,y+this.height+3*SIZE_SCALE,this.width*0.4,4*SIZE_SCALE,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#4E342E'; ctx.beginPath(); ctx.moveTo(x+15*SIZE_SCALE,y+10*SIZE_SCALE); ctx.quadraticCurveTo(x+30*SIZE_SCALE,y-15*SIZE_SCALE,x+this.width-10*SIZE_SCALE,y+5*SIZE_SCALE); ctx.lineTo(x+this.width-20*SIZE_SCALE,y+20*SIZE_SCALE); ctx.quadraticCurveTo(x+40*SIZE_SCALE,y+5*SIZE_SCALE,x+10*SIZE_SCALE,y+20*SIZE_SCALE); ctx.closePath(); ctx.fill(); ctx.fillStyle='#3E2723'; ctx.beginPath(); ctx.moveTo(x+20*SIZE_SCALE,y+20*SIZE_SCALE); ctx.quadraticCurveTo(x+40*SIZE_SCALE,y+40*SIZE_SCALE,x+this.width-15*SIZE_SCALE,y+25*SIZE_SCALE); ctx.lineTo(x+this.width-15*SIZE_SCALE,y+35*SIZE_SCALE); ctx.quadraticCurveTo(x+50*SIZE_SCALE,y+45*SIZE_SCALE,x+25*SIZE_SCALE,y+30*SIZE_SCALE); ctx.closePath(); ctx.fill(); ctx.fillStyle='#5D4037'; ctx.beginPath(); ctx.ellipse(x+this.width*0.5,y+this.height*0.5,this.width*0.2,this.height*0.25,0,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFF'; ctx.beginPath(); ctx.arc(x+10*SIZE_SCALE,y+10*SIZE_SCALE,12*SIZE_SCALE,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#000'; ctx.beginPath(); ctx.arc(x+6*SIZE_SCALE,y+8*SIZE_SCALE,3*SIZE_SCALE,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFF'; ctx.beginPath(); ctx.arc(x+5*SIZE_SCALE,y+7*SIZE_SCALE,1.2*SIZE_SCALE,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#FFC107'; ctx.beginPath(); ctx.moveTo(x-2*SIZE_SCALE,y+12*SIZE_SCALE); ctx.lineTo(x-16*SIZE_SCALE,y+10*SIZE_SCALE); ctx.lineTo(x-2*SIZE_SCALE,y+16*SIZE_SCALE); ctx.closePath(); ctx.fill(); }
+    }
+
+    class BackgroundManager {
+        constructor() { this.mountains=[]; this.trees=[]; this.clouds=[]; this.bushes=[]; this.flowers=[]; this.groundOffset=0; this.init(); }
+        init() { this.mountains=[]; this.trees=[]; this.clouds=[]; this.bushes=[]; this.flowers=[]; for (let i=0; i<Math.floor(canvasWidth/200)+2; i++) this.mountains.push({ x:i*180+Math.random()*50, h:(80+Math.random()*100)*BG_SCALE, w:(120+Math.random()*80)*BG_SCALE, color:`hsl(${200+Math.random()*30},${35+Math.random()*20}%,${50+Math.random()*20}%)` }); const leafColors=['#4A7A2E','#5D8A3C','#3D6B24','#689F38','#558838','#6B9E3D']; for (let i=0; i<Math.floor(canvasWidth/180)+3; i++) { const h=120+Math.random()*140, w=70+Math.random()*60, foliage=[]; for (let j=0; j<12+Math.floor(Math.random()*10); j++) { const angle=(j/12)*Math.PI*2+Math.random()*0.5, dist=w*0.35+Math.random()*w*0.35; foliage.push({relX:Math.cos(angle)*dist, relY:Math.sin(angle)*dist*0.8-w*0.25, radius:w*0.18+Math.random()*w*0.18, color:leafColors[Math.floor(Math.random()*leafColors.length)]}); } for (let j=0; j<15+Math.floor(Math.random()*12); j++) { const angle=Math.random()*Math.PI*2, dist=w*0.3+Math.random()*w*0.6; foliage.push({relX:Math.cos(angle)*dist, relY:Math.sin(angle)*dist*0.7-w*0.3-Math.random()*w*0.15, radius:w*0.1+Math.random()*w*0.15, color:leafColors[Math.floor(Math.random()*leafColors.length)]}); } this.trees.push({x:i*220+Math.random()*100, h, w, sway:Math.random()*Math.PI*2, foliage}); } for (let i=0; i<Math.floor(canvasWidth/100)+5; i++) this.bushes.push({x:i*80+Math.random()*50, s:(8+Math.random()*16)*BG_SCALE, sway:Math.random()*Math.PI*2}); for (let i=0; i<Math.floor(canvasWidth/150)+4; i++) this.flowers.push({x:i*130+Math.random()*80, color:['#FF6B6B','#FFD93D','#FF8A80'][Math.floor(Math.random()*3)], size:(3+Math.random()*4)*BG_SCALE}); for (let i=0; i<Math.floor(canvasWidth/250)+4; i++) this.clouds.push({x:Math.random()*canvasWidth, y:25+Math.random()*(canvasHeight*0.3), w:(60+Math.random()*90)*BG_SCALE, opacity:0.5+Math.random()*0.5, speed:12+Math.random()*28}); }
+        update(dt) { const speed = (gameState==='playing'||gameState==='falling')?gameSpeed:(gameState==='gameover'?gameSpeed*0.3:0); for (let m of this.mountains) { m.x-=speed*0.12*dt; if(m.x<-m.w-50) m.x=canvasWidth+Math.random()*100; } for (let t of this.trees) { t.x-=speed*0.35*dt; t.sway+=dt*0.8; if(t.x<-t.w-40) t.x=canvasWidth+Math.random()*120; } for (let b of this.bushes) { b.x-=speed*0.5*dt; b.sway+=dt*1.5; if(b.x<-b.s-20) b.x=canvasWidth+Math.random()*80; } for (let f of this.flowers) { f.x-=speed*0.45*dt; if(f.x<-10) f.x=canvasWidth+Math.random()*100; } for (let c of this.clouds) { c.x-=c.speed*dt; if(c.x<-c.w-30) { c.x=canvasWidth+Math.random()*50; c.y=25+Math.random()*(canvasHeight*0.3); } } this.groundOffset=(this.groundOffset+speed*dt)%60; }
+        draw(ctx) { const skyGrad=ctx.createLinearGradient(0,0,0,groundY); skyGrad.addColorStop(0,'#7EC8E3'); skyGrad.addColorStop(0.45,'#A8D8EA'); skyGrad.addColorStop(0.85,'#CCE8F0'); skyGrad.addColorStop(1,'#DAF0F7'); ctx.fillStyle=skyGrad; ctx.fillRect(0,0,canvasWidth,groundY); const sunX=canvasWidth*0.83, sunY=canvasHeight*0.12, sunR=40*BG_SCALE; const glow=ctx.createRadialGradient(sunX,sunY,sunR*0.5,sunX,sunY,sunR*3.5); glow.addColorStop(0,'rgba(255,255,220,0.9)'); glow.addColorStop(0.4,'rgba(255,230,160,0.4)'); glow.addColorStop(1,'rgba(255,180,80,0)'); ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(sunX,sunY,sunR*3.5,0,Math.PI*2); ctx.fill(); const sunGrad=ctx.createRadialGradient(sunX-4,sunY-4,4,sunX,sunY,sunR); sunGrad.addColorStop(0,'#FFFDE7'); sunGrad.addColorStop(0.35,'#FFE082'); sunGrad.addColorStop(1,'#FF8F00'); ctx.fillStyle=sunGrad; ctx.beginPath(); ctx.arc(sunX,sunY,sunR,0,Math.PI*2); ctx.fill(); for (let c of this.clouds) { ctx.fillStyle=`rgba(255,255,255,${c.opacity})`; ctx.beginPath(); ctx.arc(c.x,c.y,c.w*0.28,0,Math.PI*2); ctx.arc(c.x+c.w*0.22,c.y-c.w*0.12,c.w*0.24,0,Math.PI*2); ctx.arc(c.x+c.w*0.42,c.y-c.w*0.04,c.w*0.21,0,Math.PI*2); ctx.arc(c.x+c.w*0.18,c.y+c.w*0.06,c.w*0.19,0,Math.PI*2); ctx.arc(c.x-c.w*0.08,c.y+c.w*0.04,c.w*0.22,0,Math.PI*2); ctx.fill(); } for (let m of this.mountains) { const grad=ctx.createLinearGradient(0,groundY-m.h,0,groundY); grad.addColorStop(0,m.color); grad.addColorStop(1,'#8B9A6B'); ctx.fillStyle=grad; ctx.beginPath(); ctx.moveTo(m.x-m.w*0.05,groundY); ctx.quadraticCurveTo(m.x+m.w*0.25,groundY-m.h*0.75,m.x+m.w*0.5,groundY-m.h); ctx.quadraticCurveTo(m.x+m.w*0.7,groundY-m.h*0.6,m.x+m.w+10,groundY); ctx.fill(); } for (let t of this.trees) { const tx=t.x, ty=groundY, th=t.h, tw=t.w, sway=Math.sin(t.sway)*1.5; const trunkW=tw*0.22, trunkH=th*0.45, trunkX=tx-trunkW/2+sway*0.3, trunkY=ty-trunkH; const trunkGrad=ctx.createLinearGradient(trunkX,0,trunkX+trunkW,0); trunkGrad.addColorStop(0,'#6B4226'); trunkGrad.addColorStop(0.5,'#A0724A'); trunkGrad.addColorStop(1,'#5D3320'); ctx.fillStyle=trunkGrad; ctx.beginPath(); ctx.roundRect(trunkX,trunkY,trunkW,trunkH,trunkW*0.4); ctx.fill(); ctx.strokeStyle='#4A2518'; ctx.lineWidth=1.5; ctx.stroke(); const canopyCenterX=tx+sway*0.5, canopyCenterY=trunkY-tw*0.15; ctx.fillStyle='rgba(0,0,0,0.25)'; ctx.beginPath(); ctx.ellipse(tx,ty,trunkW*1.6,4,0,0,Math.PI*2); ctx.fill(); for (let leaf of t.foliage) { ctx.fillStyle=leaf.color; ctx.beginPath(); ctx.arc(canopyCenterX+leaf.relX,canopyCenterY+leaf.relY,leaf.radius,0,Math.PI*2); ctx.fill(); } ctx.fillStyle='rgba(180,220,150,0.3)'; ctx.beginPath(); ctx.arc(canopyCenterX-tw*0.1,canopyCenterY-tw*0.2,tw*0.35,0,Math.PI*2); ctx.fill(); } for (let b of this.bushes) { const bx=b.x, by=groundY, bs=b.s, bsway=Math.sin(b.sway)*2; ctx.fillStyle='#6B9B3A'; ctx.beginPath(); ctx.arc(bx,by-bs*0.15,bs*0.5,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#7DAF4A'; ctx.beginPath(); ctx.arc(bx+bs*0.3+bsway,by-bs*0.2,bs*0.4,0,Math.PI*2); ctx.fill(); ctx.fillStyle='#5A8A2E'; ctx.beginPath(); ctx.arc(bx-bs*0.2+bsway*0.7,by-bs*0.1,bs*0.35,0,Math.PI*2); ctx.fill(); } for (let f of this.flowers) { const fx=f.x, fy=groundY-3; for (let p=0; p<5; p++) { const angle=(p/5)*Math.PI*2; ctx.fillStyle=f.color; ctx.beginPath(); ctx.arc(fx+Math.cos(angle)*f.size*0.6,fy+Math.sin(angle)*f.size*0.6,f.size*0.4,0,Math.PI*2); ctx.fill(); } ctx.fillStyle='#FFEE58'; ctx.beginPath(); ctx.arc(fx,fy,f.size*0.35,0,Math.PI*2); ctx.fill(); } const roadGrad=ctx.createLinearGradient(0,groundY,0,canvasHeight); roadGrad.addColorStop(0,'#C4A46C'); roadGrad.addColorStop(0.1,'#A08450'); roadGrad.addColorStop(1,'#6B4F2A'); ctx.fillStyle=roadGrad; ctx.fillRect(0,groundY,canvasWidth,canvasHeight-groundY); ctx.strokeStyle='rgba(255,255,240,0.45)'; ctx.lineWidth=2; ctx.setLineDash([35,28]); ctx.lineDashOffset=-this.groundOffset; ctx.beginPath(); ctx.moveTo(0,groundY+10); ctx.lineTo(canvasWidth,groundY+10); ctx.stroke(); ctx.setLineDash([]); const grassGrad=ctx.createLinearGradient(0,groundY-6,0,groundY+4); grassGrad.addColorStop(0,'#66BB6A'); grassGrad.addColorStop(1,'#43A047'); ctx.fillStyle=grassGrad; ctx.fillRect(0,groundY-4,canvasWidth,8); for (let gx=-this.groundOffset%16; gx<canvasWidth; gx+=16) { const gh=4+Math.sin(gx*0.35+frameCount*0.03)*3; ctx.strokeStyle='#4CAF50'; ctx.lineWidth=1.5; ctx.beginPath(); ctx.moveTo(gx,groundY-2); ctx.quadraticCurveTo(gx+2.5,groundY-gh,gx+5,groundY-1); ctx.stroke(); } }
+    }
+
+    function resizeCanvas() { canvasWidth=container.clientWidth; canvasHeight=container.clientHeight; canvas.width=canvasWidth*(window.devicePixelRatio||1); canvas.height=canvasHeight*(window.devicePixelRatio||1); canvas.style.width=canvasWidth+'px'; canvas.style.height=canvasHeight+'px'; ctx.setTransform(1,0,0,1,0,0); ctx.scale(window.devicePixelRatio||1,window.devicePixelRatio||1); groundY=canvasHeight*GROUND_RATIO; restartButton.x=canvasWidth/2-restartButton.w/2; restartButton.y=canvasHeight/2+30; if (chicken && !hasStartedPlaying) { chicken.y=groundY-chicken.height; chicken.x=canvasWidth*0.16; } if (bgElements) bgElements.init(); if (weatherManager) weatherManager.init(); }
+    function resetGame() { gameSpeed=GAME_SPEED_INITIAL; stamina=STAMINA_MAX; staminaTimer=0; score=0; obstacles=[]; holes=[]; items=[]; eagles=[]; platforms=[]; spikes=[]; hasStartedPlaying=false; gameOverAnimTimer=0; chicken=new Chicken(); chicken.y=groundY-chicken.height; chicken.x=canvasWidth*0.16; bgElements=new BackgroundManager(); weatherManager = new WeatherManager(); gameState='waiting'; }
+    function startGame() { if(gameState==='gameover'||gameState==='falling') resetGame(); gameState='playing'; hasStartedPlaying=true; lastTime=performance.now(); }
+    function gameOver() { if(gameState==='gameover') return; gameState='gameover'; gameOverAnimTimer=0; if(score>bestScore) { bestScore=Math.floor(score); localStorage.setItem('chickenRunBest_v25',bestScore); } }
+    function jump() { if(isBlocked||!chicken||chicken.fallingInHole||gameState==='falling'||gameState==='gameover') return; if(gameState==='waiting'){startGame(); chicken.jump();} else if(gameState==='playing') chicken.jump(); }
+    function isPositionClear(x,y,w,h) { for(let obs of [...obstacles, ...holes, ...spikes, ...platforms]) { let obsBox = obs.getCollisionBox ? obs.getCollisionBox() : (obs.getCollisionZone ? obs.getCollisionZone() : {x:obs.x, y:obs.y, width:obs.width, height:obs.height}); if(obsBox && x<obsBox.x+obsBox.width && x+w>obsBox.x && y<obsBox.y+obsBox.height && y+h>obsBox.y) return false; } return true; }
+    function isOverHole(x, w) { for (let hole of holes) { if (x < hole.x + hole.width && x + w > hole.x) return true; } return false; }
+
+    function checkCollisions() { if(!chicken||gameState!=='playing'||chicken.fallingInHole) return; const box=chicken.getCollisionBox(); if(chicken.invincibleTimer>0) return; for(let obs of obstacles) { const oBox=obs.getCollisionBox(); if(box.x<oBox.x+oBox.width&&box.x+box.width>oBox.x&&box.y<oBox.y+oBox.height&&box.y+box.height>oBox.y) { if(chicken.shieldTimer>0){chicken.shieldTimer=0; chicken.invincibleTimer=0.5; obs.passed=true; continue;} gameOver(); return; } if(!obs.passed&&obs.x+obs.width<box.x){obs.passed=true; score+=10;} } for(let hole of holes) { const hZone=hole.getCollisionZone(); if(chicken.isOnGround&&!chicken.currentPlatform&&box.x+box.width>hZone.x+4*SIZE_SCALE&&box.x<hZone.x+hZone.width-4*SIZE_SCALE) { if(chicken.shieldTimer>0){chicken.shieldTimer=0; chicken.invincibleTimer=0.5; hole.passed=true; continue;} gameState='falling'; chicken.fallingInHole=true; chicken.fallTimer=0; return; } if(!hole.passed&&hole.x+hole.width<box.x){hole.passed=true; score+=15;} } for(let spike of spikes) { const sBox=spike.getCollisionBox(); if(box.x<sBox.x+sBox.width&&box.x+box.width>sBox.x&&box.y<sBox.y+sBox.height&&box.y+box.height>sBox.y) { if(chicken.shieldTimer>0){chicken.shieldTimer=0; chicken.invincibleTimer=0.5; spike.passed=true; continue;} gameOver(); return; } if(!spike.passed&&spike.x+spike.width<box.x){spike.passed=true; score+=5;} } for(let eagle of eagles) { if(!eagle.active) continue; const eBox=eagle.getCollisionBox(); if(box.x<eBox.x+eBox.width&&box.x+box.width>eBox.x&&box.y<eBox.y+eBox.height&&box.y+box.height>eBox.y) { if(chicken.shieldTimer>0){chicken.shieldTimer=0; chicken.invincibleTimer=0.5; eagle.passed=true; continue;} gameOver(); return; } } for(let item of items) { if(item.collected) continue; const iBox=item.getCollisionBox(); if(box.x<iBox.x+iBox.width&&box.x+box.width>iBox.x&&box.y<iBox.y+iBox.height&&box.y+box.height>iBox.y) { item.collected=true; if(item.type==='gold') score+=50; else if(item.type==='stamina') stamina=Math.min(STAMINA_MAX,stamina+2); else if(item.type==='shield') chicken.shieldTimer=5; } } }
+    let spawnTimer=0, nextSpawnDelay=1.2, itemSpawnTimer=0, eagleSpawnTimer=0;
+
+    function spawnObstacle() {
+        const r=Math.random();
+        if(r<0.3) { let obs=new Obstacle('haystack'); if(!isOverHole(obs.x, obs.width) && isPositionClear(obs.x,obs.y,obs.width,obs.height)) obstacles.push(obs); }
+        else if(r<0.5) { let obs=new Obstacle('crate'); if(!isOverHole(obs.x, obs.width) && isPositionClear(obs.x,obs.y,obs.width,obs.height)) obstacles.push(obs); }
+        else if(r<0.65) { let obs=new Obstacle('crate_triple'); if(!isOverHole(obs.x, obs.width) && isPositionClear(obs.x,obs.y,obs.width,obs.height)) obstacles.push(obs); }
+        else if(r<0.75) { let obs=new Obstacle('crate_triangle'); if(!isOverHole(obs.x, obs.width) && isPositionClear(obs.x,obs.y,obs.width,obs.height)) obstacles.push(obs); }
+        else if(r<0.9) { let sp=new Spike(); if(!isOverHole(sp.x, sp.width) && isPositionClear(sp.x,sp.y,sp.width,sp.height)) spikes.push(sp); }
+        else {
+            let hole=new Hole();
+            if(isPositionClear(hole.x,hole.y,hole.width,hole.depth)) {
+                holes.push(hole);
+                if (hole.width > 400 * SIZE_SCALE) {
+                    let platformWidth = 100 * SIZE_SCALE, gap = 130 * SIZE_SCALE;
+                    let startX = hole.x + 60 * SIZE_SCALE, endX = hole.x + hole.width - 60 * SIZE_SCALE - platformWidth;
+                    let currentX = startX;
+                    while (currentX < endX && platforms.length < 8) {
+                        let plat = new Platform(currentX, groundY - 90 * SIZE_SCALE, platformWidth);
+                        if (isPositionClear(plat.x, plat.y, plat.width, plat.height)) platforms.push(plat);
+                        currentX += platformWidth + gap;
+                    }
+                }
+            }
+        }
+    }
+
+    function spawnItem() { const types=['gold','gold','stamina','shield']; const type=types[Math.floor(Math.random()*types.length)]; const newItem=new Item(type); if(isPositionClear(newItem.x,newItem.y,newItem.width,newItem.height)) items.push(newItem); }
+    function spawnEagle() { eagles.push(new Eagle()); }
+
+    function update(dt) { if(isBlocked) return; if(gameState==='gameover'){ gameOverAnimTimer+=dt; } if(gameState==='falling'){ if(chicken) chicken.update(dt); return; } if(gameState==='playing') { if(chicken&&chicken.fallingInHole){ chicken.update(dt); return; } gameSpeed=Math.min(GAME_SPEED_MAX,gameSpeed+GAME_SPEED_INCREMENT*dt); staminaTimer+=dt; if(staminaTimer>=STAMINA_REGEN_TIME&&stamina<STAMINA_MAX){ stamina++; staminaTimer-=STAMINA_REGEN_TIME; if(stamina>STAMINA_MAX) stamina=STAMINA_MAX; } if(stamina>=STAMINA_MAX) staminaTimer=0; spawnTimer+=dt; if(spawnTimer>=nextSpawnDelay){ spawnTimer=0; spawnObstacle(); const baseDelay=0.9; const variation=Math.random()*0.9; nextSpawnDelay=baseDelay+variation*(1-gameSpeed/GAME_SPEED_MAX*0.4); if(Math.random()<0.15&&gameSpeed>350) setTimeout(()=>{if(gameState==='playing') spawnObstacle();},150+Math.random()*250); } itemSpawnTimer+=dt; if(itemSpawnTimer>4+Math.random()*3){ itemSpawnTimer=0; if(items.length<2) spawnItem(); } eagleSpawnTimer+=dt; if(eagleSpawnTimer>15+Math.random()*10&&gameSpeed>350){ eagleSpawnTimer=0; if(eagles.length===0) spawnEagle(); } score+=gameSpeed*dt*0.05; } if(chicken&&!chicken.fallingInHole) chicken.update(dt); for(let o of obstacles) o.update(dt); for(let h of holes) h.update(dt); for(let s of spikes) s.update(dt); for(let p of platforms) p.update(dt); for(let item of items) item.update(dt); for(let eagle of eagles) eagle.update(dt); obstacles=obstacles.filter(o=>!o.isOffScreen()); holes=holes.filter(h=>!h.isOffScreen()); spikes=spikes.filter(s=>!s.isOffScreen()); platforms=platforms.filter(p=>!p.isOffScreen()); items=items.filter(i=>!i.isOffScreen()&&!i.collected); eagles=eagles.filter(e=>!e.isOffScreen()); if(bgElements) bgElements.update(dt); if(weatherManager) weatherManager.update(dt); if(gameState==='playing') checkCollisions(); }
+
+    function draw(ctx) { ctx.clearRect(0,0,canvasWidth,canvasHeight); if(bgElements) bgElements.draw(ctx); for(let h of holes) h.draw(ctx); for(let o of obstacles) o.draw(ctx); for(let s of spikes) s.draw(ctx); for(let p of platforms) p.draw(ctx); for(let item of items) item.draw(ctx); for(let eagle of eagles) eagle.draw(ctx); if(chicken) chicken.draw(ctx); if(weatherManager) weatherManager.draw(ctx); const boltWidth=28, boltHeight=36, boltGap=6, startX=20, startY=20; for(let i=0; i<STAMINA_MAX; i++) { const bx=startX+i*(boltWidth+boltGap), by=startY, bw=boltWidth, bh=boltHeight; ctx.fillStyle='rgba(0,0,0,0.4)'; ctx.beginPath(); ctx.roundRect(bx,by,bw,bh,6); ctx.fill(); if(i<stamina) { const cx=bx+bw/2, cy=by+bh/2; const glow=ctx.createRadialGradient(cx,cy,bw*0.2,cx,cy,bw*0.8); glow.addColorStop(0,'rgba(100,255,218,0.8)'); glow.addColorStop(0.5,'rgba(0,200,255,0.4)'); glow.addColorStop(1,'rgba(0,150,255,0)'); ctx.fillStyle=glow; ctx.beginPath(); ctx.arc(cx,cy,bw*0.8,0,Math.PI*2); ctx.fill(); const bolt=ctx.createLinearGradient(0,by,0,by+bh); bolt.addColorStop(0,'#E0FFFF'); bolt.addColorStop(0.3,'#00E5FF'); bolt.addColorStop(0.5,'#00B8D4'); bolt.addColorStop(0.7,'#0091EA'); bolt.addColorStop(1,'#0066CC'); ctx.fillStyle=bolt; ctx.beginPath(); ctx.moveTo(cx,by+3); ctx.lineTo(cx-bw*0.35,cy-2); ctx.lineTo(cx-3,cy-4); ctx.lineTo(cx-bw*0.15,by+bh-3); ctx.lineTo(cx+bw*0.35,cy+2); ctx.lineTo(cx+3,cy+4); ctx.lineTo(cx+bw*0.15,by+3); ctx.closePath(); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,0.8)'; ctx.lineWidth=1.5; ctx.stroke(); ctx.fillStyle='#FFF'; ctx.beginPath(); ctx.arc(cx,cy,3.5,0,Math.PI*2); ctx.fill(); } } ctx.fillStyle='rgba(0,0,0,0.5)'; ctx.beginPath(); ctx.roundRect(canvasWidth-155,15,140,45,12); ctx.fill(); ctx.strokeStyle='rgba(255,255,255,0.6)'; ctx.lineWidth=2; ctx.stroke(); ctx.fillStyle='#FFF'; ctx.font='bold 19px "Segoe UI"'; ctx.textAlign='right'; ctx.fillText(`🏆 ${Math.floor(score)}`,canvasWidth-30,45); ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.font='11px "Segoe UI"'; ctx.fillText(`Best: ${Math.floor(bestScore)}`,canvasWidth-30,60); if(chicken&&(chicken.shieldTimer>0||chicken.invincibleTimer>0)) { ctx.fillStyle='rgba(100,200,255,0.8)'; ctx.font='bold 12px "Segoe UI"'; ctx.textAlign='left'; ctx.fillText(`🛡️ ${(chicken.shieldTimer>0?chicken.shieldTimer:chicken.invincibleTimer).toFixed(1)}s`,20,80); } if(gameState==='waiting') { ctx.fillStyle='rgba(255,255,255,0.6)'; ctx.font='bold 20px "Segoe UI"'; ctx.textAlign='center'; ctx.fillText('👆 Chạm để bắt đầu!',canvasWidth/2,canvasHeight*0.42); } if(gameState==='gameover') { const overlayAlpha=Math.min(0.8,gameOverAnimTimer*2); ctx.fillStyle=`rgba(0,0,0,${overlayAlpha})`; ctx.fillRect(0,0,canvasWidth,canvasHeight); const panelW=300, panelH=190, targetPanelY=canvasHeight/2-panelH/2-20; const slideOffset=Math.max(0,(1-gameOverAnimTimer*3)*200); const panelX=canvasWidth/2-panelW/2, panelY=targetPanelY+slideOffset; ctx.fillStyle='rgba(255,255,255,0.95)'; ctx.beginPath(); ctx.roundRect(panelX,panelY,panelW,panelH,20); ctx.fill(); ctx.strokeStyle='#FF8F00'; ctx.lineWidth=4; ctx.stroke(); const scale=1+Math.sin(gameOverAnimTimer*8)*0.03; ctx.save(); ctx.translate(canvasWidth/2,panelY+45); ctx.scale(scale,scale); ctx.fillStyle='#E53935'; ctx.font='bold 26px "Segoe UI"'; ctx.textAlign='center'; ctx.fillText('💔 Thua rồi!',0,0); ctx.restore(); ctx.fillStyle='#333'; ctx.font='18px "Segoe UI"'; ctx.textAlign='center'; ctx.fillText(`Điểm: ${Math.floor(score)}`,canvasWidth/2,panelY+85); ctx.fillText(`Kỷ lục: ${Math.floor(bestScore)}`,canvasWidth/2,panelY+115); const btnX=restartButton.x, btnY=restartButton.y, btnW=restartButton.w, btnH=restartButton.h; const pulse=1+Math.sin(gameOverAnimTimer*5)*0.05; ctx.save(); ctx.translate(btnX+btnW/2,btnY+btnH/2); ctx.scale(pulse,pulse); const grad=ctx.createLinearGradient(-btnW/2,-btnH/2,btnW/2,btnH/2); grad.addColorStop(0,'#FFB300'); grad.addColorStop(1,'#FF8F00'); ctx.fillStyle=grad; ctx.beginPath(); ctx.roundRect(-btnW/2,-btnH/2,btnW,btnH,35); ctx.fill(); ctx.fillStyle='#FFF'; ctx.font='bold 22px "Segoe UI"'; ctx.textAlign='center'; ctx.fillText('CHƠI LẠI',0,8); ctx.restore(); for(let i=0; i<10; i++) { const angle=(i/10)*Math.PI*2+gameOverAnimTimer*2, radius=120+Math.sin(gameOverAnimTimer*3+i)*30; const px=canvasWidth/2+Math.cos(angle)*radius, py=canvasHeight/2-20+Math.sin(angle)*radius*0.6; const alpha=0.5+Math.sin(gameOverAnimTimer*4+i)*0.3; ctx.fillStyle=`rgba(255,215,0,${alpha})`; ctx.beginPath(); ctx.arc(px,py,4+Math.sin(gameOverAnimTimer*5+i)*2,0,Math.PI*2); ctx.fill(); } } }
+
+    function handleCanvasClick(e) { if(isBlocked) return; const rect=canvas.getBoundingClientRect(); const scaleX=canvasWidth/rect.width, scaleY=canvasHeight/rect.height; let clientX, clientY; if(e.touches){ clientX=e.touches[0].clientX; clientY=e.touches[0].clientY; } else { clientX=e.clientX; clientY=e.clientY; } const x=(clientX-rect.left)*scaleX, y=(clientY-rect.top)*scaleY; if(gameState==='gameover') { if(x>=restartButton.x&&x<=restartButton.x+restartButton.w&&y>=restartButton.y&&y<=restartButton.y+restartButton.h) { e.preventDefault(); resetGame(); startGame(); if(chicken) chicken.jump(); return; } return; } e.preventDefault(); if(gameState==='waiting'){ startGame(); chicken.jump(); } else jump(); }
+    canvas.addEventListener('click',handleCanvasClick); canvas.addEventListener('touchstart',(e)=>{ e.preventDefault(); handleCanvasClick(e); },{passive:false});
+    document.addEventListener('keydown',(e)=>{ if(isBlocked) return; if(e.code==='Space'||e.code==='ArrowUp'){ e.preventDefault(); if(gameState==='gameover'){resetGame(); startGame(); if(chicken) chicken.jump();} else jump(); } });
+
+    function gameLoop(ts) { if(!lastTime) lastTime=ts; let dt=Math.min(0.15,(ts-lastTime)/1000); lastTime=ts; frameCount++; update(dt); draw(ctx); requestAnimationFrame(gameLoop); }
+    if(!ctx.roundRect) { ctx.roundRect=function(x,y,w,h,r){ if(typeof r==='number') r={tl:r,tr:r,br:r,bl:r}; ctx.beginPath(); ctx.moveTo(x+r.tl,y); ctx.lineTo(x+w-r.tr,y); ctx.quadraticCurveTo(x+w,y,x+w,y+r.tr); ctx.lineTo(x+w,y+h-r.br); ctx.quadraticCurveTo(x+w,y+h,x+w-r.br,y+h); ctx.lineTo(x+r.bl,y+h); ctx.quadraticCurveTo(x,y+h,x,y+h-r.bl); ctx.lineTo(x,y+r.tl); ctx.quadraticCurveTo(x,y,x+r.tl,y); ctx.closePath(); }; }
+    resizeCanvas(); resetGame(); requestAnimationFrame(gameLoop);
+})();
+</script>
+</body>
+</html>
