@@ -9,26 +9,19 @@
         body { background: #1a1a2e; display:flex; justify-content:center; align-items:center; height:100vh; width:100vw; overflow:hidden; font-family:'Segoe UI', Arial, sans-serif; touch-action:manipulation; position:fixed; top:0; left:0; }
         #gameContainer { position:relative; width:100vw; height:100vh; max-width:100vw; max-height:100vh; overflow:hidden; background:#000; }
         canvas { display:block; width:100%; height:100%; }
-    footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; opacity: 0.7; font-family: Tahoma; }
-
+        footer { position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; opacity: 0.7; font-family: Tahoma; }
     </style>
 </head>
 <body>
 <div id="gameContainer"><canvas id="gameCanvas"></canvas></div>
-   <footer> Version:D20260630-H22M52T6113    »»»   developed by Tran Gia Bao</footer>
-
+<footer> Version:D20260630-H22M52T6113 »»» developed by Tran Gia Bao</footer>
 <script>
 (function() {
     const chickenGif = new Image();
-chickenGif.src = '../picture/chicken.gif';
-let chickenGifReady = false;
-
-chickenGif.onload = () => {
-    chickenGifReady = true;
-};
-chickenGif.onerror = () => {
-    console.log('Không tải được GIF gà:', chickenGif.src);
-};
+    chickenGif.src = 'chicken.gif';
+    let chickenGifReady = false;
+    chickenGif.onload = () => { chickenGifReady = true; };
+    chickenGif.onerror = () => { console.log('Không tải được GIF gà, dùng hình vẽ.'); };
 
     let isBlocked = false;
     const STAMINA_MAX = 6;
@@ -46,109 +39,29 @@ chickenGif.onerror = () => {
     let gameState = 'waiting', score = 0, gameSpeed = GAME_SPEED_INITIAL, stamina = STAMINA_MAX, staminaTimer = 0;
     let chicken, obstacles = [], holes = [], items = [], eagles = [], platforms = [], spikes = [];
     let bgElements, weatherManager, lastTime = 0, frameCount = 0;
-    let bestScore = parseInt(localStorage.getItem('chickenRunBest_v25') || '0');
+    let bestScore = parseInt(localStorage.getItem('chickenRunBest_v26') || '0');
     let hasStartedPlaying = false, gameOverAnimTimer = 0;
     let restartButton = { x: 0, y: 0, w: 200, h: 65 };
 
-    // --- Weather Manager ---
     class WeatherManager {
-        constructor() {
-            this.raindrops = [];
-            this.leaves = [];
-            this.init();
-        }
+        constructor() { this.raindrops = []; this.leaves = []; this.init(); }
         init() {
-            this.raindrops = [];
-            this.leaves = [];
-            // Tạo hạt mưa
-            for (let i = 0; i < 120; i++) {
-                this.raindrops.push({
-                    x: Math.random() * canvasWidth,
-                    y: Math.random() * canvasHeight,
-                    speed: 500 + Math.random() * 400,
-                    length: 10 + Math.random() * 20,
-                    opacity: 0.1 + Math.random() * 0.2
-                });
-            }
-            // Tạo lá bay
-            for (let i = 0; i < 18; i++) {
-                this.leaves.push({
-                    x: Math.random() * canvasWidth,
-                    y: Math.random() * canvasHeight,
-                    speed: 40 + Math.random() * 80,
-                    rotation: Math.random() * Math.PI * 2,
-                    rotSpeed: (Math.random() - 0.5) * 2,
-                    size: 4 + Math.random() * 6,
-                    opacity: 0.5 + Math.random() * 0.3,
-                    sway: Math.random() * Math.PI * 2,
-                    swaySpeed: 1 + Math.random() * 2
-                });
-            }
+            this.raindrops = []; this.leaves = [];
+            for (let i = 0; i < 120; i++) this.raindrops.push({ x: Math.random() * canvasWidth, y: Math.random() * canvasHeight, speed: 500 + Math.random() * 400, length: 10 + Math.random() * 20, opacity: 0.1 + Math.random() * 0.2 });
+            for (let i = 0; i < 18; i++) this.leaves.push({ x: Math.random() * canvasWidth, y: Math.random() * canvasHeight, speed: 40 + Math.random() * 80, rotation: Math.random() * Math.PI * 2, rotSpeed: (Math.random() - 0.5) * 2, size: 4 + Math.random() * 6, opacity: 0.5 + Math.random() * 0.3, sway: Math.random() * Math.PI * 2, swaySpeed: 1 + Math.random() * 2 });
         }
         update(dt) {
-            // Cập nhật mưa
-            for (let drop of this.raindrops) {
-                drop.y += drop.speed * dt;
-                drop.x -= 30 * dt; // Gió nhẹ đẩy mưa
-                if (drop.y > canvasHeight) {
-                    drop.y = -10;
-                    drop.x = Math.random() * canvasWidth;
-                }
-                if (drop.x < -20) drop.x = canvasWidth + 20;
-            }
-            // Cập nhật lá
-            for (let leaf of this.leaves) {
-                leaf.x -= leaf.speed * dt;
-                leaf.y += Math.sin(leaf.sway) * 20 * dt;
-                leaf.sway += leaf.swaySpeed * dt;
-                leaf.rotation += leaf.rotSpeed * dt;
-                if (leaf.x < -20) {
-                    leaf.x = canvasWidth + 20;
-                    leaf.y = Math.random() * canvasHeight;
-                }
-            }
+            for (let drop of this.raindrops) { drop.y += drop.speed * dt; drop.x -= 30 * dt; if (drop.y > canvasHeight) { drop.y = -10; drop.x = Math.random() * canvasWidth; } if (drop.x < -20) drop.x = canvasWidth + 20; }
+            for (let leaf of this.leaves) { leaf.x -= leaf.speed * dt; leaf.y += Math.sin(leaf.sway) * 20 * dt; leaf.sway += leaf.swaySpeed * dt; leaf.rotation += leaf.rotSpeed * dt; if (leaf.x < -20) { leaf.x = canvasWidth + 20; leaf.y = Math.random() * canvasHeight; } }
         }
         draw(ctx) {
-            // Vẽ sương mù nhẹ
-            ctx.fillStyle = 'rgba(200,220,230,0.04)';
-            ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-            // Thêm vài đám sương mù loang lổ
-            for (let i = 0; i < 3; i++) {
-                let fogX = (i * canvasWidth * 0.4 + frameCount * 10) % (canvasWidth + 200) - 100;
-                let fogY = groundY - 100 - i * 40;
-                let gradient = ctx.createRadialGradient(fogX, fogY, 50, fogX, fogY, 300);
-                gradient.addColorStop(0, 'rgba(220,230,240,0.08)');
-                gradient.addColorStop(1, 'rgba(220,230,240,0)');
-                ctx.fillStyle = gradient;
-                ctx.fillRect(fogX - 300, fogY - 300, 600, 600);
-            }
-            // Vẽ mưa
-            for (let drop of this.raindrops) {
-                ctx.strokeStyle = `rgba(180,200,220,${drop.opacity})`;
-                ctx.lineWidth = 1;
-                ctx.beginPath();
-                ctx.moveTo(drop.x, drop.y);
-                ctx.lineTo(drop.x + 2, drop.y + drop.length);
-                ctx.stroke();
-            }
-            // Vẽ lá bay
-            for (let leaf of this.leaves) {
-                ctx.save();
-                ctx.translate(leaf.x, leaf.y);
-                ctx.rotate(leaf.rotation);
-                ctx.fillStyle = `rgba(180,150,100,${leaf.opacity})`;
-                ctx.beginPath();
-                ctx.ellipse(0, 0, leaf.size, leaf.size * 0.4, 0, 0, Math.PI * 2);
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(120,90,60,0.3)';
-                ctx.lineWidth = 0.5;
-                ctx.stroke();
-                ctx.restore();
-            }
+            ctx.fillStyle = 'rgba(200,220,230,0.04)'; ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+            for (let i = 0; i < 3; i++) { let fogX = (i * canvasWidth * 0.4 + frameCount * 10) % (canvasWidth + 200) - 100; let fogY = groundY - 100 - i * 40; let gradient = ctx.createRadialGradient(fogX, fogY, 50, fogX, fogY, 300); gradient.addColorStop(0, 'rgba(220,230,240,0.08)'); gradient.addColorStop(1, 'rgba(220,230,240,0)'); ctx.fillStyle = gradient; ctx.fillRect(fogX - 300, fogY - 300, 600, 600); }
+            for (let drop of this.raindrops) { ctx.strokeStyle = `rgba(180,200,220,${drop.opacity})`; ctx.lineWidth = 1; ctx.beginPath(); ctx.moveTo(drop.x, drop.y); ctx.lineTo(drop.x + 2, drop.y + drop.length); ctx.stroke(); }
+            for (let leaf of this.leaves) { ctx.save(); ctx.translate(leaf.x, leaf.y); ctx.rotate(leaf.rotation); ctx.fillStyle = `rgba(180,150,100,${leaf.opacity})`; ctx.beginPath(); ctx.ellipse(0, 0, leaf.size, leaf.size * 0.4, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(120,90,60,0.3)'; ctx.lineWidth = 0.5; ctx.stroke(); ctx.restore(); }
         }
     }
 
-    // --- Chicken class ---
     class Chicken {
         constructor() {
             this.width = 44 * SIZE_SCALE; this.height = 48 * SIZE_SCALE;
@@ -165,31 +78,19 @@ chickenGif.onerror = () => {
             if (this.jumpCooldown > 0) this.jumpCooldown -= dt;
             if (this.shieldTimer > 0) this.shieldTimer -= dt;
             if (this.invincibleTimer > 0) this.invincibleTimer -= dt;
-            if (this.currentPlatform) {
-                let p = this.currentPlatform;
-                if (!p.active || p.x + p.width < this.x || p.x > this.x + this.width) { this.currentPlatform = null; this.isOnGround = false; }
-                else { this.y = p.y - this.height; this.velocityY = 0; }
-            }
+            if (this.currentPlatform) { let p = this.currentPlatform; if (!p.active || p.x + p.width < this.x || p.x > this.x + this.width) { this.currentPlatform = null; this.isOnGround = false; } else { this.y = p.y - this.height; this.velocityY = 0; } }
             if (!this.currentPlatform || !this.isOnGround) {
                 if (!this.isOnGround) {
                     this.velocityY += GRAVITY * dt; this.y += this.velocityY * dt;
                     if (this.y >= groundY - this.height) { this.y = groundY - this.height; this.velocityY = 0; this.isOnGround = true; this.currentPlatform = null; this.airJumpsUsed = 0; this.spawnLandingDust(); }
-                    else {
-                        for (let p of platforms) {
-                            if (p.active && this.velocityY > 0 && this.x + this.width > p.x && this.x < p.x + p.width && this.y + this.height >= p.y && this.y + this.height - this.velocityY * dt <= p.y + 5) {
-                                this.y = p.y - this.height; this.velocityY = 0; this.isOnGround = true; this.currentPlatform = p; this.airJumpsUsed = 0; this.spawnLandingDust(); break;
-                            }
-                        }
-                    }
+                    else { for (let p of platforms) { if (p.active && this.velocityY > 0 && this.x + this.width > p.x && this.x < p.x + p.width && this.y + this.height >= p.y && this.y + this.height - this.velocityY * dt <= p.y + 5) { this.y = p.y - this.height; this.velocityY = 0; this.isOnGround = true; this.currentPlatform = p; this.airJumpsUsed = 0; this.spawnLandingDust(); break; } } }
                 }
                 this.wingFlapPhase += this.isOnGround ? 0 : dt * 12;
             }
             this.animTimer += dt; if (this.isOnGround && this.animTimer > 0.08) { this.animTimer = 0; this.animFrame = (this.animFrame + 1) % 4; } if (!this.isOnGround) this.animFrame = 4;
             this.eyeBlinkTimer += dt; if (this.eyeBlinkTimer > 2.5 + Math.random()*2) { this.isBlinking = true; this.eyeBlinkTimer = 0; } if (this.isBlinking && this.eyeBlinkTimer > 0.1) { this.isBlinking = false; this.eyeBlinkTimer = 0; }
             for (let i=this.trailParticles.length-1; i>=0; i--) { let p=this.trailParticles[i]; p.life-=dt; p.y+=p.vy*dt; p.x+=p.vx*dt; if(p.life<=0) this.trailParticles.splice(i,1); }
-            if (this.isOnGround && gameState==='playing' && Math.random()<0.6) {
-                this.trailParticles.push({ x: this.x+5*SIZE_SCALE+Math.random()*10*SIZE_SCALE, y: this.y+this.height-2*SIZE_SCALE, vx:-20*SIZE_SCALE-Math.random()*35*SIZE_SCALE, vy:-15*SIZE_SCALE-Math.random()*30*SIZE_SCALE, life:0.25+Math.random()*0.35, size:1.5*SIZE_SCALE+Math.random()*3*SIZE_SCALE, color:'rgba(170,140,110,0.7)' });
-            }
+            if (this.isOnGround && gameState==='playing' && Math.random()<0.6) { this.trailParticles.push({ x: this.x+5*SIZE_SCALE+Math.random()*10*SIZE_SCALE, y: this.y+this.height-2*SIZE_SCALE, vx:-20*SIZE_SCALE-Math.random()*35*SIZE_SCALE, vy:-15*SIZE_SCALE-Math.random()*30*SIZE_SCALE, life:0.25+Math.random()*0.35, size:1.5*SIZE_SCALE+Math.random()*3*SIZE_SCALE, color:'rgba(170,140,110,0.7)' }); }
         }
         spawnLandingDust() { for (let i=0; i<10; i++) this.trailParticles.push({ x:this.x+Math.random()*this.width, y:this.y+this.height, vx:(Math.random()-0.5)*70*SIZE_SCALE, vy:-50*SIZE_SCALE-Math.random()*70*SIZE_SCALE, life:0.3+Math.random()*0.5, size:2*SIZE_SCALE+Math.random()*5*SIZE_SCALE, color:'rgba(190,160,130,0.8)' }); }
         jump() {
@@ -203,37 +104,46 @@ chickenGif.onerror = () => {
         }
         getCollisionBox() { const m=8*SIZE_SCALE, n=6*SIZE_SCALE; return { x:this.x+m, y:this.y+n, width:this.width-2*m, height:this.height-2*n }; }
         draw(ctx) {
-    ctx.save();
-
-    // Nếu GIF chưa load xong thì tạm chưa vẽ
-    if (!chickenGifReady) {
-        ctx.restore();
-        return;
+            ctx.save();
+            const cx = this.x + this.width / 2;
+            const shadowY = this.currentPlatform ? this.currentPlatform.y : groundY;
+            ctx.fillStyle = 'rgba(0,0,0,0.2)'; ctx.beginPath(); ctx.ellipse(cx, shadowY, this.width * 0.4, 4 * SIZE_SCALE, 0, 0, Math.PI * 2); ctx.fill();
+            if (this.shieldTimer > 0 || this.invincibleTimer > 0) { ctx.fillStyle = `rgba(100,200,255,${0.35 + Math.sin(frameCount * 0.2) * 0.15})`; ctx.beginPath(); ctx.arc(cx, this.y + this.height / 2, this.width * 0.8, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,0.9)'; ctx.lineWidth = 3 * SIZE_SCALE; ctx.stroke(); }
+            if (chickenGifReady) { ctx.drawImage(chickenGif, this.x, this.y, this.width, this.height); }
+            else {
+                const bodyX = cx, bodyY = this.y + this.height / 2;
+                let bounce = (this.isOnGround && gameState === 'playing') ? Math.abs(Math.sin(this.animFrame * Math.PI / 2)) * 5 * SIZE_SCALE : 0;
+                const bX = bodyX, bY = bodyY + bounce;
+                const legY = bY + this.height / 2 - 4 * SIZE_SCALE;
+                ctx.strokeStyle = '#E8751A'; ctx.lineWidth = 3.5 * SIZE_SCALE; ctx.lineCap = 'round';
+                if (this.isOnGround && gameState === 'playing') {
+                    let phase = this.animFrame % 2;
+                    let lx = bX - 8 * SIZE_SCALE + (phase ? -2 : 2) * SIZE_SCALE; ctx.beginPath(); ctx.moveTo(bX - 5 * SIZE_SCALE, legY); ctx.lineTo(lx, legY + 10 * SIZE_SCALE); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(lx, legY + 10 * SIZE_SCALE); ctx.lineTo(lx - 5 * SIZE_SCALE, legY + 12 * SIZE_SCALE); ctx.moveTo(lx, legY + 10 * SIZE_SCALE); ctx.lineTo(lx + 4 * SIZE_SCALE, legY + 13 * SIZE_SCALE); ctx.stroke();
+                    let rx = bX + 8 * SIZE_SCALE + (phase ? 2 : -2) * SIZE_SCALE; ctx.beginPath(); ctx.moveTo(bX + 5 * SIZE_SCALE, legY); ctx.lineTo(rx, legY + 10 * SIZE_SCALE); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(rx, legY + 10 * SIZE_SCALE); ctx.lineTo(rx - 5 * SIZE_SCALE, legY + 12 * SIZE_SCALE); ctx.moveTo(rx, legY + 10 * SIZE_SCALE); ctx.lineTo(rx + 4 * SIZE_SCALE, legY + 13 * SIZE_SCALE); ctx.stroke();
+                } else { ctx.beginPath(); ctx.moveTo(bX - 5 * SIZE_SCALE, legY); ctx.lineTo(bX - 8 * SIZE_SCALE, legY + 8 * SIZE_SCALE); ctx.stroke(); ctx.beginPath(); ctx.moveTo(bX + 5 * SIZE_SCALE, legY); ctx.lineTo(bX + 8 * SIZE_SCALE, legY + 8 * SIZE_SCALE); ctx.stroke(); }
+                let grad = ctx.createRadialGradient(bX - 3 * SIZE_SCALE, bY - 2 * SIZE_SCALE, 2 * SIZE_SCALE, bX, bY, this.width * 0.55);
+                grad.addColorStop(0, '#FFF9C4'); grad.addColorStop(0.5, '#FFE082'); grad.addColorStop(1, '#F9A825');
+                ctx.fillStyle = grad; ctx.beginPath(); ctx.ellipse(bX, bY, this.width * 0.42, this.height * 0.35, 0, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#E6A020'; ctx.lineWidth = 1.5 * SIZE_SCALE; ctx.stroke();
+                const wf = !this.isOnGround ? Math.sin(this.wingFlapPhase) * 0.7 : Math.sin(this.animFrame * Math.PI / 2) * 0.3;
+                ctx.fillStyle = '#FFF176'; ctx.save(); ctx.translate(bX - this.width * 0.25, bY - 5 * SIZE_SCALE); ctx.rotate(-0.4 + wf * 0.9); ctx.beginPath(); ctx.ellipse(0, 0, 14 * SIZE_SCALE, 8 * SIZE_SCALE, -0.3, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#E6A020'; ctx.lineWidth = 1.2 * SIZE_SCALE; ctx.stroke(); ctx.restore();
+                ctx.fillStyle = '#FFE57F'; ctx.save(); ctx.translate(bX + this.width * 0.15, bY - 6 * SIZE_SCALE); ctx.rotate(0.5 - wf * 0.7); ctx.beginPath(); ctx.ellipse(0, 0, 10 * SIZE_SCALE, 6 * SIZE_SCALE, 0.4, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#E6A020'; ctx.lineWidth = 1 * SIZE_SCALE; ctx.stroke(); ctx.restore();
+                const headX = bX + this.width * 0.2, headY = bY - this.height * 0.25, headR = this.width * 0.26;
+                let hg = ctx.createRadialGradient(headX - 2 * SIZE_SCALE, headY - 3 * SIZE_SCALE, 2 * SIZE_SCALE, headX, headY, headR); hg.addColorStop(0, '#FFFEF5'); hg.addColorStop(0.6, '#FFE082'); hg.addColorStop(1, '#F9A825');
+                ctx.fillStyle = hg; ctx.beginPath(); ctx.arc(headX, headY, headR, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#E6A020'; ctx.lineWidth = 1.5 * SIZE_SCALE; ctx.stroke();
+                ctx.fillStyle = '#E53935'; ctx.beginPath(); ctx.arc(headX - 2 * SIZE_SCALE, headY - headR - 2 * SIZE_SCALE, 5 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(headX + 5 * SIZE_SCALE, headY - headR - 4 * SIZE_SCALE, 4.5 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); ctx.beginPath(); ctx.arc(headX + 11 * SIZE_SCALE, headY - headR - 1 * SIZE_SCALE, 3.5 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#C62828'; ctx.lineWidth = 1 * SIZE_SCALE; ctx.stroke();
+                const eyeX = headX + 6 * SIZE_SCALE, eyeY = headY - 2 * SIZE_SCALE; ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(eyeX, eyeY, 7 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); ctx.strokeStyle = '#333'; ctx.lineWidth = 1.2 * SIZE_SCALE; ctx.stroke();
+                if (!this.isBlinking) { ctx.fillStyle = '#1A1A1A'; ctx.beginPath(); ctx.arc(eyeX + 1.5 * SIZE_SCALE, eyeY, 3.5 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); ctx.fillStyle = '#FFF'; ctx.beginPath(); ctx.arc(eyeX - 0.5 * SIZE_SCALE, eyeY - 1.5 * SIZE_SCALE, 1.8 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill(); }
+                else { ctx.strokeStyle = '#333'; ctx.lineWidth = 2 * SIZE_SCALE; ctx.beginPath(); ctx.moveTo(eyeX - 5 * SIZE_SCALE, eyeY); ctx.lineTo(eyeX + 5 * SIZE_SCALE, eyeY); ctx.stroke(); }
+                ctx.fillStyle = '#FF8F00'; ctx.beginPath(); ctx.moveTo(headX + headR + 2 * SIZE_SCALE, headY - 3 * SIZE_SCALE); ctx.lineTo(headX + headR + 14 * SIZE_SCALE, headY + 3 * SIZE_SCALE); ctx.lineTo(headX + headR + 2 * SIZE_SCALE, headY + 8 * SIZE_SCALE); ctx.closePath(); ctx.fill(); ctx.strokeStyle = '#E65100'; ctx.lineWidth = 1.2 * SIZE_SCALE; ctx.stroke();
+                ctx.fillStyle = 'rgba(255,150,150,0.5)'; ctx.beginPath(); ctx.arc(headX - 4 * SIZE_SCALE, headY + 4 * SIZE_SCALE, 4 * SIZE_SCALE, 0, Math.PI * 2); ctx.fill();
+                ctx.fillStyle = '#FFE082'; ctx.beginPath(); ctx.moveTo(bX - this.width * 0.35, bY - 5 * SIZE_SCALE); ctx.quadraticCurveTo(bX - this.width * 0.55, bY - 18 * SIZE_SCALE, bX - this.width * 0.45, bY - 20 * SIZE_SCALE); ctx.quadraticCurveTo(bX - this.width * 0.3, bY - 10 * SIZE_SCALE, bX - this.width * 0.35, bY - 5 * SIZE_SCALE); ctx.fill(); ctx.strokeStyle = '#E6A020'; ctx.lineWidth = 1 * SIZE_SCALE; ctx.stroke();
+            }
+            ctx.restore();
+        }
     }
 
-    // Vẽ bóng dưới chân để vẫn nhìn “nằm” đúng trên mặt đất
-    const cx = this.x + this.width / 2;
-    const shadowY = this.currentPlatform ? this.currentPlatform.y : groundY;
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.beginPath();
-    ctx.ellipse(cx, shadowY, this.width * 0.4, 4 * SIZE_SCALE, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Vẽ hiệu ứng shield / invincible nếu cần
-    if (this.shieldTimer > 0 || this.invincibleTimer > 0) {
-        ctx.fillStyle = `rgba(100,200,255,${0.35 + Math.sin(frameCount * 0.2) * 0.15})`;
-        ctx.beginPath();
-        ctx.arc(cx, this.y + this.height / 2, this.width * 0.8, 0, Math.PI * 2);
-        ctx.fill();
-    }
-
-    // Vẽ GIF
-    ctx.drawImage(chickenGif, this.x, this.y, this.width, this.height);
-
-    ctx.restore();
-}
-
-    // Obstacle, Hole, Spike, Platform, Item, Eagle, BackgroundManager giữ nguyên
     class Obstacle {
         constructor(type, platform = null) {
             this.type = type; this.platform = platform;
@@ -337,7 +247,7 @@ chickenGif.onerror = () => {
     function resizeCanvas() { canvasWidth=container.clientWidth; canvasHeight=container.clientHeight; canvas.width=canvasWidth*(window.devicePixelRatio||1); canvas.height=canvasHeight*(window.devicePixelRatio||1); canvas.style.width=canvasWidth+'px'; canvas.style.height=canvasHeight+'px'; ctx.setTransform(1,0,0,1,0,0); ctx.scale(window.devicePixelRatio||1,window.devicePixelRatio||1); groundY=canvasHeight*GROUND_RATIO; restartButton.x=canvasWidth/2-restartButton.w/2; restartButton.y=canvasHeight/2+30; if (chicken && !hasStartedPlaying) { chicken.y=groundY-chicken.height; chicken.x=canvasWidth*0.16; } if (bgElements) bgElements.init(); if (weatherManager) weatherManager.init(); }
     function resetGame() { gameSpeed=GAME_SPEED_INITIAL; stamina=STAMINA_MAX; staminaTimer=0; score=0; obstacles=[]; holes=[]; items=[]; eagles=[]; platforms=[]; spikes=[]; hasStartedPlaying=false; gameOverAnimTimer=0; chicken=new Chicken(); chicken.y=groundY-chicken.height; chicken.x=canvasWidth*0.16; bgElements=new BackgroundManager(); weatherManager = new WeatherManager(); gameState='waiting'; }
     function startGame() { if(gameState==='gameover'||gameState==='falling') resetGame(); gameState='playing'; hasStartedPlaying=true; lastTime=performance.now(); }
-    function gameOver() { if(gameState==='gameover') return; gameState='gameover'; gameOverAnimTimer=0; if(score>bestScore) { bestScore=Math.floor(score); localStorage.setItem('chickenRunBest_v25',bestScore); } }
+    function gameOver() { if(gameState==='gameover') return; gameState='gameover'; gameOverAnimTimer=0; if(score>bestScore) { bestScore=Math.floor(score); localStorage.setItem('chickenRunBest_v26',bestScore); } }
     function jump() { if(isBlocked||!chicken||chicken.fallingInHole||gameState==='falling'||gameState==='gameover') return; if(gameState==='waiting'){startGame(); chicken.jump();} else if(gameState==='playing') chicken.jump(); }
     function isPositionClear(x,y,w,h) { for(let obs of [...obstacles, ...holes, ...spikes, ...platforms]) { let obsBox = obs.getCollisionBox ? obs.getCollisionBox() : (obs.getCollisionZone ? obs.getCollisionZone() : {x:obs.x, y:obs.y, width:obs.width, height:obs.height}); if(obsBox && x<obsBox.x+obsBox.width && x+w>obsBox.x && y<obsBox.y+obsBox.height && y+h>obsBox.y) return false; } return true; }
     function isOverHole(x, w) { for (let hole of holes) { if (x < hole.x + hole.width && x + w > hole.x) return true; } return false; }
