@@ -331,8 +331,7 @@ canvas{
 
 <canvas id="game"></canvas>
 
-<audio id="soundCorrect" src="../audio/dung.mp3" preload="auto"></audio>
-<audio id="soundWrong" src="../audio/sai.mp3" preload="auto"></audio>
+
 
 <div id="ui">
   <div class="topbar">
@@ -426,12 +425,6 @@ const finalScore = document.getElementById("finalScore");
 const finalRank = document.getElementById("finalRank");
 const accuracyPercent = document.getElementById("accuracyPercent");
 const accuracyFill = document.getElementById("accuracyFill");
-const soundCorrect = document.getElementById("soundCorrect");
-const soundWrong = document.getElementById("soundWrong");
-
-soundCorrect.volume = 1;
-soundWrong.volume = 1;
-
 let W = 0;
 let H = 0;
 let DPR = Math.min(window.devicePixelRatio || 1, 2);
@@ -490,16 +483,48 @@ function clamp(v, min, max){
   return Math.max(min, Math.min(max, v));
 }
   
-  function playSound(sound){
-  if(!sound) return;
+  const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
 
-  sound.currentTime = 0;
+function playCorrectSound() {
+    const now = audioCtx.currentTime;
 
-  const playPromise = sound.play();
+    [880, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
 
-  if(playPromise){
-    playPromise.catch(() => {});
-  }
+        osc.type = "sine";
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.3, now + i * 0.05);
+        gain.gain.linearRampToValueAtTime(0.12, now + i * 0.05 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.041, now + i * 0.05 + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now + i * 0.05);
+        osc.stop(now + i * 0.05 + 0.12);
+    });
+}
+
+function playWrongSound() {
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(700, now);
+    osc.frequency.exponentialRampToValueAtTime(51, now + 0.35);
+
+    gain.gain.setValueAtTime(0.4, now);
+    gain.gain.exponentialRampToValueAtTime(0.051, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.35);
 }
 
 /* =====================================================
@@ -935,6 +960,9 @@ function drawParticles(){
    ===================================================== */
 
 function startGame(){
+    if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+}
   running = true;
   score = 0;
   combo = 0;
@@ -1012,12 +1040,12 @@ if(correct){
     const speedBonus = Math.floor(getDifficulty() * 2);
 
     score += 10 + comboBonus + speedBonus;
-playSound(soundCorrect);
+playCorrectSound();
     showFeedback("✓", "#7CFFB2");
     addBurst(constellation.cx, constellation.cy, true);
  }else{
   combo = 0;
-playSound(soundWrong);
+playWrongSound();
   showFeedback("✕", "#FF6B6B");
   addBurst(constellation.cx, constellation.cy, false);
 }
