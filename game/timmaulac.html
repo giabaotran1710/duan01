@@ -174,6 +174,49 @@
 
 <script>
     (function () {
+        const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playCorrectSound() {
+    const now = audioCtx.currentTime;
+
+    [880, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.3, now + i * 0.05);
+        gain.gain.linearRampToValueAtTime(0.12, now + i * 0.05 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.041, now + i * 0.05 + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now + i * 0.05);
+        osc.stop(now + i * 0.05 + 0.12);
+    });
+}
+
+function playWrongSound() {
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(700, now);
+    osc.frequency.exponentialRampToValueAtTime(51, now + 0.35);
+
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.051, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.35);
+}
         const gridEl = document.getElementById('grid');
         const livesEl = document.getElementById('lives');
         const levelNumEl = document.getElementById('levelNum');
@@ -328,6 +371,7 @@ const oddHue = (hue + hueOffset + 360) % 360;
         earned = Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(earned)));
 
         btn.classList.add("correct-pulse");
+        playCorrectSound();
 
         animateScore(earned);
 
@@ -342,6 +386,7 @@ const oddHue = (hue + hueOffset + 360) % 360;
 
         // Ô bấm sai
         btn.classList.add("wrong-shake");
+        playWrongSound();
 
         // Highlight ô đúng
         const correctTile = gridEl.children[oddIndex];
