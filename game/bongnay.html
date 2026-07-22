@@ -390,8 +390,7 @@ canvas{
 
 <body>
 
-<audio id="soundCorrect" preload="auto" src="../audio/dung.mp3"></audio>
-<audio id="soundWrong" preload="auto" src="../audio/sai.mp3"></audio>
+
 
 <canvas id="gameCanvas"></canvas>
 
@@ -491,7 +490,7 @@ const bestText = document.getElementById("bestText");
 const modeBtn = document.getElementById("modeBtn");
 const modeText = document.getElementById("modeText");
 
-const questionModeText = document.getElementById("questionMode");
+let questionModeText = document.getElementById("questionMode");
 const questionBox = document.getElementById("questionBox");
 const feedback = document.getElementById("feedback");
 
@@ -506,10 +505,7 @@ const finalBest = document.getElementById("finalBest");
 
 const answerButtons = [...document.querySelectorAll(".answerBtn")];
 
-const soundCorrect = document.getElementById("soundCorrect");
-const soundWrong = document.getElementById("soundWrong");
-soundCorrect.volume = 1;
-soundWrong.volume = 1;
+
 let W = 0;
 let H = 0;
 let DPR = 1;
@@ -614,7 +610,49 @@ function rand(min,max){
 function clamp(v,min,max){
   return Math.max(min, Math.min(max, v));
 }
- 
+ const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playCorrectSound() {
+    const now = audioCtx.currentTime;
+
+    [880, 1320].forEach((freq, i) => {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+
+        osc.type = "sine";
+        osc.frequency.value = freq;
+
+        gain.gain.setValueAtTime(0.3, now + i * 0.05);
+        gain.gain.linearRampToValueAtTime(0.12, now + i * 0.05 + 0.01);
+        gain.gain.exponentialRampToValueAtTime(0.041, now + i * 0.05 + 0.12);
+
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+
+        osc.start(now + i * 0.05);
+        osc.stop(now + i * 0.05 + 0.12);
+    });
+}
+
+function playWrongSound() {
+    const now = audioCtx.currentTime;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sawtooth";
+    osc.frequency.setValueAtTime(700, now);
+    osc.frequency.exponentialRampToValueAtTime(51, now + 0.35);
+
+    gain.gain.setValueAtTime(0.6, now);
+    gain.gain.exponentialRampToValueAtTime(0.051, now + 0.35);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start(now);
+    osc.stop(now + 0.35);
+}
  function getRoundScore(){
   const elapsed = Math.max(0, gameTime - roundStartTime);
   const progress = clamp(elapsed / ROUND_SCORE_DECAY_SECONDS, 0, 1);
@@ -719,6 +757,10 @@ else{
 }
 
 function createRound(){
+    questionBox.innerHTML =
+  'Bóng nào nảy <span id="questionMode"></span>?';
+
+questionModeText = document.getElementById("questionMode");
   locked = false;
   highlightNumber = 0;
 
@@ -853,19 +895,7 @@ function updateUI(){
   bestText.textContent = best;
 }
 
-function playSound(type){
 
-  const audio =
-    type === "correct"
-      ? soundCorrect
-      : soundWrong;
-
-  try{
-    audio.pause();
-    audio.currentTime = 0;
-    audio.play().catch(()=>{});
-  }catch(e){}
-}
 
 
 
@@ -894,7 +924,7 @@ function chooseAnswer(num){
   highlightNumber = correctNumber;
 
   if(isCorrect){
-    playSound("correct");
+    playCorrectSound();
 
     const earnedScore = getRoundScore();
 
@@ -917,11 +947,12 @@ level++;
     }, 650);
 
   }else{
-    playSound("wrong");
+    playWrongSound();
 
     wrong++;
-
-    const waitTime = wrong >= 3 ? 550 : 450;
+questionBox.innerHTML =
+  `Đáp án đúng: <span id="questionMode">${correctNumber}</span>`;
+    const waitTime = wrong >= 3 ? 1000 : 1200;
 
 showFeedback("✕", "#ff4d68", waitTime);
 
@@ -969,6 +1000,9 @@ startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
 
 function startGame(){
+    if (audioCtx.state === "suspended") {
+    audioCtx.resume();
+}
   level = 1;
   score = 0;
   wrong = 0;
