@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Tìm Màu Lạc</title>
+    <style>
+        :root {
+            --bg: #F6F7FC;
+            --panel: #FFFFFF;
+            --ink: #16162A;
+            --muted: #7C7C95;
+            --pink: #FF5D8F;
+            --pink-deep: #E8447A;
+            --teal: #00C2A8;
+            --amber: #FFB020;
+            --danger: #FF4757;
+            --ring: rgba(255, 93, 143, 0.18);
+            --shadow: 0 18px 40px -16px rgba(22, 22, 42, 0.18);
+        }
+        * { box-sizing: border-box; }
+        html, body { height: 100%; }
+        body {
+            margin: 0; min-height: 100dvh;
+            display: flex; align-items: center; justify-content: center;
+            background: radial-gradient(circle at 14% 10%, rgba(255, 93, 143, 0.13), transparent 45%),
+                        radial-gradient(circle at 86% 88%, rgba(0, 194, 168, 0.13), transparent 45%),
+                        var(--bg);
+            font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            color: var(--ink); padding: 24px 16px;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .stage { width: 100%; max-width: 460px; display: flex; flex-direction: column; gap: 16px; }
+        .topbar { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+        .brand { display: flex; flex-direction: column; gap: 2px; }
+        .brand h1 {
+            font-family: ui-rounded, 'SF Pro Rounded', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+            font-weight: 800; font-size: 26px; letter-spacing: 0.2px; margin: 0; line-height: 1.05;
+            background: linear-gradient(120deg, var(--pink) 0%, var(--pink-deep) 55%, var(--teal) 110%);
+            -webkit-background-clip: text; background-clip: text; color: transparent;
+        }
+        .brand span { font-size: 12.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.2px; }
+        .lives { display: flex; gap: 6px; }
+        .drop { width: 22px; height: 26px; position: relative; filter: drop-shadow(0 3px 5px rgba(255, 93, 143, 0.35)); }
+        .drop svg { width: 100%; height: 100%; display: block; }
+        .drop.lost { filter: none; animation: splat 0.5s ease forwards; }
+        @keyframes splat {
+            0% { transform: scale(1); opacity: 1; }
+            35% { transform: scale(1.3) rotate(-8deg); opacity: 1; }
+            100% { transform: scale(0.65) rotate(6deg); opacity: 0.55; }
+        }
+    #scoreNum.bump{
+    animation:scoreBump .12s ease;
+}
+
+@keyframes scoreBump{
+    0%{transform:scale(1);}
+    50%{transform:scale(1.35);}
+    100%{transform:scale(1);}
+}
+        .statbar { background: var(--panel); border-radius: 18px; padding: 12px 16px; display: flex; align-items: center; justify-content: space-between; box-shadow: var(--shadow); }
+        .stat { display: flex; flex-direction: column; gap: 1px; }
+        .stat .num { font-weight: 700; font-size: 20px; line-height: 1; }
+        .stat .lbl { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.6px; font-weight: 700; }
+        .stat.level .num { color: var(--pink-deep); }
+        .stat.score .num { color: var(--teal); }
+        .stat.best .num { color: var(--amber); }
+
+        /* QUAN TRỌNG: thêm position: relative để overlay hiển thị đúng vị trí */
+        .card {
+            background: var(--panel); border-radius: 26px; padding: 20px;
+            box-shadow: var(--shadow);
+            position: relative;  /* 👈 dòng này giúp overlay nằm gọn trong card */
+            overflow: hidden;
+            min-height: 65vh;
+        }
+
+        .prompt { text-align: center; font-weight: 700; font-size: 14px; color: var(--muted); margin: 0 0 14px; letter-spacing: 0.2px; }
+        .prompt b { color: var(--ink); }
+        .grid { display: grid; gap: 10px; width: 100%; }
+        .tile { aspect-ratio: 1/1; border: none; border-radius: 16px; cursor: pointer; position: relative; transition: transform 0.12s ease; outline-offset: 3px; }
+        .tile:active { transform: scale(0.93); }
+        .tile:focus-visible { outline: 3px solid var(--ink); }
+        .tile.correct-pulse { animation: goodpop 0.45s ease; }
+        @keyframes goodpop {
+            0% { box-shadow: 0 0 0 0 rgba(0, 194, 168, 0.55); }
+            70% { box-shadow: 0 0 0 14px rgba(0, 194, 168, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(0, 194, 168, 0); }
+        }
+        .tile.wrong-shake { animation: badshake 0.4s ease; }
+        @keyframes badshake {
+            0%, 100% { transform: translateX(0); }
+            20% { transform: translateX(-6px) scale(0.97); }
+            40% { transform: translateX(6px) scale(0.97); }
+            60% { transform: translateX(-4px) scale(0.97); }
+            80% { transform: translateX(4px) scale(0.97); }
+        }
+        .tile.faded { opacity: 0; pointer-events: none; transform: scale(0.6); }
+        .splat { position: absolute; inset: 0; border-radius: 16px; pointer-events: none; }
+        .toast {
+            position: absolute; top: 10px; left: 50%; transform: translate(-50%, -130%);
+            background: var(--ink); color: #fff; font-weight: 700; font-size: 13px;
+            padding: 8px 16px; border-radius: 999px; opacity: 0;
+            transition: transform 0.25s ease, opacity 0.25s ease; white-space: nowrap; z-index: 5;
+        }
+        .toast.show { transform: translate(-50%, 0); opacity: 1; }
+        .toast.good { background: var(--teal); }
+        .toast.bad { background: var(--danger); }
+        .overlay {
+            position: absolute; inset: 0;
+            background: rgba(255, 255, 255, 0.97); backdrop-filter: blur(2px);
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            text-align: center; gap: 10px; padding: 24px; border-radius: 26px; z-index: 10;
+        }
+        .overlay.hidden { display: none; }
+        .overlay .big { font-weight: 800; font-size: 26px; margin: 0; }
+        .overlay.gameover .big { color: var(--danger); }
+        .overlay .sub { color: var(--muted); font-size: 14px; font-weight: 500; max-width: 280px; margin: 0 0 6px; line-height: 1.5; }
+        .overlay .resultscore { font-weight: 800; font-size: 42px; color: var(--pink-deep); line-height: 1; margin: 4px 0; }
+        .overlay .icon { font-size: 46px; line-height: 1; margin-bottom: 2px; }
+        .btn {
+            border: none; cursor: pointer; font-weight: 700; font-size: 15px;
+            padding: 13px 28px; border-radius: 999px;
+            background: linear-gradient(120deg, var(--pink), var(--pink-deep)); color: #fff;
+            box-shadow: 0 10px 22px -8px rgba(232, 68, 122, 0.55);
+            transition: transform 0.12s ease;
+        }
+        .btn:active { transform: scale(0.96); }
+        footer { text-align: center; font-size: 11.5px; color: var(--muted); font-weight: 600; letter-spacing: 0.2px; }
+    footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; opacity: 0.7; font-family: Tahoma; }
+
+    </style>
+</head>
+<body>
+
+<div class="stage">
+    <div class="topbar">
+        <div class="brand">
+            <h1>Tìm Màu Lạc</h1>
+            <span>Chạm vào ô màu khác biệt</span>
+        </div>
+        <div class="lives" id="lives"></div>
+    </div>
+    <div class="statbar">
+        <div class="stat level"><div class="num" id="levelNum">1</div><div class="lbl">Cấp độ</div></div>
+        <div class="stat score"><div class="num" id="scoreNum">0</div><div class="lbl">Điểm</div></div>
+          <div class="stat best"><div class="num" id="bestNum">0</div><div class="lbl">Kỷ lục</div></div>
+    </div>
+
+    <div class="card">
+        <p class="prompt">Tìm ô có <b>màu khác</b> với các ô còn lại</p>
+        <div class="toast" id="toast"></div>
+        <div class="grid" id="grid"></div>
+
+        <div class="overlay" id="startOverlay">
+            <div class="icon">🎨</div>
+            <p class="big">Sẵn sàng chưa?</p>
+            <p class="sub">Tìm ô màu lạc trong lưới. Bạn có 3 lượt sai. Càng lên cấp, màu càng giống nhau!</p>
+            <button class="btn" id="startBtn">Bắt đầu chơi</button>
+        </div>
+
+        <div class="overlay gameover hidden" id="overOverlay">
+            <div class="icon">⛔</div>
+            <p class="big">Hết lượt rồi!</p>
+            <div class="resultscore" id="finalScore">0</div>
+            <p class="sub" id="overSub">điểm</p>
+            <button class="btn" id="retryBtn">Chơi lại</button>
+        </div>
+    </div>
+
+ </div>
+      <footer> Version:D20260107-H00M01T8831    »»»   developed by Tran Gia Bao</footer>
+
+
+<script>
+    (function () {
+        const gridEl = document.getElementById('grid');
+        const livesEl = document.getElementById('lives');
+        const levelNumEl = document.getElementById('levelNum');
+        const scoreNumEl = document.getElementById('scoreNum');
+        const bestNumEl = document.getElementById('bestNum');
+        const toastEl = document.getElementById('toast');
+        const startOverlay = document.getElementById('startOverlay');
+        const overOverlay = document.getElementById('overOverlay');
+        const finalScoreEl = document.getElementById('finalScore');
+        const overSub = document.getElementById('overSub');
+        const startBtn = document.getElementById('startBtn');
+        const retryBtn = document.getElementById('retryBtn');
+
+        const createDropSVG = (fill) =>
+            `<svg viewBox="0 0 24 28"><path fill="${fill}" d="M12 0C12 0 2 13.5 2 19.5C2 24.2 6.5 28 12 28C17.5 28 22 24.2 22 19.5C22 13.5 12 0 12 0Z"/></svg>`;
+
+                const TIME_LIMIT = 10;          // giây
+        const MAX_SCORE = 5000;
+        const MIN_SCORE = 250;
+
+        let level = 1;
+        let score = 0;
+        let best = 0;
+        let lives = 3;
+        let busy = false;
+        let oddIndex = -1;
+
+        // Biến mới cho thời gian
+        let roundStartTime = 0;
+        let timerInterval = null;
+        let timeoutId = null;
+        let bonusDisplayEl = null;       // sẽ gán sau
+
+        function clamp(v, min, max) { return Math.max(min, Math.min(max, v)); }
+
+        function renderLives() {
+            livesEl.innerHTML = '';
+            for (let i = 0; i < 3; i++) {
+                const alive = i < lives;
+                const div = document.createElement('div');
+                div.className = 'drop' + (alive ? '' : ' lost');
+                div.innerHTML = createDropSVG(alive ? '#FF5D8F' : '#E3E3EF');
+                livesEl.appendChild(div);
+            }
+        }
+
+        function showToast(msg, kind) {
+            toastEl.textContent = msg;
+            toastEl.className = 'toast show ' + kind;
+            clearTimeout(showToast._t);
+            showToast._t = setTimeout(() => { toastEl.className = 'toast ' + kind; }, 650);
+        }
+
+        function gridSizeForLevel(lv) { return clamp(2 + Math.floor((lv - 1) / 2), 2, 6); }
+        function lightnessDiffForLevel(lv) {
+    return clamp(18 - (lv - 1) * 0.85, 2, 18);
+}
+function animateScore(addScore){
+    const start = score;
+    const end = score + addScore;
+    const duration = 400;
+    const startTime = performance.now();
+
+    function update(now){
+        const t = Math.min((now-startTime)/duration,1);
+        const value = Math.round(start+(end-start)*t);
+
+        scoreNumEl.textContent=value;
+
+        scoreNumEl.classList.remove("bump");
+        void scoreNumEl.offsetWidth;
+        scoreNumEl.classList.add("bump");
+
+        if(t<1){
+            requestAnimationFrame(update);
+        }else{
+            score=end;
+            scoreNumEl.textContent=score;
+        }
+    }
+
+    requestAnimationFrame(update);
+}
+        
+                function newRound() {
+            // Xóa timer cũ
+            if (timerInterval) clearInterval(timerInterval);
+            if (timeoutId) clearTimeout(timeoutId);
+
+            busy = false;
+            gridEl.innerHTML = '';
+            const cols = gridSizeForLevel(level);
+            const total = cols * cols;
+            oddIndex = Math.floor(Math.random() * total);
+   const hue = Math.floor(Math.random() * 360);
+const sat = 55 + Math.random() * 15;   // ít biến động hơn
+const baseL = 42 + Math.random() * 10;  // gom sát nhau hơn
+
+const diff = lightnessDiffForLevel(level);
+const sign = Math.random() < 0.5 ? -1 : 1;
+const oddL = clamp(baseL + sign * diff, 35, 55);
+
+// chỉ lệch rất nhẹ, gần như cùng màu
+const hueOffset = (Math.random() - 0.5) * 2;   // ±1 độ
+const satOffset = (Math.random() - 0.5) * 4;   // ±2%
+const oddSat = clamp(sat + satOffset, 50, 75);
+const oddHue = (hue + hueOffset + 360) % 360;
+            gridEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+            for (let i = 0; i < total; i++) {
+                const btn = document.createElement('button');
+                btn.className = 'tile';
+                btn.setAttribute('aria-label', i === oddIndex ? 'ô màu khác' : 'ô màu thường');
+                btn.style.background = `hsl(${i === oddIndex ? oddHue : hue} ${i === oddIndex ? oddSat : sat}% ${i === oddIndex ? oddL : baseL}%)`;
+                btn.addEventListener('click', () => handlePick(i, btn));
+                gridEl.appendChild(btn);
+            }
+
+            // Bắt đầu tính giờ cho câu mới
+            roundStartTime = Date.now();
+            bonusDisplayEl = document.getElementById('bonusNum');
+            updateBonusDisplay();
+
+            timerInterval = setInterval(updateBonusDisplay, 100);
+
+            // Hết giờ sau TIME_LIMIT giây
+            timeoutId = setTimeout(() => {
+                if (!busy) {  // nếu chưa chọn
+                    timeoutRound();
+                }
+            }, TIME_LIMIT * 1000);
+        }
+                function updateBonusDisplay() {
+            if (!bonusDisplayEl) return;
+            const elapsed = (Date.now() - roundStartTime) / 1000;
+            let currentBonus = MAX_SCORE - (elapsed / TIME_LIMIT) * (MAX_SCORE - MIN_SCORE);
+            currentBonus = Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(currentBonus)));
+            bonusDisplayEl.textContent = currentBonus;
+        }
+
+                function handlePick(i, btn) {
+    if (busy) return;
+    busy = true;
+
+    // Xóa timer
+    if (timerInterval) clearInterval(timerInterval);
+    if (timeoutId) clearTimeout(timeoutId);
+
+    if (i === oddIndex) {
+        // Tính điểm theo thời gian
+        const elapsed = (Date.now() - roundStartTime) / 1000;
+        let earned = MAX_SCORE - (elapsed / TIME_LIMIT) * (MAX_SCORE - MIN_SCORE);
+        earned = Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(earned)));
+
+        btn.classList.add("correct-pulse");
+
+        animateScore(earned);
+
+        showToast("+" + earned, "good");
+
+        level++;
+        levelNumEl.textContent = level;
+
+        setTimeout(newRound, 450);
+
+    } else {
+
+        // Ô bấm sai
+        btn.classList.add("wrong-shake");
+
+        // Highlight ô đúng
+        const correctTile = gridEl.children[oddIndex];
+        correctTile.style.outline = "5px solid #00C2A8";
+        correctTile.style.outlineOffset = "-5px";
+        correctTile.classList.add("correct-pulse");
+
+        lives--;
+        renderLives();
+
+        showToast("Sai rồi 😬", "bad");
+
+        if (lives <= 0) {
+            setTimeout(gameOver, 900);
+        } else {
+            setTimeout(() => {
+                newRound();
+            }, 900);
+        }
+    }
+}
+                
+
+        function gameOver() {
+            best = Math.max(best, score);
+            bestNumEl.textContent = best;
+            finalScoreEl.textContent = score;
+            overSub.textContent = score >= best && score > 0
+                ? 'Kỷ lục mới! Chơi lại để vượt qua chính mình 🔥'
+                : 'Thử lại để phá kỷ lục nhé';
+            overOverlay.classList.remove('hidden');
+        }
+
+         function startGame() {
+            // Xóa timer cũ
+            if (timerInterval) clearInterval(timerInterval);
+            if (timeoutId) clearTimeout(timeoutId);
+
+            level = 1; score = 0; lives = 3; busy = false;
+            levelNumEl.textContent = level;
+            scoreNumEl.textContent = score;
+            renderLives();
+            startOverlay.classList.add('hidden');
+            overOverlay.classList.add('hidden');
+            newRound();
+        }
+
+        startBtn.addEventListener('click', startGame);
+        retryBtn.addEventListener('click', startGame);
+        renderLives();
+    })();
+</script>
+
+</body>
+</html>
