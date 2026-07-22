@@ -375,6 +375,53 @@
   position: fixed; inset: 0; z-index: 1;
   pointer-events: none; width: 100%; height: 100%;
 }
+    
+    .board{
+  position:relative;
+  overflow:hidden;
+}
+
+.board::after{
+  content:"";
+  position:absolute;
+  top:0;
+  left:-45%;
+  width:35%;
+  height:100%;
+
+  background:linear-gradient(
+    90deg,
+    transparent,
+    rgba(255,255,255,.08),
+    rgba(255,255,255,.75),
+    rgba(255,255,255,.08),
+    transparent
+  );
+
+  transform:skewX(-25deg);
+  opacity:0;
+  pointer-events:none;
+}
+
+.board.shine::after{
+  animation:boardShine .6s ease;
+}
+
+@keyframes boardShine{
+  0%{
+    left:-45%;
+    opacity:0;
+  }
+
+  15%{
+    opacity:1;
+  }
+
+  100%{
+    left:120%;
+    opacity:0;
+  }
+}
 
   footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:monospace;z-index:99999; }
   
@@ -408,7 +455,7 @@
 
   <!-- Speed Bar -->
   <div class="speed-bar-wrap">
-    <div class="speed-bar-label">TỐC ĐỘ<style>font-family:'Tahoma',Sans-serif;</style></div>
+    <div class="speed-bar-label">TỐC ĐỘ</div>
     <div class="speed-bar-outer">
       <div class="speed-bar-inner" id="speedBar" style="width:0%"></div>
       <div class="emphasis-marker" id="emphasisMarker"></div>
@@ -560,13 +607,75 @@ function spawnNote(){
   setTimeout(()=>n.remove(),4200);
 }
 setInterval(spawnNote, 800);
+    function playBoardShine() {
+    const board = document.getElementById("rhythmBoard");
+    if (!board) return;
+
+    board.classList.remove("shine");
+    void board.offsetWidth;
+    board.classList.add("shine");
+
+    setTimeout(() => {
+        board.classList.remove("shine");
+    }, 600);
+}
 
 // ===== GAME STATE =====
 const DIRS = ['up','down','left','right'];
 // Use proper arrow characters for display
-const DIR_ICON = { up:'⬆', down:'⬇', left:'⬅', right:'⮕' };
+const DIR_ICON = {
+  up: "↑",
+  down: "↓",
+  left: "←",
+  right: "→"
+};
 const DIR_OPPOSITE = { up:'down', down:'up', left:'right', right:'left' };
+// ===== BACKGROUND MUSIC =====
+let bgMusicTimer = null;
 
+function startBackgroundMusic() {
+  if (bgMusicTimer) return;
+
+  const notes = [
+    261.63, // C4
+    329.63, // E4
+    392.00, // G4
+    523.25, // C5
+    392.00, // G4
+    329.63, // E4
+  ];
+
+  let index = 0;
+
+  bgMusicTimer = setInterval(() => {
+    if (audioCtx.state === "suspended") return;
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+    osc.frequency.value = notes[index];
+
+    gain.gain.setValueAtTime(0.015, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+      0.0001,
+      audioCtx.currentTime + 0.7
+    );
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.7);
+
+    index = (index + 1) % notes.length;
+  }, 700);
+}
+
+function stopBackgroundMusic() {
+  clearInterval(bgMusicTimer);
+  bgMusicTimer = null;
+}
 let state = {
   score: 0, level: 1, combo: 0, maxCombo: 0,
   totalHit: 0, totalMiss: 0,
@@ -735,7 +844,8 @@ function onBarFull(){
   showFeedback('MISS','miss');
   document.getElementById('actionBtn').classList.remove('emphasis');
   revealCurrentQuestionIfNeeded();
-  renderBoard();
+renderBoard();
+playBoardShine();
   lastTs=null;
   state.barProgress=0;
   state.emphasisTriggered=false;
@@ -846,6 +956,7 @@ function nextLevel(){
   state.barSpeed = speedForLevel(state.level);
   revealCurrentQuestionIfNeeded();
   renderBoard();
+   playBoardShine();
   updateHUD();
   startBar();
 }
@@ -877,7 +988,9 @@ function startGame(){
   
   revealCurrentQuestionIfNeeded();
   renderBoard();
+  playBoardShine();
   updateHUD();
+  startBackgroundMusic();
   updateTimerDisplay();
   startCountdown(); // Hàm startCountdown sẽ lo việc phát tiếng bíp
 }
@@ -919,6 +1032,7 @@ function startCountdown(){
 
 
 function gameOver(){
+   stopBackgroundMusic();
   stopBar();
   SFX.gameOver();
   document.getElementById('gameScreen').classList.add('hidden');
@@ -996,18 +1110,30 @@ const SFX = {
   },
 
   hit() {
-    // Tiếng Click cơ học đanh gọn
-    this.burst(800 + (state.currentIdx * 100), 0.04, 'triangle', true);
-  },
+  const osc = audioCtx.createOscillator();
+  const gain = audioCtx.createGain();
+
+  osc.type = "triangle";
+  osc.frequency.setValueAtTime(600, audioCtx.currentTime);
+
+  gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+  gain.gain.exponentialRampToValueAtTime(0.091, audioCtx.currentTime + 0.05);
+
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+
+  osc.start();
+  osc.stop(audioCtx.currentTime + 0.1);
+},
 
   result(type) {
     if (type === 'perfect') {
       // "Chíu chíu" - 2 luồng âm thanh cực nhanh chồng lên nhau
-      this.burst(1200, 0.15, 'square', true);
-      setTimeout(() => this.burst(1600, 0.1, 'square', true), 50);
+      this.burst(2000, 0.915, 'square', true);
+      setTimeout(() => this.burst(500, 0.5, 'sawtooth', true), 1);
     } else if (type === 'good') {
       // 1 âm thanh dứt khoát
-      this.burst(900, 0.1, 'square', true);
+      this.burst(600, 0.915, 'triangle', true);
     } else { // bad
       // Âm thanh trầm đục, rơi xuống
       const osc = audioCtx.createOscillator();
@@ -1024,14 +1150,14 @@ const SFX = {
 
   miss() {
     // Tiếng "Zap" điện tử bị lỗi
-    const duration = 0.2;
+    const duration = 0.35;
     const osc = audioCtx.createOscillator();
     const gain = audioCtx.createGain();
     osc.type = 'sawtooth';
     // Tần số chạy loạn xạ (FM synthesis cơ bản)
     osc.frequency.setValueAtTime(100, audioCtx.currentTime);
     osc.frequency.linearRampToValueAtTime(600, audioCtx.currentTime + 0.05);
-    osc.frequency.linearRampToValueAtTime(10, audioCtx.currentTime + duration);
+    osc.frequency.linearRampToValueAtTime(100, audioCtx.currentTime + duration);
     
     gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
     gain.gain.linearRampToValueAtTime(0.0001, audioCtx.currentTime + duration);
