@@ -64,6 +64,29 @@
             // ==================== DOM ELEMENTS ====================
             const canvas = document.getElementById('gameCanvas');
             const ctx = canvas.getContext('2d');
+            const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function playJumpSound() {
+    if (audioCtx.state === "suspended") {
+        audioCtx.resume();
+    }
+
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";      // Có thể đổi: sine, triangle, sawtooth
+    osc.frequency.setValueAtTime(9000, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(3000, audioCtx.currentTime + 0.08);
+
+    gain.gain.setValueAtTime(0.1, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.151, audioCtx.currentTime + 0.08);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+    osc.stop(audioCtx.currentTime + 0.08);
+}
             const container = document.getElementById('gameContainer');
 
             // ==================== GAME CONSTANTS ====================
@@ -88,15 +111,15 @@
             let canvasWidth, canvasHeight, groundY;
             let terrainOffset = 0;
             // Chu kỳ ngày đêm
-let dayTimer = 0;
-const DAY_DURATION = 45;      // mỗi cảnh 45 giây
-const TRANSITION_TIME = 8;    // chuyển cảnh 8 giây
-let terrainTarget = 0;
-let terrainProgress = 1;
-let terrainStart = 0;
+            let dayTimer = 0;
+            const DAY_DURATION = 45;      // mỗi cảnh 45 giây
+            const TRANSITION_TIME = 8;    // chuyển cảnh 8 giây
+            let terrainTarget = 0;
+            let terrainProgress = 1;
+            let terrainStart = 0;
             function getGroundY() {
-    return groundY + terrainOffset;
-}
+                return groundY + terrainOffset;
+            }
             let gameState = 'waiting'; // 'waiting' | 'playing' | 'falling' | 'gameover'
             let score = 0;
             let gameSpeed = CONSTANTS.GAME_SPEED_INITIAL;
@@ -315,51 +338,51 @@ let terrainStart = 0;
                     }
 
                     // Physics if not on a platform
-if (!this.currentPlatform || !this.isOnGround) {
-    if (!this.isOnGround) {
-        this.velocityY += CONSTANTS.GRAVITY * dt;
-        this.y += this.velocityY * dt;
+                    if (!this.currentPlatform || !this.isOnGround) {
+                        if (!this.isOnGround) {
+                            this.velocityY += CONSTANTS.GRAVITY * dt;
+                            this.y += this.velocityY * dt;
 
-        const currentGround = getGroundY();
+                            const currentGround = getGroundY();
 
-        // Rơi xuống chạm đất
-        if (this.y >= currentGround - this.height) {
-            this.y = currentGround - this.height;
-            this.velocityY = 0;
-            this.isOnGround = true;
-            this.currentPlatform = null;
-            this.airJumpsUsed = 0;
-            this.spawnLandingDust();
-        } else {
-            // Va chạm platform khi đang rơi
-            for (let p of platforms) {
-                if (
-                    p.active &&
-                    this.velocityY > 0 &&
-                    this.x + this.width > p.x &&
-                    this.x < p.x + p.width &&
-                    this.y + this.height >= p.y &&
-                    this.y + this.height - this.velocityY * dt <= p.y + 5
-                ) {
-                    this.y = p.y - this.height;
-                    this.velocityY = 0;
-                    this.isOnGround = true;
-                    this.currentPlatform = p;
-                    this.airJumpsUsed = 0;
-                    this.spawnLandingDust();
-                    break;
-                }
-            }
-        }
-    }
+                            // Rơi xuống chạm đất
+                            if (this.y >= currentGround - this.height) {
+                                this.y = currentGround - this.height;
+                                this.velocityY = 0;
+                                this.isOnGround = true;
+                                this.currentPlatform = null;
+                                this.airJumpsUsed = 0;
+                                this.spawnLandingDust();
+                            } else {
+                                // Va chạm platform khi đang rơi
+                                for (let p of platforms) {
+                                    if (
+                                        p.active &&
+                                        this.velocityY > 0 &&
+                                        this.x + this.width > p.x &&
+                                        this.x < p.x + p.width &&
+                                        this.y + this.height >= p.y &&
+                                        this.y + this.height - this.velocityY * dt <= p.y + 5
+                                    ) {
+                                        this.y = p.y - this.height;
+                                        this.velocityY = 0;
+                                        this.isOnGround = true;
+                                        this.currentPlatform = p;
+                                        this.airJumpsUsed = 0;
+                                        this.spawnLandingDust();
+                                        break;
+                                    }
+                                }
+                            }
+                        }
 
-    this.wingFlapPhase += this.isOnGround ? 0 : dt * 12;
-}
+                        this.wingFlapPhase += this.isOnGround ? 0 : dt * 12;
+                    }
 
-// Nếu đang đứng trên đất và chưa dính platform thì bám sát địa hình
-if (this.isOnGround && !this.currentPlatform) {
-    this.y = getGroundY() - this.height;
-}
+                    // Nếu đang đứng trên đất và chưa dính platform thì bám sát địa hình
+                    if (this.isOnGround && !this.currentPlatform) {
+                        this.y = getGroundY() - this.height;
+                    }
 
                     // Animation
                     this.animTimer += dt;
@@ -435,6 +458,7 @@ if (this.isOnGround && !this.currentPlatform) {
 
                     stamina--;
                     this.jumpCooldown = 0.08;
+                        playJumpSound();
 
                     // Jump particles
                     for (let i = 0; i < 12; i++) {
@@ -467,8 +491,8 @@ if (this.isOnGround && !this.currentPlatform) {
 
                     const cx = this.x + this.width / 2;
                     const shadowY = this.currentPlatform
-    ? this.currentPlatform.y
-    : getGroundY();
+                        ? this.currentPlatform.y
+                        : getGroundY();
 
                     // Shadow
                     ctx.fillStyle = 'rgba(0,0,0,0.2)';
@@ -729,15 +753,15 @@ if (this.isOnGround && !this.currentPlatform) {
                     this.passed = false;
                 }
 
-           update(dt) {
-    this.x -= gameSpeed * dt;
+                update(dt) {
+                    this.x -= gameSpeed * dt;
 
-    if (!this.platform) {
-        this.y = getGroundY() - this.height;
-    } else {
-        this.y = this.platform.y - this.height;
-    }
-}
+                    if (!this.platform) {
+                        this.y = getGroundY() - this.height;
+                    } else {
+                        this.y = this.platform.y - this.height;
+                    }
+                }
 
                 isOffScreen() {
                     return this.x < -this.width - 20 * CONSTANTS.SIZE_SCALE;
@@ -952,16 +976,16 @@ if (this.isOnGround && !this.currentPlatform) {
                     }
 
                     this.x = canvasWidth + 60 * CONSTANTS.SIZE_SCALE;
-this.y = getGroundY();
-this.depth = canvasHeight - getGroundY() + 15 * CONSTANTS.SIZE_SCALE;
+                    this.y = getGroundY();
+                    this.depth = canvasHeight - getGroundY() + 15 * CONSTANTS.SIZE_SCALE;
                 }
 
                 update(dt) {
-    this.x -= gameSpeed * dt;
+                    this.x -= gameSpeed * dt;
 
-    this.y = getGroundY();
-    this.depth = canvasHeight - this.y + 15 * CONSTANTS.SIZE_SCALE;
-}
+                    this.y = getGroundY();
+                    this.depth = canvasHeight - this.y + 15 * CONSTANTS.SIZE_SCALE;
+                }
 
                 isOffScreen() {
                     return this.x < -this.width - 20 * CONSTANTS.SIZE_SCALE;
@@ -1008,9 +1032,9 @@ this.depth = canvasHeight - getGroundY() + 15 * CONSTANTS.SIZE_SCALE;
                 }
 
                 update(dt) {
-    this.x -= gameSpeed * dt;
-    this.y = getGroundY();
-}
+                    this.x -= gameSpeed * dt;
+                    this.y = getGroundY();
+                }
 
                 isOffScreen() {
                     return this.x < -this.width - 20 * CONSTANTS.SIZE_SCALE;
@@ -1024,70 +1048,69 @@ this.depth = canvasHeight - getGroundY() + 15 * CONSTANTS.SIZE_SCALE;
                         height: this.height
                     };
                 }
-draw(ctx) {
 
-    // Bóng
-    ctx.fillStyle = "rgba(0,0,0,0.22)";
-    ctx.beginPath();
-    ctx.ellipse(
-        this.x + this.width / 2,
-        this.y + 3,
-        this.width * 0.45,
-        4,
-        0,
-        0,
-        Math.PI * 2
-    );
-    ctx.fill();
+                draw(ctx) {
+                    // Bóng
+                    ctx.fillStyle = "rgba(0,0,0,0.22)";
+                    ctx.beginPath();
+                    ctx.ellipse(
+                        this.x + this.width / 2,
+                        this.y + 3,
+                        this.width * 0.45,
+                        4,
+                        0,
+                        0,
+                        Math.PI * 2
+                    );
+                    ctx.fill();
 
-    const spikeCount = 5;
-    const spikeWidth = this.width / spikeCount;
+                    const spikeCount = 5;
+                    const spikeWidth = this.width / spikeCount;
 
-    for (let i = 0; i < spikeCount; i++) {
+                    for (let i = 0; i < spikeCount; i++) {
+                        const sx = this.x + i * spikeWidth;
 
-        const sx = this.x + i * spikeWidth;
+                        const grad = ctx.createLinearGradient(
+                            sx,
+                            this.y - this.height,
+                            sx,
+                            this.y
+                        );
 
-        const grad = ctx.createLinearGradient(
-            sx,
-            this.y - this.height,
-            sx,
-            this.y
-        );
+                        grad.addColorStop(0, "#EEEEEE");
+                        grad.addColorStop(0.45, "#B0BEC5");
+                        grad.addColorStop(1, "#616161");
 
-        grad.addColorStop(0, "#EEEEEE");
-        grad.addColorStop(0.45, "#B0BEC5");
-        grad.addColorStop(1, "#616161");
+                        ctx.fillStyle = grad;
 
-        ctx.fillStyle = grad;
+                        ctx.beginPath();
+                        ctx.moveTo(sx, this.y);
+                        ctx.lineTo(sx + spikeWidth / 2, this.y - this.height);
+                        ctx.lineTo(sx + spikeWidth, this.y);
+                        ctx.closePath();
+                        ctx.fill();
 
-        ctx.beginPath();
-        ctx.moveTo(sx, this.y);
-        ctx.lineTo(sx + spikeWidth / 2, this.y - this.height);
-        ctx.lineTo(sx + spikeWidth, this.y);
-        ctx.closePath();
-        ctx.fill();
+                        ctx.strokeStyle = "#424242";
+                        ctx.lineWidth = 1.2;
+                        ctx.stroke();
 
-        ctx.strokeStyle = "#424242";
-        ctx.lineWidth = 1.2;
-        ctx.stroke();
+                        // Vệt sáng
+                        ctx.strokeStyle = "rgba(255,255,255,0.55)";
+                        ctx.beginPath();
+                        ctx.moveTo(sx + spikeWidth / 2, this.y - this.height);
+                        ctx.lineTo(sx + spikeWidth / 2, this.y - this.height * 0.45);
+                        ctx.stroke();
+                    }
 
-        // Vệt sáng
-        ctx.strokeStyle = "rgba(255,255,255,0.55)";
-        ctx.beginPath();
-        ctx.moveTo(sx + spikeWidth / 2, this.y - this.height);
-        ctx.lineTo(sx + spikeWidth / 2, this.y - this.height * 0.45);
-        ctx.stroke();
-    }
-
-    // Đế gỗ
-    ctx.fillStyle = "#6D4C41";
-    ctx.fillRect(
-        this.x,
-        this.y,
-        this.width,
-        5 * CONSTANTS.SIZE_SCALE
-    );
-}
+                    // Đế gỗ
+                    ctx.fillStyle = "#6D4C41";
+                    ctx.fillRect(
+                        this.x,
+                        this.y,
+                        this.width,
+                        5 * CONSTANTS.SIZE_SCALE
+                    );
+                }
             }
 
             // ==================== CLASS: PLATFORM ====================
@@ -1098,14 +1121,14 @@ draw(ctx) {
                     this.x = x || canvasWidth + 30 * CONSTANTS.SIZE_SCALE;
                     this.y = y || getGroundY() - 80 * CONSTANTS.SIZE_SCALE - Math.random() * 50 * CONSTANTS.SIZE_SCALE;
 
-this.heightAboveGround = getGroundY() - this.y;
+                    this.heightAboveGround = getGroundY() - this.y;
                     this.active = true;
                 }
 
                 update(dt) {
-    this.x -= gameSpeed * dt;
-    this.y = getGroundY() - this.heightAboveGround;
-}
+                    this.x -= gameSpeed * dt;
+                    this.y = getGroundY() - this.heightAboveGround;
+                }
 
                 isOffScreen() {
                     return this.x < -this.width - 20 * CONSTANTS.SIZE_SCALE;
@@ -1137,24 +1160,24 @@ this.heightAboveGround = getGroundY() - this.y;
                     this.height = 24 * CONSTANTS.SIZE_SCALE;
                     this.x = canvasWidth + 30 * CONSTANTS.SIZE_SCALE;
                     this.heightAboveGround =
-    this.height +
-    5 * CONSTANTS.SIZE_SCALE +
-    Math.random() * 25 * CONSTANTS.SIZE_SCALE;
+                        this.height +
+                        5 * CONSTANTS.SIZE_SCALE +
+                        Math.random() * 25 * CONSTANTS.SIZE_SCALE;
 
-this.y = getGroundY() - this.heightAboveGround;
+                    this.y = getGroundY() - this.heightAboveGround;
                     this.collected = false;
                     this.bobOffset = 0;
                 }
 
                 update(dt) {
-    this.x -= gameSpeed * dt;
+                    this.x -= gameSpeed * dt;
 
-    this.y = getGroundY() - this.heightAboveGround;
+                    this.y = getGroundY() - this.heightAboveGround;
 
-    this.bobOffset =
-        Math.sin(frameCount * 0.06 + this.x * 0.01) *
-        2 * CONSTANTS.SIZE_SCALE;
-}
+                    this.bobOffset =
+                        Math.sin(frameCount * 0.06 + this.x * 0.01) *
+                        2 * CONSTANTS.SIZE_SCALE;
+                }
 
                 isOffScreen() {
                     return this.x < -this.width - 20 * CONSTANTS.SIZE_SCALE;
@@ -1335,110 +1358,96 @@ this.y = getGroundY() - this.heightAboveGround;
                     ctx.fill();
                 }
             }
-function getSkyState() {
 
-    const total = DAY_DURATION + TRANSITION_TIME;
-    const cycle = total * 4;
+            function getSkyState() {
+                const total = DAY_DURATION + TRANSITION_TIME;
+                const cycle = total * 4;
 
-    let t = dayTimer % cycle;
+                let t = dayTimer % cycle;
 
-    const skies = [
+                const skies = [
+                    {
+                        top:"#FDBA74",
+                        mid:"#FDE68A",
+                        bottom:"#FFF7D6",
+                        sun:"#FFD54F",
+                        sunY:0.22,
+                        stars:false,
+                        moon:false
+                    },
+                    {
+                        top:"#7EC8E3",
+                        mid:"#A8D8EA",
+                        bottom:"#DAF0F7",
+                        sun:"#FFD54F",
+                        sunY:0.12,
+                        stars:false,
+                        moon:false
+                    },
+                    {
+                        top:"#FF8A65",
+                        mid:"#F48FB1",
+                        bottom:"#9575CD",
+                        sun:"#FFB74D",
+                        sunY:0.28,
+                        stars:false,
+                        moon:false
+                    },
+                    {
+                        top:"#08142E",
+                        mid:"#13294B",
+                        bottom:"#223B63",
+                        sun:"#FFFFFF",
+                        sunY:0.15,
+                        stars:true,
+                        moon:true
+                    }
+                ];
 
-        {
-            top:"#FDBA74",
-            mid:"#FDE68A",
-            bottom:"#FFF7D6",
-            sun:"#FFD54F",
-            sunY:0.22,
-            stars:false,
-            moon:false
-        },
+                let phase = Math.floor(t / total);
 
-        {
-            top:"#7EC8E3",
-            mid:"#A8D8EA",
-            bottom:"#DAF0F7",
-            sun:"#FFD54F",
-            sunY:0.12,
-            stars:false,
-            moon:false
-        },
+                let local = t % total;
 
-        {
-            top:"#FF8A65",
-            mid:"#F48FB1",
-            bottom:"#9575CD",
-            sun:"#FFB74D",
-            sunY:0.28,
-            stars:false,
-            moon:false
-        },
+                if(local < DAY_DURATION){
+                    return skies[phase];
+                }
 
-        {
-            top:"#08142E",
-            mid:"#13294B",
-            bottom:"#223B63",
-            sun:"#FFFFFF",
-            sunY:0.15,
-            stars:true,
-            moon:true
-        }
+                let next = (phase + 1) % 4;
 
-    ];
+                let p = (local - DAY_DURATION) / TRANSITION_TIME;
 
-    let phase = Math.floor(t / total);
+                const lerpColor = (a,b)=>{
+                    const ca=parseInt(a.slice(1),16);
+                    const cb=parseInt(b.slice(1),16);
 
-    let local = t % total;
+                    const ar=(ca>>16)&255;
+                    const ag=(ca>>8)&255;
+                    const ab=ca&255;
 
-    if(local < DAY_DURATION){
-        return skies[phase];
-    }
+                    const br=(cb>>16)&255;
+                    const bg=(cb>>8)&255;
+                    const bb=cb&255;
 
-    let next = (phase + 1) % 4;
+                    const r=Math.round(ar+(br-ar)*p);
+                    const g=Math.round(ag+(bg-ag)*p);
+                    const bl=Math.round(ab+(bb-ab)*p);
 
-    let p = (local - DAY_DURATION) / TRANSITION_TIME;
+                    return `rgb(${r},${g},${bl})`;
+                };
 
-    const lerpColor = (a,b)=>{
+                return {
+                    top:lerpColor(skies[phase].top,skies[next].top),
+                    mid:lerpColor(skies[phase].mid,skies[next].mid),
+                    bottom:lerpColor(skies[phase].bottom,skies[next].bottom),
+                    sun:lerpColor(skies[phase].sun,skies[next].sun),
+                    sunY: skies[phase].sunY + (skies[next].sunY - skies[phase].sunY) * p,
+                    stars: p > 0.5 ? skies[next].stars : skies[phase].stars,
+                    moon: p > 0.5 ? skies[next].moon : skies[phase].moon
+                };
+            }
 
-        const ca=parseInt(a.slice(1),16);
-        const cb=parseInt(b.slice(1),16);
-
-        const ar=(ca>>16)&255;
-        const ag=(ca>>8)&255;
-        const ab=ca&255;
-
-        const br=(cb>>16)&255;
-        const bg=(cb>>8)&255;
-        const bb=cb&255;
-
-        const r=Math.round(ar+(br-ar)*p);
-        const g=Math.round(ag+(bg-ag)*p);
-        const bl=Math.round(ab+(bb-ab)*p);
-
-        return `rgb(${r},${g},${bl})`;
-    };
-
-    return {
-
-        top:lerpColor(skies[phase].top,skies[next].top),
-        mid:lerpColor(skies[phase].mid,skies[next].mid),
-        bottom:lerpColor(skies[phase].bottom,skies[next].bottom),
-
-        sun:lerpColor(skies[phase].sun,skies[next].sun),
-
-        sunY:
-            skies[phase].sunY+
-            (skies[next].sunY-skies[phase].sunY)*p,
-
-        stars:p>0.5?skies[next].stars:skies[phase].stars,
-        moon:p>0.5?skies[next].moon:skies[phase].moon
-
-    };
-
-}
-            // ==================== CLASS: BACKGROUND MANAGER ====================
+            // ==================== CLASS: BACKGROUND MANAGER (REPLACED) ====================
             class BackgroundManager {
-                
                 constructor() {
                     this.mountains = [];
                     this.trees = [];
@@ -1473,7 +1482,6 @@ function getSkyState() {
                         const w = 70 + Math.random() * 60;
                         const foliage = [];
 
-                        // Main foliage clusters
                         for (let j = 0; j < 12 + Math.floor(Math.random() * 10); j++) {
                             const angle = (j / 12) * Math.PI * 2 + Math.random() * 0.5;
                             const dist = w * 0.35 + Math.random() * w * 0.35;
@@ -1485,7 +1493,6 @@ function getSkyState() {
                             });
                         }
 
-                        // Additional foliage
                         for (let j = 0; j < 15 + Math.floor(Math.random() * 12); j++) {
                             const angle = Math.random() * Math.PI * 2;
                             const dist = w * 0.3 + Math.random() * w * 0.6;
@@ -1535,201 +1542,33 @@ function getSkyState() {
                         });
                     }
                 }
-drawTree(ctx, t) {
-    const tx = t.x;
-    const ty = getGroundY();
-    const sway = Math.sin(t.sway) * 2;
 
-    // ===== TRUNK =====
-    const trunkH = t.h * 0.48;
-    const trunkTop = ty - trunkH;
-    const trunkW = Math.max(10, t.w * 0.18);
-
-    ctx.save();
-    ctx.translate(tx, 0);
-
-    const bark = ctx.createLinearGradient(-trunkW * 0.7, 0, trunkW * 0.7, 0);
-    bark.addColorStop(0, '#4E2D16');
-    bark.addColorStop(0.35, '#7B4A23');
-    bark.addColorStop(0.65, '#A66A3B');
-    bark.addColorStop(1, '#553116');
-
-    ctx.fillStyle = bark;
-    ctx.beginPath();
-    ctx.moveTo(-trunkW * 0.45, ty);
-    ctx.quadraticCurveTo(-trunkW * 0.75, ty - trunkH * 0.35, -trunkW * 0.45, trunkTop + trunkH * 0.2);
-    ctx.quadraticCurveTo(-trunkW * 0.25, trunkTop, 0, trunkTop);
-    ctx.quadraticCurveTo(trunkW * 0.25, trunkTop, trunkW * 0.45, trunkTop + trunkH * 0.2);
-    ctx.quadraticCurveTo(trunkW * 0.75, ty - trunkH * 0.35, trunkW * 0.45, ty);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#3A220F';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Bark details
-    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
-    ctx.lineWidth = 1;
-    for (let i = 0; i < 7; i++) {
-        const yy = trunkTop + 10 + i * (trunkH / 8);
-        ctx.beginPath();
-        ctx.moveTo(-trunkW * 0.2, yy);
-        ctx.quadraticCurveTo(0, yy + 3, trunkW * 0.2, yy);
-        ctx.stroke();
-    }
-
-    // ===== BRANCHES =====
-    ctx.strokeStyle = '#5A351B';
-    ctx.lineWidth = 4.5;
-    ctx.lineCap = 'round';
-
-    const branches = [
-        [-2, trunkTop + 28, -26, trunkTop + 8],
-        [3, trunkTop + 42, 30, trunkTop + 18],
-        [0, trunkTop + 62, -22, trunkTop + 46],
-        [5, trunkTop + 78, 26, trunkTop + 60]
-    ];
-
-    for (const b of branches) {
-        ctx.beginPath();
-        ctx.moveTo(b[0], b[1]);
-        ctx.quadraticCurveTo((b[0] + b[2]) / 2, b[1] - 10, b[2], b[3]);
-        ctx.stroke();
-    }
-
-    // ===== CANOPY =====
-    const leafColors = [
-        '#1F5E2A', '#245F2B', '#2E7D32',
-        '#388E3C', '#43A047', '#4CAF50',
-        '#5A9B45'
-    ];
-
-    const centerX = sway;
-    const centerY = trunkTop + 18;
-
-    // Base shadow under canopy
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(centerX, trunkTop + 10, trunkW * 1.8, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Big foliage masses first
-    const clusters = [
-        { x: -18, y: -8, rx: 28, ry: 22 },
-        { x: 2, y: -18, rx: 34, ry: 26 },
-        { x: 24, y: -10, rx: 30, ry: 24 },
-        { x: -6, y: 8, rx: 38, ry: 28 },
-        { x: 18, y: 12, rx: 34, ry: 26 }
-    ];
-
-    for (const c of clusters) {
-        const g = ctx.createRadialGradient(
-            centerX + c.x - 8, centerY + c.y - 8, 4,
-            centerX + c.x, centerY + c.y, Math.max(c.rx, c.ry)
-        );
-        g.addColorStop(0, 'rgba(120,190,90,0.95)');
-        g.addColorStop(0.45, 'rgba(70,150,60,0.95)');
-        g.addColorStop(1, 'rgba(25,90,35,0.95)');
-
-        ctx.fillStyle = g;
-        ctx.beginPath();
-        ctx.ellipse(
-            centerX + c.x,
-            centerY + c.y,
-            c.rx,
-            c.ry,
-            (Math.random() - 0.5) * 0.2,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-    }
-
-    // Leaf particles for natural silhouette
-    for (let i = 0; i < 0; i++) {
-        const angle = Math.random() * Math.PI * 2;
-        const radius = 12 + Math.random() * 42;
-        const px = centerX + Math.cos(angle) * radius * 1.15;
-        const py = centerY + Math.sin(angle) * radius * 0.82 - 8;
-        const rx = 5 + Math.random() * 10;
-        const ry = 4 + Math.random() * 8;
-        const color = leafColors[(Math.random() * leafColors.length) | 0];
-
-        ctx.fillStyle = color;
-        ctx.beginPath();
-        ctx.ellipse(
-            px,
-            py,
-            rx,
-            ry,
-            Math.random() * Math.PI,
-            0,
-            Math.PI * 2
-        );
-        ctx.fill();
-    }
-
-    // Highlights on canopy
-    const light = ctx.createRadialGradient(
-        centerX - 14, centerY - 18, 5,
-        centerX - 8, centerY - 14, 70
-    );
-    light.addColorStop(0, 'rgba(255,255,255,0.20)');
-    light.addColorStop(0.45, 'rgba(210,255,180,0.12)');
-    light.addColorStop(1, 'rgba(255,255,255,0)');
-
-    ctx.fillStyle = light;
-    ctx.beginPath();
-    ctx.arc(centerX - 4, centerY - 4, 70, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Outer silhouette softening
-    ctx.fillStyle = 'rgba(10,40,15,0.12)';
-    ctx.beginPath();
-    ctx.ellipse(centerX - 4, centerY + 4, 46, 34, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Ground shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.18)';
-    ctx.beginPath();
-    ctx.ellipse(0, ty, 26, 5, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.restore();
-}
                 update(dt) {
                     const speed = (gameState === 'playing' || gameState === 'falling') ?
                         gameSpeed :
                         (gameState === 'gameover' ? gameSpeed * 0.3 : 0);
 
-                    // Update mountains (parallax slowest)
                     for (let m of this.mountains) {
                         m.x -= speed * 0.12 * dt;
                         if (m.x < -m.w - 50) m.x = canvasWidth + Math.random() * 100;
                     }
 
-                    // Update trees
                     for (let t of this.trees) {
                         t.x -= speed * 0.35 * dt;
-                        
                         if (t.x < -t.w - 40) t.x = canvasWidth + Math.random() * 120;
                     }
 
-                    // Update bushes
                     for (let b of this.bushes) {
                         b.x -= speed * 0.5 * dt;
                         b.sway += dt * 1.5;
                         if (b.x < -b.s - 20) b.x = canvasWidth + Math.random() * 80;
                     }
 
-                    // Update flowers
                     for (let f of this.flowers) {
                         f.x -= speed * 0.45 * dt;
                         if (f.x < -10) f.x = canvasWidth + Math.random() * 100;
                     }
 
-                    // Update clouds
                     for (let c of this.clouds) {
                         c.x -= c.speed * dt;
                         if (c.x < -c.w - 30) {
@@ -1738,27 +1577,149 @@ drawTree(ctx, t) {
                         }
                     }
 
-                    // Ground line offset for dashed road marking
                     this.groundOffset = (this.groundOffset + speed * dt) % 60;
+                }
+
+                drawTree(ctx, t) {
+                    const tx = t.x;
+                    const ty = getGroundY();
+                    const sway = Math.sin(t.sway) * 2;
+
+                    const trunkH = t.h * 0.48;
+                    const trunkTop = ty - trunkH;
+                    const trunkW = Math.max(10, t.w * 0.18);
+
+                    ctx.save();
+                    ctx.translate(tx, 0);
+
+                    const bark = ctx.createLinearGradient(-trunkW * 0.7, 0, trunkW * 0.7, 0);
+                    bark.addColorStop(0, '#4E2D16');
+                    bark.addColorStop(0.35, '#7B4A23');
+                    bark.addColorStop(0.65, '#A66A3B');
+                    bark.addColorStop(1, '#553116');
+
+                    ctx.fillStyle = bark;
+                    ctx.beginPath();
+                    ctx.moveTo(-trunkW * 0.45, ty);
+                    ctx.quadraticCurveTo(-trunkW * 0.75, ty - trunkH * 0.35, -trunkW * 0.45, trunkTop + trunkH * 0.2);
+                    ctx.quadraticCurveTo(-trunkW * 0.25, trunkTop, 0, trunkTop);
+                    ctx.quadraticCurveTo(trunkW * 0.25, trunkTop, trunkW * 0.45, trunkTop + trunkH * 0.2);
+                    ctx.quadraticCurveTo(trunkW * 0.75, ty - trunkH * 0.35, trunkW * 0.45, ty);
+                    ctx.closePath();
+                    ctx.fill();
+
+                    ctx.strokeStyle = '#3A220F';
+                    ctx.lineWidth = 1.5;
+                    ctx.stroke();
+
+                    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
+                    ctx.lineWidth = 1;
+                    for (let i = 0; i < 7; i++) {
+                        const yy = trunkTop + 10 + i * (trunkH / 8);
+                        ctx.beginPath();
+                        ctx.moveTo(-trunkW * 0.2, yy);
+                        ctx.quadraticCurveTo(0, yy + 3, trunkW * 0.2, yy);
+                        ctx.stroke();
+                    }
+
+                    ctx.strokeStyle = '#5A351B';
+                    ctx.lineWidth = 4.5;
+                    ctx.lineCap = 'round';
+
+                    const branches = [
+                        [-2, trunkTop + 28, -26, trunkTop + 8],
+                        [3, trunkTop + 42, 30, trunkTop + 18],
+                        [0, trunkTop + 62, -22, trunkTop + 46],
+                        [5, trunkTop + 78, 26, trunkTop + 60]
+                    ];
+
+                    for (const b of branches) {
+                        ctx.beginPath();
+                        ctx.moveTo(b[0], b[1]);
+                        ctx.quadraticCurveTo((b[0] + b[2]) / 2, b[1] - 10, b[2], b[3]);
+                        ctx.stroke();
+                    }
+
+                    const centerX = sway;
+                    const centerY = trunkTop + 18;
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+                    ctx.beginPath();
+                    ctx.ellipse(centerX, trunkTop + 10, trunkW * 1.8, 8, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    const clusters = [
+                        { x: -18, y: -8, rx: 28, ry: 22 },
+                        { x: 2, y: -18, rx: 34, ry: 26 },
+                        { x: 24, y: -10, rx: 30, ry: 24 },
+                        { x: -6, y: 8, rx: 38, ry: 28 },
+                        { x: 18, y: 12, rx: 34, ry: 26 }
+                    ];
+
+                    for (const c of clusters) {
+                        const g = ctx.createRadialGradient(
+                            centerX + c.x - 8, centerY + c.y - 8, 4,
+                            centerX + c.x, centerY + c.y, Math.max(c.rx, c.ry)
+                        );
+                        g.addColorStop(0, 'rgba(120,190,90,0.95)');
+                        g.addColorStop(0.45, 'rgba(70,150,60,0.95)');
+                        g.addColorStop(1, 'rgba(25,90,35,0.95)');
+
+                        ctx.fillStyle = g;
+                        ctx.beginPath();
+                        ctx.ellipse(
+                            centerX + c.x,
+                            centerY + c.y,
+                            c.rx,
+                            c.ry,
+                            0,
+                            0,
+                            Math.PI * 2
+                        );
+                        ctx.fill();
+                    }
+
+                    const light = ctx.createRadialGradient(
+                        centerX - 14, centerY - 18, 5,
+                        centerX - 8, centerY - 14, 70
+                    );
+                    light.addColorStop(0, 'rgba(255,255,255,0.20)');
+                    light.addColorStop(0.45, 'rgba(210,255,180,0.12)');
+                    light.addColorStop(1, 'rgba(255,255,255,0)');
+
+                    ctx.fillStyle = light;
+                    ctx.beginPath();
+                    ctx.arc(centerX - 4, centerY - 4, 70, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(10,40,15,0.12)';
+                    ctx.beginPath();
+                    ctx.ellipse(centerX - 4, centerY + 4, 46, 34, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.fillStyle = 'rgba(0,0,0,0.18)';
+                    ctx.beginPath();
+                    ctx.ellipse(0, ty, 26, 5, 0, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    ctx.restore();
                 }
 
                 draw(ctx) {
                     const gy = getGroundY();
                     const sky = getSkyState();
-                    // Sky gradient
+
                     const skyGrad = ctx.createLinearGradient(0, 0, 0, gy);
                     skyGrad.addColorStop(0, sky.top);
-skyGrad.addColorStop(0.5, sky.mid);
-skyGrad.addColorStop(1, sky.bottom);
+                    skyGrad.addColorStop(0.5, sky.mid);
+                    skyGrad.addColorStop(1, sky.bottom);
                     ctx.fillStyle = skyGrad;
                     ctx.fillRect(0, 0, canvasWidth, gy);
 
-                    // Sun
                     const sunX = canvasWidth * 0.83;
                     const sunY = canvasHeight * sky.sunY;
                     const sunR = 40 * CONSTANTS.BG_SCALE;
 
-                    // Sun glow
                     const glow = ctx.createRadialGradient(sunX, sunY, sunR * 0.5, sunX, sunY, sunR * 3.5);
                     glow.addColorStop(0, 'rgba(255,255,220,0.9)');
                     glow.addColorStop(0.4, 'rgba(255,230,160,0.4)');
@@ -1768,7 +1729,6 @@ skyGrad.addColorStop(1, sky.bottom);
                     ctx.arc(sunX, sunY, sunR * 3.5, 0, Math.PI * 2);
                     ctx.fill();
 
-                    // Sun body
                     const sunGrad = ctx.createRadialGradient(sunX - 4, sunY - 4, 4, sunX, sunY, sunR);
                     sunGrad.addColorStop(0, '#FFFDE7');
                     sunGrad.addColorStop(0.35, '#FFE082');
@@ -1777,19 +1737,14 @@ skyGrad.addColorStop(1, sky.bottom);
                     ctx.beginPath();
                     ctx.arc(sunX, sunY, sunR, 0, Math.PI * 2);
                     ctx.fill();
-                    
-                    // Mặt trăng
-if(sky.moon){
 
-    ctx.fillStyle="#F5F5F5";
+                    if (sky.moon) {
+                        ctx.fillStyle = "#F5F5F5";
+                        ctx.beginPath();
+                        ctx.arc(canvasWidth * 0.18, canvasHeight * 0.16, 24, 0, Math.PI * 2);
+                        ctx.fill();
+                    }
 
-    ctx.beginPath();
-    ctx.arc(canvasWidth*0.18,canvasHeight*0.16,24,0,Math.PI*2);
-    ctx.fill();
-
-}
-
-                    // Clouds
                     for (let c of this.clouds) {
                         ctx.fillStyle = `rgba(255,255,255,${c.opacity})`;
                         ctx.beginPath();
@@ -1800,23 +1755,16 @@ if(sky.moon){
                         ctx.arc(c.x - c.w * 0.08, c.y + c.w * 0.04, c.w * 0.22, 0, Math.PI * 2);
                         ctx.fill();
                     }
-// Sao
-if(sky.stars){
 
-    ctx.fillStyle="rgba(255,255,255,.9)";
+                    if (sky.stars) {
+                        ctx.fillStyle = "rgba(255,255,255,.9)";
+                        for (let i = 0; i < 80; i++) {
+                            const x = (i * 157) % canvasWidth;
+                            const y = (i * 83) % (groundY - 40);
+                            ctx.fillRect(x, y, 2, 2);
+                        }
+                    }
 
-    for(let i=0;i<80;i++){
-
-        const x=(i*157)%canvasWidth;
-        const y=(i*83)%(groundY-40);
-
-        ctx.fillRect(x,y,2,2);
-
-    }
-
-}
-                    
-                    // Mountains
                     for (let m of this.mountains) {
                         const grad = ctx.createLinearGradient(0, gy - m.h, 0, gy);
                         grad.addColorStop(0, m.color);
@@ -1824,18 +1772,15 @@ if(sky.stars){
                         ctx.fillStyle = grad;
                         ctx.beginPath();
                         ctx.moveTo(m.x - m.w * 0.05, gy);
-                        ctx.quadraticCurveTo(m.x + m.w * 0.25, gy - m.h * 0.75,
-    m.x + m.w * 0.5, gy - m.h);
-   ctx.quadraticCurveTo(m.x + m.w * 0.7, gy - m.h * 0.6,
-    m.x + m.w + 10, gy);
+                        ctx.quadraticCurveTo(m.x + m.w * 0.25, gy - m.h * 0.75, m.x + m.w * 0.5, gy - m.h);
+                        ctx.quadraticCurveTo(m.x + m.w * 0.7, gy - m.h * 0.6, m.x + m.w + 10, gy);
                         ctx.fill();
                     }
 
-                    // Trees
-for (let t of this.trees) {
-    this.drawTree(ctx, t);
-}
-                    // Bushes
+                    for (let t of this.trees) {
+                        this.drawTree(ctx, t);
+                    }
+
                     for (let b of this.bushes) {
                         const bx = b.x;
                         const by = gy;
@@ -1858,30 +1803,30 @@ for (let t of this.trees) {
                         ctx.fill();
                     }
 
-                    // Flowers
                     for (let f of this.flowers) {
                         const fx = f.x;
                         const fy = gy - 3;
 
-                        // Petals
                         for (let p = 0; p < 5; p++) {
                             const angle = (p / 5) * Math.PI * 2;
                             ctx.fillStyle = f.color;
                             ctx.beginPath();
-                            ctx.arc(fx + Math.cos(angle) * f.size * 0.6,
+                            ctx.arc(
+                                fx + Math.cos(angle) * f.size * 0.6,
                                 fy + Math.sin(angle) * f.size * 0.6,
-                                f.size * 0.4, 0, Math.PI * 2);
+                                f.size * 0.4,
+                                0,
+                                Math.PI * 2
+                            );
                             ctx.fill();
                         }
 
-                        // Center
                         ctx.fillStyle = '#FFEE58';
                         ctx.beginPath();
                         ctx.arc(fx, fy, f.size * 0.35, 0, Math.PI * 2);
                         ctx.fill();
                     }
 
-                    // Ground / road
                     const roadGrad = ctx.createLinearGradient(0, gy, 0, canvasHeight);
                     roadGrad.addColorStop(0, '#C4A46C');
                     roadGrad.addColorStop(0.1, '#A08450');
@@ -1889,32 +1834,29 @@ for (let t of this.trees) {
                     ctx.fillStyle = roadGrad;
                     ctx.fillRect(0, gy, canvasWidth, canvasHeight - gy);
 
-                    // Road dashed line
                     ctx.strokeStyle = 'rgba(255,255,240,0.45)';
                     ctx.lineWidth = 2;
                     ctx.setLineDash([35, 28]);
                     ctx.lineDashOffset = -this.groundOffset;
                     ctx.beginPath();
                     ctx.moveTo(0, gy + 10);
-ctx.lineTo(canvasWidth, gy + 10);
+                    ctx.lineTo(canvasWidth, gy + 10);
                     ctx.stroke();
                     ctx.setLineDash([]);
 
-                    // Grass edge
                     const grassGrad = ctx.createLinearGradient(0, gy - 6, 0, gy + 4);
                     grassGrad.addColorStop(0, '#66BB6A');
                     grassGrad.addColorStop(1, '#43A047');
                     ctx.fillStyle = grassGrad;
                     ctx.fillRect(0, gy - 4, canvasWidth, 8);
 
-                    // Individual grass blades
                     for (let gx = -this.groundOffset % 16; gx < canvasWidth; gx += 16) {
                         const gh = 4 + Math.sin(gx * 0.35 + frameCount * 0.03) * 3;
                         ctx.strokeStyle = '#4CAF50';
                         ctx.lineWidth = 1.5;
                         ctx.beginPath();
                         ctx.moveTo(gx, gy - 2);
-ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
+                        ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                         ctx.stroke();
                     }
                 }
@@ -1922,14 +1864,10 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
 
             // ==================== GAME FUNCTIONS ====================
 
-            /**
-             * Resize canvas to fit container
-             */
             function resizeCanvas() {
                 canvasWidth = container.clientWidth;
                 canvasHeight = container.clientHeight;
 
-                // Handle high DPI displays
                 canvas.width = canvasWidth * (window.devicePixelRatio || 1);
                 canvas.height = canvasHeight * (window.devicePixelRatio || 1);
                 canvas.style.width = canvasWidth + 'px';
@@ -1941,20 +1879,55 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 restartButton.x = canvasWidth / 2 - restartButton.w / 2;
                 restartButton.y = canvasHeight / 2 + 30;
 
-                // Reposition chicken if game hasn't started
                 if (chicken && !hasStartedPlaying) {
                     chicken.y = getGroundY() - chicken.height;
                     chicken.x = canvasWidth * 0.16;
                 }
 
-                // Reinitialize background and weather
                 if (bgElements) bgElements.init();
                 if (weatherManager) weatherManager.init();
             }
+function playLoseSound() {
+    if (audioCtx.state === "suspended") audioCtx.resume();
 
-            /**
-             * Reset game to initial state
-             */
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = "sine";
+
+    // Tiếng hét từ cao xuống thấp
+    osc.frequency.setValueAtTime(1200, audioCtx.currentTime);
+    osc.frequency.exponentialRampToValueAtTime(
+        2000,
+        audioCtx.currentTime + 0.5
+    );
+
+    gain.gain.setValueAtTime(0.48, audioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(
+        0.0053,
+        audioCtx.currentTime + 0.9
+    );
+
+    // Rung nhẹ giống tiếng la
+    const lfo = audioCtx.createOscillator();
+    const lfoGain = audioCtx.createGain();
+
+    lfo.frequency.value = 15;
+    lfoGain.gain.value = 100;
+
+    lfo.connect(lfoGain);
+    lfoGain.connect(osc.frequency);
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    lfo.start();
+    osc.start();
+
+    lfo.stop(audioCtx.currentTime + 0.9);
+    osc.stop(audioCtx.currentTime + 0.9);
+}
+            
             function resetGame() {
                 gameSpeed = CONSTANTS.GAME_SPEED_INITIAL;
                 stamina = CONSTANTS.STAMINA_MAX;
@@ -1978,65 +1951,31 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 gameState = 'waiting';
             }
 
-            /**
-             * Start or restart the game
-             */
+            // REPLACED startGame
             function startGame() {
-                if (gameState === 'gameover' || gameState === 'falling') resetGame();
+                resizeCanvas();
+
+                if (gameState === 'gameover' || gameState === 'falling') {
+                    resetGame();
+                }
+
                 gameState = 'playing';
                 hasStartedPlaying = true;
                 lastTime = performance.now();
             }
 
-            /**
-             * Trigger game over state
-             */
-            
-            function updateTerrain(dt) {
-
-    // Đổi độ cao khoảng 3~5 giây một lần
-    if (terrainProgress >= 1 && Math.random() < dt * 0.25) {
-
-        terrainStart = terrainOffset;
-
-        terrainTarget =
-            (Math.floor(Math.random() * 5) - 2) * 20;
-        // -40 -20 0 20 40
-
-        terrainProgress = 0;
-    }
-
-    if (terrainProgress < 1) {
-
-        terrainProgress += dt * 0.18;
-
-        if (terrainProgress > 1)
-            terrainProgress = 1;
-
-        // Nội suy cong
-        const t = terrainProgress;
-        const smooth = (1 - Math.cos(Math.PI * t)) / 2;
-
-        terrainOffset =
-            terrainStart +
-            (terrainTarget - terrainStart) * smooth;
-    }
-}
             function gameOver() {
                 if (gameState === 'gameover') return;
                 gameState = 'gameover';
+                playLoseSound();
                 gameOverAnimTimer = 0;
 
-                // Update best score
                 if (score > bestScore) {
                     bestScore = Math.floor(score);
                     localStorage.setItem('chickenRunBest_v26', bestScore);
                 }
             }
 
-            /**
-             * Make the chicken jump
-             */
             function jump() {
                 if (isBlocked || !chicken || chicken.fallingInHole ||
                     gameState === 'falling' || gameState === 'gameover') return;
@@ -2049,9 +1988,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 }
             }
 
-            /**
-             * Check if a position is clear of obstacles, holes, spikes, and platforms
-             */
             function isPositionClear(x, y, w, h) {
                 const allObjects = [...obstacles, ...holes, ...spikes, ...platforms];
 
@@ -2076,9 +2012,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 return true;
             }
 
-            /**
-             * Check if a horizontal span overlaps any hole
-             */
             function isOverHole(x, w) {
                 for (let hole of holes) {
                     if (x < hole.x + hole.width && x + w > hole.x) {
@@ -2088,16 +2021,12 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 return false;
             }
 
-            /**
-             * Check all collisions between chicken and game objects
-             */
             function checkCollisions() {
                 if (!chicken || gameState !== 'playing' || chicken.fallingInHole) return;
                 if (chicken.invincibleTimer > 0) return;
 
                 const box = chicken.getCollisionBox();
 
-                // Check obstacle collisions
                 for (let obs of obstacles) {
                     const oBox = obs.getCollisionBox();
                     if (box.x < oBox.x + oBox.width &&
@@ -2114,14 +2043,12 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                         gameOver();
                         return;
                     }
-                    // Score for passing obstacle
                     if (!obs.passed && obs.x + obs.width < box.x) {
                         obs.passed = true;
                         score += 10;
                     }
                 }
 
-                // Check hole collisions
                 for (let hole of holes) {
                     const hZone = hole.getCollisionZone();
                     if (chicken.isOnGround && !chicken.currentPlatform &&
@@ -2145,7 +2072,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                     }
                 }
 
-                // Check spike collisions
                 for (let spike of spikes) {
                     const sBox = spike.getCollisionBox();
                     if (box.x < sBox.x + sBox.width &&
@@ -2168,7 +2094,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                     }
                 }
 
-                // Check eagle collisions
                 for (let eagle of eagles) {
                     if (!eagle.active) continue;
                     const eBox = eagle.getCollisionBox();
@@ -2188,7 +2113,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                     }
                 }
 
-                // Check item pickups
                 for (let item of items) {
                     if (item.collected) continue;
                     const iBox = item.getCollisionBox();
@@ -2209,49 +2133,39 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 }
             }
 
-            /**
-             * Spawn a new obstacle in the game world
-             */
             function spawnObstacle() {
                 const r = Math.random();
 
                 if (r < 0.3) {
-                    // Haystack
                     let obs = new Obstacle('haystack');
                     if (!isOverHole(obs.x, obs.width) && isPositionClear(obs.x, obs.y, obs.width, obs.height)) {
                         obstacles.push(obs);
                     }
                 } else if (r < 0.5) {
-                    // Single crate
                     let obs = new Obstacle('crate');
                     if (!isOverHole(obs.x, obs.width) && isPositionClear(obs.x, obs.y, obs.width, obs.height)) {
                         obstacles.push(obs);
                     }
                 } else if (r < 0.58) {
-                    // Triple crate stack
                     let obs = new Obstacle('crate_triple');
                     if (!isOverHole(obs.x, obs.width) && isPositionClear(obs.x, obs.y, obs.width, obs.height)) {
                         obstacles.push(obs);
                     }
                 } else if (r < 0.75) {
-                    // Crate triangle
                     let obs = new Obstacle('crate_triangle');
                     if (!isOverHole(obs.x, obs.width) && isPositionClear(obs.x, obs.y, obs.width, obs.height)) {
                         obstacles.push(obs);
                     }
                 } else if (r < 0.9) {
-                    // Spikes
                     let sp = new Spike();
                     if (!isOverHole(sp.x, sp.width) && isPositionClear(sp.x, sp.y, sp.width, sp.height)) {
                         spikes.push(sp);
                     }
                 } else {
-                    // Hole (possibly with platforms)
                     let hole = new Hole();
                     if (isPositionClear(hole.x, hole.y, hole.width, hole.depth)) {
                         holes.push(hole);
 
-                        // Add platforms for very wide holes
                         if (hole.width > 400 * CONSTANTS.SIZE_SCALE) {
                             let platformWidth = 100 * CONSTANTS.SIZE_SCALE;
                             let gap = 130 * CONSTANTS.SIZE_SCALE;
@@ -2261,10 +2175,10 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
 
                             while (currentX < endX && platforms.length < 8) {
                                 let plat = new Platform(
-    currentX,
-    getGroundY() - 90 * CONSTANTS.SIZE_SCALE,
-    platformWidth
-);
+                                    currentX,
+                                    getGroundY() - 90 * CONSTANTS.SIZE_SCALE,
+                                    platformWidth
+                                );
                                 if (isPositionClear(plat.x, plat.y, plat.width, plat.height)) {
                                     platforms.push(plat);
                                 }
@@ -2275,9 +2189,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 }
             }
 
-            /**
-             * Spawn a collectible item
-             */
             function spawnItem() {
                 const types = ['gold', 'gold', 'stamina', 'shield'];
                 const type = types[Math.floor(Math.random() * types.length)];
@@ -2287,33 +2198,40 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 }
             }
 
-            /**
-             * Spawn an eagle enemy
-             */
             function spawnEagle() {
                 eagles.push(new Eagle());
             }
 
-            // ==================== MAIN GAME LOOP ====================
+            function updateTerrain(dt) {
+                if (terrainProgress >= 1 && Math.random() < dt * 0.25) {
+                    terrainStart = terrainOffset;
+                    terrainTarget =
+    (Math.floor(Math.random() * 9) - 4) * 35;
+// -140 -105 -70 -35 0 35 70 105 140
+                    terrainProgress = 0;
+                }
 
-            /**
-             * Update game state each frame
-             */
+                if (terrainProgress < 1) {
+                    terrainProgress += dt * 0.22;
+                    if (terrainProgress > 1) terrainProgress = 1;
+                    const t = terrainProgress;
+                    const smooth = (1 - Math.cos(Math.PI * t)) / 2;
+                    terrainOffset = terrainStart + (terrainTarget - terrainStart) * smooth;
+                }
+            }
+
             function update(dt) {
                 if (isBlocked) return;
 
-                // Game over animation timing
                 if (gameState === 'gameover') {
                     gameOverAnimTimer += dt;
                 }
 
-                // Falling state
                 if (gameState === 'falling') {
                     if (chicken) chicken.update(dt);
                     return;
                 }
 
-                // Playing state
                 if (gameState === 'playing') {
                     dayTimer += dt;
                     updateTerrain(dt);
@@ -2322,11 +2240,9 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                         return;
                     }
 
-                    // Increase game speed over time
                     gameSpeed = Math.min(CONSTANTS.GAME_SPEED_MAX,
                         gameSpeed + CONSTANTS.GAME_SPEED_INCREMENT * dt);
 
-                    // Stamina regeneration
                     staminaTimer += dt;
                     if (staminaTimer >= CONSTANTS.STAMINA_REGEN_TIME && stamina < CONSTANTS.STAMINA_MAX) {
                         stamina++;
@@ -2335,18 +2251,15 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                     }
                     if (stamina >= CONSTANTS.STAMINA_MAX) staminaTimer = 0;
 
-                    // Obstacle spawning
                     spawnTimer += dt;
                     if (spawnTimer >= nextSpawnDelay) {
                         spawnTimer = 0;
                         spawnObstacle();
 
-                        // Dynamic spawn delay
                         const baseDelay = 0.9;
                         const variation = Math.random() * 0.9;
                         nextSpawnDelay = baseDelay + variation * (1 - gameSpeed / CONSTANTS.GAME_SPEED_MAX * 0.4);
 
-                        // Occasionally spawn a second obstacle
                         if (Math.random() < 0.15 && gameSpeed > 350) {
                             setTimeout(() => {
                                 if (gameState === 'playing') spawnObstacle();
@@ -2354,28 +2267,23 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                         }
                     }
 
-                    // Item spawning
                     itemSpawnTimer += dt;
                     if (itemSpawnTimer > 4 + Math.random() * 3) {
                         itemSpawnTimer = 0;
                         if (items.length < 2) spawnItem();
                     }
 
-                    // Eagle spawning
                     eagleSpawnTimer += dt;
                     if (eagleSpawnTimer > 15 + Math.random() * 10 && gameSpeed > 350) {
                         eagleSpawnTimer = 0;
                         if (eagles.length === 0) spawnEagle();
                     }
 
-                    // Increment score based on speed
                     score += gameSpeed * dt * 0.05;
                 }
 
-                // Update chicken
                 if (chicken && !chicken.fallingInHole) chicken.update(dt);
 
-                // Update all game objects
                 for (let o of obstacles) o.update(dt);
                 for (let h of holes) h.update(dt);
                 for (let s of spikes) s.update(dt);
@@ -2383,7 +2291,6 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 for (let item of items) item.update(dt);
                 for (let eagle of eagles) eagle.update(dt);
 
-                // Remove off-screen objects
                 obstacles = obstacles.filter(o => !o.isOffScreen());
                 holes = holes.filter(h => !h.isOffScreen());
                 spikes = spikes.filter(s => !s.isOffScreen());
@@ -2391,23 +2298,14 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 items = items.filter(i => !i.isOffScreen() && !i.collected);
                 eagles = eagles.filter(e => !e.isOffScreen());
 
-                // Update background and weather
                 if (bgElements) bgElements.update(dt);
                 if (weatherManager) weatherManager.update(dt);
 
-                // Check collisions
                 if (gameState === 'playing') checkCollisions();
             }
 
-            /**
-             * Render the entire game frame
-             */
-            
+            // ==================== MAIN DRAW FUNCTION (ADDED BACK) ====================
             function draw(ctx) {
-                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
-                
-                
-
                 // Draw background
                 if (bgElements) bgElements.draw(ctx);
 
@@ -2606,13 +2504,9 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
 
             // ==================== INPUT HANDLING ====================
 
-            /**
-             * Handle canvas click/tap events
-             */
             function handleCanvasClick(e) {
                 if (isBlocked) return;
 
-                // Get click coordinates relative to canvas
                 const rect = canvas.getBoundingClientRect();
                 const scaleX = canvasWidth / rect.width;
                 const scaleY = canvasHeight / rect.height;
@@ -2629,38 +2523,38 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 const x = (clientX - rect.left) * scaleX;
                 const y = (clientY - rect.top) * scaleY;
 
-                // Handle game over restart button
                 if (gameState === 'gameover') {
-                    if (x >= restartButton.x && x <= restartButton.x + restartButton.w &&
-                        y >= restartButton.y && y <= restartButton.y + restartButton.h) {
+                    if (
+                        x >= restartButton.x &&
+                        x <= restartButton.x + restartButton.w &&
+                        y >= restartButton.y &&
+                        y <= restartButton.y + restartButton.h
+                    ) {
                         e.preventDefault();
                         resetGame();
                         startGame();
                         if (chicken) chicken.jump();
-                        return;
                     }
                     return;
                 }
 
                 e.preventDefault();
 
-                // Handle waiting state (start game)
                 if (gameState === 'waiting') {
                     startGame();
                     chicken.jump();
-                } else {
-                    jump();
+                    return;
                 }
+
+                jump();
             }
 
-            // Bind input events
             canvas.addEventListener('click', handleCanvasClick);
             canvas.addEventListener('touchstart', (e) => {
                 e.preventDefault();
                 handleCanvasClick(e);
             }, { passive: false });
 
-            // Keyboard input
             document.addEventListener('keydown', (e) => {
                 if (isBlocked) return;
 
@@ -2677,26 +2571,34 @@ ctx.quadraticCurveTo(gx + 2.5, gy - gh, gx + 5, gy - 1);
                 }
             });
 
-            // ==================== GAME LOOP ====================
+            // REPLACED gameLoop
             function gameLoop(ts) {
                 if (!lastTime) lastTime = ts;
 
-                // Cap delta time to prevent physics issues
                 let dt = Math.min(0.15, (ts - lastTime) / 1000);
                 lastTime = ts;
                 frameCount++;
 
                 update(dt);
-                draw(ctx);
+
+                ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+                try {
+                    draw(ctx);
+                } catch (err) {
+                    console.error('DRAW ERROR:', err);
+                    ctx.fillStyle = '#07111f';
+                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                    ctx.fillStyle = '#fff';
+                    ctx.font = 'bold 16px Arial';
+                    ctx.fillText('Lỗi vẽ màn hình. Mở Console để xem chi tiết.', 20, 40);
+                }
 
                 requestAnimationFrame(gameLoop);
             }
 
-            // ==================== INITIALIZATION ====================
             resizeCanvas();
             resetGame();
             requestAnimationFrame(gameLoop);
-
         })();
     </script>
 </body>
