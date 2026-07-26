@@ -616,6 +616,58 @@
 .level-selector:active{
     background:rgba(255,255,255,.08);
 }
+  .board-wrapper{
+    position: relative;
+}
+
+.dev-hint{
+    position:absolute;
+    z-index:30;
+    pointer-events:none;
+    transform:translate(-50%,-50%);
+}
+
+.dev-arrow{
+    font-size:25px;
+    color:#4cff7a;
+    font-weight:900;
+    text-shadow:
+        0 0 8px rgba(76,255,122,.9),
+        0 0 18px rgba(76,255,122,.7);
+    animation:devArrowPulse .8s infinite alternate;
+}
+
+@keyframes devArrowPulse{
+    from{
+        transform:scale(1);
+    }
+    to{
+        transform:scale(1.25);
+    }
+}
+
+.dev-center{
+    position:absolute;
+    left:50%;
+    top:50%;
+    transform:translate(-50%,-50%);
+    width:28px;
+    height:28px;
+    border-radius:50%;
+    background:rgba(10,16,28,.82);
+    border:1px solid rgba(76,255,122,.45);
+    color:#4cff7a;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:11px;
+    font-weight:900;
+    letter-spacing:.5px;
+    box-shadow:0 0 10px rgba(76,255,122,.18);
+}
+
+
+
   </style>
 </head>
 <body>
@@ -630,11 +682,10 @@
     <span>Màn chơi</span>
     <span class="info-value" id="levelDisplay">1 ▼</span>
 </div>
-      <div class="info-item">
-        <span class="info-icon"></span>
-        <span>Bước</span>
-        <span class="info-value" id="movesDisplay">0</span>
-      </div>
+    <div class="info-item level-selector" id="movesSelector">
+  <span>Bước</span>
+  <span class="info-value" id="movesDisplay">0</span>
+</div>
    
       
     </div>
@@ -1861,6 +1912,9 @@ function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
       let currentLevel = null;
       let unlockedLevels = [];
 let bestStars = [];
+      let developerMode = false;
+let devHintEl = null;
+let devPressTimer = null;
 
       const boardEl = document.getElementById('board');
       const levelDisplay = document.getElementById('levelDisplay');
@@ -1871,6 +1925,7 @@ let bestStars = [];
       const btnReset = document.getElementById('btnReset');
       const btnChallenge = document.getElementById("btnChallenge");
       const titleEl = document.querySelector(".title");
+      const movesSelector = document.getElementById("movesSelector");
 
       // ============ GAME FUNCTIONS ============
       function saveStars(){
@@ -1897,6 +1952,148 @@ function loadStars(){
 
     }
 
+}
+      function saveDeveloperMode() {
+    try {
+        localStorage.setItem("sokoban_dev_mode", developerMode ? "1" : "0");
+    } catch(e){}
+}
+
+function buildCurrentSolveState() {
+    const walkGrid = boardData.map(row =>
+        row.map(ch => (ch === '#') ? '#' : ' ')
+    );
+
+    const boxesSet = new Set();
+    const targetsSet = new Set();
+    let player = { r: 0, c: 0 };
+
+    for (let r = 0; r < boardData.length; r++) {
+        for (let c = 0; c < boardData[r].length; c++) {
+            const ch = boardData[r][c];
+
+            if (ch === '@') {
+                player = { r, c };
+            } else if (ch === '+') {
+                player = { r, c };
+                targetsSet.add(`${r},${c}`);
+            } else if (ch === '$') {
+                boxesSet.add(`${r},${c}`);
+            } else if (ch === '*') {
+                boxesSet.add(`${r},${c}`);
+                targetsSet.add(`${r},${c}`);
+            } else if (ch === '.') {
+                targetsSet.add(`${r},${c}`);
+            }
+        }
+    }
+
+    return { walkGrid, player, boxesSet, targetsSet };
+}
+
+function getDeveloperHintMove() {
+    if (!developerMode) return null;
+
+    const { walkGrid, player, boxesSet, targetsSet } = buildCurrentSolveState();
+    const result = solveLevelAStar(walkGrid, player, boxesSet, targetsSet);
+
+    if (!result.solvable || !result.path || result.path.length === 0) return null;
+    return result.path[0];
+}
+
+function clearDeveloperHint() {
+    if (devHintEl) {
+        devHintEl.remove();
+        devHintEl = null;
+    }
+}
+
+function renderDeveloperHint() {
+  if (!developerMode) {
+    if (devHintEl) {
+        devHintEl.remove();
+        devHintEl = null;
+    }
+    return;
+}
+    clearDeveloperHint();
+
+    if (!developerMode || !boardData.length || gameWon) return;
+
+    const move = getDeveloperHintMove();
+    if (!move) return;
+
+    const dirClassMap = {
+        U: "up",
+        D: "down",
+        L: "left",
+        R: "right"
+    };
+
+    const activeDir = dirClassMap[move];
+    if (!activeDir) return;
+
+    const wrapper = document.querySelector(".board-wrapper");
+    const cellSize = parseFloat(getComputedStyle(boardEl).getPropertyValue("--cell-size")) || 24;
+    const gap = 2;
+    const pad = 3;
+
+    const left = boardEl.offsetLeft + pad + playerPos.c * (cellSize + gap) + cellSize / 2;
+const top = boardEl.offsetTop + pad + playerPos.r * (cellSize + gap) + cellSize / 2;
+
+devHintEl = document.createElement("div");
+devHintEl.className = "dev-hint";
+
+const offset = cellSize * 0.8;
+
+switch(activeDir){
+    case "up":
+        devHintEl.style.left = left + "px";
+        devHintEl.style.top = (top - offset) + "px";
+        break;
+
+    case "down":
+        devHintEl.style.left = left + "px";
+        devHintEl.style.top = (top + offset) + "px";
+        break;
+
+    case "left":
+        devHintEl.style.left = (left - offset) + "px";
+        devHintEl.style.top = top + "px";
+        break;
+
+    case "right":
+        devHintEl.style.left = (left + offset) + "px";
+        devHintEl.style.top = top + "px";
+        break;
+}
+    const arrowMap = {
+    up: "▲",
+    down: "▼",
+    left: "◀",
+    right: "▶"
+};
+
+devHintEl.innerHTML = `
+    <div class="dev-arrow">${arrowMap[activeDir]}</div>
+`;
+
+    wrapper.appendChild(devHintEl);
+}
+
+function openDeveloperModePrompt() {
+    const pass = window.prompt("Nhập mật khẩu Developer Mode");
+    if (pass === null) return;
+
+    if (pass.trim() !== "1724") {
+        alert("Sai mật khẩu");
+        return;
+    }
+
+    developerMode = true;
+    
+    updateInfo();
+    renderDeveloperHint();
 }
       function parseMap(mapRows) {
         const grid = [];
@@ -2097,6 +2294,7 @@ boardEl.style.setProperty("--cell-size", `${Math.max(16, cellSize)}px`);
             boardEl.appendChild(cell);
           }
         }
+          renderDeveloperHint();
       }
 
 function updateInfo() {
@@ -2373,7 +2571,48 @@ function saveProgress() {
         }
       });
 
- 
+ if (movesSelector) {
+    movesSelector.addEventListener("contextmenu", e => e.preventDefault());
+
+  movesSelector.addEventListener("pointerdown", (e) => {
+    if (e.button !== 0) return;
+
+    devStartX = e.clientX;
+    devStartY = e.clientY;
+
+    if (!developerMode) {
+        clearTimeout(devPressTimer);
+
+        devPressTimer = setTimeout(() => {
+            openDeveloperModePrompt();
+        }, 5000);
+    }
+});
+
+movesSelector.addEventListener("pointerup", (e) => {
+    clearTimeout(devPressTimer);
+
+    if (!developerMode) return;
+
+    const dx = e.clientX - devStartX;
+    const dy = e.clientY - devStartY;
+
+    // Chỉ tắt nếu gần như chỉ là một cú chạm
+    if (Math.hypot(dx, dy) < 10) {
+        developerMode = false;
+        saveDeveloperMode();
+        clearDeveloperHint();
+        renderDeveloperHint();
+    }
+});
+    const cancelDevPress = () => clearTimeout(devPressTimer);
+
+    movesSelector.addEventListener("pointerup", cancelDevPress);
+    movesSelector.addEventListener("pointercancel", cancelDevPress);
+    movesSelector.addEventListener("pointerleave", cancelDevPress);
+    movesSelector.addEventListener("touchend", cancelDevPress, { passive: true });
+    movesSelector.addEventListener("touchcancel", cancelDevPress, { passive: true });
+}
 
     
 btnUndo.addEventListener("click", () => {
@@ -2444,6 +2683,9 @@ boardWrapper.addEventListener("touchend", e => {
       // ============ INIT ============
       loadUnlockedLevels();
 loadStars();
+      if (developerMode) {
+    
+}
       const saved = loadProgress();
 
 if(saved){
