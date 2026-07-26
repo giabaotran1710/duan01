@@ -578,6 +578,16 @@
     font-weight:700;
     font-size:.85rem;
 }
+  .level-selector{
+    cursor:pointer;
+    border-radius:20px;
+    padding:4px 10px;
+    transition:.2s;
+}
+
+.level-selector:active{
+    background:rgba(255,255,255,.08);
+}
   </style>
 </head>
 <body>
@@ -588,11 +598,10 @@
     </div>
 
     <div class="info-bar">
-      <div class="info-item">
-        <span class="info-icon"></span>
-        <span>Màn chơi</span>
-        <span class="info-value" id="levelDisplay">1</span>
-      </div>
+      <div class="info-item level-selector" id="levelSelector">
+    <span>Màn chơi</span>
+    <span class="info-value" id="levelDisplay">1 ▼</span>
+</div>
       <div class="info-item">
         <span class="info-icon"></span>
         <span>Bước</span>
@@ -1809,6 +1818,8 @@ function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
       
      let parMoves = 0;
       let currentLevel = null;
+      let unlockedLevels = [];
+let bestStars = [];
 
       const boardEl = document.getElementById('board');
       const levelDisplay = document.getElementById('levelDisplay');
@@ -1821,6 +1832,31 @@ function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
       const titleEl = document.querySelector(".title");
 
       // ============ GAME FUNCTIONS ============
+      function saveStars(){
+
+    localStorage.setItem(
+        "sokoban_stars",
+        JSON.stringify(bestStars)
+    );
+
+}
+
+function loadStars(){
+
+    try{
+
+        bestStars =
+            JSON.parse(
+                localStorage.getItem("sokoban_stars")
+            ) || [];
+
+    }catch(e){
+
+        bestStars=[];
+
+    }
+
+}
       function parseMap(mapRows) {
         const grid = [];
         let pPos = { r: 0, c: 0 };
@@ -1843,7 +1879,26 @@ function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
         }
         return { grid, pPos, boxes, targets };
       }
+function saveUnlockedLevels() {
+    try {
+        localStorage.setItem(
+            "sokoban_levels",
+            JSON.stringify(unlockedLevels)
+        );
+    } catch(e){}
+}
 
+function loadUnlockedLevels() {
+    try {
+        const data = localStorage.getItem("sokoban_levels");
+        if(data){
+            unlockedLevels = JSON.parse(data);
+        }
+    } catch(e){}
+
+    if(!Array.isArray(unlockedLevels))
+        unlockedLevels = [];
+}
       function countBoxesOnTarget(grid) {
         let count = 0;
         for (const row of grid) {
@@ -1876,8 +1931,30 @@ function loadLevel(levelIndex, forceNew = false){
 
         currentLevelIndex = levelIndex;
 
-        if(forceNew || currentLevel == null){
-            currentLevel = createGeneratedLevel(levelIndex);
+        if(forceNew){
+
+    currentLevel = createGeneratedLevel(levelIndex);
+
+    unlockedLevels[levelIndex] = currentLevel;
+
+    saveUnlockedLevels();
+
+}else{
+
+    if(unlockedLevels[levelIndex]){
+
+        currentLevel = unlockedLevels[levelIndex];
+
+    }else if(currentLevel == null){
+
+        currentLevel = createGeneratedLevel(levelIndex);
+
+        unlockedLevels[levelIndex] = currentLevel;
+
+        saveUnlockedLevels();
+
+    }
+          
           const stars = document.getElementById("starTargets");
 
 stars.classList.remove(
@@ -2081,6 +2158,15 @@ else
 
       function checkWin() {
         if (boxesOnTarget === totalBoxes) {
+          const stars = getStars();
+
+if((bestStars[currentLevelIndex]||0) < stars){
+
+    bestStars[currentLevelIndex]=stars;
+
+    saveStars();
+
+}
           gameWon = true;
           updateInfo();
           setTimeout(() => showWinOverlay(), 300);
@@ -2315,6 +2401,8 @@ boardWrapper.addEventListener("touchend", e => {
 }, { passive: true });
 
       // ============ INIT ============
+      loadUnlockedLevels();
+loadStars();
       const saved = loadProgress();
 
 if(saved){
@@ -2333,7 +2421,99 @@ if(saved){
 }
 
       console.log('📦 Sokoban đã sẵn sàng!');
+      function showLevelPopup(){
+
+    const list=document.getElementById("levelList");
+
+    list.innerHTML="";
+
+    for(let i=0;i<unlockedLevels.length;i++){
+
+        if(!unlockedLevels[i]) continue;
+
+        const btn=document.createElement("button");
+
+        btn.className="btn";
+
+        let stars="";
+
+        switch(bestStars[i]||0){
+
+            case 3: stars="⭐⭐⭐";break;
+            case 2: stars="⭐⭐";break;
+            case 1: stars="⭐";break;
+            default: stars="";
+        }
+
+        btn.style.width = "100%";
+btn.style.marginBottom = "8px";
+btn.style.display = "flex";
+btn.style.justifyContent = "space-between";
+btn.style.alignItems = "center";
+
+btn.innerHTML = `
+    <span>Màn ${i + 1}</span>
+    <span>${stars}</span>
+`;
+        btn.onclick=()=>{
+
+            currentLevel=unlockedLevels[i];
+
+            loadLevel(i,false);
+
+            hideLevelPopup();
+
+        };
+
+        list.appendChild(btn);
+
+    }
+
+    document.getElementById("levelPopup").style.display="flex";
+
+}
+
+function hideLevelPopup(){
+
+    document.getElementById("levelPopup").style.display="none";
+
+}
+    document
+.getElementById("levelSelector")
+.onclick=showLevelPopup;
+
+window.addEventListener("load", () => {
+
+    document.getElementById("levelSelector").onclick = showLevelPopup;
+
+    document.getElementById("closeLevelPopup").onclick = hideLevelPopup;
+
+});
     })();
+    
   </script>
+    <div id="levelPopup" class="win-overlay" style="display:none;">
+    <div class="win-dialog">
+
+        <div class="win-text">
+            CHỌN MÀN CHƠI
+        </div>
+
+        <div id="levelList"
+             style="
+             max-height:360px;
+             overflow:auto;
+             margin-top:15px;">
+        </div>
+
+        <button
+        class="btn btn-accent"
+        id="closeLevelPopup"
+        style="margin-top:15px;">
+            Đóng
+        </button>
+
+    </div>
+</div>
 </body>
 </html>
