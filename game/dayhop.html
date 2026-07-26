@@ -1,0 +1,2028 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <title>Đẩy hộp</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+    background: #1a1a2e;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+    position: fixed;
+    inset: 0;
+    width: 100%;
+    touch-action: none;
+    overscroll-behavior: none;
+    font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+    padding: 12px;
+    -webkit-tap-highlight-color: transparent;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+    .game-container {
+      background: #16213e;
+      border-radius: 28px;
+      padding: 20px 16px 24px;
+      max-width: 420px;
+      width: 100%;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), 0 0 0 2px rgba(255, 255, 255, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 18px;
+    }
+
+    .header {
+      text-align: center;
+      width: 100%;
+    }
+
+    .title {
+      font-size: 2.2rem;
+      font-weight: 800;
+      letter-spacing: 1px;
+      background: linear-gradient(135deg, #f7d774, #e8a850);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      filter: drop-shadow(0 2px 4px rgba(0,0,0,0.4));
+      margin-bottom: 2px;
+      padding-top:5px;
+    }
+
+    .subtitle {
+      font-size: 0.8rem;
+      color: #8899aa;
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 500;
+    }
+
+    .info-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      width: 100%;
+      background: #0f1629;
+      border-radius: 50px;
+      padding: 10px 18px;
+      color: #e0e0e0;
+      font-weight: 600;
+      font-size: 0.95rem;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .info-item {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .info-icon {
+      font-size: 1.1rem;
+    }
+
+    .info-value {
+      color: #f7d774;
+      font-weight: 700;
+      min-width: 22px;
+      text-align: center;
+    }
+
+    
+
+    .board-wrapper {
+      background: #0f1629;
+      border-radius: 20px;
+      padding: 12px;
+      box-shadow: inset 0 4px 15px rgba(0, 0, 0, 0.5);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      width: 100%;
+    }
+
+    .board {
+      display: grid;
+      --cell-size: 42px;
+      gap: 2px;
+      background: #1a2740;
+      padding: 3px;
+      border-radius: 12px;
+      transition: all 0.15s ease;
+    }
+
+.cell {
+  width: var(--cell-size);
+  height: var(--cell-size);
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: calc(var(--cell-size) * 0.65);
+  transition: all 0.12s ease;
+  position: relative;
+  background: #1a2740;
+  overflow: hidden;
+}
+    .cell-wall {
+      background: #3b4a6b;
+      border-radius: 4px;
+      box-shadow: inset 0 2px 0 rgba(255,255,255,0.15), inset 0 -3px 0 rgba(0,0,0,0.3);
+    }
+
+    .cell-floor {
+      background: #1e2d4a;
+    }
+
+    .cell-target {
+      background: #1e2d4a;
+      box-shadow: inset 0 0 0 3px rgba(231, 76, 60, 0.5);
+      border-radius: 50%;
+    }
+
+    .cell-box, .cell-box-on-target, .cell-player, .cell-player-on-target {
+      background: transparent;
+      border-radius: 0;
+      box-shadow: none;
+    }
+
+    .entity {
+      position: absolute;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      background-repeat: no-repeat;
+      background-position: center;
+      background-size: contain;
+      pointer-events: none;
+    }
+
+    .entity-box, .entity-box-on-target, .entity-player, .entity-player-on-target {
+      display: block;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      background: #2a3a5c;
+      border: none;
+      color: #e0e0e0;
+      padding: 10px 16px;
+      border-radius: 30px;
+      font-weight: 600;
+      font-size: 0.9rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+      box-shadow: 0 3px 0 #0f1629;
+      letter-spacing: 0.5px;
+      touch-action: manipulation;
+    }
+
+    .btn:active {
+      transform: translateY(2px);
+      box-shadow: 0 1px 0 #0f1629;
+      background: #3d5280;
+    }
+
+    .btn-accent {
+      background: #e8a850;
+      color: #1a1a2e;
+      box-shadow: 0 3px 0 #b8732a;
+      font-weight: 700;
+    }
+
+    .btn-accent:active {
+      background: #f0b860;
+      box-shadow: 0 1px 0 #b8732a;
+    }
+
+
+    .win-overlay {
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0,0,0,0.75);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      animation: fadeIn 0.3s ease;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    .win-dialog {
+      background: #16213e;
+      border-radius: 24px;
+      padding: 30px 24px;
+      text-align: center;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.6);
+      max-width: 320px;
+      width: 90%;
+      animation: popIn 0.35s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+    }
+
+    @keyframes popIn {
+      from { transform: scale(0.8); opacity: 0; }
+      to { transform: scale(1); opacity: 1; }
+    }
+
+    .win-emoji {
+  font-size: 4rem;
+}
+@keyframes starFlyIn{
+
+    0%{
+        opacity:0;
+        transform:
+            scale(.2)
+            rotate(-180deg)
+            translateY(-120px);
+    }
+
+    55%{
+        opacity:1;
+        transform:
+            scale(1.25)
+            rotate(20deg)
+            translateY(8px);
+    }
+
+    75%{
+        transform:
+            scale(.9)
+            rotate(-8deg)
+            translateY(-3px);
+    }
+
+    100%{
+        opacity:1;
+        transform:
+            scale(1)
+            rotate(0)
+            translateY(0);
+    }
+}
+
+
+    .win-text {
+      color: #f7d774;
+      font-size: 1.6rem;
+      font-weight: 700;
+      margin: 10px 0;
+    }
+
+    .win-stats {
+      color: #aabbcc;
+      margin: 6px 0 16px;
+    }
+
+    @media (max-width: 380px) {
+      .game-container {
+        padding: 14px 8px 16px;
+        gap: 12px;
+        border-radius: 20px;
+      }
+      .cell {
+        width: clamp(22px, 9vw, 34px);
+        height: clamp(22px, 9vw, 34px);
+        border-radius: 4px;
+      }
+      
+      .title { font-size: 1.7rem; }
+      .btn { padding: 8px 12px; font-size: 0.8rem; }
+    }
+  .loading-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(15,22,41,.92);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    flex-direction:column;
+    gap:18px;
+    z-index:9999;
+    opacity:0;
+    visibility:hidden;
+    transition:.2s;
+}
+
+.loading-overlay.show{
+    opacity:1;
+    visibility:visible;
+}
+
+.loading-spinner{
+    width:64px;
+    height:64px;
+    border:6px solid rgba(255,255,255,.15);
+    border-top-color:#f7d774;
+    border-radius:50%;
+    animation:spin .8s linear infinite;
+}
+
+.loading-text{
+    color:#f7d774;
+    font-size:18px;
+    font-weight:700;
+    letter-spacing:1px;
+}
+
+.loading-sub{
+    color:#9fb2cc;
+    font-size:14px;
+}
+
+@keyframes spin{
+    to{
+        transform:rotate(360deg);
+    }
+}
+  
+  .star-row{
+    display:flex;
+    justify-content:center;
+    gap:12px;
+    margin:12px 0 18px;
+}
+
+.star{
+    font-size:46px;
+    color:#555;
+    opacity:1;
+}
+
+.star.active{
+    color:#FFD54A;
+    animation:starFly .8s cubic-bezier(.2,1.2,.25,1) forwards;
+}
+
+@keyframes starFly{
+
+    0%{
+        opacity:0;
+        transform:
+            translate(-250px,-220px)
+            rotate(-720deg)
+            scale(.2);
+    }
+
+    65%{
+        opacity:1;
+        transform:
+            scale(1.35)
+            rotate(15deg);
+    }
+
+    100%{
+        opacity:1;
+        transform:
+            scale(1)
+            rotate(0);
+    }
+}
+  .star-targets{
+    width:100%;
+    display:flex;
+    justify-content:space-around;
+    align-items:center;
+    margin-top:-8px;
+    margin-bottom:2px;
+    padding:6px 10px;
+    background:#0f1629;
+    border-radius:14px;
+    color:#d8d8d8;
+    font-size:.82rem;
+    font-weight:600;
+}
+
+.star-targets span{
+    display:flex;
+    align-items:center;
+    gap:4px;
+}
+
+.star-targets b{
+    color:#FFD54A;
+}
+  .stage-normal{
+    filter:none;
+}
+
+.stage-hard{
+    filter:hue-rotate(-55deg) saturate(1.6);
+}
+
+.stage-extreme{
+    filter:hue-rotate(120deg) saturate(2);
+}
+  </style>
+</head>
+<body>
+  <div class="game-container" id="gameContainer">
+    <div class="header">
+      <div class="title">📦 ĐẨY HỘP</div>
+      <div class="subtitle">giabao1710.click</div>
+    </div>
+
+    <div class="info-bar">
+      <div class="info-item">
+        <span class="info-icon"></span>
+        <span>Màn chơi</span>
+        <span class="info-value" id="levelDisplay">1</span>
+      </div>
+      <div class="info-item">
+        <span class="info-icon"></span>
+        <span>Bước</span>
+        <span class="info-value" id="movesDisplay">0</span>
+      </div>
+   
+      
+    </div>
+    <div class="star-targets" id="starTargets">
+    <div class="star-target">
+        <div class="star-icon">⭐⭐⭐</div>
+        <div class="star-step"><b id="star3Moves">0</b> bước</div>
+    </div>
+
+    <div class="star-target">
+        <div class="star-icon">⭐⭐</div>
+        <div class="star-step"><b id="star2Moves">0</b> bước</div>
+    </div>
+
+    <div class="star-target">
+        <div class="star-icon">⭐</div>
+        <div class="star-step">Vượt ải</div>
+    </div>
+
+</div>
+
+    <div class="board-wrapper">
+      <div class="board" id="board"></div>
+    </div>
+
+    <div class="btn-row">
+      <button class="btn" id="btnUndo">HOÀN TÁC</button>
+      <button class="btn" id="btnReset">CHƠI LẠI</button>
+      <button class="btn btn-accent" id="btnNext">⏭️ Tiếp</button>
+    </div>
+<div class="loading-overlay" id="loading">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Đang tải...</div>
+    <div class="loading-sub">Vui lòng chờ</div>
+</div>
+
+  <script>
+    (function() {
+      // ============ UTILITY FUNCTIONS ============
+      function mulberry32(seed) {
+        return function () {
+          let t = seed += 0x6D2B79F5;
+          t = Math.imul(t ^ (t >>> 15), t | 1);
+          t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+          return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+        };
+      }
+
+      function randInt(rand, min, max) {
+        return Math.floor(rand() * (max - min + 1)) + min;
+      }
+function showLoading(){
+    document.getElementById("loading").classList.add("show");
+}
+
+function hideLoading(){
+    document.getElementById("loading").classList.remove("show");
+}
+      function shuffleWithRand(arr, rand) {
+        for (let i = arr.length - 1; i > 0; i--) {
+          const j = randInt(rand, 0, i);
+          [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+      }
+
+      function isBox(ch) {
+        return ch === '$' || ch === '*';
+      }
+
+      function isFloor(ch) {
+        return ch === ' ' || ch === '.';
+      }
+
+      // ============ SVG HELPERS ============
+      function svgUri(svg) {
+        return `url("data:image/svg+xml;charset=UTF-8,${encodeURIComponent(svg)}")`;
+      }
+
+      function getBoxSvg() {
+        return svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+          <defs>
+            <linearGradient id="f" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stop-color="#d89d58"/><stop offset="100%" stop-color="#9a6330"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="64" cy="118" rx="36" ry="6" fill="rgba(0,0,0,.18)"/>
+          <rect x="16" y="28" width="96" height="96" rx="6" fill="url(#f)" stroke="#6b4322" stroke-width="2"/>
+          <rect x="24" y="36" width="80" height="80" fill="none" stroke="#7b4d24" stroke-width="4"/>
+          <line x1="64" y1="36" x2="64" y2="116" stroke="#7b4d24" stroke-width="4"/>
+          <line x1="24" y1="76" x2="104" y2="76" stroke="#7b4d24" stroke-width="4"/>
+          <line x1="28" y1="40" x2="100" y2="112" stroke="#88552b" stroke-width="3"/>
+          <line x1="100" y1="40" x2="28" y2="112" stroke="#88552b" stroke-width="3"/>
+          <circle cx="28" cy="40" r="2.5" fill="#4a2d16"/><circle cx="100" cy="40" r="2.5" fill="#4a2d16"/>
+          <circle cx="28" cy="112" r="2.5" fill="#4a2d16"/><circle cx="100" cy="112" r="2.5" fill="#4a2d16"/>
+        </svg>`);
+      }
+
+      function getPlayerSvg(onTarget = false) {
+        const shirt = onTarget ? '#ff7aa8' : '#4da6ff';
+        const shirtDark = onTarget ? '#c94473' : '#275c9f';
+        return svgUri(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 128 128">
+          <defs>
+            <linearGradient id="p1" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="${shirt}"/><stop offset="100%" stop-color="${shirtDark}"/>
+            </linearGradient>
+            <linearGradient id="p2" x1="0" x2="0" y1="0" y2="1">
+              <stop offset="0%" stop-color="#f2c7a5"/><stop offset="100%" stop-color="#d9a880"/>
+            </linearGradient>
+          </defs>
+          <ellipse cx="64" cy="108" rx="22" ry="7" fill="rgba(0,0,0,0.20)"/>
+          <circle cx="64" cy="30" r="16" fill="url(#p2)"/>
+          <path d="M52 28 C58 18, 70 18, 76 28" fill="#3a2b25"/>
+          <circle cx="58" cy="31" r="1.6" fill="#2d1f18"/><circle cx="70" cy="31" r="1.6" fill="#2d1f18"/>
+          <path d="M48 49 Q64 40 80 49 L86 76 Q64 87 42 76 Z" fill="url(#p1)" stroke="rgba(0,0,0,0.14)" stroke-width="2"/>
+          <path d="M48 50 Q42 57 38 67" fill="none" stroke="${shirtDark}" stroke-width="6" stroke-linecap="round"/>
+          <path d="M80 50 Q86 57 90 67" fill="none" stroke="${shirtDark}" stroke-width="6" stroke-linecap="round"/>
+          <path d="M54 74 L50 101" stroke="#2b3553" stroke-width="10" stroke-linecap="round"/>
+          <path d="M74 74 L78 101" stroke="#2b3553" stroke-width="10" stroke-linecap="round"/>
+          <path d="M52 100 L46 103" stroke="#1e2438" stroke-width="8" stroke-linecap="round"/>
+          <path d="M80 100 L86 103" stroke="#1e2438" stroke-width="8" stroke-linecap="round"/>
+        </svg>`);
+      }
+
+      // ============ SOLVER TỐI ƯU ============
+      function serializeBoxes(boxesSet) {
+        return [...boxesSet].sort().join('|');
+      }
+
+      function stateKey(player, boxesSet) {
+        return `${player.r},${player.c};${serializeBoxes(boxesSet)}`;
+      }
+
+      function isWallCell(grid, r, c) {
+        return r < 0 || r >= grid.length || c < 0 || c >= grid[0].length || grid[r][c] === '#';
+      }
+
+      function isFreeForPlayer(grid, r, c, boxesSet) {
+        if (isWallCell(grid, r, c)) return false;
+        return !boxesSet.has(`${r},${c}`);
+      }
+
+      function reachableCells(grid, player, boxesSet) {
+        const dirs = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+        const q = [[player.r, player.c]];
+        const seen = new Set([`${player.r},${player.c}`]);
+
+        while (q.length) {
+          const [r, c] = q.shift();
+          for (const d of dirs) {
+            const nr = r + d.dr, nc = c + d.dc;
+            const key = `${nr},${nc}`;
+            if (seen.has(key)) continue;
+            if (!isFreeForPlayer(grid, nr, nc, boxesSet)) continue;
+            seen.add(key);
+            q.push([nr, nc]);
+          }
+        }
+        return seen;
+      }
+
+      function isSolved(boxesSet, targetsSet) {
+        for (const b of boxesSet) {
+          if (!targetsSet.has(b)) return false;
+        }
+        return true;
+      }
+
+      function isSolvableFast(grid, player, boxesSet, targetsSet) {
+        const dirs = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
+        
+        const visited = new Set();
+        const queue = [{ player: { ...player }, boxes: new Set(boxesSet) }];
+        visited.add(stateKey(player, boxesSet));
+        
+        let steps = 0;
+        // Giới hạn thấp hơn cho solver nhanh
+        const MAX_STATES = 100000;
+        
+        while (queue.length > 0 && steps < MAX_STATES) {
+          const state = queue.shift();
+          steps++;
+          
+          if (isSolved(state.boxes, targetsSet)) return true;
+          
+          const reach = reachableCells(grid, state.player, state.boxes);
+          
+          for (const box of state.boxes) {
+            const [br, bc] = box.split(',').map(Number);
+            
+            for (const d of dirs) {
+              const pushFromR = br - d.dr, pushFromC = bc - d.dc;
+              const destR = br + d.dr, destC = bc + d.dc;
+              
+              // Kiểm tra nhanh: ô đẩy phải đến được và ô đích phải trống
+              if (!reach.has(`${pushFromR},${pushFromC}`)) continue;
+              if (!isFreeForPlayer(grid, destR, destC, state.boxes)) continue;
+              
+              // Kiểm tra deadlock đơn giản: hộp không nên dính tường nếu không phải target
+              const destKey = `${destR},${destC}`;
+              if (!targetsSet.has(destKey)) {
+                // Deadlock: hộp ở góc
+                const wallChecks = [
+                  [destR - 1, destC], [destR + 1, destC],
+                  [destR, destC - 1], [destR, destC + 1]
+                ];
+                let blockedCount = 0;
+                for (const [wr, wc] of wallChecks) {
+                  if (isWallCell(grid, wr, wc)) blockedCount++;
+                }
+                if (blockedCount >= 2) continue; // Bỏ qua nếu hộp bị kẹt góc
+              }
+              
+              const nextBoxes = new Set(state.boxes);
+              nextBoxes.delete(box);
+              nextBoxes.add(destKey);
+              
+              const nextPlayer = { r: br, c: bc };
+              const key = stateKey(nextPlayer, nextBoxes);
+              
+              if (!visited.has(key)) {
+                visited.add(key);
+                queue.push({ player: nextPlayer, boxes: nextBoxes });
+              }
+            }
+          }
+        }
+        
+        return false;
+      }
+function manhattan(a, b) {
+  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
+}
+
+function hasClearStraightLine(grid, a, b) {
+  if (a[0] === b[0]) {
+    const r = a[0];
+    const [from, to] = a[1] < b[1] ? [a[1], b[1]] : [b[1], a[1]];
+    for (let c = from + 1; c < to; c++) {
+      if (grid[r][c] === '#') return false;
+    }
+    return true;
+  }
+
+  if (a[1] === b[1]) {
+    const c = a[1];
+    const [from, to] = a[0] < b[0] ? [a[0], b[0]] : [b[0], a[0]];
+    for (let r = from + 1; r < to; r++) {
+      if (grid[r][c] === '#') return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
+function looksTooObvious(grid, targets, boxes, minDist) {
+  for (const box of boxes) {
+    for (const target of targets) {
+      const d = manhattan(box, target);
+
+      // Quá gần nhau -> dễ đoán cặp
+      if (d < minDist) return true;
+
+      // Cùng hàng/cột và nhìn thẳng được -> rất lộ
+      if (d <= minDist + 1 && hasClearStraightLine(grid, box, target)) return true;
+    }
+  }
+  return false;
+}
+  // ============ LEVEL GENERATOR TỐI ƯU ============
+function toKey(r, c) {
+  return `${r},${c}`;
+}
+
+function fromKey(key) {
+  return key.split(',').map(Number);
+}
+
+function boxesOnTargetCount(boxesSet, targetsSet) {
+  let count = 0;
+  for (const b of boxesSet) {
+    if (targetsSet.has(b)) count++;
+  }
+  return count;
+}
+
+function freeNeighborCount(grid, r, c) {
+  const dirs = [
+    [-1, 0], [1, 0], [0, -1], [0, 1]
+  ];
+  let count = 0;
+  for (const [dr, dc] of dirs) {
+    const nr = r + dr, nc = c + dc;
+    if (!isWallCell(grid, nr, nc)) count++;
+  }
+  return count;
+}
+
+function pickSpreadCells(cells, count, minDist, rand) {
+  const attempts = 60;
+
+  for (let t = 0; t < attempts; t++) {
+    const pool = [...cells];
+    shuffleWithRand(pool, rand);
+
+    const chosen = [];
+    for (const cell of pool) {
+      let ok = true;
+      for (const other of chosen) {
+        const d = Math.abs(cell[0] - other[0]) + Math.abs(cell[1] - other[1]);
+        if (d < minDist) {
+          ok = false;
+          break;
+        }
+      }
+      if (ok) chosen.push(cell);
+      if (chosen.length === count) return chosen;
+    }
+  }
+
+  return null;
+}
+
+function nearestTargetInfo(pos, targetPoints) {
+  let bestDist = Infinity;
+  let bestTarget = null;
+
+  for (const t of targetPoints) {
+    const d = Math.abs(pos[0] - t[0]) + Math.abs(pos[1] - t[1]);
+    if (d < bestDist) {
+      bestDist = d;
+      bestTarget = t;
+    }
+  }
+
+  return { dist: bestDist, target: bestTarget };
+}
+
+function isCornerDeadlockCell(grid, r, c, targetsSet) {
+  const key = toKey(r, c);
+  if (targetsSet.has(key)) return false;
+
+  const up = isWallCell(grid, r - 1, c);
+  const down = isWallCell(grid, r + 1, c);
+  const left = isWallCell(grid, r, c - 1);
+  const right = isWallCell(grid, r, c + 1);
+
+  return (up || down) && (left || right);
+}
+
+function scoreReverseCandidate(
+    grid,
+    candidate,
+    boxesSet,
+    targetsSet,
+    targetPoints,
+    rand
+) {
+  const [br, bc] = fromKey(candidate.boxKey);
+  const [nr, nc] = fromKey(candidate.nextBoxKey);
+  const [pr, pc] = fromKey(candidate.nextPlayerKey);
+
+  let score = 0;
+  // Khuyến khích box tụ lại
+
+
+for (const other of boxesSet) {
+    if (other === candidate.boxKey) continue;
+
+    const [or, oc] = fromKey(other);
+
+    const d = Math.abs(nr - or) + Math.abs(nc - oc);
+
+    if(d===1) score+=120;
+
+else if(d===2) score+=70;
+
+else if(d===3) score+=30;
+
+else if(d>=7) score-=80;}
+
+  const oldInfo = nearestTargetInfo([br, bc], targetPoints);
+  const newInfo = nearestTargetInfo([nr, nc], targetPoints);
+
+  // Ưu tiên làm box rời xa đích
+  score+=(newInfo.dist-oldInfo.dist)*100;
+
+  // Đẩy box off target là tốt
+  const boxWasTarget = targetsSet.has(candidate.boxKey);
+  const boxNowTarget = targetsSet.has(candidate.nextBoxKey);
+  if (boxWasTarget && !boxNowTarget) score += 160;
+  if (boxNowTarget) score -= 450;
+
+  // Không cho box dính quá gần target
+  if(newInfo.dist<=4) score -= (3 - newInfo.dist) * 120;
+
+  // Càng vào hành lang / chỗ chật vừa phải càng tốt
+  const open = freeNeighborCount(grid, nr, nc);
+  score += (4 - open) * 14;
+
+  // Tránh vị trí quá lộ: thẳng hàng nhìn thấy target
+  if (newInfo.target && hasClearStraightLine(grid, [nr, nc], newInfo.target)) {
+    score -= newInfo.dist <= 4 ? 90 : 30;
+  }
+
+  // Tránh deadlock thật sự
+  if (isCornerDeadlockCell(grid, nr, nc, targetsSet)) {
+    score -= 10000;
+  }
+
+  // Đừng để player đứng quá sát sau khi reverse
+  const playerToBox = Math.abs(pr - nr) + Math.abs(pc - nc);
+  score += Math.max(0, playerToBox - 1) * 3;
+
+  // Nhiễu nhỏ để tránh lặp pattern
+  score += rand() * 8;
+
+  return score;
+}
+
+function chooseReverseCandidate(
+    candidates,
+    grid,
+    boxesSet,
+    targetsSet,
+    targetPoints,
+    rand
+) {
+  const scored = [];
+
+for (const c of candidates) {
+  const s = scoreReverseCandidate(
+    grid,
+    c,
+    boxesSet,
+    targetsSet,
+    targetPoints,
+    rand
+  );
+  if (s > -9000) scored.push({ c, s });
+}
+  if (scored.length === 0) return null;
+
+  scored.sort((a, b) => b.s - a.s);
+
+  const top = scored.slice(0,2);
+  const minScore = top[top.length - 1].s;
+
+  let totalWeight = 0;
+  const weighted = top.map(item => {
+    const w = Math.max(1, item.s - minScore + 1);
+    totalWeight += w;
+    return { item, w };
+  });
+
+  let r = rand() * totalWeight;
+  for (const entry of weighted) {
+    r -= entry.w;
+    if (r <= 0) return entry.item.c;
+  }
+
+  return weighted[0].item.c;
+}
+
+function solveLevelAStar(grid, player, boxesSet, targetsSet) {
+  const dirs = [
+    { dr: -1, dc: 0, ch: 'U' },
+    { dr: 1, dc: 0, ch: 'D' },
+    { dr: 0, dc: -1, ch: 'L' },
+    { dr: 0, dc: 1, ch: 'R' }
+  ];
+
+  const targetPoints = [...targetsSet].map(fromKey);
+  const startBoxes = new Set(boxesSet);
+  const startKey = stateKey(player, startBoxes);
+
+  class MinHeap {
+    constructor() {
+      this.data = [];
+    }
+
+    size() {
+      return this.data.length;
+    }
+
+    push(node) {
+      this.data.push(node);
+      this.#bubbleUp(this.data.length - 1);
+    }
+
+    pop() {
+      if (this.data.length === 0) return null;
+      const top = this.data[0];
+      const end = this.data.pop();
+      if (this.data.length > 0) {
+        this.data[0] = end;
+        this.#bubbleDown(0);
+      }
+      return top;
+    }
+
+    #bubbleUp(index) {
+      const data = this.data;
+      while (index > 0) {
+        const parent = (index - 1) >> 1;
+        if (data[parent].f <= data[index].f) break;
+        [data[parent], data[index]] = [data[index], data[parent]];
+        index = parent;
+      }
+    }
+
+    #bubbleDown(index) {
+      const data = this.data;
+      const length = data.length;
+
+      while (true) {
+        const left = index * 2 + 1;
+        const right = left + 1;
+        let smallest = index;
+
+        if (left < length && data[left].f < data[smallest].f) smallest = left;
+        if (right < length && data[right].f < data[smallest].f) smallest = right;
+        if (smallest === index) break;
+
+        [data[index], data[smallest]] = [data[smallest], data[index]];
+        index = smallest;
+      }
+    }
+  }
+
+  function isGoal(boxes) {
+    for (const b of boxes) {
+      if (!targetsSet.has(b)) return false;
+    }
+    return true;
+  }
+
+  function isDeadlockedBox(key, boxes) {
+    if (targetsSet.has(key)) return false;
+
+    const [r, c] = fromKey(key);
+    const up = isWallCell(grid, r - 1, c);
+    const down = isWallCell(grid, r + 1, c);
+    const left = isWallCell(grid, r, c - 1);
+    const right = isWallCell(grid, r, c + 1);
+
+    return (up || down) && (left || right);
+  }
+
+  // Heuristic admissible: tổng khoảng cách Manhattan tối ưu giữa box và target.
+  // Vì chỉ có 4 hộp nên brute-force permutation rất ổn.
+  const heuristicCache = new Map();
+  function heuristic(boxes) {
+    const boxesKey = serializeBoxes(boxes);
+    if (heuristicCache.has(boxesKey)) return heuristicCache.get(boxesKey);
+
+    const boxPoints = [...boxes].map(fromKey);
+
+    if (boxPoints.length === 0) {
+      heuristicCache.set(boxesKey, 0);
+      return 0;
+    }
+
+    const used = new Array(targetPoints.length).fill(false);
+    let best = Infinity;
+
+    function dfs(i, sum) {
+      if (sum >= best) return;
+      if (i === boxPoints.length) {
+        best = sum;
+        return;
+      }
+
+      const [br, bc] = boxPoints[i];
+      for (let t = 0; t < targetPoints.length; t++) {
+        if (used[t]) continue;
+        used[t] = true;
+        const [tr, tc] = targetPoints[t];
+        dfs(i + 1, sum + Math.abs(br - tr) + Math.abs(bc - tc));
+        used[t] = false;
+      }
+    }
+
+    dfs(0, 0);
+
+    const h = Number.isFinite(best) ? best : 0;
+    heuristicCache.set(boxesKey, h);
+    return h;
+  }
+
+  function reconstructPath(goalKey, parentMap) {
+    const path = [];
+    let key = goalKey;
+
+    while (key !== startKey) {
+      const node = parentMap.get(key);
+      if (!node) break;
+      path.push(node.move);
+      key = node.prevKey;
+    }
+
+    path.reverse();
+    return path;
+  }
+
+  const open = new MinHeap();
+  const gScore = new Map();
+  const parent = new Map();
+
+  const startNode = {
+    key: startKey,
+    player: { ...player },
+    boxes: new Set(startBoxes),
+    g: 0,
+    pushes: 0,
+    f: heuristic(startBoxes)
+  };
+
+  open.push(startNode);
+  gScore.set(startKey, 0);
+
+  let explored = 0;
+
+  while (open.size() > 0) {
+    const current = open.pop();
+    if (!current) break;
+
+    // Bỏ qua node cũ đã bị thay thế bởi đường tốt hơn
+    if (current.g !== gScore.get(current.key)) continue;
+
+    explored++;
+
+    if (isGoal(current.boxes)) {
+      return {
+        solvable: true,
+        moves: current.g,
+        pushes: current.pushes,
+        explored,
+        path: reconstructPath(current.key, parent)
+      };
+    }
+
+    for (const d of dirs) {
+      const nr = current.player.r + d.dr;
+      const nc = current.player.c + d.dc;
+
+      if (isWallCell(grid, nr, nc)) continue;
+
+      const nextPlayer = { r: nr, c: nc };
+      let nextBoxes = current.boxes;
+      let nextPushes = current.pushes;
+
+      const nextCellKey = `${nr},${nc}`;
+
+      // Nếu bước vào ô có box thì là push
+      if (current.boxes.has(nextCellKey)) {
+        const br = nr + d.dr;
+        const bc = nc + d.dc;
+
+        if (isWallCell(grid, br, bc)) continue;
+
+        const destKey = `${br},${bc}`;
+        if (current.boxes.has(destKey)) continue;
+
+        // Prune deadlock đơn giản
+        if (isDeadlockedBox(destKey, current.boxes)) continue;
+
+        nextBoxes = new Set(current.boxes);
+        nextBoxes.delete(nextCellKey);
+        nextBoxes.add(destKey);
+        nextPushes = current.pushes + 1;
+      }
+
+      const nextKey = stateKey(nextPlayer, nextBoxes);
+      const tentativeG = current.g + 1;
+
+      const oldG = gScore.has(nextKey) ? gScore.get(nextKey) : Infinity;
+      if (tentativeG >= oldG) continue;
+
+      gScore.set(nextKey, tentativeG);
+      parent.set(nextKey, {
+        prevKey: current.key,
+        move: d.ch
+      });
+
+      const h = heuristic(nextBoxes);
+
+      open.push({
+        key: nextKey,
+        player: nextPlayer,
+        boxes: nextBoxes,
+        g: tentativeG,
+        pushes: nextPushes,
+        f: tentativeG + h
+      });
+    }
+  }
+
+  return {
+    solvable: false,
+    moves: Infinity,
+    pushes: Infinity,
+    explored,
+    path: []
+  };
+}
+
+function evaluateLevelQuality(grid, playerPos, boxesSet, targetsSet, analysis) {
+  const boxes = [...boxesSet].map(fromKey);
+  const targetPoints = [...targetsSet].map(fromKey);
+
+  let score = 0;
+  let obviousPairs = 0;
+  let corridorCount = 0;
+
+  for (const box of boxes) {
+    const info = nearestTargetInfo(box, targetPoints);
+    
+    // Thưởng khi các box ở gần nhau
+for (let i = 0; i < boxes.length; i++) {
+    for (let j = i + 1; j < boxes.length; j++) {
+
+        const d =
+            Math.abs(boxes[i][0] - boxes[j][0]) +
+            Math.abs(boxes[i][1] - boxes[j][1]);
+
+        if (d === 1) score += 40;      // sát nhau
+        else if (d === 2) score += 20; // cách 1 ô
+        else if (d >= 6) score -= 15;  // quá xa nhau
+    }
+}
+
+    // Box càng xa target càng tốt
+    score += info.dist * 28;
+
+    // Quá gần target -> quá lộ
+    if (info.dist <= 2) {
+      score -= (3 - info.dist) * 90;
+      obviousPairs++;
+    }
+
+    // Cùng hàng/cột và nhìn thẳng tới target -> lộ
+    if (info.target && hasClearStraightLine(grid, box, info.target)) {
+      score -= info.dist <= 4 ? 90 : 30;
+      obviousPairs++;
+    }
+
+    // Deadlock thật thì bỏ
+    if (isCornerDeadlockCell(grid, box[0], box[1], targetsSet)) {
+      return -999999;
+    }
+
+    // Hành lang / chỗ chật vừa phải làm puzzle đỡ “trống”
+    const open = freeNeighborCount(grid, box[0], box[1]);
+    if (open <= 2) {
+      score += 18;
+      corridorCount++;
+    }
+  }
+
+  const playerMinDist = boxes.reduce((best, box) => {
+    return Math.min(best, Math.abs(playerPos.r - box[0]) + Math.abs(playerPos.c - box[1]));
+  }, Infinity);
+
+  score += Math.max(0, playerMinDist - 2) * 12;
+  if (playerMinDist < 2) score -= 70;
+
+  // Độ khó từ solver
+  score += Math.min(analysis.pushes, 60) * 14;
+  score += Math.min(analysis.explored, 50000) / 220;
+
+  // Màn quá “thẳng” thì giảm điểm
+  score -= obviousPairs * 45;
+  if (corridorCount === 0) score -= 40;
+  if (corridorCount >= 2) score += 25;
+
+  return score;
+}
+function createGeneratedLevel(levelIndex) {
+
+    let bestLevel = null;
+    let bestScore = -Infinity;
+
+    const tries = 2;
+    ;
+
+    for (let i = 0; i < tries; i++) {
+
+        const level = createSingleLevel(levelIndex);
+      
+
+        if (!level) continue;
+
+        const score =
+            Math.random() * 20 +
+            parseInt(level.difficulty) || 0;
+
+        if (!bestLevel || score > bestScore) {
+            bestLevel = level;
+            bestScore = score;
+        }
+    }
+
+    return bestLevel || createSingleLevel(levelIndex);
+}
+function createSingleLevel(levelIndex) {
+  const levelNo = levelIndex + 1;
+
+let stageDifficulty = "normal";
+
+if (levelNo % 10 === 0) {
+    stageDifficulty = "extreme";
+}
+else if (levelNo % 4 === 0) {
+    stageDifficulty = "hard";
+}
+  while (true) {
+    const rand = mulberry32(
+      (0xA53A + levelIndex * 9973) ^ Math.floor(Math.random() * 0x7fffffff)
+    );
+
+    const size = 8;
+    const rows = size;
+    const cols = size;
+
+    const boxCount = 4;
+    const wallDensity = 0.15;
+    const reverseSteps =
+Math.min(180+levelIndex*4,260);
+
+    const dirs = [
+      { dr: -1, dc: 0 },
+      { dr: 1, dc: 0 },
+      { dr: 0, dc: -1 },
+      { dr: 0, dc: 1 }
+    ];
+
+    const grid = Array.from({ length: rows }, (_, r) =>
+      Array.from({ length: cols }, (_, c) =>
+        (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) ? '#' : ' '
+      )
+    );
+
+    const innerCells = [];
+    for (let r = 1; r <= rows - 2; r++) {
+      for (let c = 1; c <= cols - 2; c++) {
+        innerCells.push([r, c]);
+      }
+    }
+
+    shuffleWithRand(innerCells, rand);
+
+    // Tường ngẫu nhiên
+    const numWalls = Math.floor(innerCells.length * wallDensity);
+    const wallsToPlace = innerCells.slice(0, numWalls);
+
+    for (const [r, c] of wallsToPlace) {
+      grid[r][c] = '#';
+
+      // Tránh tạo ô chết hoàn toàn
+      let isolated = true;
+      for (const d of dirs) {
+        const nr = r + d.dr, nc = c + d.dc;
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === ' ') {
+          isolated = false;
+          break;
+        }
+      }
+      if (isolated) grid[r][c] = ' ';
+    }
+
+    // Lấy các ô trống
+    const emptyCells = [];
+    for (let r = 1; r <= rows - 2; r++) {
+      for (let c = 1; c <= cols - 2; c++) {
+        if (grid[r][c] === ' ') emptyCells.push([r, c]);
+      }
+    }
+
+    if (emptyCells.length < boxCount + 1) continue;
+
+    // Kiểm tra liên thông toàn bộ vùng trống
+    const visited = new Set();
+    const queue = [emptyCells[0]];
+    visited.add(toKey(emptyCells[0][0], emptyCells[0][1]));
+
+    while (queue.length) {
+      const [r, c] = queue.shift();
+      for (const d of dirs) {
+        const nr = r + d.dr, nc = c + d.dc;
+        const key = toKey(nr, nc);
+        if (visited.has(key)) continue;
+        if (grid[nr] && grid[nr][nc] === ' ') {
+          visited.add(key);
+          queue.push([nr, nc]);
+        }
+      }
+    }
+
+    if (visited.size < emptyCells.length) continue;
+
+    // Chọn target: cách nhau một chút để tránh lộ
+    const minTargetDist = (size >= 10) ? 2 : 1;
+    const targets = pickSpreadCells(emptyCells, boxCount, minTargetDist, rand);
+    if (!targets) continue;
+
+    const targetsSet = new Set(targets.map(([r, c]) => toKey(r, c)));
+    const targetPoints = targets.map(([r, c]) => [r, c]);
+
+    // Chọn player ban đầu
+    const playerCandidates = emptyCells.filter(([r, c]) => !targetsSet.has(toKey(r, c)));
+    if (playerCandidates.length === 0) continue;
+
+    shuffleWithRand(playerCandidates, rand);
+
+    let playerCell = null;
+    for (const cell of playerCandidates) {
+      const [r, c] = cell;
+      const distToTargets = targets.reduce((min, t) => {
+        const d = Math.abs(r - t[0]) + Math.abs(c - t[1]);
+        return Math.min(min, d);
+      }, Infinity);
+
+      if (distToTargets >= 2) {
+        playerCell = cell;
+        break;
+      }
+    }
+
+    if (!playerCell) playerCell = playerCandidates[0];
+
+    let playerPos = { r: playerCell[0], c: playerCell[1] };
+    let boxesSet = new Set(targets.map(([r, c]) => toKey(r, c)));
+
+    // Reverse generation: đẩy ngược box ra khỏi đích
+    let ok = true;
+
+    for (let step = 0; step < reverseSteps; step++) {
+      let candidates = getReverseCandidates(
+        grid,
+        playerPos,
+        boxesSet,
+        targetsSet
+      );
+
+      if (candidates.length === 0) {
+        ok = false;
+        break;
+      }
+
+      // Ưu tiên các bước làm box rời target
+      const onTargetMoves = candidates.filter(c => {
+        const [br, bc] = fromKey(c.boxKey);
+        const [nr, nc] = fromKey(c.nextBoxKey);
+        return targetsSet.has(toKey(br, bc)) && !targetsSet.has(toKey(nr, nc));
+      });
+
+      if (onTargetMoves.length > 0) {
+        candidates = onTargetMoves;
+      }
+
+      const pick = chooseReverseCandidate(
+    candidates,
+    grid,
+    boxesSet,
+    targetsSet,
+    targetPoints,
+    rand
+);
+      if (!pick) {
+        ok = false;
+        break;
+      }
+
+      boxesSet.delete(pick.boxKey);
+      boxesSet.add(pick.nextBoxKey);
+      playerPos = { r: fromKey(pick.nextPlayerKey)[0], c: fromKey(pick.nextPlayerKey)[1] };
+    }
+
+    if (!ok) continue;
+
+    // Đảm bảo không còn box nào nằm trên target
+    let safety = 0;
+    while (boxesOnTargetCount(boxesSet, targetsSet) > 0 && safety < 30) {
+      let candidates = getReverseCandidates(
+        grid,
+        playerPos,
+        boxesSet,
+        targetsSet
+      );
+      if (candidates.length === 0) break;
+
+      const preferred = candidates.filter(c => {
+        const [br, bc] = fromKey(c.boxKey);
+        const [nr, nc] = fromKey(c.nextBoxKey);
+        return targetsSet.has(toKey(br, bc)) && !targetsSet.has(toKey(nr, nc));
+      });
+
+      if (preferred.length > 0) candidates = preferred;
+
+      const pick = chooseReverseCandidate(
+  candidates,
+  grid,
+  boxesSet,
+  targetsSet,
+  targetPoints,
+  rand
+);
+      if (!pick) break;
+
+      boxesSet.delete(pick.boxKey);
+      boxesSet.add(pick.nextBoxKey);
+      playerPos = { r: fromKey(pick.nextPlayerKey)[0], c: fromKey(pick.nextPlayerKey)[1] };
+
+      safety++;
+    }
+
+    if (boxesOnTargetCount(boxesSet, targetsSet) !== 0) {
+      continue;
+    }
+const boxes = [...boxesSet].map(fromKey);
+
+// Không cho box quá gần target hoặc nhìn thẳng tới target
+
+    // Chạy solver để lọc độ dài lời giải
+    const analysis =
+solveLevelAStar(
+    grid,
+    playerPos,
+    boxesSet,
+    targetsSet
+);
+      
+    if (!analysis.solvable) continue;
+
+    let minMoves, maxMoves;
+
+switch(stageDifficulty){
+
+    case "hard":
+        minMoves = 30;
+        maxMoves = 37;
+        break;
+
+    case "extreme":
+        minMoves = 38;
+        maxMoves = 50;
+        break;
+
+    default:
+        minMoves = 22;
+        maxMoves = 29;
+}
+
+if(
+    analysis.moves < minMoves ||
+    analysis.moves > maxMoves
+){
+    continue;
+}
+
+
+    // Gán lên grid
+    for (const [r, c] of targets) grid[r][c] = '.';
+
+    for (const boxKey of boxesSet) {
+      const [r, c] = fromKey(boxKey);
+      grid[r][c] = targetsSet.has(boxKey) ? '*' : '$';
+    }
+
+    grid[playerPos.r][playerPos.c] =
+      targetsSet.has(toKey(playerPos.r, playerPos.c)) ? '+' : '@';
+
+    const difficulty =
+      analysis.pushes >= 24 ? 'RẤT KHÓ' :
+      analysis.pushes >= 18 ? 'KHÓ' :
+      analysis.pushes >= 12 ? 'VỪA' :
+      'DỄ';
+
+    return {
+  name: `Cấp ${levelIndex + 1}`,
+  map: grid.map(row => row.join('')),
+  difficulty:
+`${difficulty} • ${analysis.moves} bước`,
+  par: analysis.moves
+};
+  }
+}
+
+function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
+  const reach = reachableCells(grid, playerPos, boxesSet);
+
+  const dirs = [
+    { dr: -1, dc: 0 },
+    { dr: 1, dc: 0 },
+    { dr: 0, dc: -1 },
+    { dr: 0, dc: 1 }
+  ];
+
+  const candidates = [];
+
+  for (const boxKey of boxesSet) {
+    const [br, bc] = fromKey(boxKey);
+
+    for (const d of dirs) {
+      const nextBoxR = br - d.dr;
+      const nextBoxC = bc - d.dc;
+
+      const nextPlayerR = br - 2 * d.dr;
+      const nextPlayerC = bc - 2 * d.dc;
+
+      const nextBoxKey = toKey(nextBoxR, nextBoxC);
+      const nextPlayerKey = toKey(nextPlayerR, nextPlayerC);
+
+      if (!reach.has(nextBoxKey)) continue;
+      if (!isFreeForPlayer(grid, nextBoxR, nextBoxC, boxesSet)) continue;
+      if (!isFreeForPlayer(grid, nextPlayerR, nextPlayerC, boxesSet)) continue;
+
+      candidates.push({
+        boxKey,
+        nextBoxKey,
+        nextPlayerKey
+      });
+    }
+  }
+
+  return candidates;
+}
+
+      // ============ GAME STATE ============
+      let currentLevelIndex = 0;
+      let boardData = [];
+      let playerPos = { r: 0, c: 0 };
+      let movesCount = 0;
+      let history = [];
+      let totalBoxes = 0;
+      let boxesOnTarget = 0;
+      let gameWon = false;
+      let currentDifficulty = 'DỄ';
+      
+     let parMoves = 0;
+      let currentLevel = null;
+
+      const boardEl = document.getElementById('board');
+      const levelDisplay = document.getElementById('levelDisplay');
+      const movesDisplay = document.getElementById('movesDisplay');
+      
+      
+      const btnUndo = document.getElementById('btnUndo');
+      const btnReset = document.getElementById('btnReset');
+      const btnNext = document.getElementById('btnNext');
+
+      // ============ GAME FUNCTIONS ============
+      function parseMap(mapRows) {
+        const grid = [];
+        let pPos = { r: 0, c: 0 };
+        let boxes = 0;
+        let targets = 0;
+
+        const cleaned = mapRows.map(row => row.replace(/\s+$/g, ''));
+        const maxCols = Math.max(...cleaned.map(r => r.length));
+
+        for (let r = 0; r < cleaned.length; r++) {
+          const row = [];
+          for (let c = 0; c < maxCols; c++) {
+            const ch = cleaned[r][c] || ' ';
+            row.push(ch);
+            if (ch === '@' || ch === '+') pPos = { r, c };
+            if (ch === '$' || ch === '*') boxes++;
+            if (ch === '.' || ch === '+' || ch === '*') targets++;
+          }
+          grid.push(row);
+        }
+        return { grid, pPos, boxes, targets };
+      }
+
+      function countBoxesOnTarget(grid) {
+        let count = 0;
+        for (const row of grid) {
+          for (const ch of row) {
+            if (ch === '*') count++;
+          }
+        }
+        return count;
+      }
+
+      function cloneGrid(grid) {
+        return grid.map(row => [...row]);
+      }
+
+      function saveState() {
+        history.push({
+          grid: cloneGrid(boardData),
+          playerPos: { ...playerPos },
+          movesCount: movesCount,
+          boxesOnTarget: boxesOnTarget
+        });
+        if (history.length > 200) history.shift();
+      }
+
+function loadLevel(levelIndex, forceNew = false){
+
+    showLoading();
+
+    setTimeout(() => {
+
+        currentLevelIndex = levelIndex;
+
+        if(forceNew || currentLevel == null){
+            currentLevel = createGeneratedLevel(levelIndex);
+          const stars = document.getElementById("starTargets");
+
+stars.classList.remove(
+    "stage-normal",
+    "stage-hard",
+    "stage-extreme"
+);
+
+stars.classList.add(
+    "stage-" + currentLevel.stageDifficulty
+);
+        }
+
+        const parsed = parseMap(currentLevel.map);
+
+        boardData = parsed.grid;
+        playerPos = parsed.pPos;
+        totalBoxes = parsed.boxes;
+        boxesOnTarget = countBoxesOnTarget(boardData);
+
+        movesCount = 0;
+        history = [];
+        gameWon = false;
+
+        currentDifficulty = currentLevel.difficulty || "";
+        parMoves = currentLevel.par || 0;
+
+        saveProgress();
+
+        render();
+        updateInfo();
+        removeWinOverlay();
+
+        hideLoading();
+
+    }, 50);   // hoặc 50ms
+}
+      function getStars() {
+
+    if (movesCount <= parMoves)
+        return 3;
+
+    if (movesCount <= parMoves + 5)
+        return 2;
+
+    return 1;
+}
+      function render() {
+        boardEl.innerHTML = '';
+        const rows = boardData.length;
+        const cols = boardData[0].length;
+        const wrapper = document.querySelector(".board-wrapper");
+
+const maxWidth = wrapper.clientWidth - 12;
+const maxHeight = window.innerHeight * 0.55;
+
+const cellSize = Math.floor(
+    Math.min(
+        maxWidth / cols,
+        maxHeight / rows,
+        42
+    )
+);
+
+boardEl.style.setProperty("--cell-size", `${Math.max(16, cellSize)}px`);
+        boardEl.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        boardEl.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+
+        for (let r = 0; r < rows; r++) {
+          for (let c = 0; c < cols; c++) {
+            const ch = boardData[r][c];
+            const cell = document.createElement('div');
+            cell.classList.add('cell');
+
+            let cellClass = '';
+            let entityType = null;
+            let onTarget = false;
+
+            switch (ch) {
+              case '#': cellClass = 'cell-wall'; break;
+              case ' ': cellClass = 'cell-floor'; break;
+              case '.': cellClass = 'cell-target'; break;
+              case '$': cellClass = 'cell-floor'; entityType = 'box'; break;
+              case '*': cellClass = 'cell-target'; entityType = 'box'; onTarget = true; break;
+              case '@': cellClass = 'cell-floor'; entityType = 'player'; break;
+              case '+': cellClass = 'cell-target'; entityType = 'player'; onTarget = true; break;
+              default: cellClass = 'cell-floor';
+            }
+
+            cell.className = `cell ${cellClass}`;
+
+            if (entityType) {
+              const entity = document.createElement('div');
+              entity.className = `entity entity-${entityType}${onTarget ? '-on-target' : ''}`;
+              entity.style.backgroundImage = entityType === 'box' ? getBoxSvg() : getPlayerSvg(onTarget);
+              cell.appendChild(entity);
+            }
+
+            boardEl.appendChild(cell);
+          }
+        }
+      }
+
+      function updateInfo() {
+        document.getElementById("star3Moves").textContent = parMoves;
+document.getElementById("star2Moves").textContent = parMoves + 5;
+
+        levelDisplay.textContent = currentLevelIndex + 1;
+        movesDisplay.textContent = movesCount;
+        
+        
+        btnNext.style.opacity = gameWon ? '1' : '0.5';
+        btnNext.style.pointerEvents = gameWon ? 'auto' : 'none';
+      }
+
+      function getCell(r, c) {
+        if (r < 0 || r >= boardData.length || c < 0 || c >= boardData[0].length) return '#';
+        return boardData[r][c];
+      }
+
+      function setCell(r, c, val) {
+        if (r >= 0 && r < boardData.length && c >= 0 && c < boardData[0].length) {
+          boardData[r][c] = val;
+        }
+      }
+
+      function movePlayer(dr, dc) {
+        if (gameWon) return;
+
+        const pr = playerPos.r, pc = playerPos.c;
+        const nr = pr + dr, nc = pc + dc;
+        const currentCell = getCell(pr, pc);
+        const nextCell = getCell(nr, nc);
+
+        if (nextCell === '#') return;
+
+        if (isBox(nextCell)) {
+          const nnr = nr + dr, nnc = nc + dc;
+          const beyondCell = getCell(nnr, nnc);
+          if (!isFloor(beyondCell)) return;
+
+          saveState();
+
+          const boxWasOnTarget = nextCell === '*';
+          const beyondIsTarget = beyondCell === '.';
+
+          setCell(nnr, nnc, beyondIsTarget ? '*' : '$');
+          if (boxWasOnTarget && !beyondIsTarget) boxesOnTarget--;
+          if (!boxWasOnTarget && beyondIsTarget) boxesOnTarget++;
+
+          const playerWasOnTarget = currentCell === '+';
+          const nextWasTarget = nextCell === '*' || nextCell === '.';
+          setCell(pr, pc, playerWasOnTarget ? '.' : ' ');
+          setCell(nr, nc, nextWasTarget ? '+' : '@');
+          playerPos = { r: nr, c: nc };
+          movesCount++;
+
+        } else if (isFloor(nextCell)) {
+          saveState();
+          const playerWasOnTarget = currentCell === '+';
+          const nextIsTarget = nextCell === '.';
+          setCell(pr, pc, playerWasOnTarget ? '.' : ' ');
+          setCell(nr, nc, nextIsTarget ? '+' : '@');
+          playerPos = { r: nr, c: nc };
+          movesCount++;
+        } else {
+          return;
+        }
+
+        render();
+        updateInfo();
+        checkWin();
+      }
+
+      function checkWin() {
+        if (boxesOnTarget === totalBoxes) {
+          gameWon = true;
+          updateInfo();
+          setTimeout(() => showWinOverlay(), 300);
+        }
+      }
+
+      function undo() {
+        if (gameWon) return;
+        if (history.length === 0) return;
+
+        const prev = history.pop();
+        boardData = prev.grid;
+        playerPos = prev.playerPos;
+        movesCount = prev.movesCount;
+        boxesOnTarget = prev.boxesOnTarget;
+        gameWon = false;
+
+        render();
+        updateInfo();
+      }
+
+      function resetLevel() {
+
+    loadLevel(currentLevelIndex,false);
+
+}
+
+      function nextLevel() {
+
+    if (!gameWon) return;
+
+    currentLevel = null;
+
+    loadLevel(
+        currentLevelIndex + 1,
+        true
+    );
+
+}
+
+      function showWinOverlay() {
+        removeWinOverlay();
+        const overlay = document.createElement('div');
+overlay.id = "winOverlay";
+overlay.className = "win-overlay";
+        
+
+const starCount = getStars();
+
+overlay.innerHTML = `
+<div class="win-dialog">
+
+    <div class="star-row">
+        <span class="star">★</span>
+        <span class="star">★</span>
+        <span class="star">★</span>
+    </div>
+            <div class="win-text">Hoàn thành!</div>
+            <div class="win-stats">
+              
+            </div>
+            <button class="btn btn-accent" id="btnWinNext" style="margin: 6px;">
+              ⏭️ Cấp tiếp theo
+            </button>
+            <button class="btn" id="btnWinClose" style="margin: 6px;">
+              ✕ Đóng
+            </button>
+          </div>
+        `;
+        document.body.appendChild(overlay);
+      const stars = overlay.querySelectorAll(".star");
+
+for(let i = 0; i < starCount; i++){
+
+    setTimeout(()=>{
+        stars[i].classList.add("active");
+    }, i * 250);
+
+}
+
+        document.getElementById('btnWinNext').addEventListener('click', () => {
+          removeWinOverlay();
+          nextLevel();
+        });
+        document.getElementById('btnWinClose').addEventListener('click', removeWinOverlay);
+        overlay.addEventListener('click', (e) => {
+          if (e.target === overlay) removeWinOverlay();
+        });
+      }
+
+      function removeWinOverlay() {
+        const existing = document.getElementById('winOverlay');
+        if (existing) existing.remove();
+      }
+
+      function saveProgress() {
+        try {
+          localStorage.setItem('sokoban_progress', JSON.stringify({
+            level: currentLevelIndex,
+            timestamp: Date.now()
+          }));
+        } catch (e) {}
+      }
+
+      function loadProgress() {
+        try {
+          const saved = localStorage.getItem('sokoban_progress');
+          if (saved) {
+            const data = JSON.parse(saved);
+            if (Number.isInteger(data.level) && data.level >= 0) {
+              return data.level;
+            }
+          }
+        } catch (e) {}
+        return 0;
+      }
+
+      // ============ EVENT LISTENERS ============
+      document.addEventListener('keydown', (e) => {
+        switch (e.key) {
+          case 'ArrowUp': case 'w': case 'W': e.preventDefault(); movePlayer(-1, 0); break;
+          case 'ArrowDown': case 's': case 'S': e.preventDefault(); movePlayer(1, 0); break;
+          case 'ArrowLeft': case 'a': case 'A': e.preventDefault(); movePlayer(0, -1); break;
+          case 'ArrowRight': case 'd': case 'D': e.preventDefault(); movePlayer(0, 1); break;
+          case 'z': case 'Z': if (e.ctrlKey || e.metaKey) { e.preventDefault(); undo(); } break;
+          case 'u': case 'U': e.preventDefault(); undo(); break;
+          case 'r': case 'R': if (!e.ctrlKey && !e.metaKey) { e.preventDefault(); resetLevel(); } break;
+          case 'n': case 'N': e.preventDefault(); if (gameWon) nextLevel(); break;
+        }
+      });
+
+ 
+
+      btnUndo.addEventListener('click', undo);
+      btnReset.addEventListener('click', resetLevel);
+      btnNext.addEventListener('click', nextLevel);
+
+      let touchStartX = 0;
+let touchStartY = 0;
+
+const boardWrapper = document.querySelector(".board-wrapper");
+
+boardWrapper.addEventListener("touchstart", e => {
+    const t = e.touches[0];
+    touchStartX = t.clientX;
+    touchStartY = t.clientY;
+}, { passive: true });
+
+boardWrapper.addEventListener("touchend", e => {
+    if (gameWon) return;
+
+    const t = e.changedTouches[0];
+
+    const dx = t.clientX - touchStartX;
+    const dy = t.clientY - touchStartY;
+
+    const distance = Math.hypot(dx, dy);
+
+    // Bỏ qua nếu vuốt quá ngắn
+    if (distance < 25) return;
+
+    if (Math.abs(dx) > Math.abs(dy)) {
+        movePlayer(0, dx > 0 ? 1 : -1);
+    } else {
+        movePlayer(dy > 0 ? 1 : -1, 0);
+    }
+}, { passive: true });
+
+      // ============ INIT ============
+      const savedLevel = loadProgress();
+      loadLevel(savedLevel);
+
+      console.log('📦 Sokoban đã sẵn sàng!');
+    })();
+  </script>
+</body>
+</html>
