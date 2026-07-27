@@ -736,6 +736,31 @@
 
   <script>
     (function() {
+      // ===== ÂM THANH WEB AUDIO =====
+const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+
+function beep(freq, duration, type = "square", volume = 0.08) {
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+
+    osc.type = type;
+    osc.frequency.value = freq;
+
+    gain.gain.value = volume;
+
+    osc.connect(gain);
+    gain.connect(audioCtx.destination);
+
+    osc.start();
+
+    gain.gain.exponentialRampToValueAtTime(
+        0.0001,
+        audioCtx.currentTime + duration
+    );
+
+    osc.stop(audioCtx.currentTime + duration);
+}
+
       // ============ UTILITY FUNCTIONS ============
       function mulberry32(seed) {
         return function () {
@@ -2370,13 +2395,18 @@ else
           setCell(nnr, nnc, beyondIsTarget ? '*' : '$');
           if (boxWasOnTarget && !beyondIsTarget) boxesOnTarget--;
           if (!boxWasOnTarget && beyondIsTarget) boxesOnTarget++;
+          if (!boxWasOnTarget && beyondIsTarget) {
+    beep(750, 0.12, "triangle");
+}
 
           const playerWasOnTarget = currentCell === '+';
           const nextWasTarget = nextCell === '*' || nextCell === '.';
           setCell(pr, pc, playerWasOnTarget ? '.' : ' ');
           setCell(nr, nc, nextWasTarget ? '+' : '@');
           playerPos = { r: nr, c: nc };
-          movesCount++;
+movesCount++;
+
+beep(170, 0.08, "square");
 
         } else if (isFloor(nextCell)) {
           saveState();
@@ -2442,7 +2472,20 @@ function nextLevel() {
 
     currentLevel = null;
 
-    loadLevel(currentLevelIndex + 1, true);
+    // Màn cao nhất đã mở
+    const highestUnlocked = unlockedLevels.length - 1;
+
+    let nextIndex;
+
+    if (currentLevelIndex < highestUnlocked) {
+        // Đang chơi lại màn cũ -> quay về màn cao nhất
+        nextIndex = highestUnlocked;
+    } else {
+        // Đang ở màn mới nhất -> sang màn tiếp theo
+        nextIndex = highestUnlocked + 1;
+    }
+
+    loadLevel(nextIndex, !unlockedLevels[nextIndex]);
 }
 
 function showWinOverlay() {
@@ -2454,6 +2497,12 @@ function showWinOverlay() {
 
     const starCount = getStars();
     const canNext = !challengeMode || starCount === 3;
+  const highestUnlocked = unlockedLevels.length - 1;
+
+const nextLevelNumber =
+    currentLevelIndex < highestUnlocked
+        ? highestUnlocked + 1
+        : highestUnlocked + 2;
 
     const starsHtml = `
         <div class="star-row">
@@ -2493,8 +2542,8 @@ ${noteHtml}
     ${
         canNext
         ? `<button class="btn btn-challenge" id="btnWinNext">
-                TIẾP
-           </button>`
+    MÀN ${nextLevelNumber}
+</button>`
         : ``
     }
 
@@ -2508,6 +2557,9 @@ ${noteHtml}
     for (let i = 0; i < starCount; i++) {
         setTimeout(() => {
             stars[i].classList.add("active");
+          beep(900, 0.05, "triangle");
+setTimeout(() => beep(1200, 0.05, "triangle"), 45);
+setTimeout(() => beep(1500, 0.07, "triangle"), 90);
         }, i * 250);
     }
 
