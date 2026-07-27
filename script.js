@@ -92,7 +92,9 @@ document.addEventListener('DOMContentLoaded', function () {
         { id: 'echnhayho', name: 'Ếch nhảy hồ', diff: '5/5', genre: ['quan-sat'] },
         { id: 'comet', name: 'Trốn khỏi thiên thạch', diff: '5/5', genre: ['phan-xa'] },
         { id: 'sudoku', name: 'Sudoku', diff: '5/5', genre: ['tri-tue'] },
-        { id: 'timmaulac', name: 'Tìm màu lạc', diff:'3/5', genre: ['quan-sat']}
+        { id: 'timmaulac', name: 'Tìm màu lạc', diff:'3/5', genre: ['quan-sat']},
+        { id: 'dayhop', name: 'Đẩy hộp', diff:'4/5', genre: ['tri-tue']},
+
     ];
 
     const routes = {
@@ -126,6 +128,8 @@ document.addEventListener('DOMContentLoaded', function () {
         'comet': 'game/tronkhoithienthach.html',
         'sudoku': 'game/sudoku.html',
         'timmaulac':'game/timmaulac.html',
+        'dayhop':'game/dayhop.html',
+
     };
 
     games.forEach(g => {
