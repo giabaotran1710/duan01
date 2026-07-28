@@ -2208,54 +2208,52 @@ function loadUnlockedLevels() {
         if (history.length > 200) history.shift();
       }
 
-function loadLevel(levelIndex, forceNew = false){
-  if (!forceNew) {
-    isSharedLevel = false;
-}
+function loadLevel(levelIndex, forceNew = false) {
+    if (isSharedLevel) {
+        const parsed = parseMap(currentLevel.map);
+
+        boardData = parsed.grid;
+        playerPos = parsed.pPos;
+        totalBoxes = parsed.boxes;
+        boxesOnTarget = countBoxesOnTarget(boardData);
+
+        movesCount = 0;
+        history = [];
+        gameWon = false;
+
+        currentDifficulty = currentLevel.difficulty || "";
+        parMoves = currentLevel.par || 0;
+
+        render();
+        updateInfo();
+        removeWinOverlay();
+        hideLoading();
+        return;
+    }
 
     showLoading();
 
     setTimeout(() => {
-
         currentLevelIndex = levelIndex;
 
-        if(forceNew){
-
-    currentLevel = createGeneratedLevel(levelIndex);
-
-    unlockedLevels[levelIndex] = currentLevel;
-
-    saveUnlockedLevels();
-
-}else{
-
-    if(unlockedLevels[levelIndex]){
-
-        currentLevel = unlockedLevels[levelIndex];
-
-    }else if(currentLevel == null){
-
-        currentLevel = createGeneratedLevel(levelIndex);
-
-        unlockedLevels[levelIndex] = currentLevel;
-
-        saveUnlockedLevels();
-
-    }
-          
-          
+        if (forceNew) {
+            currentLevel = createGeneratedLevel(levelIndex);
+            unlockedLevels[levelIndex] = currentLevel;
+            saveUnlockedLevels();
+        } else {
+            if (unlockedLevels[levelIndex]) {
+                currentLevel = unlockedLevels[levelIndex];
+            } else if (currentLevel == null) {
+                currentLevel = createGeneratedLevel(levelIndex);
+                unlockedLevels[levelIndex] = currentLevel;
+                saveUnlockedLevels();
+            }
         }
-const stars = document.getElementById("starTargets");
 
-stars.classList.remove(
-    "stage-normal",
-    "stage-hard",
-    "stage-extreme"
-);
+        const stars = document.getElementById("starTargets");
+        stars.classList.remove("stage-normal", "stage-hard", "stage-extreme");
+        stars.classList.add("stage-" + (currentLevel.stageDifficulty || "normal"));
 
-stars.classList.add(
-    "stage-" + (currentLevel.stageDifficulty || "normal")
-);
         const parsed = parseMap(currentLevel.map);
 
         boardData = parsed.grid;
@@ -2275,10 +2273,8 @@ stars.classList.add(
         render();
         updateInfo();
         removeWinOverlay();
-
         hideLoading();
-
-    }, 50);   // hoặc 50ms
+    }, 50);
 }
       function getStars() {
 
@@ -2348,7 +2344,15 @@ boardEl.style.setProperty("--cell-size", `${Math.max(16, cellSize)}px`);
       }
 
 function updateInfo() {
-  levelDisplay.textContent = currentLevelIndex + 1;
+  if (isSharedLevel) {
+
+    levelDisplay.textContent = "Màn của người khác";
+
+} else {
+
+    levelDisplay.textContent = currentLevelIndex + 1;
+
+}
 movesDisplay.textContent = movesCount;
     const starPanel = document.getElementById("starTargets");
 const challengePanel = document.getElementById("challengePanel");
@@ -2453,7 +2457,12 @@ beep(170, 0.08, "square");
       function checkWin() {
         if (boxesOnTarget === totalBoxes) {
           const stars = getStars();
-
+if (!isSharedLevel) {
+    if ((bestStars[currentLevelIndex] || 0) < stars) {
+        bestStars[currentLevelIndex] = stars;
+        saveStars();
+    }
+}
 if (!isSharedLevel) {
 
     if ((bestStars[currentLevelIndex] || 0) < stars) {
@@ -2805,14 +2814,11 @@ function loadSharedLevelFromUrl() {
     if (!sharedMap) return false;
 
     try {
-
         const mapText = atob(sharedMap);
         const map = mapText.split("\n");
 
-        // Phân tích map
         const parsed = parseMap(map);
 
-        // Grid chỉ gồm tường và nền cho solver
         const walkGrid = parsed.grid.map(row =>
             row.map(ch => ch === "#" ? "#" : " ")
         );
@@ -2822,28 +2828,18 @@ function loadSharedLevelFromUrl() {
 
         for (let r = 0; r < parsed.grid.length; r++) {
             for (let c = 0; c < parsed.grid[r].length; c++) {
-
                 const ch = parsed.grid[r][c];
 
                 if (ch === "$") {
-
                     boxesSet.add(`${r},${c}`);
-
                 } else if (ch === "*") {
-
                     boxesSet.add(`${r},${c}`);
                     targetsSet.add(`${r},${c}`);
-
                 } else if (ch === ".") {
-
                     targetsSet.add(`${r},${c}`);
-
                 } else if (ch === "+") {
-
                     targetsSet.add(`${r},${c}`);
-
                 }
-
             }
         }
 
@@ -2854,8 +2850,7 @@ function loadSharedLevelFromUrl() {
             targetsSet
         );
 
-        currentLevelIndex = 0;
-
+        currentLevelIndex = -1;
         currentLevel = {
             name: "Màn chia sẻ",
             map,
@@ -2865,21 +2860,15 @@ function loadSharedLevelFromUrl() {
         };
 
         isSharedLevel = true;
-
-        unlockedLevels[0] = currentLevel;
-        saveUnlockedLevels();
-
         return true;
 
     } catch (e) {
-
         console.error("Không đọc được map chia sẻ:", e);
         return false;
-
     }
 }
-      // ============ INIT ============
-      loadUnlockedLevels();
+// ============ INIT ============
+loadUnlockedLevels();
 loadStars();
 
 const sharedLoaded = loadSharedLevelFromUrl();
@@ -2888,7 +2877,7 @@ if (sharedLoaded) {
     challengeMode = false;
     btnChallenge.classList.remove("active");
     titleEl.classList.remove("challenge");
-    loadLevel(0, false);
+    loadLevel(currentLevelIndex, false);
 } else {
     const saved = loadProgress();
 
@@ -2908,7 +2897,8 @@ if (sharedLoaded) {
     }
 }
 
-      console.log('📦 Sokoban đã sẵn sàng!');
+console.log('📦 Sokoban đã sẵn sàng!');
+      
       function showLevelPopup(){
 
     const list=document.getElementById("levelList");
