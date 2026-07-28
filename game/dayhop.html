@@ -2798,31 +2798,84 @@ boardWrapper.addEventListener("touchend", e => {
     }
 }, { passive: true });
 
-      function loadSharedLevelFromUrl() {
+function loadSharedLevelFromUrl() {
     const params = new URLSearchParams(location.search);
     const sharedMap = params.get("map");
 
     if (!sharedMap) return false;
 
     try {
+
         const mapText = atob(sharedMap);
+        const map = mapText.split("\n");
+
+        // Phân tích map
+        const parsed = parseMap(map);
+
+        // Grid chỉ gồm tường và nền cho solver
+        const walkGrid = parsed.grid.map(row =>
+            row.map(ch => ch === "#" ? "#" : " ")
+        );
+
+        const boxesSet = new Set();
+        const targetsSet = new Set();
+
+        for (let r = 0; r < parsed.grid.length; r++) {
+            for (let c = 0; c < parsed.grid[r].length; c++) {
+
+                const ch = parsed.grid[r][c];
+
+                if (ch === "$") {
+
+                    boxesSet.add(`${r},${c}`);
+
+                } else if (ch === "*") {
+
+                    boxesSet.add(`${r},${c}`);
+                    targetsSet.add(`${r},${c}`);
+
+                } else if (ch === ".") {
+
+                    targetsSet.add(`${r},${c}`);
+
+                } else if (ch === "+") {
+
+                    targetsSet.add(`${r},${c}`);
+
+                }
+
+            }
+        }
+
+        const analysis = solveLevelAStar(
+            walkGrid,
+            parsed.pPos,
+            boxesSet,
+            targetsSet
+        );
 
         currentLevelIndex = 0;
+
         currentLevel = {
             name: "Màn chia sẻ",
-            map: mapText.split("\n"),
-            par: 0,
+            map,
+            par: analysis.solvable ? analysis.moves : 0,
             difficulty: "CHIA SẺ",
             stageDifficulty: "normal"
         };
+
         isSharedLevel = true;
+
         unlockedLevels[0] = currentLevel;
         saveUnlockedLevels();
 
         return true;
+
     } catch (e) {
+
         console.error("Không đọc được map chia sẻ:", e);
         return false;
+
     }
 }
       // ============ INIT ============
