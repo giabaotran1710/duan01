@@ -676,7 +676,27 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     font-size:18px;
 }
 
+.toast{
+    position:fixed;
+    left:50%;
+    bottom:30px;
+    transform:translateX(-50%);
+    background:rgba(20,20,20,.92);
+    color:#fff;
+    padding:12px 18px;
+    border-radius:30px;
+    font-size:.9rem;
+    font-weight:600;
+    opacity:0;
+    pointer-events:none;
+    transition:.25s;
+    z-index:99999;
+}
 
+.toast.show{
+    opacity:1;
+    bottom:50px;
+}
 
   </style>
 </head>
@@ -2346,7 +2366,7 @@ boardEl.style.setProperty("--cell-size", `${Math.max(16, cellSize)}px`);
 function updateInfo() {
   if (isSharedLevel) {
 
-    levelDisplay.textContent = "Màn của người khác";
+    levelDisplay.textContent = "được chia sẻ";
 
 } else {
 
@@ -2469,9 +2489,16 @@ if (!isSharedLevel) {
 
         bestStars[currentLevelIndex] = stars;
         saveStars();
-
     }
+}
+          // Mở khóa màn kế tiếp ngay khi thắng
+if (!isSharedLevel) {
+    const nextIndex = currentLevelIndex + 1;
 
+    if (!unlockedLevels[nextIndex]) {
+        unlockedLevels[nextIndex] = createGeneratedLevel(nextIndex);
+        saveUnlockedLevels();
+    }
 }
           gameWon = true;
           updateInfo();
@@ -2740,7 +2767,6 @@ if (btnShare) {
         if (navigator.share) {
             await navigator.share({
                 title: "Tôi thấy màn này khá khó.!",
-                text: "Thử vượt màn này nhé!",
                 url
             });
         } else {
@@ -2750,6 +2776,10 @@ if (btnShare) {
     };
 }
 btnChallenge.addEventListener("click", () => {
+  if (isSharedLevel) {
+    showToast("Không thể thay đổi cài đặt do đây là màn chơi được chia sẻ.");
+    return;
+}
 
     // Đang bật Challenge -> muốn tắt
     if (challengeMode) {
@@ -2806,6 +2836,30 @@ boardWrapper.addEventListener("touchend", e => {
         movePlayer(dy > 0 ? 1 : -1, 0);
     }
 }, { passive: true });
+      
+      let toastTimer = null;
+
+function showToast(text){
+
+    let toast = document.getElementById("toast");
+
+    if(!toast){
+        toast = document.createElement("div");
+        toast.id = "toast";
+        toast.className = "toast";
+        document.body.appendChild(toast);
+    }
+
+    toast.textContent = text;
+
+    clearTimeout(toastTimer);
+
+    toast.classList.add("show");
+
+    toastTimer = setTimeout(()=>{
+        toast.classList.remove("show");
+    },2200);
+}
 
 function loadSharedLevelFromUrl() {
     const params = new URLSearchParams(location.search);
@@ -2874,10 +2928,14 @@ loadStars();
 const sharedLoaded = loadSharedLevelFromUrl();
 
 if (sharedLoaded) {
-    challengeMode = false;
-    btnChallenge.classList.remove("active");
-    titleEl.classList.remove("challenge");
+
+    challengeMode = true;
+
+    btnChallenge.classList.add("active");
+    titleEl.classList.add("challenge");
+
     loadLevel(currentLevelIndex, false);
+
 } else {
     const saved = loadProgress();
 
@@ -2929,9 +2987,17 @@ btn.style.display = "flex";
 btn.style.justifyContent = "space-between";
 btn.style.alignItems = "center";
 
+const score = bestStars[i] || 0;
+
+let starHtml = "";
+
+for (let s = 1; s <= 3; s++) {
+    starHtml += `<span style="color:${s <= score ? "#FFD54A" : "#FFFFFF"}">★</span>`;
+}
+
 btn.innerHTML = `
     <span>Màn ${i + 1}</span>
-    <span>${stars}</span>
+    <span style="font-size:22px">${starHtml}</span>
 `;
         btn.onclick=()=>{
 
