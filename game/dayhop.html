@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <link rel="stylesheet"
+href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <title>Đẩy hộp</title>
   <style>
     * {
@@ -665,6 +667,14 @@
     letter-spacing:.5px;
     box-shadow:0 0 10px rgba(76,255,122,.18);
 }
+  #btnShare{
+    flex:0 0 46px;
+    padding:10px;
+}
+
+#btnShare i{
+    font-size:18px;
+}
 
 
 
@@ -726,6 +736,9 @@
       <button class="btn" id="btnReset">CHƠI LẠI</button>
       <button class="btn btn-challenge" id="btnChallenge">
     THỬ THÁCH
+        <button class="btn" id="btnShare" title="Chia sẻ">
+    <i class="fa-solid fa-share-nodes"></i>
+</button>
 </button>
     </div>
 <div class="loading-overlay" id="loading">
@@ -759,6 +772,14 @@ function beep(freq, duration, type = "square", volume = 0.08) {
     );
 
     osc.stop(audioCtx.currentTime + duration);
+}
+function createShareLink() {
+    if (!currentLevel || !Array.isArray(currentLevel.map)) return "";
+
+    const map = currentLevel.map.join("\n");
+    const encoded = btoa(map);
+
+    return `${location.origin}${location.pathname}?map=${encodeURIComponent(encoded)}`;
 }
 
       // ============ UTILITY FUNCTIONS ============
@@ -1940,6 +1961,7 @@ let bestStars = [];
       let developerMode = false;
 let devHintEl = null;
 let devPressTimer = null;
+      let isSharedLevel = false;
 
       const boardEl = document.getElementById('board');
       const levelDisplay = document.getElementById('levelDisplay');
@@ -2187,6 +2209,9 @@ function loadUnlockedLevels() {
       }
 
 function loadLevel(levelIndex, forceNew = false){
+  if (!forceNew) {
+    isSharedLevel = false;
+}
 
     showLoading();
 
@@ -2429,11 +2454,14 @@ beep(170, 0.08, "square");
         if (boxesOnTarget === totalBoxes) {
           const stars = getStars();
 
-if((bestStars[currentLevelIndex]||0) < stars){
+if (!isSharedLevel) {
 
-    bestStars[currentLevelIndex]=stars;
+    if ((bestStars[currentLevelIndex] || 0) < stars) {
 
-    saveStars();
+        bestStars[currentLevelIndex] = stars;
+        saveStars();
+
+    }
 
 }
           gameWon = true;
@@ -2464,6 +2492,7 @@ if((bestStars[currentLevelIndex]||0) < stars){
 }
 
 function nextLevel() {
+  if (isSharedLevel) return;
     if (!gameWon) return;
 
     if (challengeMode && getStars() < 3) {
@@ -2496,7 +2525,7 @@ function showWinOverlay() {
     overlay.className = "win-overlay";
 
     const starCount = getStars();
-    const canNext = !challengeMode || starCount === 3;
+    const canNext = isSharedLevel || (!challengeMode || starCount === 3);
   const highestUnlocked = unlockedLevels.length - 1;
 
 const nextLevelNumber =
@@ -2539,13 +2568,13 @@ ${noteHtml}
         CHƠI LẠI
     </button>
 
-    ${
-        canNext
+${
+    canNext
         ? `<button class="btn btn-challenge" id="btnWinNext">
-    MÀN ${nextLevelNumber}
-</button>`
+            ${isSharedLevel ? "TRỞ VỀ" : `MÀN ${nextLevelNumber}`}
+          </button>`
         : ``
-    }
+}
 
 
 </div>
@@ -2570,10 +2599,23 @@ setTimeout(() => beep(1500, 0.07, "triangle"), 90);
 
     const btnWinNext = document.getElementById('btnWinNext');
     if (btnWinNext) {
-        btnWinNext.addEventListener('click', () => {
-            removeWinOverlay();
-            nextLevel();
-        });
+        btnWinNext.addEventListener("click", () => {
+
+    removeWinOverlay();
+
+    if (isSharedLevel) {
+
+        history.replaceState({}, "", location.pathname);
+
+        location.reload();
+
+    } else {
+
+        nextLevel();
+
+    }
+
+});
     }
 
     
@@ -2589,6 +2631,7 @@ setTimeout(() => beep(1500, 0.07, "triangle"), 90);
       }
 
 function saveProgress() {
+  if (isSharedLevel) return;
     try {
         localStorage.setItem("sokoban_progress", JSON.stringify({
             level: currentLevelIndex,
@@ -2674,6 +2717,29 @@ btnUndo.addEventListener("click", () => {
 btnReset.addEventListener("click", () => {
     resetLevel();
 });
+      
+ const btnShare = document.getElementById("btnShare");
+
+if (btnShare) {
+    btnShare.onclick = async () => {
+        const url = createShareLink();
+        if (!url) {
+            alert("Chưa có màn để chia sẻ.");
+            return;
+        }
+
+        if (navigator.share) {
+            await navigator.share({
+                title: "Tôi thấy màn này khá khó.!",
+                text: "Thử vượt màn này nhé!",
+                url
+            });
+        } else {
+            await navigator.clipboard.writeText(url);
+            alert("Đã sao chép liên kết.");
+        }
+    };
+}
 btnChallenge.addEventListener("click", () => {
 
     // Đang bật Challenge -> muốn tắt
@@ -2732,27 +2798,61 @@ boardWrapper.addEventListener("touchend", e => {
     }
 }, { passive: true });
 
+      function loadSharedLevelFromUrl() {
+    const params = new URLSearchParams(location.search);
+    const sharedMap = params.get("map");
+
+    if (!sharedMap) return false;
+
+    try {
+        const mapText = atob(sharedMap);
+
+        currentLevelIndex = 0;
+        currentLevel = {
+            name: "Màn chia sẻ",
+            map: mapText.split("\n"),
+            par: 0,
+            difficulty: "CHIA SẺ",
+            stageDifficulty: "normal"
+        };
+        isSharedLevel = true;
+        unlockedLevels[0] = currentLevel;
+        saveUnlockedLevels();
+
+        return true;
+    } catch (e) {
+        console.error("Không đọc được map chia sẻ:", e);
+        return false;
+    }
+}
       // ============ INIT ============
       loadUnlockedLevels();
 loadStars();
-      if (developerMode) {
-    
-}
-      const saved = loadProgress();
 
-if(saved){
-    currentLevelIndex = saved.level;
-    currentLevel = saved.levelData;
-    challengeMode = !!saved.challengeMode;
+const sharedLoaded = loadSharedLevelFromUrl();
 
-    if(challengeMode){
-        btnChallenge.classList.add("active");
-        titleEl.classList.add("challenge");
+if (sharedLoaded) {
+    challengeMode = false;
+    btnChallenge.classList.remove("active");
+    titleEl.classList.remove("challenge");
+    loadLevel(0, false);
+} else {
+    const saved = loadProgress();
+
+    if (saved) {
+        currentLevelIndex = saved.level;
+        currentLevel = saved.levelData;
+        challengeMode = !!saved.challengeMode;
+
+        if (challengeMode) {
+            btnChallenge.classList.add("active");
+            titleEl.classList.add("challenge");
+        }
+
+        loadLevel(currentLevelIndex, false);
+    } else {
+        loadLevel(0, true);
     }
-
-    loadLevel(currentLevelIndex, false);
-}else{
-    loadLevel(0, true);
 }
 
       console.log('📦 Sokoban đã sẵn sàng!');
