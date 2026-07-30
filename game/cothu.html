@@ -1,4 +1,5 @@
-<!DOCTYPE html><html lang="vi">
+<!DOCTYPE html>
+<html lang="vi">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
@@ -421,6 +422,123 @@ border-radius:10px;
     top:-6px;
     left:-1px;
 }
+  .modeOn{
+  background:linear-gradient(180deg,#166534,#14532d) !important;
+}
+
+.grass {
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  overflow: hidden;
+  pointer-events: none;
+  z-index: 2;
+  
+  /* Ảnh cỏ SVG nhẹ */
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><defs><linearGradient id="g" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="%234caf50"/><stop offset="100%" stop-color="%231b5e20"/></linearGradient></defs><path d="M 5,95 L 8,40 L 12,55 L 15,25 L 20,60 L 22,15 L 28,55 L 32,10 L 36,50 L 40,5 L 44,45 L 48,20 L 52,65 L 56,30 L 60,60 L 64,20 L 68,70 L 72,35 L 76,65 L 80,25 L 84,75 L 88,40 L 90,70 L 94,45 L 98,80 L 100,60 L 100,100 L 0,100 L 0,90 Z" fill="url(%23g)" stroke="%232e7d32" stroke-width="2" stroke-linejoin="round"/></svg>');
+  background-size: cover;
+  background-repeat: no-repeat;
+  opacity: 0.95;
+
+  /* Animation đung đưa theo gió */
+  animation: grassSway 4s ease-in-out infinite;
+  transform-origin: bottom center;
+  will-change: transform; /* giúp GPU xử lý mượt */
+}
+
+@keyframes grassSway {
+  0%, 100% { transform: rotate(0deg); }
+  25%      { transform: rotate(1.2deg); }
+  75%      { transform: rotate(-1.2deg); }
+}
+  
+  /* ===== Ô THỦY TRIỀU (GIỐNG NƯỚC) ===== */
+.tide {
+    position: relative;
+    overflow: hidden;
+    background: linear-gradient(
+        to bottom,
+        #78dfff 0%,
+        #4eb8ea 40%,
+        #2387d2 75%,
+        #1667b2 100%
+    );
+}
+.tide::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: repeating-radial-gradient(
+        ellipse 140% 18px at 50% 0,
+        rgba(255,255,255,.28) 0 2px,
+        transparent 3px 22px
+    );
+    background-size: 100% 48px;
+    animation: waterWave 15s linear infinite;
+    opacity: .65;
+}
+.tide::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background: linear-gradient(
+        to bottom,
+        rgba(255,255,255,.22),
+        transparent 22%,
+        transparent 78%,
+        rgba(0,0,0,.08)
+    );
+    mix-blend-mode: screen;
+}
+.tideOn {
+  background: linear-gradient(180deg, #0369a1, #0284c7) !important;
+  color: white;
+}
+  .tideWarning {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  font-size: 1em;
+  z-index: 10;
+  pointer-events: none;
+  text-shadow: 0 0 4px black;
+  animation: warnPulse 1s ease-in-out infinite;
+}
+@keyframes warnPulse {
+  0%, 100% { opacity: 0.8; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+  
+  /* Lớp phủ hiệu ứng thủy triều */
+.tide-overlay {
+  position: absolute;
+  pointer-events: none;
+  z-index: 15;
+  background: linear-gradient(
+    to bottom,
+    #78dfff 0%,
+    #4eb8ea 40%,
+    #2387d2 75%,
+    #1667b2 100%
+  );
+  opacity: 0;
+}
+.tide-overlay.rising {
+  animation: tideRise 1.5s ease-in forwards;
+}
+.tide-overlay.receding {
+  animation: tideRecede 1.5s ease-out forwards;
+}
+@keyframes tideRise {
+  0%   { clip-path: inset(0 100% 0 0); opacity: 0; }
+  100% { clip-path: inset(0 0 0 0); opacity: 1; }
+}
+@keyframes tideRecede {
+  0%   { clip-path: inset(0 0 0 0); opacity: 1; }
+  100% { clip-path: inset(0 0 0 100%); opacity: 0; }
+}
   </style>
 </head>
 <body>
@@ -447,6 +565,8 @@ border-radius:10px;
     </div><div class="panel">
   <div class="btnrow">
 <button id="restartBtn" class="action"><span>⟲</span></button>
+<button id="modeBtn" class="iconBtn">Cờ úp</button>
+<button id="tideBtn" class="iconBtn">Thủy triều</button>
 </div>
 </div>
 
@@ -471,7 +591,25 @@ border-radius:10px;
 (() => {
   const W = 7, H = 9;
   const boardEl = document.getElementById('board');
+  const cellMap = new Map();
+  const grassMap = new Map();
   let captureFx = null;
+  const HUMAN_SIDE = 'blue';
+  const AI_SIDE = 'red';
+  const AI_DEPTH = 4;
+  let aiThinking = false;
+  let aiTimer = null;
+
+  const PIECE_SCORE = {
+    rat: 100,
+    cat: 200,
+    dog: 300,
+    wolf: 400,
+    leopard: 520,
+    tiger: 680,
+    lion: 820,
+    elephant: 1000
+  };
   const turnValue = document.getElementById('turnValue');
   const statusEl = document.getElementById('status');
   const winnerPanel = document.getElementById('winnerPanel');
@@ -480,6 +618,77 @@ border-radius:10px;
   const infoBtn = document.getElementById('infoBtn');
   const rulesModal = document.getElementById('rulesModal');
   const closeRulesBtn = document.getElementById('closeRulesBtn');
+  const modeBtn = document.getElementById('modeBtn');
+  let tideMode = false;
+  const tideBtn = document.getElementById('tideBtn');
+  let upMode = false;
+  let revealedIds = new Set();
+  
+  function revealGrass(piece) {
+    const key = `${piece.x},${piece.y}`;
+    const grass = grassMap.get(key);
+    if (!grass) return;
+    const pieceDiv = grass.parentElement; // div.piece
+    if (!pieceDiv) return;
+    grass.remove();
+    grassMap.delete(key);
+    revealedIds.add(piece.id);
+    const def = pieceDefs[piece.type];
+    const emojiSpan = document.createElement('span');
+    emojiSpan.className = 'emoji';
+    emojiSpan.textContent = def.emoji;
+    pieceDiv.appendChild(emojiSpan);
+    if (isTrapFor(piece, piece.x, piece.y)) {
+      const arrow = document.createElement('div');
+      arrow.className = 'trapArrow';
+      arrow.textContent = '➟';
+      pieceDiv.appendChild(arrow);
+    }
+  }
+
+  function updateModeBtn() {
+    modeBtn.textContent = upMode ? 'Cờ úp' : 'Cờ thường';
+    modeBtn.classList.toggle('modeOn', upMode);
+  }
+
+  function shuffleArray(arr) {
+    for (let i = arr.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [arr[i], arr[j]] = [arr[j], arr[i]];
+    }
+    return arr;
+  }
+
+  function buildPiecesForMode() {
+    if (!upMode) {
+      revealedIds = new Set(initialPieces.map(p => p.id));
+      return structuredClone(initialPieces);
+    }
+    revealedIds = new Set();
+    const bluePieces = initialPieces.filter(p => p.side === 'blue').map(p => ({ ...p }));
+    const redPieces = initialPieces.filter(p => p.side === 'red').map(p => ({ ...p }));
+    const bluePos = bluePieces.map(p => ({ x: p.x, y: p.y }));
+    const redPos = redPieces.map(p => ({ x: p.x, y: p.y }));
+    shuffleArray(bluePos);
+    shuffleArray(redPos);
+    bluePieces.forEach((p, i) => { p.x = bluePos[i].x; p.y = bluePos[i].y; });
+    redPieces.forEach((p, i) => { p.x = redPos[i].x; p.y = redPos[i].y; });
+    return [...bluePieces, ...redPieces];
+  }
+
+  function isHiddenPiece(piece) {
+    return upMode && !revealedIds.has(piece.id);
+  }
+  
+  function isWaterOrTide(x, y) {
+    const t = terrain(x, y);
+    return t === 'water' || t === 'tide';
+  }
+  
+  function syncTurnUI() {
+    turnValue.textContent = state.turn === 'blue' ? 'XANH' : 'ĐỎ';
+    turnValue.className = 'turnValue ' + state.turn;
+  }
 
   const pieceDefs = {
     rat:     { rank: 1, emoji: '🐭', name: 'Chuột' },
@@ -512,6 +721,9 @@ border-radius:10px;
   ];
 
   const terrain = (x, y) => {
+    if (state && state.tideActive && y === 4 && x >= 0 && x < W) {
+      return 'tide';
+    }
     const denBlue = x === 3 && y === 0;
     const denRed = x === 3 && y === 8;
     const trapBlue = (x === 2 && y === 0) || (x === 4 && y === 0) || (x === 3 && y === 1);
@@ -525,23 +737,120 @@ border-radius:10px;
     return 'land';
   };
 
+  // Địa hình gốc không bao gồm thủy triều
+  function baseTerrain(x, y) {
+    const denBlue = x === 3 && y === 0;
+    const denRed = x === 3 && y === 8;
+    const trapBlue = (x === 2 && y === 0) || (x === 4 && y === 0) || (x === 3 && y === 1);
+    const trapRed = (x === 2 && y === 8) || (x === 4 && y === 8) || (x === 3 && y === 7);
+    const water = (y >= 3 && y <= 5) && (x === 1 || x === 2 || x === 4 || x === 5);
+    if (denBlue) return 'denBlue';
+    if (denRed) return 'denRed';
+    if (trapBlue) return 'trapBlue';
+    if (trapRed) return 'trapRed';
+    if (water) return 'water';
+    return 'land';
+  }
+
   let state;
 
   function reset() {
+    clearTimeout(aiTimer);
+    aiTimer = null;
+    aiThinking = false;
     state = {
-      pieces: structuredClone(initialPieces),
+      pieces: buildPiecesForMode(),
       turn: 'blue',
       selectedId: null,
       legal: [],
-      winner: null
+      winner: null,
+      tideActive: false,
+      tideAnimating: false,
+      tideCountdown: 3
     };
+    updateModeBtn();
+    tideBtn.classList.toggle('tideOn', tideMode);
     winnerPanel.classList.remove('show');
     winnerEl.classList.remove('show');
     winnerEl.textContent = '';
-    setStatus('Chọn một quân của bên đang đi.');
+    startHumanTurn();
+    cellMap.clear();
+    grassMap.clear();
     render();
   }
+  
+  function applyTide() {
+    state.tideActive = true;
+    state.tideAnimating = true;
 
+    // Giết quân (trừ chuột) ở hàng 5
+    const victims = state.pieces.filter(p => p.y === 4 && p.type !== 'rat');
+    for (const v of victims) {
+      const idx = state.pieces.findIndex(p => p.id === v.id);
+      if (idx >= 0) state.pieces.splice(idx, 1);
+    }
+    if (victims.length) setStatus('Thủy triều dâng! Một số quân bị chết đuối.');
+
+    // Kiểm tra thắng/thua
+    if (!state.pieces.some(p => p.side === HUMAN_SIDE)) {
+      state.winner = AI_SIDE;
+      winnerEl.textContent = 'AI thắng do thủy triều!';
+    } else if (!state.pieces.some(p => p.side === AI_SIDE)) {
+      state.winner = HUMAN_SIDE;
+      winnerEl.textContent = 'Bạn thắng do thủy triều!';
+    }
+    if (state.winner) {
+      winnerPanel.classList.add('show');
+      winnerEl.classList.add('show');
+    }
+    // Không render hay tạo overlay ở đây
+  }
+  
+  function createTideOverlays(phase) {
+    // Xóa overlay cũ
+    boardEl.querySelectorAll('.tide-overlay').forEach(el => el.remove());
+
+    for (let x = 0; x < W; x++) {
+      const cell = cellMap.get(`${x},4`);   // hàng thứ 5 (y=4)
+      if (!cell) continue;
+
+      const overlay = document.createElement('div');
+      overlay.className = `tide-overlay ${phase}`;
+      overlay.style.left = cell.offsetLeft + 'px';
+      overlay.style.top = cell.offsetTop + 'px';
+      overlay.style.width = cell.offsetWidth + 'px';
+      overlay.style.height = cell.offsetHeight + 'px';
+      overlay.style.zIndex = '15';
+      boardEl.appendChild(overlay);
+
+      // Tự xóa sau khi animation kết thúc (phòng trường hợp chưa kịp render lại)
+      overlay.addEventListener('animationend', () => overlay.remove());
+    }
+  }
+  
+  function startHumanTurn() {
+    if (tideMode && !state.tideActive && state.tideCountdown <= 0) {
+      applyTide();
+      state.tideCountdown = 3;
+      if (state.winner) {
+        render();
+        return;
+      }
+      render();
+      // Chờ layout hoàn tất để lấy đúng vị trí cell
+      requestAnimationFrame(() => {
+        createTideOverlays('rising');
+        setTimeout(() => {
+          state.tideAnimating = false;
+          render();
+          clearSelection('Đến lượt bạn.');
+        }, 1500);
+      });
+      return;
+    }
+    clearSelection('Đến lượt bạn.');
+  }
+  
   function pieceAt(x, y, pieces = state.pieces) {
     return pieces.find(p => p.x === x && p.y === y) || null;
   }
@@ -564,15 +873,12 @@ border-radius:10px;
   }
   function canCapture(attacker, defender, ax, ay, dx, dy) {
     if (attacker.side === defender.side) return false;
-
-    const attackerInWater = isWater(ax, ay);
-    const defenderInWater = isWater(dx, dy);
+    const attackerInWater = isWaterOrTide(ax, ay);
+    const defenderInWater = isWaterOrTide(dx, dy);
     if (attacker.type !== 'rat' && defenderInWater) return false;
     if (defender.type === 'rat' && defenderInWater && attacker.type !== 'rat') return false;
-
     const aRank = effectiveRank(attacker, ax, ay);
     const dRank = effectiveRank(defender, dx, dy);
-
     if (attacker.type === 'rat' && defender.type === 'elephant') return true;
     if (attacker.type === 'elephant' && defender.type === 'rat') return false;
     if (attacker.type === 'rat' && defender.type === 'rat') return attackerInWater === defenderInWater;
@@ -583,34 +889,39 @@ border-radius:10px;
   function legalMoves(piece) {
     const moves = [];
     const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
-
     for (const [dx, dy] of dirs) {
       const x = piece.x + dx;
       const y = piece.y + dy;
       if (!inBounds(x, y) || isOwnDen(piece, x, y)) continue;
       const occ = pieceAt(x, y);
       if (!occ) {
-        if (piece.type === 'rat' || !isWater(x, y)) moves.push({x, y, capture:false});
-      } else if (occ.side !== piece.side && canCapture(piece, occ, piece.x, piece.y, x, y)) {
-        moves.push({x, y, capture:true});
+        if (piece.type === 'rat' || !isWaterOrTide(x, y)) moves.push({x, y, capture:false});
+      } else {
+        if (occ.side === piece.side) continue;
+        if (upMode && !revealedIds.has(occ.id)) {
+          if (canCapture(piece, occ, piece.x, piece.y, x, y)) {
+            moves.push({x, y, capture:true, hidden:true});
+          }
+        } else {
+          if (canCapture(piece, occ, piece.x, piece.y, x, y)) {
+            moves.push({x, y, capture:true, hidden:false});
+          }
+        }
       }
     }
-
     if (piece.type === 'tiger' || piece.type === 'lion') {
       for (const [dx, dy] of dirs) {
         let nx = piece.x + dx;
         let ny = piece.y + dy;
-        if (!inBounds(nx, ny) || !isWater(nx, ny)) continue;
-
+        if (!inBounds(nx, ny) || !isWaterOrTide(nx, ny)) continue;
         let blocked = false;
-        while (inBounds(nx, ny) && isWater(nx, ny)) {
+        while (inBounds(nx, ny) && isWaterOrTide(nx, ny)) {
           const occ = pieceAt(nx, ny);
           if (occ && occ.type === 'rat') blocked = true;
           nx += dx;
           ny += dy;
         }
         if (blocked || !inBounds(nx, ny) || isOwnDen(piece, nx, ny)) continue;
-
         const occ = pieceAt(nx, ny);
         if (!occ) moves.push({x:nx, y:ny, capture:false, jump:true});
         else if (occ.side !== piece.side && canCapture(piece, occ, piece.x, piece.y, nx, ny)) {
@@ -620,37 +931,318 @@ border-radius:10px;
     }
     return moves;
   }
+  function otherSide(side) {
+    return side === HUMAN_SIDE ? AI_SIDE : HUMAN_SIDE;
+  }
+
+  function withTempState(st, fn) {
+    const prev = state;
+    state = st;
+    try { return fn(); } finally { state = prev; }
+  }
+
+  function cloneStateForAI(st) {
+    return {
+      pieces: st.pieces.map(p => ({ ...p })),
+      turn: st.turn,
+      selectedId: null,
+      legal: [],
+      winner: st.winner
+    };
+  }
+
+  function pieceAtIn(st, x, y) {
+    return st.pieces.find(p => p.x === x && p.y === y) || null;
+  }
+
+  function isTrapForIn(piece, x, y) {
+    const t = terrain(x, y);
+    return (piece.side === 'blue' && t === 'trapRed') || (piece.side === 'red' && t === 'trapBlue');
+  }
+
+  function isEnemyDenIn(piece, x, y) {
+    const t = terrain(x, y);
+    return (piece.side === 'blue' && t === 'denRed') || (piece.side === 'red' && t === 'denBlue');
+  }
+
+  function legalMovesIn(st, piece) {
+    if (!piece) return [];
+    if (upMode && !revealedIds.has(piece.id)) return [];
+    return withTempState(st, () => legalMoves(piece));
+  }
+
+  function allMovesIn(st, side) {
+    const moves = [];
+    for (const p of st.pieces) {
+      if (p.side !== side) continue;
+      for (const mv of legalMovesIn(st, p)) {
+        moves.push({...mv, pieceId: p.id, fromX: p.x, fromY: p.y, side: p.side, type: p.type});
+      }
+    }
+    return moves;
+  }
+
+  function applySimMove(st, move) {
+    const piece = st.pieces.find(p => p.id === move.pieceId);
+    if (!piece) return;
+    const target = pieceAtIn(st, move.x, move.y);
+    if (target && target.side !== piece.side) {
+      st.pieces = st.pieces.filter(p => p.id !== target.id);
+    }
+    piece.x = move.x;
+    piece.y = move.y;
+    if (isEnemyDenIn(piece, move.x, move.y)) {
+      st.winner = piece.side;
+      return;
+    }
+    if (!st.pieces.some(p => p.side !== piece.side)) {
+      st.winner = piece.side;
+      return;
+    }
+    st.turn = otherSide(piece.side);
+  }
+
+  function evaluateBoard(st) {
+    function pieceMobility(st, piece) { return legalMovesIn(st, piece).length; }
+    function escapePressureScore(st, piece) {
+      const moves = legalMovesIn(st, piece);
+      const n = moves.length;
+      if (n === 0) return 5000;
+      if (n === 1) return 1800;
+      if (n === 2) return 700;
+      if (n === 3) return 250;
+      return 0;
+    }
+    function edgeTrapScore(piece) {
+      let score = 0;
+      if (piece.x === 0 || piece.x === 6) score += 120;
+      if (piece.y === 0 || piece.y === 8) score += 120;
+      if ((piece.x === 0 || piece.x === 6) && (piece.y === 0 || piece.y === 8)) score += 220;
+      return score;
+    }
+    if (st.winner === AI_SIDE) return 1000000;
+    if (st.winner === HUMAN_SIDE) return -1000000;
+
+    let score = 0;
+    const aiMoves = allMovesIn(st, AI_SIDE);
+    const humanMoves = allMovesIn(st, HUMAN_SIDE);
+    for (const m of humanMoves) {
+      const piece = st.pieces.find(p => p.id === m.pieceId);
+      if (piece && isEnemyDenIn(piece, m.x, m.y)) score -= 100000;
+    }
+    for (const p of st.pieces) {
+      const val = PIECE_SCORE[p.type] || 0;
+      const sign = p.side === AI_SIDE ? 1 : -1;
+      score += sign * val;
+      if (isTrapForIn(p, p.x, p.y)) score += sign * -140;
+      const target = p.side === AI_SIDE ? { x:3, y:0 } : { x:3, y:8 };
+      const dist = Math.abs(p.x - target.x) + Math.abs(p.y - target.y);
+      score += sign * (18 - dist) * 3;
+      if (p.side === HUMAN_SIDE) {
+        if (dist <= 1) score -= 2500;
+        else if (dist === 2) score -= 1200;
+        else if (dist === 3) score -= 500;
+      } else {
+        if (dist <= 1) score += 1800;
+        else if (dist === 2) score += 900;
+      }
+      const enemyMoves = p.side === AI_SIDE ? humanMoves : aiMoves;
+      if (enemyMoves.some(m => m.capture && m.x === p.x && m.y === p.y)) {
+        score += p.side === AI_SIDE ? -val * 0.55 : val * 0.35;
+      }
+    }
+    score += aiMoves.length * 4;
+    score -= humanMoves.length * 4;
+    return score;
+  }
+
+  function minimax(st, depth, maximizing, alpha, beta) {
+    if (depth === 0 || st.winner) return evaluateBoard(st);
+    const side = maximizing ? AI_SIDE : HUMAN_SIDE;
+    const moves = allMovesIn(st, side);
+    if (!moves.length) return maximizing ? -900000 : 900000;
+    if (maximizing) {
+      let best = -Infinity;
+      for (const move of moves) {
+        const next = cloneStateForAI(st);
+        applySimMove(next, move);
+        const value = minimax(next, depth - 1, false, alpha, beta);
+        best = Math.max(best, value);
+        alpha = Math.max(alpha, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    } else {
+      let best = Infinity;
+      for (const move of moves) {
+        const next = cloneStateForAI(st);
+        applySimMove(next, move);
+        const value = minimax(next, depth - 1, true, alpha, beta);
+        best = Math.min(best, value);
+        beta = Math.min(beta, best);
+        if (beta <= alpha) break;
+      }
+      return best;
+    }
+  }
+
+  function chooseAIMove(st, depth = AI_DEPTH) {
+    if (upMode) {
+      const aiDen = { x: 3, y: 8 };
+      const humanPieces = st.pieces.filter(p => p.side === HUMAN_SIDE && revealedIds.has(p.id));
+      let immediateThreat = false;
+      for (let p of humanPieces) {
+        const dist = Math.abs(p.x - aiDen.x) + Math.abs(p.y - aiDen.y);
+        if (dist <= 2) { immediateThreat = true; break; }
+      }
+      if (!immediateThreat) {
+        const hiddenAI = st.pieces.filter(p => p.side === AI_SIDE && !revealedIds.has(p.id));
+        if (hiddenAI.length) {
+          const randomIndex = Math.floor(Math.random() * hiddenAI.length);
+          return { kind: 'reveal', pieceId: hiddenAI[randomIndex].id };
+        }
+      }
+    }
+    const moves = allMovesIn(st, AI_SIDE);
+    if (!moves.length) return null;
+    for (const move of moves) {
+      const next = cloneStateForAI(st);
+      applySimMove(next, move);
+      if (next.winner === AI_SIDE) return move;
+    }
+    let bestMove = moves[0];
+    let bestScore = -Infinity;
+    for (const move of moves) {
+      const next = cloneStateForAI(st);
+      applySimMove(next, move);
+      const score = next.winner ? evaluateBoard(next) : minimax(next, depth - 1, false, -Infinity, Infinity);
+      if (score > bestScore) { bestScore = score; bestMove = move; }
+    }
+    return bestMove;
+  }
+
+  function finishAITurn(piece) {
+    if (state.winner) { aiThinking = false; render(); return; }
+    if (isEnemyDen(piece, piece.x, piece.y)) {
+      state.winner = AI_SIDE;
+      winnerEl.textContent = 'AI chiến thắng bằng cách vào hang đối thủ!';
+      winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+      setStatus('Trận đấu kết thúc.');
+      aiThinking = false; render(); return;
+    }
+    if (!state.pieces.some(p => p.side === HUMAN_SIDE)) {
+      state.winner = AI_SIDE;
+      winnerEl.textContent = 'AI chiến thắng vì bạn không còn quân.';
+      winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+      setStatus('Trận đấu kết thúc.');
+      aiThinking = false; render(); return;
+    }
+    if (tideMode && state.tideActive) {
+      // Bắt đầu rút
+      state.tideActive = false;
+      state.tideAnimating = true;
+      state.tideCountdown = 3;
+      render();
+      requestAnimationFrame(() => {
+        createTideOverlays('receding');
+        setTimeout(() => {
+          state.tideAnimating = false;
+          render();
+          state.turn = HUMAN_SIDE;
+          aiThinking = false;
+          startHumanTurn();
+        }, 1500);
+      });
+      return;
+    } else if (tideMode && !state.tideActive) {
+      state.tideCountdown--;
+    }
+    state.turn = HUMAN_SIDE;
+    aiThinking = false;
+    startHumanTurn();
+  }
+
+  function executeAIMove(move) {
+    if (move.kind === 'reveal') {
+      const piece = state.pieces.find(p => p.id === move.pieceId);
+      if (piece) revealGrass(piece);
+      aiThinking = false;
+      state.turn = HUMAN_SIDE;
+      clearSelection('AI đã vạch cỏ.', false);
+      syncTurnUI();
+      return;
+    }
+    const piece = state.pieces.find(p => p.id === move.pieceId);
+    if (!piece || state.winner) { aiThinking = false; return; }
+    const defender = pieceAt(move.x, move.y);
+    if (defender && defender.side === HUMAN_SIDE) {
+      captureFx = { x: move.x, y: move.y };
+      render();
+      setTimeout(() => {
+        const idx = state.pieces.findIndex(p => p.id === defender.id);
+        if (idx >= 0) state.pieces.splice(idx, 1);
+        captureFx = null;
+        piece.x = move.x; piece.y = move.y;
+        finishAITurn(piece);
+      }, 420);
+      return;
+    }
+    piece.x = move.x; piece.y = move.y;
+    finishAITurn(piece);
+  }
+
+  function scheduleAIMove() {
+    if (state.winner || state.turn !== AI_SIDE || aiThinking) return;
+    clearTimeout(aiTimer);
+    aiThinking = true;
+    setStatus('AI đang suy nghĩ...');
+    aiTimer = setTimeout(() => {
+      const move = chooseAIMove(state, AI_DEPTH);
+      if (!move) {
+        aiThinking = false;
+        state.winner = HUMAN_SIDE;
+        winnerEl.textContent = 'Bạn thắng vì AI không còn nước đi!';
+        winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+        setStatus('Trận đấu kết thúc.');
+        render(); return;
+      }
+      executeAIMove(move);
+    }, 260);
+  }
 
   function setStatus(text) { statusEl.textContent = text; }
   function sideName(side) { return side === 'blue' ? 'Xanh' : 'Đỏ'; }
 
   function render() {
+    cellMap.clear();
+    grassMap.clear();
     turnValue.textContent = state.turn === 'blue' ? 'XANH' : 'ĐỎ';
     turnValue.className = 'turnValue ' + state.turn;
+    
     boardEl.innerHTML = '';
-
     const selected = state.pieces.find(p => p.id === state.selectedId) || null;
     const moves = state.legal;
-
     for (let y = 0; y < H; y++) {
       for (let x = 0; x < W; x++) {
         const cell = document.createElement('div');
-        cell.className = 'cell ' + terrain(x, y).replace('denBlue','den').replace('denRed','den');
+        const key = `${x},${y}`;
+        cell.dataset.key = key;
+        cellMap.set(key, cell);
+        
+        // Xác định địa hình hiển thị: nếu đang trong animation dâng, ẩn nền tide
+        let displayTerrain = terrain(x, y);
+        if (displayTerrain === 'tide' && state.tideAnimating) {
+          displayTerrain = baseTerrain(x, y);
+        }
+        cell.className = 'cell ' + displayTerrain.replace('denBlue','den').replace('denRed','den');
+        
         if (selected && selected.x === x && selected.y === y) cell.classList.add('selected');
         const hint = moves.find(m => m.x === x && m.y === y);
         if (hint) cell.classList.add(hint.capture ? 'captureHint' : 'moveHint');
-
         const piece = pieceAt(x, y);
-                if (
-          captureFx &&
-          captureFx.x === x &&
-          captureFx.y === y
-        ){
-          cell.innerHTML = `
-            <div class="captureFx">
-              <i class="fa-solid fa-skull"></i>
-            </div>
-          `;
+        if (captureFx && captureFx.x === x && captureFx.y === y) {
+          const icon = captureFx.icon || '<i class="fa-solid fa-skull"></i>';
+          cell.innerHTML = `<div class="captureFx">${icon}</div>`;
           boardEl.appendChild(cell);
           continue;
         }
@@ -658,11 +1250,15 @@ border-radius:10px;
           const def = pieceDefs[piece.type];
           const node = document.createElement('div');
           node.className = 'piece ' + piece.side;
-          const rank = isTrapFor(piece, x, y) ? '0' : String(def.rank);
-          node.innerHTML = `
-<div class="emoji">${def.emoji}</div>
-${isTrapFor(piece, x, y) ? '<div class="trapArrow">➟</div>' : ''}
-`;
+          const hidden = isHiddenPiece(piece);
+          if (hidden) {
+            const grass = document.createElement("span");
+            grass.className = "grass";
+            grassMap.set(`${x},${y}`, grass);
+            node.appendChild(grass);
+          } else {
+            node.innerHTML = `<div class="emoji">${def.emoji}</div>${isTrapFor(piece, x, y) ? '<div class="trapArrow">➟</div>' : ''}`;
+          }
           cell.appendChild(node);
         } else {
           const t = terrain(x, y);
@@ -670,26 +1266,45 @@ ${isTrapFor(piece, x, y) ? '<div class="trapArrow">➟</div>' : ''}
           else if (t === 'trapBlue' || t === 'trapRed') cell.textContent = 'BẪY';
           else if (t === 'water') cell.textContent = '';
         }
-
+        // Chỉ thêm nền nước tĩnh khi đã dâng xong (không còn animating)
+        if (terrain(x, y) === 'tide' && !state.tideAnimating) {
+          cell.classList.add('tide');
+        }
+        // Cảnh báo thủy triều sắp dâng (chỉ khi tideMode, chưa active, sắp dâng vào lượt sau)
+        if (tideMode && !state.tideActive && state.tideCountdown === 1 && y === 4 && terrain(x, y) !== 'water') {
+          const warn = document.createElement('div');
+          warn.className = 'tideWarning';
+          warn.textContent = '⚠️';
+          cell.appendChild(warn);
+        }
         cell.addEventListener('click', () => onCellClick(x, y));
         boardEl.appendChild(cell);
       }
     }
   }
 
-  function clearSelection(msg) {
+  function clearSelection(msg, doRender = true) {
     state.selectedId = null;
     state.legal = [];
     if (msg) setStatus(msg);
-    render();
+    if (doRender) render(); else syncTurnUI();
   }
 
   function onCellClick(x, y) {
-    if (state.winner) return;
-
+    if (state.tideAnimating) return;
+    if (state.winner || state.turn === AI_SIDE || aiThinking) return;
     const selected = state.pieces.find(p => p.id === state.selectedId) || null;
     const clickedPiece = pieceAt(x, y);
-
+    if (upMode && clickedPiece && !revealedIds.has(clickedPiece.id)) {
+      revealGrass(clickedPiece);
+      state.selectedId = null;
+      state.legal = [];
+      state.turn = otherSide(state.turn);
+      setStatus('Đã vạch cỏ, mất lượt.');
+      syncTurnUI();
+      if (state.turn === AI_SIDE) scheduleAIMove();
+      return;
+    }
     if (!selected) {
       if (clickedPiece && clickedPiece.side === state.turn) {
         state.selectedId = clickedPiece.id;
@@ -701,12 +1316,7 @@ ${isTrapFor(piece, x, y) ? '<div class="trapArrow">➟</div>' : ''}
       }
       return;
     }
-
-    if (clickedPiece && clickedPiece.id === selected.id) {
-      clearSelection('Đã bỏ chọn.');
-      return;
-    }
-
+    if (clickedPiece && clickedPiece.id === selected.id) { clearSelection('Đã bỏ chọn.'); return; }
     if (clickedPiece && clickedPiece.side === state.turn) {
       state.selectedId = clickedPiece.id;
       state.legal = legalMoves(clickedPiece);
@@ -714,95 +1324,106 @@ ${isTrapFor(piece, x, y) ? '<div class="trapArrow">➟</div>' : ''}
       render();
       return;
     }
-
     const move = state.legal.find(m => m.x === x && m.y === y);
-    if (!move) {
-      setStatus('Nước đi không hợp lệ.');
-      return;
-    }
-
+    if (!move) { setStatus('Nước đi không hợp lệ.'); return; }
     const from = {x:selected.x, y:selected.y};
     const defender = clickedPiece;
-
-    if (isEnemyDen(selected, x, y)) {
-      selected.x = x;
-      selected.y = y;
-
-      state.selectedId = null;
-      state.legal = [];
-
-      state.winner = selected.side;
-      winnerEl.textContent = `${sideName(selected.side)} chiến thắng bằng cách vào hang đối thủ!`;
-      winnerPanel.classList.add('show');
-      winnerEl.classList.add('show');
-      setStatus('Trận đấu kết thúc.');
-
-      render();
+    // Tấn công vào quân ẩn (cỏ)
+    if (move && move.hidden) {
+      if (canCapture(selected, defender, from.x, from.y, x, y)) {
+        const idx = state.pieces.findIndex(p => p.id === defender.id);
+        if (idx >= 0) state.pieces.splice(idx, 1);
+        captureFx = { x, y, icon: '💥' };
+        render();
+        setTimeout(() => {
+          captureFx = null;
+          selected.x = x; selected.y = y;
+          if (!state.pieces.some(p => p.side !== selected.side)) {
+            state.winner = selected.side;
+            winnerEl.textContent = `${sideName(selected.side)} chiến thắng!`;
+            winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+            setStatus('Trận đấu kết thúc.'); render(); return;
+          }
+          state.turn = AI_SIDE;
+          clearSelection('Đến lượt AI.');
+          scheduleAIMove();
+        }, 300);
+      } else {
+        const idx = state.pieces.findIndex(p => p.id === selected.id);
+        if (idx >= 0) state.pieces.splice(idx, 1);
+        captureFx = { x: from.x, y: from.y, icon: '💀' };
+        render();
+        setTimeout(() => {
+          captureFx = null;
+          if (!state.pieces.some(p => p.side !== selected.side)) {
+            state.winner = AI_SIDE;
+            winnerEl.textContent = 'AI chiến thắng!';
+            winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+            setStatus('Trận đấu kết thúc.'); render(); return;
+          }
+          state.turn = AI_SIDE;
+          clearSelection('Đến lượt AI.');
+          scheduleAIMove();
+        }, 300);
+      }
       return;
     }
-
+    if (isEnemyDen(selected, x, y)) {
+      selected.x = x; selected.y = y;
+      state.selectedId = null; state.legal = [];
+      state.winner = selected.side;
+      winnerEl.textContent = `${sideName(selected.side)} chiến thắng bằng cách vào hang đối thủ!`;
+      winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+      setStatus('Trận đấu kết thúc.');
+      render(); return;
+    }
     if (defender && defender.side !== selected.side) {
-      if (!canCapture(selected, defender, from.x, from.y, x, y)) {
-        setStatus('Quân này không thể ăn quân đó.');
-        return;
-      }
-           captureFx = {
-        x,
-        y
-      };
-
+      if (!canCapture(selected, defender, from.x, from.y, x, y)) { setStatus('Quân này không thể ăn quân đó.'); return; }
+      captureFx = { x, y };
       render();
-
       setTimeout(() => {
         const idx = state.pieces.findIndex(p => p.id === defender.id);
-        state.pieces.splice(idx, 1);
+        if (idx >= 0) state.pieces.splice(idx, 1);
         captureFx = null;
-
-        selected.x = x;
-        selected.y = y;
-
+        selected.x = x; selected.y = y;
         const enemyStillExists = state.pieces.some(p => p.side !== selected.side);
         if (!enemyStillExists) {
           state.winner = selected.side;
           winnerEl.textContent = `${sideName(selected.side)} chiến thắng bằng cách ăn hết quân đối thủ!`;
-          winnerPanel.classList.add('show');
-          winnerEl.classList.add('show');
-          setStatus('Trận đấu kết thúc.');
-          render();
-          return;
+          winnerPanel.classList.add('show'); winnerEl.classList.add('show');
+          setStatus('Trận đấu kết thúc.'); render(); return;
         }
-
-        state.turn = state.turn === 'blue' ? 'red' : 'blue';
-        clearSelection(`Đã đi xong. Tới lượt ${sideName(state.turn)}.`);
+        state.turn = AI_SIDE;
+        clearSelection('Đến lượt AI.');
+        scheduleAIMove();
       }, 420);
-
       return;
     }
-
-    selected.x = x;
-    selected.y = y;
-
+    selected.x = x; selected.y = y;
     const enemyStillExists = state.pieces.some(p => p.side !== selected.side);
     if (!enemyStillExists) {
       state.winner = selected.side;
       winnerEl.textContent = `${sideName(selected.side)} chiến thắng bằng cách ăn hết quân đối thủ!`;
-      winnerPanel.classList.add('show');
-      winnerEl.classList.add('show');
+      winnerPanel.classList.add('show'); winnerEl.classList.add('show');
       setStatus('Trận đấu kết thúc.');
-      clearSelection();
-      render();
-      return;
+      clearSelection(); render(); return;
     }
-
-    state.turn = state.turn === 'blue' ? 'red' : 'blue';
-    clearSelection(`Đã đi xong. Tới lượt ${sideName(state.turn)}.`);
+    state.turn = AI_SIDE;
+    clearSelection('Đến lượt AI.');
+    scheduleAIMove();
   }
 
   function openRules() { rulesModal.classList.add('show'); }
   function closeRules() { rulesModal.classList.remove('show'); }
 
   restartBtn.addEventListener('click', reset);
-
+  modeBtn.addEventListener('click', () => { upMode = !upMode; reset(); });
+  tideBtn.addEventListener('click', () => {
+    tideMode = !tideMode;
+    tideBtn.classList.toggle('tideOn', tideMode);
+    reset();
+  });
+  updateModeBtn();
   infoBtn.addEventListener('click', openRules);
   closeRulesBtn.addEventListener('click', closeRules);
   rulesModal.addEventListener('click', (e) => { if (e.target === rulesModal) closeRules(); });
