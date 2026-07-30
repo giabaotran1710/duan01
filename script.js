@@ -94,7 +94,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { id: 'sudoku', name: 'Sudoku', diff: '5/5', genre: ['tri-tue'] },
         { id: 'timmaulac', name: 'Tìm màu lạc', diff:'3/5', genre: ['quan-sat']},
         { id: 'dayhop', name: 'Đẩy hộp', diff:'4/5', genre: ['tri-tue']},
-       { id: 'cothu', name: 'Cờ thú', diff:'?/5', genre: ['co','chien-thuat']},
+       { id: 'cothu', name: 'Cờ thú', diff:'3/5', genre: ['co','chien-thuat']},
 
 
     ];
@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
         'sudoku': 'game/sudoku.html',
         'timmaulac':'game/timmaulac.html',
         'dayhop':'game/dayhop.html',
-        'cothu':'maintenance.html',
+        'cothu':'game/cothu.html',
 
     };
 
