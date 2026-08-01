@@ -54,7 +54,7 @@ function updateFoodChain() {
     foodChain.textContent = "🐘 > 🦁 > 🐯 > 🐆 > 🐺 > 🐶 > 🐱 > 🐭 > 🐘";
   }
 }
-
+  
   function revealGrass(piece) {
     const key = `${piece.x},${piece.y}`;
     const grass = grassMap.get(key);
@@ -80,7 +80,7 @@ function updateFoodChain() {
 function updateModeBtn() {
   modeBtn.textContent = upMode ? 'Cờ úp' : 'Cờ thường';
   modeBtn.classList.toggle('modeOn', upMode);
-
+  
   // Vô hiệu hóa các nút khi đang ở Rừng sâu hoặc Tử chiến
   if (forestMode || deathMatchMode) {
     modeBtn.classList.add('disabled-btn');
@@ -88,7 +88,7 @@ function updateModeBtn() {
   } else {
     modeBtn.classList.remove('disabled-btn');
   }
-
+  
   // Luôn cho phép bấm nút thủy triều trừ khi đang Tử chiến
   if (deathMatchMode) {
     tideBtn.classList.add('disabled-btn');
@@ -249,12 +249,12 @@ function buildInitialPieces() {
   function isHiddenPiece(piece) {
     return upMode && !revealedIds.has(piece.id);
   }
-
+  
   function isWaterOrTide(x, y) {
     const t = terrain(x, y);
     return t === 'water' || t === 'tide';
   }
-
+  
   function syncTurnUI() {
     turnValue.textContent = state.turn === 'blue' ? 'XANH' : 'ĐỎ';
     turnValue.className = 'turnValue ' + state.turn;
@@ -465,7 +465,7 @@ else tideBtn.textContent = 'Thủy triều';
 lastRedMove = null;
     render();
   }
-
+  
   function applyTide() {
     state.tideActive = true;
     state.tideAnimating = true;
@@ -487,7 +487,7 @@ lastRedMove = null;
       winnerEl.classList.add('show');
     }
   }
-
+  
   function createTideOverlays(phase) {
     boardEl.querySelectorAll('.tide-overlay').forEach(el => el.remove());
     for (let x = 0; x < W; x++) {
@@ -504,7 +504,7 @@ lastRedMove = null;
       overlay.addEventListener('animationend', () => overlay.remove());
     }
   }
-
+  
   function startHumanTurn() {
     decreaseStatuses(state.pieces);
     if (tideMode && !state.tideActive && state.tideCountdown <= 0) {
@@ -527,7 +527,7 @@ lastRedMove = null;
     }
     clearSelection('Đến lượt bạn.');
   }
-
+  
   function pieceAt(x, y, pieces = state.pieces) {
     return pieces.find(p => p.x === x && p.y === y) || null;
   }
@@ -733,6 +733,15 @@ lastRedMove = null;
   }
 
   function applySimMove(st, move) {
+    // Mô phỏng đúng vòng đời trạng thái choáng/ngủ: mỗi lượt đi (kể cả lượt do AI tưởng tượng
+    // trước trong quá trình tìm kiếm) đều phải làm giảm bộ đếm choáng/ngủ của MỌI quân đi 1,
+    // giống hệt decreaseStatuses() ở ván thật. Trước đây bước này bị bỏ sót trong cây tìm kiếm,
+    // khiến hiệu ứng choáng của Cú (vốn chỉ kéo dài 3 lượt) bị AI xem như VĨNH VIỄN trong suốt
+    // nhánh tìm kiếm, dẫn tới AI đánh giá quá cao các đòn chọc choáng thay vì phòng thủ hang.
+    for (const p of st.pieces) {
+      if (p.stunned > 0) p.stunned--;
+      if (p.asleep > 0) p.asleep--;
+    }
     const piece = st.pieces.find(p => p.id === move.pieceId);
     if (!piece) return;
     const target = pieceAtIn(st, move.x, move.y);
@@ -844,13 +853,22 @@ lastRedMove = null;
     let score = 0;
     const aiMoves = allMovesIn(st, AI_SIDE);
     const humanMoves = allMovesIn(st, HUMAN_SIDE);
-    for (const m of humanMoves) {
-      const piece = st.pieces.find(p => p.id === m.pieceId);
-      if (piece && isEnemyDenIn(piece, m.x, m.y)) score -= 100000;
+    // Chỉ tính điểm thưởng "sắp thắng" cho bên THỰC SỰ đang được đi lượt này.
+    // Trước đây bonus này được cộng bất kể đến lượt ai, khiến AI đánh giá quá cao một quân
+    // đang áp sát hang địch dù đối thủ mới là người đi tiếp theo và có thể ăn mất quân đó
+    // trước (đặc biệt ở Rừng sâu, nơi cả 3 ô liền kề miệng hang đều là bẫy nên quân áp sát
+    // luôn ở thế bị bất kỳ quân nào của đối phương ăn tự do).
+    if (st.turn === HUMAN_SIDE) {
+      for (const m of humanMoves) {
+        const piece = st.pieces.find(p => p.id === m.pieceId);
+        if (piece && isEnemyDenIn(piece, m.x, m.y)) score -= 100000;
+      }
     }
-    for (const m of aiMoves) {
-      const piece = st.pieces.find(p => p.id === m.pieceId);
-      if (piece && isEnemyDenIn(piece, m.x, m.y)) score += 90000;
+    if (st.turn === AI_SIDE) {
+      for (const m of aiMoves) {
+        const piece = st.pieces.find(p => p.id === m.pieceId);
+        if (piece && isEnemyDenIn(piece, m.x, m.y)) score += 90000;
+      }
     }
     for (const p of st.pieces) {
       const val = PIECE_SCORE[p.type] || 0;
@@ -893,6 +911,17 @@ lastRedMove = null;
     });
   }
 
+  // Một nước đi được coi là "bắt buộc phải xét thêm" trong quiescence search nếu nó ăn quân
+  // HOẶC đi thẳng vào hang đối phương để thắng ngay. Trước đây quiescence chỉ mở rộng thêm
+  // các nước ăn quân, nên nếu nước thắng nằm ngay sau đường chân trời tìm kiếm chính, AI sẽ
+  // dùng điểm heuristic gần đúng (dễ sai) thay vì phát hiện chính xác cơ hội thắng đó.
+  function isForcingMove(st, m) {
+    if (m.capture) return true;
+    const piece = st.pieces.find(p => p.id === m.pieceId);
+    if (!piece) return false;
+    return isEnemyDenIn(piece, m.x, m.y);
+  }
+
   // Quiescence search: sau khi hết độ sâu, nếu còn nước ăn quân "nóng" thì tính thêm để tránh horizon effect
   function quiescence(st, maximizing, alpha, beta, qDepth) {
     const standPat = evaluateBoard(st);
@@ -901,7 +930,7 @@ lastRedMove = null;
       if (standPat >= beta) return standPat;
       alpha = Math.max(alpha, standPat);
       const side = AI_SIDE;
-      const captures = orderMoves(st, allMovesIn(st, side).filter(m => m.capture));
+      const captures = orderMoves(st, allMovesIn(st, side).filter(m => isForcingMove(st, m)));
       let best = standPat;
       for (const move of captures) {
         const next = cloneStateForAI(st);
@@ -916,7 +945,7 @@ lastRedMove = null;
       if (standPat <= alpha) return standPat;
       beta = Math.min(beta, standPat);
       const side = HUMAN_SIDE;
-      const captures = orderMoves(st, allMovesIn(st, side).filter(m => m.capture));
+      const captures = orderMoves(st, allMovesIn(st, side).filter(m => isForcingMove(st, m)));
       let best = standPat;
       for (const move of captures) {
         const next = cloneStateForAI(st);
@@ -964,6 +993,7 @@ lastRedMove = null;
   // Độ sâu tìm kiếm động: cuối ván (ít quân) tính sâu hơn vì không gian nước đi nhỏ lại
   function computeSearchDepth(st) {
     const totalPieces = st.pieces.length;
+    if (totalPieces <= 4) return AI_DEPTH + 4;
     if (totalPieces <= 6) return AI_DEPTH + 3;
     if (totalPieces <= 9) return AI_DEPTH + 2;
     if (totalPieces <= 12) return AI_DEPTH + 1;
