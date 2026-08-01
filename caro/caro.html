@@ -154,15 +154,11 @@
   </div>
 </div>
 <canvas id="confettiCanvas"></canvas>
-<footer> Version:D20260621-H12M52T0050 »»» developed by Tran Gia Bao</footer>
-
+<footer> Version:D20260108-H21M43T0050 »»» developed by Tran Gia Bao</footer>
 <script>
 // ==================== THAM SỐ ====================
 const SIZE = 15;
-const MAX_DEPTH = 20;
-const TIME_LIMIT = 1500;
-const CANDIDATE_LIMIT = 30; // tăng ứng viên
-const QUIESCENCE_DEPTH = 4;
+const CANDIDATE_LIMIT = 30; // chỉ dùng cho bình luận / dự phòng, engine chính nằm trong Worker
 
 let board = [];
 let cells = [];
@@ -188,28 +184,7 @@ const drawPopup = document.getElementById("draw-popup");
 const btnDrawAccept = document.getElementById("btn-draw-accept");
 const btnDrawReject = document.getElementById("btn-draw-reject");
 
-// ==================== ZOBRIST HASHING ====================
-const zobristTable = (() => {
-  const t = [];
-  for (let r = 0; r < SIZE; r++) {
-    t[r] = [];
-    for (let c = 0; c < SIZE; c++) {
-      t[r][c] = { X: Math.floor(Math.random() * 2 ** 30), O: Math.floor(Math.random() * 2 ** 30) };
-    }
-  }
-  return t;
-})();
-let boardHash = 0;
-
-// ==================== BẢNG CHUYỂN VỊ ====================
-const TT = new Map();
-const FLAG_EXACT = 0, FLAG_LOWERBOUND = 1, FLAG_UPPERBOUND = 2;
-
-// ==================== KILLER & HISTORY HEURISTIC ====================
-const killerMoves = Array(MAX_DEPTH + 1).fill(null).map(() => [null, null]);
-const historyTable = new Map();
-
-// ==================== ĐÁNH GIÁ ====================
+// ==================== ĐÁNH GIÁ (chỉ dùng để hiển thị thanh điểm + bình luận, KHÔNG dùng để quyết định nước đi) ====================
 const WEIGHTS = {
   FIVE: 1000000, OPEN_FOUR: 100000, FOUR_ONE: 10000,
   OPEN_THREE: 10000, THREE_ONE: 1000, OPEN_TWO: 500,
@@ -254,65 +229,7 @@ function scoreDirection(r, c, dr, dc, player) {
   return getSequenceScore(count, open);
 }
 
-function evaluateBoard(player) {
-  let score = 0;
-  const enemy = player === "X" ? "O" : "X";
-  const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] === "") continue;
-      const current = board[r][c];
-      for (const [dr, dc] of dirs) {
-        const pr = r - dr, pc = c - dc;
-        if (pr >= 0 && pr < SIZE && pc >= 0 && pc < SIZE && board[pr][pc] === current) continue;
-        let len = 0, openEnds = 0;
-        let cr = r, cc = c;
-        while (cr >= 0 && cr < SIZE && cc >= 0 && cc < SIZE && board[cr][cc] === current) { len++; cr += dr; cc += dc; }
-        if (cr >= 0 && cr < SIZE && cc >= 0 && cc < SIZE && board[cr][cc] === "") openEnds++;
-        const br = r - dr, bc = c - dc;
-        if (br >= 0 && br < SIZE && bc >= 0 && bc < SIZE && board[br][bc] === "") openEnds++;
-        const seqScore = getSequenceScore(len, openEnds);
-        if (current === player) score += seqScore; else score -= seqScore;
-      }
-    }
-  }
-  const aiFork = countForks(player);
-  const humanFork = countForks(enemy);
-  score += aiFork * 50000;
-  score -= humanFork * 60000;
-  return score;
-}
-
-function countForks(player) {
-  let forkCount = 0;
-  const dirs = [[1,0],[0,1],[1,1],[1,-1]];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "") continue;
-      let openThrees = 0;
-      for (const [dr, dc] of dirs) {
-        if (isOpenThreeAt(r, c, dr, dc, player)) openThrees++;
-      }
-      if (openThrees >= 2) forkCount++;
-    }
-  }
-  return forkCount;
-}
-
-function isOpenThreeAt(r, c, dr, dc, player) {
-  board[r][c] = player;
-  let len = 1, openEnds = 0;
-  let i = r + dr, j = c + dc;
-  while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { len++; i += dr; j += dc; }
-  if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") openEnds++;
-  i = r - dr; j = c - dc;
-  while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { len++; i -= dr; j -= dc; }
-  if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") openEnds++;
-  board[r][c] = "";
-  return len === 3 && openEnds === 2;
-}
-
-// ==================== NƯỚC ỨNG VIÊN (CẢI TIẾN BÁM SÁT) ====================
+// ==================== NƯỚC ỨNG VIÊN (dùng cho bình luận / dự phòng) ====================
 function hasNeighbor2(r, c) {
   for (let dr = -2; dr <= 2; dr++) {
     for (let dc = -2; dc <= 2; dc++) {
@@ -329,16 +246,14 @@ function getCandidateMoves() {
   const occupied = getOccupiedCount();
 
   if (occupied < 6) {
-    // Giai đoạn khai cuộc: lấy mọi ô trống trong phạm vi 2 của bất kỳ quân nào, ưu tiên gần đối thủ
-    const enemyPositions = [];
+    const positions = [];
     for (let r = 0; r < SIZE; r++) {
       for (let c = 0; c < SIZE; c++) {
-        if (board[r][c] === human) enemyPositions.push([r, c]);
-        else if (board[r][c] === ai) enemyPositions.push([r, c]); // cũng xét cả quân mình để bám
+        if (board[r][c] === human || board[r][c] === ai) positions.push([r, c]);
       }
     }
     const candidateSet = new Set();
-    for (const [er, ec] of enemyPositions) {
+    for (const [er, ec] of positions) {
       for (let dr = -2; dr <= 2; dr++) {
         for (let dc = -2; dc <= 2; dc++) {
           const nr = er + dr, nc = ec + dc;
@@ -350,7 +265,6 @@ function getCandidateMoves() {
     }
     moves = Array.from(candidateSet).map(s => s.split(',').map(Number));
   } else {
-    // Giai đoạn sau: dùng hasNeighbor2 như cũ
     for (let r = 0; r < SIZE; r++) {
       for (let c = 0; c < SIZE; c++) {
         if (board[r][c] !== "" || !hasNeighbor2(r, c)) continue;
@@ -362,25 +276,13 @@ function getCandidateMoves() {
   const scored = moves.map(([r, c]) => {
     const atk = scoreCell(r, c, ai);
     const def = scoreCell(r, c, human);
-    return { move: [r, c], score: Math.max(atk, def * 1.3) }; // tăng trọng số phòng thủ
+    return { move: [r, c], score: Math.max(atk, def * 1.3) };
   });
   scored.sort((a, b) => b.score - a.score);
   return scored.slice(0, CANDIDATE_LIMIT).map(item => item.move);
 }
 
-// ==================== CHIẾN THUẬT CƠ BẢN ====================
-function findWin(player) {
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "") continue;
-      board[r][c] = player;
-      if (checkWin(r, c, player)) { board[r][c] = ""; return [r, c]; }
-      board[r][c] = "";
-    }
-  }
-  return null;
-}
-
+// ==================== CHIẾN THUẬT DÙNG CHO BÌNH LUẬN (không dùng để quyết định nước đi thật) ====================
 function isOpenFour(r, c, player) {
   const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
   for (const [dr, dc] of dirs) {
@@ -447,186 +349,6 @@ function count(r, c, dr, dc, player) {
   return cnt;
 }
 
-// ==================== QUIESCENCE SEARCH ====================
-function quiescence(alpha, beta, isMaximizing, player, depth) {
-  const enemy = player === "X" ? "O" : "X";
-  if (depth <= 0 || Date.now() - startTime > TIME_LIMIT) {
-    return isMaximizing ? evaluateBoard(player) : -evaluateBoard(enemy);
-  }
-  const standPat = isMaximizing ? evaluateBoard(player) : -evaluateBoard(enemy);
-  if (isMaximizing) {
-    if (standPat >= beta) return beta;
-    if (standPat > alpha) alpha = standPat;
-  } else {
-    if (standPat <= alpha) return alpha;
-    if (standPat < beta) beta = standPat;
-  }
-  const candidates = [];
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "" || !hasNeighbor2(r, c)) continue;
-      const atk = scoreCell(r, c, isMaximizing ? player : enemy);
-      const def = scoreCell(r, c, isMaximizing ? enemy : player);
-      if (atk >= WEIGHTS.OPEN_FOUR || def >= WEIGHTS.OPEN_FOUR) candidates.push([r, c]);
-    }
-  }
-  if (candidates.length === 0) return standPat;
-  candidates.sort((a, b) => {
-    const sa = Math.max(scoreCell(a[0], a[1], player), scoreCell(a[0], a[1], enemy));
-    const sb = Math.max(scoreCell(b[0], b[1], player), scoreCell(b[0], b[1], enemy));
-    return sb - sa;
-  });
-  for (const [r, c] of candidates) {
-    const currentPlayer = isMaximizing ? player : enemy;
-    board[r][c] = currentPlayer;
-    boardHash ^= zobristTable[r][c][currentPlayer];
-    const score = quiescence(alpha, beta, !isMaximizing, player, depth - 1);
-    board[r][c] = "";
-    boardHash ^= zobristTable[r][c][currentPlayer];
-    if (isMaximizing) {
-      if (score >= beta) return beta;
-      if (score > alpha) alpha = score;
-    } else {
-      if (score <= alpha) return alpha;
-      if (score < beta) beta = score;
-    }
-  }
-  return isMaximizing ? alpha : beta;
-}
-
-// ==================== MINIMAX + ID + TIME ====================
-let startTime = 0;
-let bestMoveGlobal = null;
-
-function getBestMove() {
-  try {
-    if (getOccupiedCount() === 0) return [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
-    let move;
-    move = findWin(ai); if (move) return move;
-    move = findWin(human); if (move) return move;
-    move = findOpenFour(ai); if (move) return move;
-    move = findOpenFour(human); if (move) return move;
-    move = findDoubleThreat(ai); if (move) return move;
-    move = findDoubleThreat(human); if (move) return move;
-    startTime = Date.now();
-    bestMoveGlobal = null;
-    TT.clear();
-    killerMoves.forEach(arr => arr.fill(null));
-    historyTable.clear();
-    let currentDepth = 1;
-    while (currentDepth <= MAX_DEPTH) {
-      if (Date.now() - startTime > TIME_LIMIT) break;
-      let bestScore = -Infinity;
-      let tempBest = null;
-      const candidates = getCandidateMoves();
-      orderMoves(candidates, ai, 0);
-      for (const [r, c] of candidates) {
-        if (board[r][c] !== "") continue;
-        board[r][c] = ai;
-        boardHash ^= zobristTable[r][c][ai];
-        const score = minimax(currentDepth - 1, false, ai, -Infinity, Infinity, 0);
-        board[r][c] = "";
-        boardHash ^= zobristTable[r][c][ai];
-        if (score > bestScore) { bestScore = score; tempBest = [r, c]; }
-        if (Date.now() - startTime > TIME_LIMIT) break;
-      }
-      if (tempBest && (Date.now() - startTime <= TIME_LIMIT || currentDepth === 1)) {
-        bestMoveGlobal = tempBest;
-      }
-      currentDepth++;
-    }
-    if (!bestMoveGlobal) {
-      const empty = getEmptyCells().filter(([r, c]) => hasNeighbor2(r, c));
-      return empty.length > 0 ? empty[0] : [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
-    }
-    return bestMoveGlobal;
-  } catch (e) {
-    console.error("Lỗi trong getBestMove:", e);
-    const empty = getEmptyCells().filter(([r, c]) => hasNeighbor2(r, c));
-    return empty.length > 0 ? empty[0] : [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
-  }
-}
-
-function orderMoves(moves, player, depth) {
-  moves.forEach(([r, c], index) => {
-    let priority = 0;
-    if (scoreCell(r, c, ai) >= WEIGHTS.FIVE) priority += 20000;
-    if (scoreCell(r, c, human) >= WEIGHTS.FIVE) priority += 18000;
-    if (isOpenFour(r, c, ai)) priority += 15000;
-    if (isOpenFour(r, c, human)) priority += 14000;
-    const ttEntry = TT.get(boardHash);
-    if (ttEntry && ttEntry.bestMove && ttEntry.bestMove[0] === r && ttEntry.bestMove[1] === c) priority += 10000;
-    if (killerMoves[depth]) {
-      if (killerMoves[depth][0] && killerMoves[depth][0][0] === r && killerMoves[depth][0][1] === c) priority += 5000;
-      if (killerMoves[depth][1] && killerMoves[depth][1][0] === r && killerMoves[depth][1][1] === c) priority += 3000;
-    }
-    const key = `${r},${c},${player}`;
-    priority += (historyTable.get(key) || 0);
-    moves[index].priority = priority;
-  });
-  moves.sort((a, b) => b.priority - a.priority);
-  moves.forEach(m => delete m.priority);
-}
-
-function minimax(depth, isMaximizing, player, alpha, beta, qDepth) {
-  const enemy = player === "X" ? "O" : "X";
-  const winner = checkWinnerGlobal();
-  if (winner === player) return 900000 + depth * 1000;
-  if (winner === enemy) return -900000 - depth * 1000;
-  if (depth === 0) return quiescence(alpha, beta, isMaximizing, player, QUIESCENCE_DEPTH);
-  const ttEntry = TT.get(boardHash);
-  if (ttEntry && ttEntry.depth >= depth) {
-    if (ttEntry.flag === FLAG_EXACT) return ttEntry.score;
-    if (ttEntry.flag === FLAG_LOWERBOUND && ttEntry.score > alpha) alpha = ttEntry.score;
-    if (ttEntry.flag === FLAG_UPPERBOUND && ttEntry.score < beta) beta = ttEntry.score;
-    if (alpha >= beta) return ttEntry.score;
-  }
-  const candidates = getCandidateMoves();
-  if (candidates.length === 0) return evaluateBoard(player);
-  const currentPlayer = isMaximizing ? player : enemy;
-  orderMoves(candidates, currentPlayer, depth);
-  let bestScore = isMaximizing ? -Infinity : Infinity;
-  let bestMove = null;
-  let flag = FLAG_EXACT;
-  for (const [r, c] of candidates) {
-    if (board[r][c] !== "") continue;
-    board[r][c] = currentPlayer;
-    boardHash ^= zobristTable[r][c][currentPlayer];
-    const score = minimax(depth - 1, !isMaximizing, player, alpha, beta, qDepth + 1);
-    board[r][c] = "";
-    boardHash ^= zobristTable[r][c][currentPlayer];
-    if (isMaximizing) {
-      if (score > bestScore) { bestScore = score; bestMove = [r, c]; }
-      alpha = Math.max(alpha, score);
-    } else {
-      if (score < bestScore) { bestScore = score; bestMove = [r, c]; }
-      beta = Math.min(beta, score);
-    }
-    if (alpha >= beta) {
-      const ki = depth;
-      if (killerMoves[ki]) {
-        if (!killerMoves[ki][0] || (killerMoves[ki][0][0] !== r || killerMoves[ki][0][1] !== c)) {
-          killerMoves[ki][1] = killerMoves[ki][0];
-          killerMoves[ki][0] = [r, c];
-        }
-      }
-      const key = `${r},${c},${currentPlayer}`;
-      historyTable.set(key, (historyTable.get(key) || 0) + depth * depth);
-      flag = isMaximizing ? FLAG_LOWERBOUND : FLAG_UPPERBOUND;
-      break;
-    }
-  }
-  TT.set(boardHash, { depth, score: bestScore, flag, bestMove });
-  return bestScore;
-}
-
-function checkWinnerGlobal() {
-  for (let r = 0; r < SIZE; r++)
-    for (let c = 0; c < SIZE; c++)
-      if (board[r][c] !== "" && checkWin(r, c, board[r][c])) return board[r][c];
-  return null;
-}
-
 // ==================== HỖ TRỢ ====================
 function getOccupiedCount() {
   let cnt = 0;
@@ -638,6 +360,103 @@ function getEmptyCells() {
   const arr = [];
   for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) if (board[r][c] === "") arr.push([r, c]);
   return arr;
+}
+
+// ==================== AI ENGINE — CHẠY TRONG WEB WORKER ====================
+// Toàn bộ minimax / VCF / đánh giá thế trận nằm trong caro-ai-worker.js để:
+//  1) Không làm treo giao diện khi AI suy nghĩ.
+//  2) Cho phép "nghĩ" lâu hơn (sâu hơn) mà không ảnh hưởng trải nghiệm.
+let aiWorker = null;
+let aiRequestId = 0;
+
+function initWorker() {
+  try {
+    aiWorker = new Worker('caro.js');
+    aiWorker.onerror = function (err) {
+      console.error("Lỗi AI Worker, chuyển sang chế độ dự phòng:", err.message);
+      aiWorker = null;
+    };
+  } catch (e) {
+    console.error("Không thể tạo AI Worker, dùng chế độ dự phòng:", e);
+    aiWorker = null;
+  }
+}
+initWorker();
+
+// Chế độ dự phòng (chỉ dùng nếu trình duyệt không tạo được Worker) — vẫn biết chặn thắng/thua ngay.
+function getFallbackMove() {
+  for (const [r, c] of getEmptyCells()) {
+    if (!hasNeighbor2(r, c)) continue;
+    board[r][c] = ai;
+    const win = checkWin(r, c, ai);
+    board[r][c] = "";
+    if (win) return [r, c];
+  }
+  for (const [r, c] of getEmptyCells()) {
+    if (!hasNeighbor2(r, c)) continue;
+    board[r][c] = human;
+    const win = checkWin(r, c, human);
+    board[r][c] = "";
+    if (win) return [r, c];
+  }
+  let move = findOpenFour(ai); if (move) return move;
+  move = findOpenFour(human); if (move) return move;
+  move = findDoubleThreat(ai); if (move) return move;
+  const candidates = getCandidateMoves();
+  if (candidates.length > 0) return candidates[0];
+  const empty = getEmptyCells().filter(([r, c]) => hasNeighbor2(r, c));
+  return empty.length > 0 ? empty[0] : [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
+}
+
+function aiMove() {
+  if (gameOver || currentTurn !== ai || aiThinking) return;
+  aiThinking = true;
+  setStatus("ai-thinking");
+  boardDiv.classList.add("disabled");
+
+  aiRequestId++;
+  const myRequestId = aiRequestId;
+
+  if (!aiWorker) {
+    setTimeout(() => {
+      if (myRequestId !== aiRequestId) return;
+      const mv = getFallbackMove();
+      finishAiMove(mv[0], mv[1]);
+    }, 300);
+    return;
+  }
+
+  aiWorker.onmessage = function (e) {
+    if (myRequestId !== aiRequestId) return; // yêu cầu cũ đã bị huỷ (reset/hoàn tác), bỏ qua
+    if (e.data && e.data.type === "move" && e.data.move) {
+      finishAiMove(e.data.move[0], e.data.move[1]);
+    }
+  };
+
+  aiWorker.postMessage({ type: "think", board, human, ai });
+}
+
+function finishAiMove(r, c) {
+  if (gameOver || board[r][c] !== "") { aiThinking = false; boardDiv.classList.remove("disabled"); return; }
+  place(r, c, ai);
+  if (checkWin(r, c, ai)) {
+    highlightWin(r, c, ai);
+    statusTop.textContent = "🤖 AI.GiaBao thắng!"; statusTop.classList.add("win");
+    resetBtn.textContent = "Chơi lại"; launchConfetti(); gameOver = true; aiThinking = false; updateUndoButton();
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+  currentTurn = human;
+  setStatus("your-turn");
+  playerStartTime = Date.now();
+  aiThinking = false;
+  boardDiv.classList.remove("disabled");
+
+  const total = getOccupiedCount();
+  if ([100, 150, 175].includes(total) && !drawMilestones.has(total)) {
+    drawMilestones.add(total);
+    offerDraw();
+  }
 }
 
 // ==================== GIAO DIỆN ====================
@@ -719,33 +538,6 @@ function playerMove(r, c) {
   setTimeout(aiMove, 50);
 }
 
-function aiMove() {
-  if (gameOver || currentTurn !== ai || aiThinking) return;
-  aiThinking = true;
-  const move = getBestMove();
-  if (!move) { aiThinking = false; boardDiv.classList.remove("disabled"); return; }
-  const [r, c] = move;
-  place(r, c, ai);
-  if (checkWin(r, c, ai)) {
-    highlightWin(r, c, ai);
-    statusTop.textContent = "🤖 AI.GiaBao thắng!"; statusTop.classList.add("win");
-    resetBtn.textContent = "Chơi lại"; launchConfetti(); gameOver = true; aiThinking = false; updateUndoButton();
-    boardDiv.classList.remove("disabled");
-    return;
-  }
-  currentTurn = human;
-  setStatus("your-turn");
-  playerStartTime = Date.now();
-  aiThinking = false;
-  boardDiv.classList.remove("disabled");
-
-  const total = getOccupiedCount();
-  if ([100, 150, 175].includes(total) && !drawMilestones.has(total)) {
-    drawMilestones.add(total);
-    offerDraw();
-  }
-}
-
 function offerDraw() {
   drawPopup.style.display = "flex";
   drawPopup.style.justifyContent = "center";
@@ -771,6 +563,7 @@ btnDrawReject.addEventListener("click", () => {
 
 function undoMove() {
   if (gameOver) return;
+  aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
   if (pvpMode) {
     if (moveHistory.length === 0) return;
     const last = moveHistory.pop();
@@ -792,6 +585,7 @@ function undoMove() {
     else lastCell = null;
     undoLeft--; undoUsed = true;
     currentTurn = human; boardDiv.classList.remove("disabled");
+    aiThinking = false;
     setStatus("your-turn"); commentaryDiv.textContent = "↩️ Người chơi vừa hoàn tác";
     updateUndoUI(); updateScore(); updateUndoButton();
   }
@@ -928,9 +722,8 @@ const faceTransformsToFront = {
   left: { rx: 0, ry: -90 }, right: { rx: 0, ry: 90 },
   top: { rx: -90, ry: 0 }, bottom: { rx: 90, ry: 0 }
 };
-// Chỉ dùng 2 mặt duy nhất để đổ, các mặt còn lại chỉ hiển thị ảo
-const xFaces = ["back"];   // mặt X thực sự
-const oFaces = ["front"];  // mặt O thực sự
+const xFaces = ["back"];
+const oFaces = ["front"];
 
 function startPVP() {
   pvpMode = true; human = "X"; ai = "O"; currentTurn = "X";
@@ -1000,9 +793,10 @@ function startGame() {
 }
 
 function resetGame() {
+  aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
   gameOver = false; lastCell = null;
   human = "X"; ai = "O"; currentTurn = "X";
-  playerStartTime = 0; boardHash = 0; TT.clear();
+  playerStartTime = 0;
   moveHistory = []; canUndo = false; undoUsed = false; pvpMode = false;
   drawMilestones.clear();
   drawPopup.style.display = "none";
