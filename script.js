@@ -68,7 +68,7 @@ document.addEventListener('DOMContentLoaded', function () {
         { id: 'memori', name: 'Ghi nhớ màu sắc', diff: '3/5', genre: ['ghi-nho'] },
         { id: 'magic', name: 'Tìm bóng', diff: '3/5', genre: ['quan-sat'] },
         { id: 'crab', name: 'Chặn cua', diff: '2/5', genre: ['chien-thuat'] },
-        { id: 'reversi', name: 'Reversi', diff: '2/5', genre: ['chien-thuat', 'co'] },
+        { id: 'reversi', name: 'Cờ bao vây', diff: '2/5', genre: ['chien-thuat', 'co'] },
         { id: 'domin', name: 'Minesweeper', diff: '5/5', genre: ['tri-tue'] },
         { id: 'haichien', name: 'Hải chiến', diff: '3/5', genre: ['chien-thuat'] },
         { id: 'musicgame', name: 'Nhịp điệu âm nhạc', diff: '4/5', genre: ['giai-tri'] },
