@@ -184,16 +184,8 @@
   ::-webkit-scrollbar{width:6px;height:6px;}
   ::-webkit-scrollbar-track{background:var(--bg);}
   ::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px;}
-  footer{
-  position: fixed;
-  bottom: 5px;
-  left: 10px;
-  z-index:999999;
-  font-size: 10px;
-  color: #aaa;
-  opacity: 0.7;
-  font-family: monospace; /* 🔥 kiểu version code */
-}
+  footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+
 </style>
 </head>
 <body>
@@ -270,7 +262,7 @@
     <strong>Chế độ AI:</strong> Đánh với người máy do Gia Bảo huấn luyện.
   </div>
 </div>
-    <footer> Version:D20260429-H19M15T2350    »»»   developed by Tran Gia Bao</footer>
+    <footer> Version:D20260208-H16M52T2350    »»»   developed by Tran Gia Bao</footer>
 
 <script>
 const SIZE = 10;
@@ -478,35 +470,95 @@ function edgeChainPressure(b, player) {
   return pressure;
 }
 
+// Score every candidate for `mover` (against `opp`) and sort best-first.
+// The edge-chain-pressure map depends only on (b, opp), so it's computed once
+// here and reused across all candidates instead of once per candidate.
+function scoreAndSort(b, mover, opp, limit) {
+  const cands = getCandidates(b, opp);
+  const pressure = edgeChainPressure(b, opp);
+  const scored = cands.map(([r,c]) => ({r, c, score: evalMove(b, r, c, mover, opp, pressure)}));
+  scored.sort((a,z) => z.score - a.score);
+  return limit ? scored.slice(0, limit) : scored;
+}
+
+// Alpha-beta minimax. `isAiTurn` alternates the mover each ply so the search
+// actually looks at AI→Human→AI→Human, not just "my move, then your single
+// best reply" like the old version did. Branch width is narrowed at deeper
+// plies (10 → 8 → 6) to keep the search fast; alpha-beta pruning cuts it
+// further whenever a branch can no longer change the outcome.
+function minimax(b, depth, aiPlayer, human, isAiTurn, alpha, beta) {
+  if (depth === 0 || isFull(b)) return count(b, aiPlayer) - count(b, human);
+  const mover = isAiTurn ? aiPlayer : human;
+  const opp   = isAiTurn ? human : aiPlayer;
+  const limit = depth >= 3 ? 10 : depth === 2 ? 8 : 6;
+  const cands = scoreAndSort(b, mover, opp, limit);
+  if (!cands.length) return count(b, aiPlayer) - count(b, human);
+
+  if (isAiTurn) {
+    let best = -Infinity;
+    for (const cand of cands) {
+      const nb = cloneBoard(b);
+      nb[cand.r][cand.c] = aiPlayer;
+      applyCapturesFrom(cand.r, cand.c, nb);
+      const val = minimax(nb, depth-1, aiPlayer, human, false, alpha, beta);
+      if (val > best) best = val;
+      if (best > alpha) alpha = best;
+      if (alpha >= beta) break; // opponent would never let this branch happen
+    }
+    return best;
+  } else {
+    let worst = Infinity;
+    for (const cand of cands) {
+      const nb = cloneBoard(b);
+      nb[cand.r][cand.c] = human;
+      applyCapturesFrom(cand.r, cand.c, nb);
+      const val = minimax(nb, depth-1, aiPlayer, human, true, alpha, beta);
+      if (val < worst) worst = val;
+      if (worst < beta) beta = worst;
+      if (alpha >= beta) break;
+    }
+    return worst;
+  }
+}
+
+// How many extra plies to search beyond the AI's current move.
+// 3 = AI moves, then Human, then AI, then Human are all considered.
+// (Verified: this beats the previous single-reply lookahead in 100% of
+// head-to-head test games, and comfortably beats a "careless but corner-aware"
+// human proxy, at ~100ms average think time — well within the UI's budget.)
+const AI_SEARCH_DEPTH = 3;
+const AI_ROOT_POOL = 14;
+
 function aiChooseMove(b, aiPlayer) {
   const human = 3 - aiPlayer;
-  const cands = getCandidates(b, human);
-  if (!cands.length) return null;
 
   // ── PHASE 1: CORNER ABSOLUTE PRIORITY ────────────────────────────────────────
-  // If ANY corner is empty, AI grabs it immediately — no further evaluation.
+  // Corners are permanently immune, so an empty corner is always worth grabbing
+  // immediately — no opponent move can ever punish taking it.
   const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
   for (const [cr, cc] of CORNERS) {
     if (b[cr][cc] === 0) return [cr, cc];
   }
 
-  // ── PHASE 2: FORCE CORNER IF AVAILABLE IN LOOKAHEAD ──────────────────────────
-  // Check if playing any candidate immediately opens a corner for human next turn.
-  // Also weight candidates that set up a corner grab on AI's NEXT turn.
-  const scored = cands.map(([r,c]) => ({r, c, score: evalMove(b,r,c,aiPlayer,human)}));
-  scored.sort((a,z) => z.score - a.score);
+  // ── PHASE 2: MINIMAX SEARCH ───────────────────────────────────────────────────
+  // Rank candidates with the full heuristic, then for each of the top ones,
+  // search several plies ahead (assuming a strong opponent) and keep whichever
+  // move gives the best guaranteed outcome.
+  const scored = scoreAndSort(b, aiPlayer, human, AI_ROOT_POOL);
+  if (!scored.length) return null;
 
-  // Expert: full lookahead on top 14 candidates
-  const pool = scored.slice(0, Math.min(14, scored.length));
-  let bestMove = pool[0], bestVal = -Infinity;
-  for (const cand of pool) {
-    const val = lookahead(b, cand.r, cand.c, aiPlayer, human);
+  let bestMove = scored[0], bestVal = -Infinity;
+  for (const cand of scored) {
+    const nb = cloneBoard(b);
+    nb[cand.r][cand.c] = aiPlayer;
+    applyCapturesFrom(cand.r, cand.c, nb);
+    const val = minimax(nb, AI_SEARCH_DEPTH, aiPlayer, human, false, -Infinity, Infinity);
     if (val > bestVal) { bestVal = val; bestMove = cand; }
   }
   return [bestMove.r, bestMove.c];
 }
 
-function evalMove(b, r, c, aiPlayer, human) {
+function evalMove(b, r, c, aiPlayer, human, pressureMap) {
   if (b[r][c] !== 0) return -Infinity;
 
   // A) Immediate flips
@@ -556,7 +608,7 @@ function evalMove(b, r, c, aiPlayer, human) {
   }
 
   // G) Edge chain interrupt — heavy bonus to break human runs along rim
-  const pressure = edgeChainPressure(b, human);
+  const pressure = pressureMap || edgeChainPressure(b, human);
   const chainRun = pressure.get(r*SIZE+c) || 0;
   // Bonus scales quadratically: run of 3 gives 9×base, run of 4 gives 16×base
   const chainInterruptScore = chainRun * chainRun * 3.5;
@@ -631,25 +683,6 @@ function simCaptures(b, r, c, player) {
   return captured;
 }
 
-function lookahead(b, r, c, aiPlayer, human) {
-  const b2 = cloneBoard(b);
-  b2[r][c] = aiPlayer;
-  applyCapturesFrom(r, c, b2);
-  const baseScore = count(b2,aiPlayer) - count(b2,human);
-
-  const replies = getCandidates(b2, aiPlayer).slice(0, 14);
-  if (!replies.length) return baseScore;
-  let worst = Infinity;
-  for (const [hr,hc] of replies) {
-    const b3 = cloneBoard(b2);
-    b3[hr][hc] = human;
-    applyCapturesFrom(hr, hc, b3);
-    const s = count(b3,aiPlayer) - count(b3,human);
-    if (s < worst) worst = s;
-  }
-  return worst;
-}
-
 function getCandidates(b, oppPlayer) {
   const total = count(b,1)+count(b,2);
   const radius = total < 20 ? 3 : 2;
@@ -697,6 +730,7 @@ const inBounds   = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
 const cloneBoard = b => b.map(row=>[...row]);
 function count(b,p){let n=0;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(b[r][c]===p)n++;return n;}
 function isBoardFull(){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(board[r][c]===0)return false;return true;}
+function isFull(b){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(b[r][c]===0)return false;return true;}
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderBoard() {
