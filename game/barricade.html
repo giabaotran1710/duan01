@@ -1,0 +1,1547 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+  <title>Ngăn cản đến đích</title>
+  <style>
+    :root {
+      --bg: #07070b;
+      --panel: #13131a;
+      --panel2: #1a1a24;
+      --cell1: #252530;
+      --cell2: #2b2b38;
+      --grid: #3d3d4d;
+      --text: #f3f4ff;
+      --muted: #9da3b8;
+      --blue: #4f8cff;
+      --blue2: #2d67e0;
+      --red: #ff5e67;
+      --red2: #d63d48;
+      --wall: #ff4d57;
+      --good: #42d392;
+      --warn: #ffd166;
+      --shadow: rgba(0, 0, 0, .35);
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html,
+    body {
+      margin: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background: radial-gradient(circle at top, #151520 0%, #09090d 42%, #050507 100%);
+      color: var(--text);
+      font-family: "Oswald", sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      touch-action: none;
+    }
+
+    .app {
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      padding: 12px;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .topbar {
+      width: min(100%, 680px);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      padding: 12px 14px;
+      border-radius: 18px;
+      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .03));
+      border: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 14px 40px var(--shadow);
+      backdrop-filter: blur(10px);
+      flex-shrink: 0;
+    }
+
+    .titleWrap {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .title {
+      font-size: 18px;
+      font-weight: 800;
+      line-height: 1.1;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: var(--muted);
+      line-height: 1.2;
+    }
+
+    .status {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      justify-content: flex-end;
+      flex-wrap: wrap;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 8px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .06);
+      border: 1px solid rgba(255, 255, 255, .08);
+      font-size: 12px;
+      font-weight: 999;
+      white-space: nowrap;
+    }
+
+    .pill.turnBlue {
+      background: rgba(79, 140, 255, .12);
+      min-width:75px;
+    }
+
+    .pill.turnRed {
+      background: rgba(255, 94, 103, .12);
+      min-width:75px;
+    }
+
+    .pill.blue {
+      box-shadow: inset 0 0 0 1px rgba(79, 140, 255, .18);
+      min-width: 50px;
+    }
+
+    .pill.red {
+      box-shadow: inset 0 0 0 1px rgba(255, 94, 103, .18);
+      min-width:50px;
+    }
+
+    .wall-icon-blue {
+      color: #4f8cff;
+    }
+    .wall-icon-red {
+      color: #ff5e67;
+    }
+
+    .boardWrap {
+      width: min(100%, 680px);
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 0;
+    }
+
+    canvas {
+      width: min(96vw, 640px);
+      height: min(96vw, 640px);
+      max-width: 640px;
+      max-height: 640px;
+      aspect-ratio: 1/1;
+      display: block;
+      border-radius: 22px;
+      background: #0d0d12;
+      box-shadow: 0 18px 50px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .08);
+      touch-action: none;
+      cursor: pointer;
+    }
+
+    .controls {
+      width: min(100%, 680px);
+      display: flex;
+      justify-content: center;
+      gap: 14px;
+      flex-shrink: 0;
+      transition: opacity 0.4s ease;
+    }
+
+    .controls.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    button {
+      appearance: none;
+      border: 0;
+      border-radius: 16px;
+      padding: 14px 24px;
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text);
+      background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .06));
+      border: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
+      transition: transform .12s ease, filter .12s ease, background .12s ease;
+      min-width: 100px;
+    }
+
+    button:active {
+      transform: scale(.96);
+      filter: brightness(1.08);
+    }
+
+    button.primary {
+      background: linear-gradient(180deg, rgba(79, 140, 255, .35), rgba(79, 140, 255, .16));
+      border-color: rgba(79, 140, 255, .28);
+    }
+
+    button.secondary {
+      background: linear-gradient(180deg, rgba(255, 209, 102, .24), rgba(255, 209, 102, .12));
+      border-color: rgba(255, 209, 102, .25);
+    }
+
+    .footer {
+      width: min(100%, 680px);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .msg {
+      width: 100%;
+      min-height: 22px;
+      text-align: center;
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--warn);
+    }
+
+    .help {
+      width: 100%;
+      text-align: center;
+      font-size: 12px;
+      line-height: 1.4;
+      color: var(--muted);
+      padding: 0 6px;
+    }
+
+    .small {
+      font-size: 9px;
+      color: var(--muted);
+      opacity: .6;
+    }
+
+    .mode-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, .75);
+      backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 100;
+      transition: opacity .4s ease;
+    }
+    .mode-overlay.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+    .mode-box {
+      background: #13131a;
+      padding: 32px 40px;
+      border-radius: 28px;
+      border: 1px solid rgba(255, 255, 255, .08);
+      box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
+      text-align: center;
+      max-width: 380px;
+      width: 90%;
+    }
+    .mode-box h2 {
+      margin: 0 0 8px 0;
+      font-weight: 700;
+      font-size: 26px;
+      letter-spacing: .5px;
+    }
+    .mode-box p {
+      color: var(--muted);
+      font-size: 14px;
+      margin: 0 0 24px 0;
+    }
+    .mode-box .btn-group {
+      display: flex;
+      gap: 14px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+    .mode-box .btn-group button {
+      min-width: 100px;
+      padding: 14px 28px;
+      font-size: 16px;
+    }
+    .mode-box .btn-group .ai-btn {
+      background: linear-gradient(180deg, rgba(79, 140, 255, .25), rgba(79, 140, 255, .10));
+      border-color: rgba(79, 140, 255, .25);
+    }
+    .mode-box .btn-group .pvp-btn {
+      background: linear-gradient(180deg, rgba(255, 209, 102, .25), rgba(255, 209, 102, .10));
+      border-color: rgba(255, 209, 102, .25);
+    }
+
+    @media (max-width: 420px) {
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .status {
+        justify-content: flex-start;
+      }
+      button {
+        padding: 12px 16px;
+        min-width: 80px;
+      }
+      .mode-box {
+        padding: 24px 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div id="modeOverlay" class="mode-overlay">
+      <div class="mode-box">
+        <h2>Chọn chế độ</h2>
+        <p>Bạn muốn chơi với AI hay cùng bạn bè?</p>
+        <div class="btn-group">
+          <button id="aiModeBtn" class="ai-btn">🤖 AI</button>
+          <button id="pvpModeBtn" class="pvp-btn">👥 2 người</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="topbar">
+      <div class="titleWrap">
+        <div class="title">Ngăn cản đến đích</div>
+        <div class="subtitle">Chạm vào quân của mình để xem nước đi — chạm vào khe tường để đặt tường</div>
+      </div>
+      <div class="status">
+        <div id="turnPill" class="pill turnBlue">Lượt: <b id="turnText">Xanh</b></div>
+        <div class="pill blue"><span class="wall-icon-blue">━</span> <b id="blueWalls">10</b></div>
+        <div class="pill red"><span class="wall-icon-red">━</span> <b id="redWalls">10</b></div>
+      </div>
+    </div>
+
+    <div class="boardWrap">
+      <canvas id="game"></canvas>
+    </div>
+
+    <div class="controls hidden" id="controls">
+      <button id="resetBtn" class="primary">Chơi lại</button>
+    </div>
+
+    <div class="footer">
+      <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
+      <div class="help">💡 Chạm vào khe tường (giữa hai ô) để đặt tường. Tường không được chặn toàn bộ đường đi của bên nào.</div>
+      <div class="small"> Version:D20260803-H12M00T0100    »»»   developed by Tran Gia Bao</div>
+    </div>
+  </div>
+
+  <script>
+    (() => {
+      const SIZE = 9;
+      const WALLS_PER_PLAYER = 10;
+
+      const canvas = document.getElementById('game');
+      const ctx = canvas.getContext('2d');
+
+      const turnPill = document.getElementById('turnPill');
+      const turnText = document.getElementById('turnText');
+      const blueWallsEl = document.getElementById('blueWalls');
+      const redWallsEl = document.getElementById('redWalls');
+      const msgEl = document.getElementById('message');
+      const controlsEl = document.getElementById('controls');
+      const resetBtn = document.getElementById('resetBtn');
+
+      const modeOverlay = document.getElementById('modeOverlay');
+      const aiModeBtn = document.getElementById('aiModeBtn');
+      const pvpModeBtn = document.getElementById('pvpModeBtn');
+
+      let gameMode = 'ai';
+      let modeLocked = false;
+
+      const state = {
+        current: 0,
+        gameOver: false,
+        aiTimer: null,
+        blue: { x: 4, y: 0, walls: WALLS_PER_PLAYER },
+        red: { x: 4, y: 8, walls: WALLS_PER_PLAYER },
+        hWalls: new Set(),
+        vWalls: new Set(),
+        blueH: new Set(),
+        blueV: new Set(),
+        redH: new Set(),
+        redV: new Set(),
+        layout: null,
+        selected: null,
+        moveCount: 0,
+        animating: false,
+        animData: null,
+        endEffect: null,
+      };
+
+      function setMessage(text) {
+        msgEl.textContent = text;
+      }
+
+      function updateUI() {
+        blueWallsEl.textContent = state.blue.walls;
+        redWallsEl.textContent = state.red.walls;
+        turnText.textContent = state.current === 0 ? 'Xanh' : 'Đỏ';
+        turnPill.classList.toggle('turnBlue', state.current === 0);
+        turnPill.classList.toggle('turnRed', state.current === 1);
+      }
+
+      function updateResetButton() {
+        if (state.moveCount > 0) {
+          controlsEl.classList.remove('hidden');
+        } else {
+          controlsEl.classList.add('hidden');
+        }
+      }
+
+      function resetGame(keepMode = true) {
+        if (state.aiTimer) clearTimeout(state.aiTimer);
+        state.current = 0;
+        state.gameOver = false;
+        state.blue = { x: 4, y: 0, walls: WALLS_PER_PLAYER };
+        state.red = { x: 4, y: 8, walls: WALLS_PER_PLAYER };
+        state.hWalls = new Set();
+        state.vWalls = new Set();
+        state.blueH = new Set();
+        state.blueV = new Set();
+        state.redH = new Set();
+        state.redV = new Set();
+        state.selected = null;
+        state.moveCount = 0;
+        state.animating = false;
+        state.animData = null;
+        state.endEffect = null;
+        updateUI();
+        updateResetButton();
+        render();
+
+        if (!modeLocked) {
+          modeOverlay.classList.remove('hidden');
+          setMessage('Chọn chế độ để bắt đầu.');
+        } else {
+          modeOverlay.classList.add('hidden');
+          setMessage('Ván mới bắt đầu. Chạm vào quân của mình.');
+          if (gameMode === 'ai' && state.current === 1) {
+            scheduleAI();
+          }
+        }
+      }
+
+      function resizeCanvas() {
+        const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+        const size = Math.floor(Math.min(window.innerWidth * 0.96, window.innerHeight * 0.62, 640));
+        canvas.style.width = size + 'px';
+        canvas.style.height = size + 'px';
+        canvas.width = Math.floor(size * dpr);
+        canvas.height = Math.floor(size * dpr);
+        ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+
+        const margin = Math.max(14, Math.floor(size * 0.03));
+        const pitch = Math.floor((size - margin * 2) / SIZE);
+        const cellSize = Math.floor(pitch * 0.84);
+        const gap = pitch - cellSize;
+        const boardPx = SIZE * cellSize + (SIZE - 1) * gap;
+        const offsetX = Math.floor((size - boardPx) / 2);
+        const offsetY = Math.floor((size - boardPx) / 2);
+
+        state.layout = { size, margin, pitch, cellSize, gap, boardPx, offsetX, offsetY };
+        render();
+      }
+
+      function cellRect(x, y) {
+        const { offsetX, offsetY, pitch, cellSize } = state.layout;
+        return {
+          x: offsetX + x * pitch,
+          y: offsetY + y * pitch,
+          w: cellSize,
+          h: cellSize
+        };
+      }
+
+      function hWallRect(x, y) {
+        const { offsetX, offsetY, pitch, cellSize, gap } = state.layout;
+        return {
+          x: offsetX + x * pitch,
+          y: offsetY + y * pitch + cellSize,
+          w: cellSize * 2 + gap,
+          h: gap
+        };
+      }
+
+      function vWallRect(x, y) {
+        const { offsetX, offsetY, pitch, cellSize, gap } = state.layout;
+        return {
+          x: offsetX + x * pitch + cellSize,
+          y: offsetY + y * pitch,
+          w: gap,
+          h: cellSize * 2 + gap
+        };
+      }
+
+      function pointInRect(px, py, r) {
+        return px >= r.x && px <= r.x + r.w && py >= r.y && py <= r.y + r.h;
+      }
+
+      function insideBoard(x, y) {
+        return x >= 0 && x < SIZE && y >= 0 && y < SIZE;
+      }
+
+      function wallKey(x, y) {
+        return `${x},${y}`;
+      }
+
+      function blockedBetween(a, b, hWalls = state.hWalls, vWalls = state.vWalls) {
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+
+        if (Math.abs(dx) + Math.abs(dy) !== 1) return true;
+
+        if (dx === 0) {
+          const x = a.x;
+          const y = Math.min(a.y, b.y);
+          return hWalls.has(`${x},${y}`);
+        }
+
+        const x = Math.min(a.x, b.x);
+        const y = a.y;
+        return vWalls.has(`${x},${y}`);
+      }
+      
+      function slotOccupiedH(x, y) {
+        const key = `${x},${y}`;
+        return state.blueH.has(key) || state.redH.has(key);
+      }
+
+      function slotOccupiedV(x, y) {
+        const key = `${x},${y}`;
+        return state.blueV.has(key) || state.redV.has(key);
+      }
+
+      function legalMoves(fromX, fromY, opp, hWalls = state.hWalls, vWalls = state.vWalls) {
+        const dirs = [
+          { x: 0, y: -1 },
+          { x: 1, y: 0 },
+          { x: 0, y: 1 },
+          { x: -1, y: 0 }
+        ];
+
+        const moves = [];
+        for (const d of dirs) {
+          const nx = fromX + d.x;
+          const ny = fromY + d.y;
+          if (!insideBoard(nx, ny)) continue;
+          if (blockedBetween({ x: fromX, y: fromY }, { x: nx, y: ny }, hWalls, vWalls)) continue;
+
+          if (nx === opp.x && ny === opp.y) {
+            const nx2 = nx + d.x;
+            const ny2 = ny + d.y;
+            if (!insideBoard(nx2, ny2)) continue;
+            if (blockedBetween({ x: nx, y: ny }, { x: nx2, y: ny2 }, hWalls, vWalls)) continue;
+            if (nx2 === fromX && ny2 === fromY) continue;
+            moves.push({ x: nx2, y: ny2 });
+          } else {
+            moves.push({ x: nx, y: ny });
+          }
+        }
+        return moves;
+      }
+
+      function bfsShortestPath(start, goalRow, hWalls = state.hWalls, vWalls = state.vWalls) {
+        const q = [{ x: start.x, y: start.y, d: 0 }];
+        const seen = new Set([`${start.x},${start.y}`]);
+
+        while (q.length) {
+          const cur = q.shift();
+          if (cur.y === goalRow) return cur.d;
+
+          const steps = [
+            { x: 0, y: -1 }, { x: 1, y: 0 }, { x: 0, y: 1 }, { x: -1, y: 0 }
+          ];
+
+          for (const s of steps) {
+            const nx = cur.x + s.x;
+            const ny = cur.y + s.y;
+            if (!insideBoard(nx, ny)) continue;
+            if (blockedBetween({ x: cur.x, y: cur.y }, { x: nx, y: ny }, hWalls, vWalls)) continue;
+            const key = `${nx},${ny}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            q.push({ x: nx, y: ny, d: cur.d + 1 });
+          }
+        }
+        return Infinity;
+      }
+
+      function bfsPath(start, goalRow, hWalls = state.hWalls, vWalls = state.vWalls) {
+        const q = [{ x: start.x, y: start.y }];
+        const seen = new Set([`${start.x},${start.y}`]);
+        const parent = new Map();
+
+        while (q.length) {
+          const cur = q.shift();
+          if (cur.y === goalRow) {
+            const path = [cur];
+            let key = `${cur.x},${cur.y}`;
+
+            while (parent.has(key)) {
+              const p = parent.get(key);
+              path.push(p);
+              key = `${p.x},${p.y}`;
+            }
+
+            return path.reverse();
+          }
+
+          const steps = [
+            { x: 0, y: -1 },
+            { x: 1, y: 0 },
+            { x: 0, y: 1 },
+            { x: -1, y: 0 }
+          ];
+
+          for (const s of steps) {
+            const nx = cur.x + s.x;
+            const ny = cur.y + s.y;
+            if (!insideBoard(nx, ny)) continue;
+            if (blockedBetween({ x: cur.x, y: cur.y }, { x: nx, y: ny }, hWalls, vWalls)) continue;
+
+            const key = `${nx},${ny}`;
+            if (seen.has(key)) continue;
+
+            seen.add(key);
+            parent.set(key, { x: cur.x, y: cur.y });
+            q.push({ x: nx, y: ny });
+          }
+        }
+
+        return null;
+      }
+
+      function pathExistsForBoth(hWalls = state.hWalls, vWalls = state.vWalls) {
+        const bluePath = bfsShortestPath({ x: state.blue.x, y: state.blue.y }, 8, hWalls, vWalls);
+        const redPath = bfsShortestPath({ x: state.red.x, y: state.red.y }, 0, hWalls, vWalls);
+        return Number.isFinite(bluePath) && Number.isFinite(redPath);
+      }
+
+      function canPlaceWall(orientation, x, y) {
+        if (x < 0 || y < 0 || x > 7 || y > 7) return false;
+
+        if (orientation === 'H') {
+          if (slotOccupiedV(x, y)) return false;
+          if (state.hWalls.has(`${x},${y}`)) return false;
+          if (state.hWalls.has(`${x + 1},${y}`)) return false;
+          return true;
+        }
+
+        if (orientation === 'V') {
+          if (slotOccupiedH(x, y)) return false;
+          if (state.vWalls.has(`${x},${y}`)) return false;
+          if (state.vWalls.has(`${x},${y + 1}`)) return false;
+          return true;
+        }
+
+        return false;
+      }
+
+      function placeWall(orientation, x, y) {
+        const p = state.current === 0 ? state.blue : state.red;
+        if (p.walls <= 0 || state.gameOver) return false;
+        if (!canPlaceWall(orientation, x, y)) return false;
+
+        const key = `${x},${y}`;
+
+        if (orientation === 'H') {
+          state.hWalls.add(`${x},${y}`);
+          state.hWalls.add(`${x + 1},${y}`);
+        } else {
+          state.vWalls.add(`${x},${y}`);
+          state.vWalls.add(`${x},${y + 1}`);
+        }
+
+        if (state.current === 0) {
+          if (orientation === 'H') state.blueH.add(key);
+          else state.blueV.add(key);
+        } else {
+          if (orientation === 'H') state.redH.add(key);
+          else state.redV.add(key);
+        }
+
+        if (!pathExistsForBoth()) {
+          if (orientation === 'H') {
+            state.hWalls.delete(`${x},${y}`);
+            state.hWalls.delete(`${x + 1},${y}`);
+          } else {
+            state.vWalls.delete(`${x},${y}`);
+            state.vWalls.delete(`${x},${y + 1}`);
+          }
+
+          if (state.current === 0) {
+            if (orientation === 'H') state.blueH.delete(key);
+            else state.blueV.delete(key);
+          } else {
+            if (orientation === 'H') state.redH.delete(key);
+            else state.redV.delete(key);
+          }
+
+          return false;
+        }
+
+        p.walls--;
+        return true;
+      }
+
+      function animateMove() {
+        if (!state.animData) return;
+        const data = state.animData;
+        const steps = 12;
+        data.progress += 1 / steps;
+
+        if (data.progress >= 1) {
+          data.progress = 1;
+          if (data.callback) data.callback();
+          return;
+        }
+
+        render();
+        requestAnimationFrame(animateMove);
+      }
+
+      function movePiece(nx, ny) {
+        if (state.gameOver) return false;
+        if (state.animating) return false;
+
+        const me = state.current === 0 ? state.blue : state.red;
+        const opp = state.current === 0 ? state.red : state.blue;
+
+        const moves = legalMoves(me.x, me.y, opp);
+        const ok = moves.some(m => m.x === nx && m.y === ny);
+        if (!ok) return false;
+
+        const fromX = me.x;
+        const fromY = me.y;
+
+        state.animating = true;
+        state.animData = {
+          fromX, fromY,
+          toX: nx, toY: ny,
+          progress: 0,
+          player: state.current,
+          callback: () => {
+            me.x = nx;
+            me.y = ny;
+            state.animating = false;
+            state.animData = null;
+
+            if ((state.current === 0 && me.y === 8) || (state.current === 1 && me.y === 0)) {
+              state.gameOver = true;
+              updateUI();
+              startEndEffect(state.current);
+              return;
+            }
+
+            switchTurn();
+          }
+        };
+
+        state.moveCount++;
+        updateResetButton();
+        animateMove();
+        return true;
+      }
+
+      function switchTurn() {
+        state.current = 1 - state.current;
+        state.selected = null;
+        updateUI();
+        render();
+
+        if (!state.gameOver) {
+          if (gameMode === 'ai' && state.current === 1) {
+            setMessage('Đợi AI.GIaBao suy nghĩ...');
+            scheduleAI();
+          } else {
+            setMessage(state.current === 0 ? 'Lượt của Xanh' : 'Lượt của Đỏ');
+          }
+        }
+      }
+
+      function normalizePointer(evt) {
+        const rect = canvas.getBoundingClientRect();
+        return {
+          x: evt.clientX - rect.left,
+          y: evt.clientY - rect.top
+        };
+      }
+
+      function cellUnderPointer(mx, my) {
+        for (let y = 0; y < SIZE; y++) {
+          for (let x = 0; x < SIZE; x++) {
+            const r = cellRect(x, y);
+            if (pointInRect(mx, my, r)) return { x, y };
+          }
+        }
+        return null;
+      }
+
+      function wallSlotUnderPointer(mx, my) {
+        for (let y = 0; y < 8; y++) {
+          for (let x = 0; x < 8; x++) {
+            const rh = hWallRect(x, y);
+            const pad = 6;
+            const rrh = { x: rh.x - pad, y: rh.y - pad, w: rh.w + pad * 2, h: rh.h + pad * 2 };
+            if (pointInRect(mx, my, rrh)) {
+              return { orientation: 'H', x, y };
+            }
+            const rv = vWallRect(x, y);
+            const rrv = { x: rv.x - pad, y: rv.y - pad, w: rv.w + pad * 2, h: rv.h + pad * 2 };
+            if (pointInRect(mx, my, rrv)) {
+              return { orientation: 'V', x, y };
+            }
+          }
+        }
+        return null;
+      }
+
+
+
+      const AI_SEARCH_DEPTH = 4; // total half-moves looked ahead (red, blue, red, blue)
+      const AI_WALL_BUDGET_SHALLOW = 7; // wall candidates kept per node near the root
+      const AI_WALL_BUDGET_DEEP = 5;    // wall candidates kept per node deeper in the tree
+
+      function cloneSet(s) {
+        return new Set(s);
+      }
+
+      function simCanPlaceWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
+        if (x < 0 || y < 0 || x > 7 || y > 7) return false;
+        if (o === 'H') {
+          if (vOrigin.has(`${x},${y}`)) return false;
+          if (hWalls.has(`${x},${y}`)) return false;
+          if (hWalls.has(`${x + 1},${y}`)) return false;
+          return true;
+        }
+        if (hOrigin.has(`${x},${y}`)) return false;
+        if (vWalls.has(`${x},${y}`)) return false;
+        if (vWalls.has(`${x},${y + 1}`)) return false;
+        return true;
+      }
+
+      function simAddWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
+        if (o === 'H') {
+          hWalls.add(`${x},${y}`);
+          hWalls.add(`${x + 1},${y}`);
+          hOrigin.add(`${x},${y}`);
+        } else {
+          vWalls.add(`${x},${y}`);
+          vWalls.add(`${x},${y + 1}`);
+          vOrigin.add(`${x},${y}`);
+        }
+      }
+
+      function simRemoveWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
+        if (o === 'H') {
+          hWalls.delete(`${x},${y}`);
+          hWalls.delete(`${x + 1},${y}`);
+          hOrigin.delete(`${x},${y}`);
+        } else {
+          vWalls.delete(`${x},${y}`);
+          vWalls.delete(`${x},${y + 1}`);
+          vOrigin.delete(`${x},${y}`);
+        }
+      }
+
+      function pathExistsForBothSim(redPos, bluePos, hWalls, vWalls) {
+        const rd = bfsShortestPath(redPos, 0, hWalls, vWalls);
+        const bd = bfsShortestPath(bluePos, 8, hWalls, vWalls);
+        return Number.isFinite(rd) && Number.isFinite(bd);
+      }
+
+      function evaluateState(redPos, bluePos, hWalls, vWalls, redWallsLeft, blueWallsLeft) {
+        const redDist = bfsShortestPath(redPos, 0, hWalls, vWalls);
+        const blueDist = bfsShortestPath(bluePos, 8, hWalls, vWalls);
+        if (!Number.isFinite(redDist)) return -50000;
+        if (!Number.isFinite(blueDist)) return 50000;
+        // Positive is good for red: red wants a short path for itself and a
+        // long path for blue, plus values holding more walls in reserve.
+        return (blueDist - redDist) * 14 + (redWallsLeft - blueWallsLeft) * 0.6;
+      }
+
+      function collectRawWallCandidates(targetPath, redPos, bluePos) {
+        const out = [];
+        const seen = new Set();
+        const push = (o, x, y) => {
+          if (x < 0 || x > 7 || y < 0 || y > 7) return;
+          const k = `${o}:${x},${y}`;
+          if (seen.has(k)) return;
+          seen.add(k);
+          out.push({ o, x, y });
+        };
+
+        if (targetPath && targetPath.length) {
+          for (const p of targetPath) {
+            for (let dy = -1; dy <= 1; dy++) {
+              for (let dx = -1; dx <= 1; dx++) {
+                push('H', p.x + dx, p.y + dy);
+                push('V', p.x + dx, p.y + dy);
+              }
+            }
+          }
+        }
+
+        for (let dy = -2; dy <= 2; dy++) {
+          for (let dx = -2; dx <= 2; dx++) {
+            push('H', redPos.x + dx, redPos.y + dy);
+            push('V', redPos.x + dx, redPos.y + dy);
+            push('H', bluePos.x + dx, bluePos.y + dy);
+            push('V', bluePos.x + dx, bluePos.y + dy);
+          }
+        }
+
+        return out;
+      }
+
+      function generateSearchActions(isRedTurn, redPos, bluePos, redWallsLeft, blueWallsLeft, hWalls, vWalls, hOrigin, vOrigin, wallBudget) {
+        const myPos = isRedTurn ? redPos : bluePos;
+        const oppPos = isRedTurn ? bluePos : redPos;
+        const myWalls = isRedTurn ? redWallsLeft : blueWallsLeft;
+        const oppGoalRow = isRedTurn ? 0 : 8; // opponent-of-opponent, i.e. red's own goal when isRedTurn... see below
+        // NOTE: goal rows — red's goal is row 0, blue's goal is row 8.
+        const myGoalRow = isRedTurn ? 0 : 8;
+        const trueOppGoalRow = isRedTurn ? 8 : 0;
+
+        const moves = legalMoves(myPos.x, myPos.y, oppPos, hWalls, vWalls)
+          .map(m => ({ type: 'move', x: m.x, y: m.y }));
+
+        let wallActions = [];
+        if (myWalls > 0) {
+          const oppPath = bfsPath(oppPos, trueOppGoalRow, hWalls, vWalls);
+          const raw = collectRawWallCandidates(oppPath, redPos, bluePos);
+          const scored = [];
+
+          for (const c of raw) {
+            if (!simCanPlaceWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin)) continue;
+
+            simAddWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin);
+            const redAfter = bfsShortestPath(redPos, 0, hWalls, vWalls);
+            const blueAfter = bfsShortestPath(bluePos, 8, hWalls, vWalls);
+            simRemoveWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin);
+
+            if (!Number.isFinite(redAfter) || !Number.isFinite(blueAfter)) continue;
+
+            const myAfter = isRedTurn ? redAfter : blueAfter;
+            const oppAfter = isRedTurn ? blueAfter : redAfter;
+            const score = (oppAfter - myAfter);
+
+            scored.push({ type: 'wall', o: c.o, x: c.x, y: c.y, score });
+          }
+
+          scored.sort((a, b) => b.score - a.score);
+          wallActions = scored.slice(0, wallBudget);
+        }
+
+        // Try the most disruptive wall placements first, then moves — helps
+        // alpha-beta cut more branches early.
+        return wallActions.concat(moves);
+      }
+
+      function minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth, isRedTurn, alpha, beta) {
+        if (bluePos.y === 8) return -100000 - depth; // blue reached goal: bad for red
+        if (redPos.y === 0) return 100000 + depth;    // red reached goal: good for red
+
+        if (depth <= 0) {
+          return evaluateState(redPos, bluePos, hWalls, vWalls, wallsLeft.red, wallsLeft.blue);
+        }
+
+        const wallBudget = depth >= 3 ? AI_WALL_BUDGET_DEEP : AI_WALL_BUDGET_SHALLOW;
+        const actions = generateSearchActions(isRedTurn, redPos, bluePos, wallsLeft.red, wallsLeft.blue, hWalls, vWalls, hOrigin, vOrigin, wallBudget);
+
+        if (actions.length === 0) {
+          return isRedTurn ? -100000 - depth : 100000 + depth;
+        }
+
+        if (isRedTurn) {
+          let best = -Infinity;
+          for (const act of actions) {
+            let val;
+            if (act.type === 'move') {
+              const oldX = redPos.x, oldY = redPos.y;
+              redPos.x = act.x; redPos.y = act.y;
+              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, false, alpha, beta);
+              redPos.x = oldX; redPos.y = oldY;
+            } else {
+              simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+              wallsLeft.red--;
+              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, false, alpha, beta);
+              wallsLeft.red++;
+              simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+            }
+            if (val > best) best = val;
+            if (best > alpha) alpha = best;
+            if (alpha >= beta) break;
+          }
+          return best;
+        } else {
+          let best = Infinity;
+          for (const act of actions) {
+            let val;
+            if (act.type === 'move') {
+              const oldX = bluePos.x, oldY = bluePos.y;
+              bluePos.x = act.x; bluePos.y = act.y;
+              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, true, alpha, beta);
+              bluePos.x = oldX; bluePos.y = oldY;
+            } else {
+              simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+              wallsLeft.blue--;
+              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, true, alpha, beta);
+              wallsLeft.blue++;
+              simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+            }
+            if (val < best) best = val;
+            if (best < beta) beta = best;
+            if (alpha >= beta) break;
+          }
+          return best;
+        }
+      }
+
+      function chooseAIAction() {
+        const redPos = { x: state.red.x, y: state.red.y };
+        const bluePos = { x: state.blue.x, y: state.blue.y };
+        const wallsLeft = { red: state.red.walls, blue: state.blue.walls };
+        const hWalls = cloneSet(state.hWalls);
+        const vWalls = cloneSet(state.vWalls);
+        const hOrigin = new Set([...state.blueH, ...state.redH]);
+        const vOrigin = new Set([...state.blueV, ...state.redV]);
+
+        const rootActions = generateSearchActions(true, redPos, bluePos, wallsLeft.red, wallsLeft.blue, hWalls, vWalls, hOrigin, vOrigin, AI_WALL_BUDGET_SHALLOW);
+
+        if (rootActions.length === 0) return null;
+
+        let bestAction = rootActions[0];
+        let bestScore = -Infinity;
+        let alpha = -Infinity;
+        const beta = Infinity;
+
+        for (const act of rootActions) {
+          let val;
+          if (act.type === 'move') {
+            const oldX = redPos.x, oldY = redPos.y;
+            redPos.x = act.x; redPos.y = act.y;
+            val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, AI_SEARCH_DEPTH - 1, false, alpha, beta);
+            redPos.x = oldX; redPos.y = oldY;
+          } else {
+            simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+            wallsLeft.red--;
+            val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, AI_SEARCH_DEPTH - 1, false, alpha, beta);
+            wallsLeft.red++;
+            simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
+          }
+
+          if (val > bestScore) {
+            bestScore = val;
+            bestAction = act;
+          }
+          if (bestScore > alpha) alpha = bestScore;
+        }
+
+        return bestAction;
+      }
+
+      function executeAIAction(action) {
+        if (!action) return;
+
+        if (action.type === 'wall') {
+          const ok = placeWall(action.o, action.x, action.y);
+          if (ok) {
+            setMessage('AI.GiaBao đặt tường chiến thuật.');
+            updateUI();
+            render();
+            state.moveCount++;
+            updateResetButton();
+            if (!state.gameOver) switchTurn();
+          } else {
+            const mv = findBestAIMoveFallback();
+            if (mv) {
+              movePiece(mv.x, mv.y);
+            }
+          }
+          return;
+        }
+
+        if (action.type === 'move') {
+          const ok = movePiece(action.x, action.y);
+          if (ok) setMessage('AI.GiaBao đã đi.');
+        }
+      }
+
+      function findBestAIMoveFallback() {
+        const me = state.red;
+        const opp = state.blue;
+        const moves = legalMoves(me.x, me.y, opp);
+        if (!moves.length) return null;
+
+        let best = moves[0];
+        let bestScore = Infinity;
+
+        for (const m of moves) {
+          const dist = bfsShortestPath({ x: m.x, y: m.y }, 0);
+          if (dist < bestScore) {
+            bestScore = dist;
+            best = m;
+          }
+        }
+
+        return best;
+      }
+
+      function scheduleAI() {
+        if (state.aiTimer) clearTimeout(state.aiTimer);
+        if (gameMode !== 'ai') return;
+
+        state.aiTimer = setTimeout(() => {
+          state.aiTimer = null;
+
+          if (state.gameOver || state.current !== 1 || state.animating) {
+            if (state.animating) {
+              state.aiTimer = setTimeout(() => scheduleAI(), 100);
+            }
+            return;
+          }
+
+          const action = chooseAIAction();
+          if (action) {
+            executeAIAction(action);
+          } else {
+            const mv = findBestAIMoveFallback();
+            if (mv) movePiece(mv.x, mv.y);
+          }
+        }, 220);
+      }
+
+      function startEndEffect(winner) {
+        state.endEffect = {
+          winner: winner,
+          startTime: performance.now(),
+          duration: 1500,
+          progress: 0
+        };
+        setMessage(winner === 0 ? 'Xanh thắng!' : 'Đỏ thắng!');
+        animateEndEffect();
+      }
+
+      function animateEndEffect() {
+        if (!state.endEffect) return;
+        const elapsed = performance.now() - state.endEffect.startTime;
+        state.endEffect.progress = Math.min(elapsed / state.endEffect.duration, 1);
+        render();
+        if (state.endEffect.progress < 1) {
+          requestAnimationFrame(animateEndEffect);
+        }
+      }
+
+      function handleBoardTap(mx, my) {
+        if (state.gameOver) return;
+        if (state.animating) return;
+        if (!modeLocked) {
+          setMessage('Hãy chọn chế độ trước khi chơi.');
+          return;
+        }
+
+        if (gameMode === 'ai' && state.current !== 0) {
+          setMessage('Đợi AI chơi...');
+          return;
+        }
+
+        const me = state.current === 0 ? state.blue : state.red;
+        const opp = state.current === 0 ? state.red : state.blue;
+        const rMe = cellRect(me.x, me.y);
+        const pad = 6;
+        const rMePad = { x: rMe.x - pad, y: rMe.y - pad, w: rMe.w + pad * 2, h: rMe.h + pad * 2 };
+        const clickedOnMe = pointInRect(mx, my, rMePad);
+
+        if (clickedOnMe) {
+          const isSelected = state.selected && state.selected.player === state.current &&
+            state.selected.x === me.x && state.selected.y === me.y;
+          if (isSelected) {
+            state.selected = null;
+            setMessage('Đã bỏ chọn quân.');
+            render();
+            return;
+          } else {
+            state.selected = { player: state.current, x: me.x, y: me.y };
+            const moves = legalMoves(me.x, me.y, opp);
+            if (moves.length === 0) {
+              setMessage('Quân của bạn không có nước đi hợp lệ.');
+            } else {
+              setMessage('Đã chọn quân. Chạm vào ô sáng để di chuyển.');
+            }
+            render();
+            return;
+          }
+        }
+
+        if (state.selected && state.selected.player === state.current) {
+          const cell = cellUnderPointer(mx, my);
+          if (cell) {
+            const moves = legalMoves(me.x, me.y, opp);
+            const isHighlight = moves.some(m => m.x === cell.x && m.y === cell.y);
+            if (isHighlight) {
+              const moved = movePiece(cell.x, cell.y);
+              if (moved) {
+                setMessage('Đã di chuyển.');
+                state.selected = null;
+              }
+              return;
+            } else {
+              state.selected = null;
+              setMessage('Đã bỏ chọn quân.');
+              render();
+              return;
+            }
+          }
+        }
+
+        const slot = wallSlotUnderPointer(mx, my);
+        if (slot) {
+          const ok = placeWall(slot.orientation, slot.x, slot.y);
+          if (ok) {
+            setMessage('Đặt tường thành công.');
+            updateUI();
+            render();
+            state.moveCount++;
+            updateResetButton();
+            if (!state.gameOver) switchTurn();
+          } else {
+            setMessage('Không thể đặt tường ở đây.');
+            render();
+          }
+          return;
+        }
+
+        if (state.selected) {
+          state.selected = null;
+          setMessage('Đã bỏ chọn quân.');
+          render();
+        } else {
+          setMessage('Chạm vào quân của bạn hoặc khe tường.');
+        }
+      }
+
+      canvas.addEventListener('pointerdown', (evt) => {
+        evt.preventDefault();
+        if (!state.layout) return;
+        const p = normalizePointer(evt);
+        handleBoardTap(p.x, p.y);
+      });
+
+      resetBtn.addEventListener('click', () => {
+        if (modeLocked) {
+          resetGame(true);
+        } else {
+          resetGame(false);
+        }
+      });
+
+      function selectMode(mode) {
+        gameMode = mode;
+        modeLocked = true;
+        modeOverlay.classList.add('hidden');
+        resetGame(true);
+        setMessage(mode === 'ai' ? 'Bắt đầu chơi với AI.' : 'Bắt đầu chơi 2 người.');
+      }
+
+      aiModeBtn.addEventListener('click', () => selectMode('ai'));
+      pvpModeBtn.addEventListener('click', () => selectMode('pvp'));
+
+      window.addEventListener('resize', resizeCanvas);
+      window.addEventListener('orientationchange', resizeCanvas);
+      document.addEventListener('contextmenu', e => e.preventDefault());
+
+      function roundRect(ctx, x, y, w, h, r) {
+        const radius = Math.min(r, w / 2, h / 2);
+        ctx.beginPath();
+        ctx.moveTo(x + radius, y);
+        ctx.arcTo(x + w, y, x + w, y + h, radius);
+        ctx.arcTo(x + w, y + h, x, y + h, radius);
+        ctx.arcTo(x, y + h, x, y, radius);
+        ctx.arcTo(x, y, x + w, y, radius);
+        ctx.closePath();
+      }
+
+      function drawBoardBase() {
+        const { offsetX, offsetY, pitch, cellSize } = state.layout;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(0,0,0,.34)';
+        roundRect(ctx, offsetX - 6, offsetY - 6, SIZE * pitch - (pitch - cellSize) + 12, SIZE * pitch - (pitch - cellSize) +
+          12, 22);
+        ctx.fill();
+
+        for (let y = 0; y < SIZE; y++) {
+          for (let x = 0; x < SIZE; x++) {
+            const r = cellRect(x, y);
+            let fill = (x + y) % 2 === 0 ? '#252530' : '#2b2b38';
+            if (y === 0) fill = 'rgba(79,140,255,.15)';
+            if (y === 8) fill = 'rgba(255,94,103,.15)';
+
+            ctx.fillStyle = fill;
+            roundRect(ctx, r.x, r.y, r.w, r.h, 7);
+            ctx.fill();
+
+            ctx.strokeStyle = 'rgba(255,255,255,.03)';
+            ctx.lineWidth = 1;
+            roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 7);
+            ctx.stroke();
+          }
+        }
+        ctx.restore();
+      }
+
+      function drawEndGameFill() {
+        if (!state.endEffect) return;
+        const progress = state.endEffect.progress;
+        const winner = state.endEffect.winner;
+        const color = winner === 0 ? '#4f8cff' : '#ff5e67';
+
+        for (let y = 0; y < SIZE; y++) {
+          for (let x = 0; x < SIZE; x++) {
+            const threshold = y / (SIZE - 1);
+            if (progress >= threshold) {
+              const alpha = Math.min((progress - threshold) * 2.5, 1);
+              const r = cellRect(x, y);
+              ctx.save();
+              ctx.globalAlpha = alpha;
+              ctx.fillStyle = color;
+              ctx.fillRect(r.x, r.y, r.w, r.h);
+              ctx.restore();
+            }
+          }
+        }
+      }
+
+      function drawWallBar(x, y, w, h, color1, color2) {
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.3)';
+        ctx.shadowBlur = 12;
+        const g = ctx.createLinearGradient(x, y, x + w, y + h);
+        g.addColorStop(0, color1);
+        g.addColorStop(0.5, color2);
+        g.addColorStop(1, color1);
+        ctx.fillStyle = g;
+        roundRect(ctx, x, y, w, h, 5);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.strokeStyle = 'rgba(255,255,255,.15)';
+        ctx.lineWidth = 1;
+        roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 5);
+        ctx.stroke();
+        ctx.restore();
+      }
+
+      function drawWalls() {
+        if (!state.selected && !state.gameOver) {
+          ctx.save();
+          ctx.globalAlpha = 0.1;
+          for (let y = 0; y < 8; y++) {
+            for (let x = 0; x < 8; x++) {
+              const rh = hWallRect(x, y);
+              ctx.fillStyle = 'rgba(255,255,255,.08)';
+              roundRect(ctx, rh.x, rh.y, rh.w, rh.h, 4);
+              ctx.fill();
+              const rv = vWallRect(x, y);
+              roundRect(ctx, rv.x, rv.y, rv.w, rv.h, 4);
+              ctx.fill();
+            }
+          }
+          ctx.restore();
+        }
+
+        for (const key of state.blueH) {
+          const [x, y] = key.split(',').map(Number);
+          const r = hWallRect(x, y);
+          drawWallBar(r.x, r.y, r.w, r.h, '#4f8cff', '#2d67e0');
+        }
+        for (const key of state.blueV) {
+          const [x, y] = key.split(',').map(Number);
+          const r = vWallRect(x, y);
+          drawWallBar(r.x, r.y, r.w, r.h, '#4f8cff', '#2d67e0');
+        }
+
+        for (const key of state.redH) {
+          const [x, y] = key.split(',').map(Number);
+          const r = hWallRect(x, y);
+          drawWallBar(r.x, r.y, r.w, r.h, '#ff5e67', '#d63d48');
+        }
+        for (const key of state.redV) {
+          const [x, y] = key.split(',').map(Number);
+          const r = vWallRect(x, y);
+          drawWallBar(r.x, r.y, r.w, r.h, '#ff5e67', '#d63d48');
+        }
+      }
+
+      function drawPawnAt(x, y, color1, color2, label) {
+        const r = cellRect(x, y);
+        const cx = r.x + r.w / 2;
+        const cy = r.y + r.h / 2;
+        const rad = Math.min(r.w, r.h) * 0.34;
+
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,.45)';
+        ctx.shadowBlur = 10;
+        ctx.shadowOffsetY = 4;
+
+        const grad = ctx.createRadialGradient(cx - rad * .35, cy - rad * .35, rad * .2, cx, cy, rad * 1.1);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.2, color1);
+        grad.addColorStop(1, color2);
+
+        ctx.fillStyle = grad;
+        ctx.beginPath();
+        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = 'rgba(255,255,255,.22)';
+        ctx.stroke();
+
+        ctx.fillStyle = 'rgba(255,255,255,.94)';
+        ctx.font = 'bold 13px "Oswald", sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(label, cx, cy + 0.5);
+        ctx.restore();
+      }
+
+      function drawPieces() {
+        const blue = state.blue;
+        const red = state.red;
+
+        if (state.animData) {
+          const data = state.animData;
+          const progress = data.progress;
+          const curX = data.fromX + (data.toX - data.fromX) * progress;
+          const curY = data.fromY + (data.toY - data.fromY) * progress;
+
+          if (data.player === 0) {
+            drawPawnAt(curX, curY, '#4f8cff', '#2d67e0', 'B');
+            drawPawnAt(red.x, red.y, '#ff5e67', '#d63d48', 'R');
+          } else {
+            drawPawnAt(blue.x, blue.y, '#4f8cff', '#2d67e0', 'B');
+            drawPawnAt(curX, curY, '#ff5e67', '#d63d48', 'R');
+          }
+        } else {
+          drawPawnAt(blue.x, blue.y, '#4f8cff', '#2d67e0', 'B');
+          drawPawnAt(red.x, red.y, '#ff5e67', '#d63d48', 'R');
+        }
+      }
+
+      function drawLegalHints() {
+        if (!state.selected) return;
+        const player = state.selected.player;
+        const me = player === 0 ? state.blue : state.red;
+        const opp = player === 0 ? state.red : state.blue;
+        const moves = legalMoves(me.x, me.y, opp);
+
+        ctx.save();
+        const color = player === 0 ? 'rgba(79,140,255,0.25)' : 'rgba(255,94,103,0.25)';
+        const stroke = player === 0 ? 'rgba(79,140,255,0.6)' : 'rgba(255,94,103,0.6)';
+        const dot = player === 0 ? 'rgba(79,140,255,0.7)' : 'rgba(255,94,103,0.7)';
+        for (const m of moves) {
+          const r = cellRect(m.x, m.y);
+          ctx.fillStyle = color;
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = 2.5;
+          roundRect(ctx, r.x + 3, r.y + 3, r.w - 6, r.h - 6, 8);
+          ctx.fill();
+          ctx.stroke();
+          ctx.fillStyle = dot;
+          ctx.beginPath();
+          ctx.arc(r.x + r.w / 2, r.y + r.h / 2, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+        ctx.restore();
+      }
+
+      function drawOverlay() {
+        if (!state.gameOver || !state.endEffect) return;
+
+        const progress = state.endEffect.progress;
+        if (progress < 0.3) return;
+
+        const alpha = Math.min((progress - 0.3) / 0.7, 1);
+        const w = canvas.clientWidth || state.layout.size;
+        const h = canvas.clientHeight || state.layout.size;
+
+        ctx.save();
+        ctx.globalAlpha = alpha;
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.shadowColor = 'rgba(0,0,0,0.8)';
+        ctx.shadowBlur = 24;
+
+        const winnerText = state.endEffect.winner === 0 ? 'Xanh thắng!' : 'Đỏ thắng!';
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 40px system-ui, sans-serif';
+        ctx.fillText(winnerText, w / 2, h / 2 - 6);
+
+        ctx.shadowBlur = 0;
+        ctx.font = '18px system-ui, sans-serif';
+        ctx.fillStyle = 'rgba(255,255,255,0.82)';
+        ctx.fillText('Bấm "Chơi lại" để bắt đầu ván mới', w / 2, h / 2 + 34);
+
+        ctx.restore();
+      }
+
+      function render() {
+        if (!state.layout) return;
+        const w = canvas.clientWidth || state.layout.size;
+        const h = canvas.clientHeight || state.layout.size;
+
+        ctx.clearRect(0, 0, w, h);
+        const grad = ctx.createRadialGradient(w * 0.5, h * 0.35, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
+        grad.addColorStop(0, '#151520');
+        grad.addColorStop(1, '#07070b');
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, w, h);
+
+        drawBoardBase();
+        drawEndGameFill();
+        drawLegalHints();
+        drawWalls();
+        drawPieces();
+        drawOverlay();
+      }
+
+      resizeCanvas();
+      updateUI();
+      modeOverlay.classList.remove('hidden');
+      setMessage('Chọn chế độ để bắt đầu.');
+    })();
+  </script>
+</body>
+</html>
