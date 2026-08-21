@@ -1,0 +1,799 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>Dogdoku</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<style>
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none}
+body{margin:0;background:#10141b;color:#eef2f7;font-family:system-ui,sans-serif;height:100vh;overflow:hidden}
+.app{height:100%;display:flex;flex-direction:column;gap:8px;padding:8px}
+.bar{background:#191f29;border:1px solid #293240;border-radius:16px;padding:9px}
+.top{display:flex;align-items:center;justify-content:space-between}
+h1{font-size:18px;margin:0}
+.lives{display:flex;gap:6px;font-size:20px}
+.lives i{color:#f4ddb0;transition:.2s;filter:drop-shadow(0 0 2px rgba(0,0,0,.4))}
+.lives i.lost{color:#2c3340;filter:none}
+.rules{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.rule{background:#202733;border-radius:12px;min-height:50px;display:flex;align-items:center;justify-content:center;gap:6px;padding:5px;font-size:10.5px;text-align:center}
+.rule svg{width:26px;height:26px;flex:none}
+.stage{flex:1;display:grid;place-items:center;min-height:0}
+.board{width:min(94vw,600px);aspect-ratio:1;display:grid;grid-template-columns:repeat(6,1fr);gap:3px}
+.cell{position:relative;border-radius:10px;display:grid;place-items:center;cursor:pointer;border:2px solid transparent;overflow:hidden}
+.cell.locked{cursor:default}
+footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+.cell .rb,.cell .bb{position:absolute;background:#0d1015}
+.cell .rb{top:0;right:-2px;bottom:0;width:3px}
+.cell .bb{left:0;right:0;bottom:-2px;height:3px}
+.pup{
+    width:95%;
+    height:95%;
+    opacity:0;
+    transform:scale(.7);
+    transition:.15s;
+    position:relative;
+    z-index:2;
+}
+
+.cell.found .pup{
+    opacity:1;
+    transform:scale(1);
+}
+ 
+ .dog-outline{
+    fill:#fff;
+    stroke:#fff;
+    stroke-width:5;
+    stroke-linejoin:round;
+    paint-order:stroke fill;
+}
+.cell.found .pup{opacity:1;transform:scale(1)}
+.ear{fill:#7c4f2a}.head{fill:#e6b077}.snout{fill:#f8e6c8}
+.eye-white{fill:#fff}.pupil{fill:#211712}.shine{fill:#fff}
+.nose{fill:#211712}.mouth{stroke:#5c3b22;stroke-width:2.5;fill:none;stroke-linecap:round}
+.tongue{fill:#ef8ea3}
+.mark{
+    position:absolute;
+    width:75%;
+    height:75%;
+    opacity:0;
+    z-index:5;
+    pointer-events:none;
+}
+
+.cell.marked .mark{
+    opacity:1;
+}
+
+.mark path{
+    fill:none;
+    stroke:#fff;
+    stroke-width:10;
+    stroke-linecap:round;
+    stroke-dasharray:1;
+    stroke-dashoffset:1;
+}
+
+/* \ xuất hiện trước */
+.mark.animate path:first-child{
+    animation: drawX .22s ease-out forwards;
+}
+
+/* / xuất hiện sau */
+.mark.animate path:last-child{
+    animation: drawX .22s ease-out .22s forwards;
+}
+
+@keyframes drawX{
+    from{
+        stroke-dashoffset:1;
+    }
+    to{
+        stroke-dashoffset:0;
+    }
+}
+ .ear{
+    fill:#8a5a32;
+}
+
+.inner-ear{
+    fill:#633d25;
+}
+.wrongflag{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;opacity:0}
+.cell.wrong{filter:grayscale(.6) brightness(.55)}
+.cell.wrong .wrongflag{opacity:1}
+.wrongflag i{font-size:22px;color:#8a95a8}
+.bottom{display:flex;justify-content:center;color:#9ca8b7;font-size:12px}
+@media(max-width:650px) and (orientation:portrait){.rules{grid-template-columns:repeat(2,1fr)}.rules .rule{min-height:36px}.rule span{font-size:10px}}
+@media(max-height:650px){.rules{display:none}}
+ .mark.complete path{
+    stroke-dashoffset:0;
+}
+    .music-btn{
+    width:38px;
+    height:38px;
+    padding:0;
+    border:0;
+    border-radius:12px;
+    background:#252d39;
+    color:#eef2f7;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    font-size:16px;
+    cursor:pointer;
+}
+
+.music-btn.off{
+    color:#667181;
+    background:#202630;
+}
+
+.gameover-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(8,10,15,.72);
+    backdrop-filter:blur(2px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    z-index:9999;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .18s ease;
+}
+
+.gameover-overlay.show{
+    opacity:1;
+    pointer-events:auto;
+}
+
+.gameover-card{
+    background:#191f29;
+    border:1px solid #293240;
+    border-radius:20px;
+    padding:26px 24px;
+    width:min(86vw,340px);
+    text-align:center;
+    transform:translateY(10px) scale(.96);
+    transition:transform .18s ease;
+    box-shadow:0 20px 50px rgba(0,0,0,.4);
+}
+
+.gameover-overlay.show .gameover-card{
+    transform:translateY(0) scale(1);
+}
+
+.gameover-icon{font-size:38px;margin-bottom:6px}
+.gameover-title{font-size:16px;font-weight:600;margin:0 0 6px}
+.gameover-msg{font-size:13px;color:#9ca8b7;margin:0 0 18px;line-height:1.5}
+
+.gameover-btn{
+    border:0;
+    border-radius:14px;
+    padding:12px 20px;
+    font-size:14px;
+    font-weight:600;
+    background:#4fa8f7;
+    color:#0e131b;
+    cursor:pointer;
+    width:100%;
+    transition:opacity .15s ease, filter .15s ease;
+}
+
+.gameover-btn:active{filter:brightness(.9)}
+.gameover-btn:disabled{
+    opacity:.55;
+    filter:none;
+    pointer-events:none;
+    cursor:default;
+}
+</style>
+</head>
+<body>
+<div class="app">
+ <div class="bar top">
+  <h1>🐾 Dogdoku</h1>
+
+  <div style="display:flex;align-items:center;gap:12px">
+    <button id="musicBtn" class="music-btn" aria-label="Tắt nhạc">
+      <i class="fa-solid fa-volume-high"></i>
+    </button>
+
+    <div class="lives" id="lives"></div>
+  </div>
+</div>
+ <div class="bar rules" id="rulesBar">
+  <div class="rule">
+    <i class="fa-solid fa-hand-pointer" style="font-size:24px"></i>
+    <span>Nhấn 1 lần vào ô để đánh dấu/xoá dấu</span>
+</div>
+
+<div class="rule">
+    <i class="fa-solid fa-hand-pointer" style="font-size:24px"></i>
+    <span>Nhấn đúp vào ô để kiểm tra chó</span>
+</div>
+  <div class="rule" id="ruleRow"><span>Chỉ duy nhất có một con chó trên một hàng
+  </span></div>
+  <div class="rule" id="ruleCol"><span>Chỉ duy nhất có một con chó trên một cột</span></div>
+  <div class="rule">
+   <svg viewBox="0 0 40 40" width="26" height="26">
+    <rect x="4" y="4" width="14" height="14" rx="3" fill="#e05260"/>
+    <rect x="22" y="4" width="14" height="14" rx="3" fill="#3d8bcf"/>
+    <rect x="4" y="22" width="14" height="14" rx="3" fill="#e6c229"/>
+    <rect x="22" y="22" width="14" height="14" rx="3" fill="#3fae5c"/>
+   </svg>
+   <span>Mỗi màu chỉ xuất hiện một con chó</span>
+  </div>
+  <div class="rule">
+   <svg viewBox="0 0 40 40" width="26" height="26">
+    <circle cx="12" cy="12" r="6" fill="#6e7b90"/>
+    <circle cx="28" cy="28" r="6" fill="#6e7b90"/>
+    <path d="M16 16 24 24M24 16 16 24" stroke="#ff6262" stroke-width="2.5"/>
+   </svg>
+   <span>Các con chó không bao giờ ở cạnh nhau</span>
+  </div>
+ </div>
+ <div class="stage"><div id="board" class="board"></div></div>
+ <div class="bar bottom"><span id="count">Đã tìm: 0 / 6</span></div>
+</div>
+
+<div class="gameover-overlay" id="gameoverOverlay">
+  <div class="gameover-card">
+    <div class="gameover-icon" id="gameoverIcon">🎉</div>
+    <p class="gameover-title" id="gameoverTitle">Hoàn thành!</p>
+    <p class="gameover-msg" id="gameoverMsg"></p>
+    <button class="gameover-btn" id="gameoverBtn">Chơi lại</button>
+  </div>
+</div>
+
+    <footer> Version:D20261108-H08M47T6198 »»» developed by Tran Gia Bao</footer>
+<script>
+const N=6;
+const REGION_COLORS=['#ff5c6c','#ffd93d','#4fd07a','#4fa8f7','#c084f5','#ff9d4d'];
+const board=document.querySelector('#board'),count=document.querySelector('#count'),livesEl=document.querySelector('#lives');
+const gameoverOverlay=document.querySelector('#gameoverOverlay');
+const gameoverIcon=document.querySelector('#gameoverIcon');
+const gameoverTitle=document.querySelector('#gameoverTitle');
+const gameoverMsg=document.querySelector('#gameoverMsg');
+const gameoverBtn=document.querySelector('#gameoverBtn');
+let sol=[],regionOf=[],cellState=[],lives=3,found=0;
+let animateMark = null;
+let gameOver = false;
+let gameOverTimer = null; 
+let markAnimationTimeout = null;   // ← Thêm biến mới
+let audioCtx = null;
+let bgMusicTimer = null;
+let bgMusicPlaying = false;
+let bgMusicStep = 0;
+let musicEnabled = true;
+let activeAudioNodes = [];         // theo dõi mọi oscillator/gain đang chạy để dọn dẹp triệt để
+let isRestarting = false;          // khoá chống spam nút "Chơi lại"
+let restartCooldownTimer = null;
+
+const musicBtn = document.querySelector('#musicBtn');
+
+musicBtn.addEventListener('click', () => {
+    if(musicEnabled){
+        musicEnabled = false;
+        stopMusic();
+        musicBtn.classList.add('off');
+        musicBtn.innerHTML = '<i class="fa-solid fa-volume-xmark"></i>';
+    }else{
+        musicEnabled = true;
+        startMusic();
+        musicBtn.classList.remove('off');
+        musicBtn.innerHTML = '<i class="fa-solid fa-volume-high"></i>';
+    }
+});
+
+const melody = [
+    523.25, 659.25, 783.99, 659.25,
+    587.33, 698.46, 880.00, 698.46,
+    523.25, 659.25, 783.99, 987.77,
+    880.00, 783.99, 659.25, 523.25
+];
+
+function trackNode(osc, gain){
+    const entry = {osc, gain};
+    activeAudioNodes.push(entry);
+    osc.onended = () => {
+        try{ osc.disconnect(); }catch(e){}
+        try{ gain.disconnect(); }catch(e){}
+        const i = activeAudioNodes.indexOf(entry);
+        if(i !== -1) activeAudioNodes.splice(i, 1);
+    };
+}
+
+// Ngắt cưỡng bức mọi oscillator còn treo (ví dụ do tab bị nền hoá / AudioContext bị suspend
+// khiến sự kiện "onended" không kịp bắn ra) để tránh dồn ứ node âm thanh gây đơ máy.
+function stopAllSounds(){
+    for(const {osc, gain} of activeAudioNodes){
+        try{ osc.stop(); }catch(e){}
+        try{ osc.disconnect(); }catch(e){}
+        try{ gain.disconnect(); }catch(e){}
+    }
+    activeAudioNodes = [];
+}
+
+function playMusicNote(freq, time, duration = 4.96){
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(freq, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.035, time + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(time);
+    osc.stop(time + duration + 0.02);
+    trackNode(osc, gain);
+}
+
+function playMusicBass(freq, time){
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(freq, time);
+
+    gain.gain.setValueAtTime(0.0001, time);
+    gain.gain.exponentialRampToValueAtTime(0.018, time + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.0001, time + 0.35);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(time);
+    osc.stop(time + 0.4);
+    trackNode(osc, gain);
+}
+
+function musicLoop(){
+    if(!bgMusicPlaying) return;
+
+    const ctx = getAudio();
+    const now = ctx.currentTime;
+
+    const beat = 0.24;
+    const index = bgMusicStep % melody.length;
+
+    playMusicNote(melody[index], now, beat * 0.85);
+
+    if(index % 4 === 0){
+        const bassNotes = [130.81, 146.83, 164.81, 196.00];
+        playMusicBass(bassNotes[(index / 4) % bassNotes.length], now);
+    }
+
+    bgMusicStep++;
+    bgMusicTimer = setTimeout(musicLoop, beat * 1000);
+}
+
+function startMusic(){
+    if(!musicEnabled) return;
+    if(bgMusicPlaying) return;
+
+    getAudio();
+    bgMusicPlaying = true;
+    bgMusicStep = 0;
+    musicLoop();
+}
+
+function stopMusic(){
+    bgMusicPlaying = false;
+    if(bgMusicTimer !== null){
+        clearTimeout(bgMusicTimer);
+        bgMusicTimer = null;
+    }
+}
+
+function getAudio(){
+    if(!audioCtx){
+        audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    }
+    if(audioCtx.state === 'suspended'){
+        audioCtx.resume();
+    }
+    return audioCtx;
+}
+
+function tone(freq, duration, type='sine', volume=0.08, delay=0){
+    const ctx = getAudio();
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = type;
+    osc.frequency.setValueAtTime(freq, ctx.currentTime + delay);
+
+    gain.gain.setValueAtTime(0.0001, ctx.currentTime + delay);
+    gain.gain.exponentialRampToValueAtTime(volume, ctx.currentTime + delay + 0.015);
+    gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + delay + duration);
+
+    osc.connect(gain);
+    gain.connect(ctx.destination);
+
+    osc.start(ctx.currentTime + delay);
+    osc.stop(ctx.currentTime + delay + duration + 0.02);
+    trackNode(osc, gain);
+}
+
+function soundWrong(){
+    tone(180, 0.16, 'square', 0.055);
+    tone(120, 0.22, 'sawtooth', 0.035, 0.08);
+}
+
+function soundWin(){
+    tone(523.25, 0.16, 'sine', 0.07);
+    tone(659.25, 0.16, 'sine', 0.07, 0.13);
+    tone(783.99, 0.28, 'sine', 0.08, 0.26);
+}
+
+function soundLose(){
+    tone(330, 0.18, 'sawtooth', 0.055);
+    tone(247, 0.22, 'sawtooth', 0.05, 0.16);
+    tone(165, 0.35, 'sawtooth', 0.045, 0.34);
+}
+
+function shuffle(a){
+    for(let i=a.length-1;i;i--){
+        let j=Math.random()*(i+1)|0;
+        // Dùng biến tạm để hoán đổi thay vì destructuring assignment
+        // ([a[i],a[j]] = [a[j],a[i]]) — cú pháp này có thể khiến một số
+        // engine cố gắng liệt kê (enumerate) toàn bộ thuộc tính của mảng
+        // và ném lỗi "Too many properties to enumerate" trong vài trường hợp.
+        const tmp = a[i];
+        a[i] = a[j];
+        a[j] = tmp;
+    }
+    return a;
+}
+
+function makeSol(){
+    for(let t=0;t<500;t++){
+        let a=[], used=new Set();
+        function bt(r){
+            if(r===N) return 1;
+            let o=shuffle([...Array(N).keys()].filter(c => !used.has(c) && (r===0 || Math.abs(c-a[r-1])>1)));
+            for(let c of o){
+                a[r]=c;
+                used.add(c);
+                if(bt(r+1)) return 1;
+                used.delete(c);
+            }
+            return 0;
+        }
+        if(bt(0)) return a;
+    }
+    return [0,2,4,1,3,5];
+}
+
+async function lockOrientation() {
+    try {
+        // "lock" trả về Promise — cần await để try/catch bắt được cả
+        // trường hợp Promise bị reject (không chỉ lỗi ném đồng bộ),
+        // tránh lỗi "Uncaught (in promise)" không được xử lý.
+        if(screen.orientation && screen.orientation.lock){
+            await screen.orientation.lock("portrait");
+        }
+    } catch (err) {
+        // Không log thẳng đối tượng lỗi gốc — trong iframe sandbox, đối
+        // tượng lỗi/host object đôi khi bị bọc lại (proxy) và việc console
+        // cố in ra toàn bộ thuộc tính của nó có thể ném "Too many
+        // properties to enumerate". Chỉ log thông điệp dạng chuỗi an toàn.
+        console.log("Không thể khóa orientation:", err && err.message ? err.message : String(err));
+    }
+}
+lockOrientation();
+
+function makeRegions(sol){
+    const regionOf = Array.from({length:N}, () => Array(N).fill(-1));
+    for(let r=0; r<N; r++) regionOf[r][sol[r]] = r;
+    const dirs = [[1,0],[-1,0],[0,1],[0,-1]];
+    let remaining = N*N - N, guard = 0;
+    while(remaining > 0 && guard < 5000){
+        guard++;
+        let progressed = false;
+        for(const reg of shuffle([...Array(N).keys()])){
+            const candidates = [];
+            for(let r=0; r<N; r++) for(let c=0; c<N; c++){
+                if(regionOf[r][c] === reg){
+                    for(const [dr,dc] of dirs){
+                        const nr = r+dr, nc = c+dc;
+                        if(nr>=0 && nr<N && nc>=0 && nc<N && regionOf[nr][nc] === -1)
+                            candidates.push([nr,nc]);
+                    }
+                }
+            }
+            if(candidates.length){
+                const [nr,nc] = candidates[Math.random()*candidates.length|0];
+                if(regionOf[nr][nc] === -1){
+                    regionOf[nr][nc] = reg;
+                    remaining--;
+                    progressed = true;
+                }
+            }
+        }
+        if(!progressed) break;
+    }
+    for(let r=0; r<N; r++) for(let c=0; c<N; c++){
+        if(regionOf[r][c] === -1){
+            for(const [dr,dc] of dirs){
+                const nr = r+dr, nc = c+dc;
+                if(nr>=0 && nr<N && nc>=0 && nc<N && regionOf[nr][nc] !== -1){
+                    regionOf[r][c] = regionOf[nr][nc];
+                    break;
+                }
+            }
+        }
+    }
+    return regionOf;
+}
+
+function dogSVG(cls){
+    const s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    s.setAttribute('viewBox','0 0 100 100');
+    s.setAttribute('class', cls || 'dog');
+    s.innerHTML = `
+        <path class="ear" d="M28 29 C22 26 16 29 12 35 C9 40 10 49 14 56 C17 62 22 65 26 62 C30 59 31 52 30 45 C30 38 29 32 28 29 Z"/>
+        <path class="ear" d="M72 29 C78 26 84 29 88 35 C91 40 90 49 86 56 C83 62 78 65 74 62 C70 59 69 52 70 45 C70 38 71 32 72 29 Z"/>
+        <ellipse class="head" cx="50" cy="53" rx="29" ry="26"/>
+        <ellipse class="snout" cx="50" cy="63" rx="16" ry="12"/>
+        <ellipse class="eye-white" cx="38" cy="46" rx="6.5" ry="7.5"/>
+        <ellipse class="eye-white" cx="62" cy="46" rx="6.5" ry="7.5"/>
+        <circle class="pupil" cx="39" cy="47.5" r="3.4"/>
+        <circle class="pupil" cx="63" cy="47.5" r="3.4"/>
+        <circle class="shine" cx="40.8" cy="45" r="1.1"/>
+        <circle class="shine" cx="64.8" cy="45" r="1.1"/>
+        <ellipse class="nose" cx="50" cy="58" rx="6" ry="4.5"/>
+        <path class="mouth" d="M50 62 Q50 68 43 71 M50 62 Q50 68 57 71"/>
+        <path class="tongue" d="M46 70 Q50 84 54 70 Q50 77 46 70 Z"/>
+        <path class="inner-ear" d="M24 34 C19 32 15 35 15 41 C15 49 17 58 21 63 C24 66 26 62 27 56 C28 48 28 39 24 34 Z"/>
+        <path class="inner-ear" d="M76 34 C81 32 85 35 85 41 C85 49 83 58 79 63 C76 66 74 62 73 56 C72 48 72 39 76 34 Z"/>
+    `;
+    return s;
+}
+
+function markSVG(){
+    const s = document.createElementNS('http://www.w3.org/2000/svg','svg');
+    s.setAttribute('viewBox','0 0 100 100');
+    s.setAttribute('class','mark');
+    s.innerHTML = `
+        <path pathLength="1" d="M10 10 L90 90"/>
+        <path pathLength="1" d="M90 10 L10 90"/>
+    `;
+    return s;
+}
+
+function updateLives(){
+    livesEl.innerHTML = '';
+    for(let i=0; i<3; i++){
+        const on = i < lives;
+        livesEl.insertAdjacentHTML('beforeend', `<i class="fa-solid fa-bone fa-rotate-by ${on?'':'lost'}" style="--fa-rotate-angle:135deg;"></i>`);
+    }
+}
+
+function newGame(){
+    gameOver = false;
+
+    // Hủy các timeout cũ
+    if(gameOverTimer !== null){
+        clearTimeout(gameOverTimer);
+        gameOverTimer = null;
+    }
+    if(markAnimationTimeout !== null){
+        clearTimeout(markAnimationTimeout);
+        markAnimationTimeout = null;
+    }
+    if(tapTimer !== null){
+        clearTimeout(tapTimer);
+        tapTimer = null;
+    }
+
+    // Dọn triệt để mọi âm thanh còn treo từ ván trước (tránh dồn ứ node
+    // gây giật/đơ khi bấm "Chơi lại" nhiều lần hoặc sau khi tab bị nền hoá)
+    stopAllSounds();
+    stopMusic();
+
+    tapIdx = -1;
+    animateMark = null;
+
+    hideGameOverCard();
+
+    sol = makeSol();
+    regionOf = makeRegions(sol);
+    lives = 3;
+    found = 0;
+    cellState = Array.from({length:N}, () => Array.from({length:N}, () => ({status:'hidden', locked:false})));
+
+    updateLives();
+    render();
+
+    // Nếu nhạc được bật → khởi động lại (đã dừng ở trên nên luôn an toàn để bật lại)
+    if(musicEnabled){
+        startMusic();
+    }
+}
+
+let tapTimer = null, tapIdx = -1;
+
+function onTap(r,c){
+    if(gameOver) return;
+    const idx = r*N + c;
+    if(tapTimer !== null && tapIdx === idx){
+        clearTimeout(tapTimer);
+        tapTimer = null;
+        handleDouble(r,c);
+    }else{
+        tapIdx = idx;
+        tapTimer = setTimeout(() => {
+            tapTimer = null;
+            if(!gameOver) handleSingle(r,c);
+        }, 260);
+    }
+}
+
+function showGameOverCard(win, message){
+    gameoverIcon.textContent = win ? '🎉' : '💔';
+    gameoverTitle.textContent = win ? 'Hoàn thành!' : 'Hết mạng rồi!';
+    gameoverMsg.textContent = message;
+    gameoverOverlay.classList.add('show');
+}
+
+function hideGameOverCard(){
+    gameoverOverlay.classList.remove('show');
+}
+
+// Chặn spam: khoá nút ngay khi bấm, chỉ mở lại sau một khoảng cooldown ngắn.
+// Điều này vừa ngăn người dùng bấm liên tục vừa loại bỏ tình trạng nhiều lượt
+// khởi tạo ván mới (cùng các oscillator/timer đi kèm) bị dồn lại và xử lý
+// chồng chéo — nguyên nhân khiến giao diện có cảm giác "đơ" trong vài giây.
+gameoverBtn.addEventListener('click', () => {
+    if(isRestarting) return;
+    isRestarting = true;
+    gameoverBtn.disabled = true;
+
+    newGame();
+
+    if(restartCooldownTimer !== null) clearTimeout(restartCooldownTimer);
+    restartCooldownTimer = setTimeout(() => {
+        isRestarting = false;
+        gameoverBtn.disabled = false;
+    }, 400);
+});
+
+function finishGame(win, message){
+    if(gameOver) return;
+
+    gameOver = true;
+
+    // Dừng nhạc nền ngay khi game kết thúc
+    stopMusic();
+
+    if(tapTimer !== null){
+        clearTimeout(tapTimer);
+        tapTimer = null;
+    }
+    tapIdx = -1;
+    animateMark = null;
+
+    if(win){
+        soundWin();
+    }else{
+        soundLose();
+    }
+
+    gameOverTimer = setTimeout(() => {
+        if(gameOver){
+            showGameOverCard(win, message);
+        }
+    }, 150);
+}
+
+function handleSingle(r,c){
+    const cell = cellState[r][c];
+    if(cell.locked) return;
+
+    if(cell.status === 'marked'){
+        cell.status = 'hidden';
+        animateMark = null;
+    }else{
+        cell.status = 'marked';
+        animateMark = `${r}-${c}`;
+    }
+    render();
+}
+
+function handleDouble(r,c){
+    if(gameOver) return;
+    const cell = cellState[r][c];
+    if(cell.locked) return;
+
+    if(sol[r] === c){
+        cell.status = 'dog';
+        cell.locked = true;
+        found++;
+        render();
+        if(found === N){
+            finishGame(true, 'Bạn đã tìm đủ 6 chú chó! Nhấn nút bên dưới để chơi ván mới.');
+        }
+    }else{
+        cell.status = 'wrong';
+        cell.locked = true;
+        lives--;
+        soundWrong();
+        updateLives();
+        render();
+        if(lives <= 0){
+            finishGame(false, 'Bạn đã hết mạng. Nhấn nút bên dưới để chơi ván mới.');
+        }
+    }
+}
+
+function render(){
+    board.innerHTML = '';
+    for(let r=0; r<N; r++) for(let c=0; c<N; c++){
+        const st = cellState[r][c];
+        const x = document.createElement('div');
+        x.className = 'cell' + (st.locked?' locked':'') + (st.status==='dog'?' found':'') + (st.status==='marked'?' marked':'') + (st.status==='wrong'?' wrong':'');
+        x.style.background = REGION_COLORS[regionOf[r][c]] + 'd9';
+        if(c < N-1 && regionOf[r][c] !== regionOf[r][c+1])
+            x.insertAdjacentHTML('beforeend', '<div class="rb"></div>');
+        if(r < N-1 && regionOf[r][c] !== regionOf[r+1][c])
+            x.insertAdjacentHTML('beforeend', '<div class="bb"></div>');
+
+        x.append(dogSVG('pup'));
+
+        const mark = markSVG();
+        x.append(mark);
+
+        if(st.status === 'marked'){
+            if(animateMark !== `${r}-${c}`){
+                mark.classList.add('complete');
+            }else{
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        mark.classList.add('animate');
+                        markAnimationTimeout = setTimeout(() => {
+                            mark.classList.remove('animate');
+                            mark.classList.add('complete');
+                            animateMark = null;
+                        }, 500);
+                    });
+                });
+            }
+        }
+
+        const wf = document.createElement('div');
+        wf.className = 'wrongflag';
+        wf.innerHTML = '<svg viewBox="0 0 40 40" width="24" height="24"><circle cx="20" cy="20" r="15" fill="none" stroke="#8a95a8" stroke-width="3.5"/><line x1="10" y1="30" x2="30" y2="10" stroke="#8a95a8" stroke-width="3.5"/></svg>';
+        x.append(wf);
+        x.onclick = () => onTap(r,c);
+        board.append(x);
+    }
+    count.textContent = `Đã tìm: ${found} / ${N}`;
+}
+
+// mini dog icons for the row/column rule cards
+const mini1 = dogSVG('pup');
+mini1.style.cssText = 'width:26px;height:26px;opacity:1;transform:none';
+document.querySelector('#ruleRow').prepend(mini1);
+
+const mini2 = dogSVG('pup');
+mini2.style.cssText = 'width:26px;height:26px;opacity:1;transform:none';
+document.querySelector('#ruleCol').prepend(mini2);
+
+newGame();
+document.addEventListener('pointerdown', () => {
+    startMusic();
+}, {once:true});
+</script>
+</body>
+</html>
