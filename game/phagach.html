@@ -1,0 +1,1635 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Phá gạch</title>
+<style>
+  :root{
+    --bg:#0b0f18;
+    --panel:#121927;
+    --line:#263248;
+    --text:#eaf1ff;
+    --muted:#8d9bb3;
+    --ball:#fff;
+    --paddle:#62d8ff;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{
+    width:100%;
+    height:100%;
+    margin:0;
+    overflow:hidden;
+    background:var(--bg);
+    color:var(--text);
+    font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    touch-action:none;
+  }
+
+  body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+
+  #app{
+    position:relative;
+    width:100vw;
+    height:100dvh;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 12%, rgba(69,112,190,.12), transparent 34%),
+      linear-gradient(180deg,#0b0f18,#080c13);
+  }
+
+  #topbar{
+    position:absolute;
+    top:0;
+    left:0;
+    right:0;
+    z-index:5;
+    height:44px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    padding:0 12px;
+    pointer-events:none;
+    font-size:13px;
+    font-weight:700;
+    letter-spacing:.3px;
+  }
+
+  .hud{
+    min-width:62px;
+    padding:6px 9px;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:10px;
+    background:rgba(10,15,25,.56);
+    backdrop-filter:blur(8px);
+    text-align:center;
+  }
+
+  #wrap{
+    position:absolute;
+    left:50%;
+    top:44px;
+    bottom:0;
+    transform:translateX(-50%);
+    width:100vw;
+    display:flex;
+    align-items:stretch;
+    justify-content:center;
+    padding:2px 5px 5px;
+  }
+
+  #game{
+    display:block;
+    width:100%;
+    height:100%;
+    max-height:none;
+    border:1px solid rgba(255,255,255,.08);
+    border-radius:14px;
+    background:#0b111b;
+  }
+
+  /* Portrait-only layout */
+  #rotate{
+    position:fixed;
+    inset:0;
+    z-index:30;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:#080c13;
+    color:var(--text);
+    font-size:18px;
+    font-weight:800;
+    text-align:center;
+  }
+
+  #rotate span{
+    display:block;
+    padding:24px;
+  }
+
+  @media (orientation:landscape){
+    #rotate{display:flex}
+    #app{display:none}
+  }
+
+  #overlay{
+    position:absolute;
+    inset:0;
+    z-index:10;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    background:rgba(4,8,14,.62);
+    backdrop-filter:blur(4px);
+  }
+
+  #card{
+    width:min(340px,80vw);
+    padding:22px 18px;
+    border:1px solid rgba(255,255,255,.1);
+    border-radius:18px;
+    background:rgba(15,22,35,.96);
+    box-shadow:0 18px 50px rgba(0,0,0,.35);
+    text-align:center;
+  }
+
+  #big{
+    margin:0 0 14px;
+    font-size:28px;
+    font-weight:900;
+  }
+
+  button{
+    width:100%;
+    height:46px;
+    border:0;
+    border-radius:12px;
+    background:#edf4ff;
+    color:#08101b;
+    font-size:15px;
+    font-weight:900;
+  }
+
+  .tip{
+    margin-top:10px;
+    color:var(--muted);
+    font-size:12px;
+  }
+
+footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="topbar">
+    <div class="hud">WAVE <span id="wave">1</span></div>
+    <div class="hud"><span id="score">0</span></div>
+    <div class="hud">SỨC MẠNH <span id="power">5</span></div>
+    <div class="hud"><span id="timer">10</span>s</div>
+  </div>
+
+  <div id="wrap">
+    <canvas id="game"></canvas>
+    <div id="overlay">
+      <div id="card">
+        <div id="big">GAME OVER</div>
+        <button id="restart">CHƠI LẠI</button>
+        <div class="tip"></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div id="rotate"><span>↕<br>Chỉ chơi ở màn hình dọc</span></div>
+<footer> Version:D20262108-H21M38T5661 »»» developed by Tran Gia Bao</footer>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d', { alpha:false });
+
+  const waveEl = document.getElementById('wave');
+  const scoreEl = document.getElementById('score');
+  const powerEl = document.getElementById('power');
+  const timerEl = document.getElementById('timer');
+  const overlay = document.getElementById('overlay');
+  const restartBtn = document.getElementById('restart');
+
+  const COLS = 7;
+  const MAX_DT = 0.025;
+  const DANGER_Y_RATIO = 0.88;
+  let W = 1, H = 1, dpr = 1;
+
+  const state = {
+    wave: 1,
+    score: 0,
+    ballPower: 5,
+    combo: 0,
+    bricks: [],
+    powerUps: [],
+    sizeUp: null,
+    sizeUpNextAt: 0,
+    sizeBoostUntil: 0,
+    x3: null,
+    x3NextAt: 0,
+    waveStartedAt: 0,
+    lastWaveAt: 0,
+    gameOver: false,
+    running: true,
+    paused: false,
+    pauseStart: 0
+  };
+
+  let stars = [];
+  let shakeMag = 0;
+  let floatTexts = [];
+let brickSlide = {
+  active: false,
+  start: 0,
+  duration: 450
+};
+  const paddle = {
+    x: 0, y: 0, w: 130, h: 13,
+    targetX: 0,
+    speed: 2.8
+  };
+
+  const ball = {
+    x: 0, y: 0,
+    r: 8,
+    vx: 260,
+    vy: -300,
+    minSpeed: 300,
+    maxSpeed: 620
+  };
+
+  let balls = [];
+  let particles = [];
+  let lastTime = performance.now();
+  let pointerActive = false;
+
+  function resize() {
+    const rect = canvas.getBoundingClientRect();
+    W = Math.max(320, rect.width);
+    H = Math.max(240, rect.height);
+
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    canvas.width = Math.round(W * dpr);
+    canvas.height = Math.round(H * dpr);
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+
+    paddle.w = Math.max(86, W * 0.28);
+    paddle.h = Math.max(10, W * 0.012);
+    paddle.y = H - Math.max(34, H * 0.055);
+
+    if (!paddle.x) paddle.x = W/2 - paddle.w/2;
+    paddle.x = clamp(paddle.x, 8, W - paddle.w - 8);
+    paddle.targetX = clamp(paddle.targetX || paddle.x, 8, W - paddle.w - 8);
+
+    ball.r = Math.max(6, W * 0.0075);
+
+    // Dải sao nền tạo chiều sâu, thị sai nhẹ theo vị trí thanh trượt.
+    const starCount = Math.round((W*H)/16000);
+    stars = Array.from({length: starCount}, () => ({
+      x: rand(0,W),
+      y: rand(0,H),
+      r: rand(.4,1.6),
+      depth: rand(.15,.6),
+      phase: rand(0,Math.PI*2),
+      speed: rand(.6,1.6)
+    }));
+  }
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+
+  function dangerY(){ return H * DANGER_Y_RATIO; }
+
+  function rand(a,b){ return a + Math.random()*(b-a); }
+
+  function currentBrickHP() {
+    const delta = Math.floor(rand(-3, 13));
+    return Math.max(1, state.ballPower + delta);
+  }
+
+function createBossBrick(top, cell, bw, bh) {
+  const bossW = cell * 2 - 10;
+  const bossH = bh * 1.55;
+  const slideDistance = Math.max(52, H * 0.085);
+
+  // HP BOSS = 10 lần HP của một viên gạch thường
+  const baseHp = currentBrickHP();
+  const bossHp = baseHp * 10;
+
+  return {
+    x: (W - bossW) / 2,
+
+    // Vị trí logic cuối cùng
+    y: top,
+
+    // Vị trí animation
+    fromY: top - slideDistance,
+    toY: top,
+    drawY: top - slideDistance,
+
+    w: bossW,
+    h: bossH,
+
+    hp: bossHp,
+    maxHp: bossHp,
+
+    hitFlash: 0,
+
+    boss: true,
+    slideNew: true
+  };
+}
+  function rectsOverlap(a, b, padding = 0){
+  return (
+    a.x - padding < b.x + b.w &&
+    a.x + a.w + padding > b.x &&
+    a.y - padding < b.y + b.h &&
+    a.y + a.h + padding > b.y
+  );
+}
+  
+  function clearBricksAroundBoss(boss){
+  const padding = Math.max(6, W * 0.015);
+
+  state.bricks = state.bricks.filter(brick => {
+    if(brick === boss) return true;
+
+    const brickRect = {
+      x: brick.x,
+      y: brick.y,
+      w: brick.w,
+      h: brick.h
+    };
+
+    const bossRect = {
+      x: boss.x,
+      y: boss.y,
+      w: boss.w,
+      h: boss.h
+    };
+
+    if(rectsOverlap(brickRect, bossRect, padding)){
+      brick.dead = true;
+      burst(
+        brick.x + brick.w / 2,
+        brick.y + brick.h / 2,
+        8,
+        0.8
+      );
+      return false;
+    }
+
+    return true;
+  });
+}
+function buildWave() {
+  const count = Math.floor(rand(3,6));
+  const isBossWave = state.wave % 5 === 0;
+
+  const top = Math.max(50, H * 0.055);
+  const rowGap = Math.max(52, H * 0.085);
+  const bw = Math.max(34, W / COLS - 10);
+  const bh = Math.max(24, Math.min(42, H * 0.045));
+  const cell = W / COLS;
+
+  // Chọn các cột cho gạch thường.
+  let availableCols = [...Array(COLS).keys()];
+
+// Tìm BOSS hiện đang tồn tại.
+const activeBoss = state.bricks.find(
+  brick => brick.boss && !brick.dead
+);
+
+if(activeBoss){
+  const bossPadding = Math.max(10, W * 0.025);
+
+  // Chỉ cho spawn nếu tâm của ô gạch
+  // không nằm trong vùng cấm của BOSS.
+  availableCols = availableCols.filter(col => {
+    const testX = col * cell + cell / 2;
+    const testW = cell - 10;
+
+    const testRect = {
+      x: testX - testW / 2,
+      y: top,
+      w: testW,
+      h: bh
+    };
+
+    const bossRect = {
+      x: activeBoss.x,
+      y: top,
+      w: activeBoss.w,
+      h: activeBoss.h
+    };
+
+    return !rectsOverlap(
+      testRect,
+      bossRect,
+      bossPadding
+    );
+  });
+}
+
+// Nếu đang là wave BOSS,
+// luôn chừa khu vực trung tâm cho BOSS mới.
+if(isBossWave){
+  availableCols = availableCols.filter(
+    col => col !== 2 && col !== 3
+  );
+}
+
+  const maxNormalCount = isBossWave
+    ? Math.min(4, availableCols.length)
+    : Math.min(5, availableCols.length);
+
+  const normalCount = Math.min(count, maxNormalCount);
+
+  const cols = availableCols
+    .sort(() => Math.random() - 0.5)
+    .slice(0, normalCount);
+
+  // Đẩy toàn bộ gạch cũ xuống.
+  for (const brick of state.bricks) {
+    brick.y += rowGap;
+    brick.fromY = brick.y - rowGap;
+    brick.toY = brick.y;
+    brick.drawY = brick.fromY;
+    brick.slideNew = false;
+  }
+
+  // Tạo gạch thường.
+  cols.forEach((col, i) => {
+    const hp = currentBrickHP();
+
+    const targetY =
+      top + (i % 2) * Math.min(rowGap, 78);
+
+    const slideDistance = Math.max(52, H * 0.085);
+
+    state.bricks.push({
+      x: col * cell + (cell - bw) / 2,
+
+      y: targetY,
+
+      fromY: targetY - slideDistance,
+      toY: targetY,
+      drawY: targetY - slideDistance,
+
+      w: bw,
+      h: bh,
+
+      hp,
+      maxHp: hp,
+
+      hitFlash: 0,
+
+      slideNew: true,
+      boss: false
+    });
+  });
+
+  // Dọn lại các gạch đang chồng lên BOSS hiện có (dùng lại biến activeBoss
+  // đã tìm ở trên — KHÔNG khai báo lại bằng const, đây chính là nguyên nhân
+  // gây SyntaxError "Identifier 'activeBoss' has already been declared"
+  // khiến toàn bộ script không chạy được).
+  if(activeBoss){
+    const padding = Math.max(8, W * 0.02);
+
+    state.bricks = state.bricks.filter(brick => {
+      if(brick === activeBoss) return true;
+
+      const brickRect = {
+        x: brick.x,
+        y: brick.toY ?? brick.y,
+        w: brick.w,
+        h: brick.h
+      };
+
+      const bossRect = {
+        x: activeBoss.x,
+        y: activeBoss.toY ?? activeBoss.y,
+        w: activeBoss.w,
+        h: activeBoss.h
+      };
+
+      if(rectsOverlap(brickRect, bossRect, padding)){
+        return false;
+      }
+
+      return true;
+    });
+  }
+
+if (isBossWave) {
+  const boss = createBossBrick(
+    top,
+    cell,
+    bw,
+    bh
+  );
+
+  state.bricks.push(boss);
+
+  // Khi BOSS xuất hiện, phá toàn bộ gạch
+  // đang chồng lên hoặc quá gần BOSS.
+  clearBricksAroundBoss(boss);
+}
+
+  // Bắt đầu animation trượt.
+  brickSlide.active = true;
+  brickSlide.start = performance.now();
+
+  // Reset power-up của wave.
+  state.powerUps = [];
+
+  const powerCount = 2;
+  const safeTop = top + bh + 8;
+  const safeBottom = Math.max(
+    safeTop,
+    dangerY() - 28
+  );
+
+  for (let n = 0; n < powerCount; n++) {
+    const item = {
+      x: W / 2,
+      y: safeTop,
+      r: Math.max(
+        8,
+        Math.min(11, W * 0.022)
+      ),
+      active: true,
+      collected: false
+    };
+
+    let found = false;
+
+    for (
+      let attempt = 0;
+      attempt < 150 && !found;
+      attempt++
+    ) {
+      const px = rand(
+        item.r + 8,
+        W - item.r - 8
+      );
+
+      const py = rand(
+        safeTop,
+        safeBottom
+      );
+
+      const overlapBrick = state.bricks.some(b =>
+        px + item.r + 5 > b.x &&
+        px - item.r - 5 < b.x + b.w &&
+        py + item.r + 5 > b.y &&
+        py - item.r - 5 < b.y + b.h
+      );
+
+      const overlapPower = state.powerUps.some(u =>
+        Math.hypot(px - u.x, py - u.y) <
+        item.r + u.r + 12
+      );
+
+      if (!overlapBrick && !overlapPower) {
+        item.x = px;
+        item.y = py;
+        found = true;
+      }
+    }
+
+    if (found) {
+      state.powerUps.push(item);
+    }
+  }
+
+  state.waveStartedAt = performance.now();
+  state.lastWaveAt = state.waveStartedAt;
+  waveEl.textContent = state.wave;
+}
+
+  function makeBall(x=W/2, y=H*0.70, vx=null, vy=null) {
+    const dir = Math.random() < .5 ? -1 : 1;
+    return {
+      x, y, r: ball.r,
+      vx: vx ?? dir * rand(150,210),
+      vy: vy ?? -rand(260,320),
+      minSpeed: 285,
+      maxSpeed: 1400
+    };
+  }
+
+  function resetBalls() {
+    balls = [makeBall()];
+  }
+
+  function resetGame() {
+    state.wave = 1;
+    state.score = 0;
+    state.ballPower = 5;
+    state.combo = 0;
+    state.gameOver = false;
+    state.running = true;
+    state.paused = false;
+    state.pauseStart = 0;
+    state.powerUps = [];
+    floatTexts.length = 0;
+    shakeMag = 0;
+    state.sizeUp = null;
+    state.sizeUpNextAt = performance.now() + 40000;
+    state.sizeBoostUntil = 0;
+    state.x3 = null;
+    state.x3NextAt = performance.now() + 25000;
+    state.bricks = [];
+    particles.length = 0;
+
+    paddle.x = W/2 - paddle.w/2;
+    paddle.targetX = paddle.x;
+
+    resetBalls();
+    buildWave();
+    overlay.style.display = 'none';
+    syncHud();
+  }
+
+  function nextWave() {
+    state.wave++;
+    buildWave();
+
+    // Tốc độ tăng 2% mỗi wave.
+    const factor = 1.02;
+    for (const b of balls) {
+      b.vx *= factor;
+      b.vy *= factor;
+      limitBallSpeed(b);
+    }
+    burst(W/2, 70, 18, 1);
+    shake(4);
+  }
+
+
+  function spawnAfterWaveCheck(now) {
+    if ((now - state.waveStartedAt) >= 10000) nextWave();
+  }
+
+  function syncHud() {
+    waveEl.textContent = state.wave;
+    scoreEl.textContent = state.score;
+    powerEl.textContent = state.ballPower;
+  }
+
+  function limitBallSpeed(b) {
+    const speed = Math.hypot(b.vx,b.vy);
+    const target = clamp(speed,b.minSpeed,1400);
+    if (speed !== target) {
+      const k=target/speed;
+      b.vx*=k;
+      b.vy*=k;
+    }
+  }
+
+
+  function sweptCircleRectHit(
+  x0, y0,
+  x1, y1,
+  r,
+  rect
+){
+  // Mở rộng hình chữ nhật theo bán kính bóng.
+  const left   = rect.x - r;
+  const right  = rect.x + rect.w + r;
+  const top    = rect.y - r;
+  const bottom = rect.y + rect.h + r;
+
+  const dx = x1 - x0;
+  const dy = y1 - y0;
+
+  // Nếu bóng đã nằm trong vùng collision.
+  if(
+    x0 >= left &&
+    x0 <= right &&
+    y0 >= top &&
+    y0 <= bottom
+  ){
+    let nx = 0;
+    let ny = 0;
+
+    const dl = Math.abs(x0 - left);
+    const dr = Math.abs(right - x0);
+    const dt = Math.abs(y0 - top);
+    const db = Math.abs(bottom - y0);
+
+    const m = Math.min(dl, dr, dt, db);
+
+    if(m === dl) nx = -1;
+    else if(m === dr) nx = 1;
+    else if(m === dt) ny = -1;
+    else ny = 1;
+
+    return {
+      hit: true,
+      t: 0,
+      nx,
+      ny
+    };
+  }
+
+  // Trường hợp bóng không di chuyển.
+  if(Math.abs(dx) < 0.000001 && Math.abs(dy) < 0.000001){
+    return {
+      hit: false,
+      t: 1,
+      nx: 0,
+      ny: 0
+    };
+  }
+
+  let txEntry, txExit;
+  let tyEntry, tyExit;
+
+  if(Math.abs(dx) < 0.000001){
+    if(x0 < left || x0 > right){
+      return {
+        hit:false,
+        t:1,
+        nx:0,
+        ny:0
+      };
+    }
+
+    txEntry = -Infinity;
+    txExit = Infinity;
+  }else{
+    txEntry = (left - x0) / dx;
+    txExit  = (right - x0) / dx;
+
+    if(txEntry > txExit){
+      [txEntry, txExit] = [txExit, txEntry];
+    }
+  }
+
+  if(Math.abs(dy) < 0.000001){
+    if(y0 < top || y0 > bottom){
+      return {
+        hit:false,
+        t:1,
+        nx:0,
+        ny:0
+      };
+    }
+
+    tyEntry = -Infinity;
+    tyExit = Infinity;
+  }else{
+    tyEntry = (top - y0) / dy;
+    tyExit  = (bottom - y0) / dy;
+
+    if(tyEntry > tyExit){
+      [tyEntry, tyExit] = [tyExit, tyEntry];
+    }
+  }
+
+  const entry = Math.max(txEntry, tyEntry);
+  const exit = Math.min(txExit, tyExit);
+
+  if(
+    entry > exit ||
+    entry < 0 ||
+    entry > 1
+  ){
+    return {
+      hit:false,
+      t:1,
+      nx:0,
+      ny:0
+    };
+  }
+
+  let nx = 0;
+  let ny = 0;
+
+  if(txEntry > tyEntry){
+    nx = dx > 0 ? -1 : 1;
+  }else{
+    ny = dy > 0 ? -1 : 1;
+  }
+
+  return {
+    hit:true,
+    t:entry,
+    nx,
+    ny
+  };
+}
+
+  function burst(x,y,count,scale) {
+    for(let i=0;i<count;i++){
+      particles.push({
+        x,y,
+        vx:rand(-110,110)*scale,
+        vy:rand(-110,110)*scale,
+        life:rand(.2,.5),
+        size:rand(1.5,3.5)
+      });
+    }
+  }
+
+  function shake(mag){
+    shakeMag = Math.min(14, shakeMag + mag);
+  }
+
+  function spawnFloatText(x,y,text,color){
+    floatTexts.push({ x, y, text, color, life: 1, vy: -46 });
+  }
+
+  function updateFloatTexts(dt){
+    for(let i=floatTexts.length-1;i>=0;i--){
+      const t=floatTexts[i];
+      t.y += t.vy*dt;
+      t.life -= dt*0.9;
+      if(t.life<=0) floatTexts.splice(i,1);
+    }
+  }
+
+  function drawFloatTexts(){
+    for(const t of floatTexts){
+      ctx.save();
+      ctx.globalAlpha = clamp(t.life,0,1);
+      ctx.fillStyle = t.color || '#fff';
+      ctx.font = '900 15px system-ui';
+      ctx.textAlign = 'center';
+      ctx.fillText(t.text, t.x, t.y);
+      ctx.restore();
+    }
+  }
+
+  function updateParticles(dt){
+    for(let i=particles.length-1;i>=0;i--){
+      const p=particles[i];
+      p.x += p.vx*dt;
+      p.y += p.vy*dt;
+      p.vy += 130*dt;
+      p.life -= dt;
+      if(p.life<=0) particles.splice(i,1);
+    }
+  }
+function updateBrickSlide(now) {
+  if (!brickSlide.active) return;
+
+  const progress = clamp(
+    (now - brickSlide.start) / brickSlide.duration,
+    0,
+    1
+  );
+
+  // Ease-out: nhanh lúc đầu, chậm dần khi tới vị trí cuối.
+  const eased = 1 - Math.pow(1 - progress, 3);
+
+  for (const brick of state.bricks) {
+    if (brick.slideNew) {
+      // Gạch mới: từ vị trí trên cao trượt xuống.
+      brick.drawY = brick.fromY + (brick.toY - brick.fromY) * eased;
+    } else {
+      // Gạch cũ cũng trượt xuống cùng lúc.
+      brick.drawY = brick.fromY + (brick.toY - brick.fromY) * eased;
+    }
+  }
+
+  if (progress >= 1) {
+    for (const brick of state.bricks) {
+      brick.drawY = brick.toY;
+      brick.slideNew = false;
+    }
+
+    brickSlide.active = false;
+  }
+}
+  
+  function update(dt, now){
+    if (state.gameOver) return;
+updateBrickSlide(now);
+
+    paddle.x += (paddle.targetX-paddle.x)*Math.min(1,dt*18);
+    paddle.x = clamp(paddle.x,8,W-paddle.w-8);
+
+    // X3 xuất hiện mỗi 25 giây.
+    if ((!state.x3 || !state.x3.active) && now >= state.x3NextAt) {
+      state.x3 = {
+        x:rand(18,W-18),
+        y:rand(H*.18,Math.max(H*.25,dangerY()-80)),
+        r:Math.max(8,Math.min(11,W*.022)),
+        active:true
+      };
+      state.x3NextAt=now+25000;
+    }
+
+    // Tăng kích thước: spawn mỗi 40 giây.
+    if ((!state.sizeUp || !state.sizeUp.active) && now >= state.sizeUpNextAt) {
+      state.sizeUp = {
+        x: rand(18,W-18),
+        y: rand(H*.18,Math.max(H*.25,dangerY()-80)),
+        r: Math.max(8,Math.min(11,W*.022)),
+        active: true
+      };
+      state.sizeUpNextAt = now + 40000;
+    }
+
+    // Hết 15 giây thì trả bóng về kích thước gốc.
+    if (state.sizeBoostUntil && now >= state.sizeBoostUntil) {
+      for (const current of balls) current.r = ball.r;
+      state.sizeBoostUntil = 0;
+    }
+
+    let x3Triggered = false;
+
+    for (let i=balls.length-1;i>=0;i--) {
+      const b=balls[i];
+      let lost=false;
+
+      // Chia nhỏ bước di chuyển theo tốc độ bóng: bóng nhanh sẽ được kiểm tra
+      // va chạm nhiều lần trong cùng 1 khung hình, tránh "xuyên" qua gạch mỏng
+      // (tunneling) — đây là nguyên nhân khiến bóng chạm gạch mà không trừ máu.
+      const speed = Math.hypot(b.vx,b.vy);
+      const maxStep = Math.max(4, b.r * 0.9);
+      const steps = Math.max(1, Math.min(8, Math.ceil((speed*dt)/maxStep)));
+      const subDt = dt/steps;
+
+      for (let s=0; s<steps; s++) {
+        b.x+=b.vx*subDt;
+        b.y+=b.vy*subDt;
+
+        if(b.x-b.r<=0){ b.x=b.r; b.vx=Math.abs(b.vx); }
+        else if(b.x+b.r>=W){ b.x=W-b.r; b.vx=-Math.abs(b.vx); }
+
+        if(b.y-b.r<=0){ b.y=b.r; b.vy=Math.abs(b.vy); }
+
+        if(
+          b.vy>0 &&
+          b.y+b.r>=paddle.y &&
+          b.y-b.r<=paddle.y+paddle.h &&
+          b.x>=paddle.x &&
+          b.x<=paddle.x+paddle.w
+        ){
+          b.y=paddle.y-b.r-.5;
+          const hit=(b.x-(paddle.x+paddle.w/2))/(paddle.w/2);
+          const angle=hit*1.05;
+          const pspeed=clamp(Math.hypot(b.vx,b.vy),285,1400);
+          b.vx=Math.sin(angle)*pspeed;
+          b.vy=-Math.abs(Math.cos(angle)*pspeed);
+          burst(b.x,paddle.y,4,.55);
+        }
+
+  for (const brick of state.bricks) {
+  if(brick.dead) continue;
+
+  const brickY = brick.drawY ?? brick.y;
+
+  const rect = {
+    x: brick.x,
+    y: brickY,
+    w: brick.w,
+    h: brick.h
+  };
+
+  // Vị trí hiện tại sau khi di chuyển.
+  const currentX = b.x;
+  const currentY = b.y;
+
+  // Vị trí trước khi di chuyển sub-step này.
+  const previousX = b.x - b.vx * subDt;
+  const previousY = b.y - b.vy * subDt;
+
+  const collision = sweptCircleRectHit(
+    previousX,
+    previousY,
+    currentX,
+    currentY,
+    b.r,
+    rect
+  );
+
+  if(!collision.hit) continue;
+
+  // Đưa bóng chính xác về điểm va chạm.
+  const hitT = collision.t;
+
+  b.x =
+    previousX +
+    (currentX - previousX) * hitT;
+
+  b.y =
+    previousY +
+    (currentY - previousY) * hitT;
+
+  // Đặt bóng sát mặt gạch để tránh bị lọt vào trong.
+  b.x += collision.nx * 0.75;
+  b.y += collision.ny * 0.75;
+
+  // Phản xạ theo mặt mà bóng vừa chạm.
+  if(
+    collision.nx !== 0 &&
+    b.vx * collision.nx < 0
+  ){
+    b.vx *= -1;
+  }
+
+  if(
+    collision.ny !== 0 &&
+    b.vy * collision.ny < 0
+  ){
+    b.vy *= -1;
+  }
+
+  // =========================
+  // TRỪ HP
+  // =========================
+
+  const damage = state.ballPower;
+
+  brick.hp = Math.max(
+    0,
+    brick.hp - damage
+  );
+
+  brick.hitFlash = 1;
+
+  burst(
+    b.x,
+    b.y,
+    brick.hp <= 0 ? 10 : 4,
+    brick.hp <= 0 ? 1.15 : 0.55
+  );
+
+  // =========================
+  // GẠCH BỊ PHÁ
+  // =========================
+
+  if(brick.hp <= 0){
+    state.combo++;
+
+    const mult =
+      1 +
+      Math.min(
+        1.5,
+        Math.floor(state.combo / 3) * 0.25
+      );
+
+    const gained = Math.round(
+      Math.max(
+        10,
+        brick.maxHp * 2
+      ) * mult
+    );
+
+    state.score += gained;
+
+    brick.dead = true;
+
+    if(
+      state.combo > 0 &&
+      state.combo % 5 === 0
+    ){
+      spawnFloatText(
+        b.x,
+        b.y - 18,
+        `COMBO x${state.combo}!`,
+        '#ffd166'
+      );
+
+      shake(6);
+    }
+  }else{
+    state.score += 2;
+  }
+
+  syncHud();
+
+  // Một bóng chỉ gây damage một brick trong sub-step này.
+  break;
+}
+
+        // Bóng rơi khỏi màn hình trong bước nhỏ này -> đánh dấu mất bóng.
+        if(b.y-b.r>H){ lost=true; break; }
+      }
+
+      if(lost){
+        balls.splice(i,1);
+        state.combo=0;
+        continue;
+      }
+
+      // X3: nhân 3 số bóng. Bóng gốc được thay bằng 3 bóng.
+      // (chỉ xử lý 1 lần/khung hình, sau khi đã duyệt hết các bóng hiện có)
+      if(!x3Triggered && state.x3 && state.x3.active &&
+         Math.hypot(b.x-state.x3.x,b.y-state.x3.y)<=b.r+state.x3.r){
+        x3Triggered = true;
+        state.x3.active=false;
+        state.score+=20;
+        burst(b.x,b.y,22,1.2);
+        spawnFloatText(b.x,b.y-18,'×3 BÓNG!','#62d8ff');
+        syncHud();
+      }
+
+      // Tăng kích thước bi +30%, tồn tại 15 giây.
+      if (state.sizeUp && state.sizeUp.active &&
+          Math.hypot(b.x-state.sizeUp.x,b.y-state.sizeUp.y) <= b.r+state.sizeUp.r) {
+        for (const current of balls) current.r = ball.r * 1.30;
+        state.sizeUp.active = false;
+        state.sizeBoostUntil = now + 15000;
+        state.score += 15;
+        burst(b.x,b.y,20,1.1);
+            spawnFloatText(
+  b.x,
+  b.y - 18,
+  'TĂNG KÍCH THƯỚC!',
+  '#62d8ff'
+);
+      }
+    }
+
+    // Nhân bóng sau khi đã duyệt xong toàn bộ balls[] của khung hình này,
+    // để không bỏ sót các bóng khác (lỗi cũ: "break" thoát cả vòng lặp ngoài).
+    if(x3Triggered){
+      const originals=[...balls];
+      const clones=[];
+
+      for(const source of originals){
+        const speed=Math.hypot(source.vx,source.vy);
+        const angle=Math.atan2(source.vy,source.vx);
+
+        for(const offset of [0,Math.PI*2/3,-Math.PI*2/3]){
+          const a=angle+offset;
+          clones.push({
+            x:source.x,y:source.y,r:source.r,
+            vx:Math.cos(a)*speed,vy:Math.sin(a)*speed,
+            minSpeed:source.minSpeed,maxSpeed:source.maxSpeed
+          });
+        }
+      }
+
+      balls=clones;
+    }
+
+    for(const brick of state.bricks)
+      brick.hitFlash=Math.max(0,brick.hitFlash-dt*6);
+
+    state.bricks=state.bricks.filter(b=>!b.dead);
+
+    // Power-up +1: có 2 vật phẩm độc lập mỗi wave.
+    for (const item of state.powerUps) {
+      if (!item.active || item.collected) continue;
+
+      for (const b of balls) {
+        if (Math.hypot(b.x-item.x,b.y-item.y)<=b.r+item.r) {
+          state.ballPower++;
+          item.collected=true;
+          item.active=false;
+          state.score+=10;
+          burst(item.x,item.y,18,1.1);
+          spawnFloatText(
+    b.x,
+    b.y - 18,
+    '+1 SỨC MẠNH!',
+    '#ffd166'
+  );
+          syncHud();
+          break;
+        }
+      }
+    }
+
+    state.powerUps = state.powerUps.filter(u => u.active);
+
+    // Gạch chạm vạch đỏ = thua.
+    if(state.bricks.some(b=>b.y+b.h>=dangerY())){
+      gameOver();
+      return;
+    }
+
+    if(balls.length===0){
+      gameOver();
+      return;
+    }
+
+    spawnAfterWaveCheck(now);
+  }
+
+  function gameOver(){
+    state.gameOver = true;
+    state.running = false;
+    overlay.style.display = 'flex';
+  }
+
+  function pauseGame(now){
+    if(state.gameOver || state.paused) return;
+    state.paused = true;
+    state.pauseStart = now;
+    pointerActive = false;
+  }
+
+  function resumeGame(now){
+    if(!state.paused) return;
+    const pausedDuration = now - state.pauseStart;
+    state.waveStartedAt += pausedDuration;
+    state.lastWaveAt += pausedDuration;
+    state.x3NextAt += pausedDuration;
+    state.sizeUpNextAt += pausedDuration;
+    if(state.sizeBoostUntil) state.sizeBoostUntil += pausedDuration;
+    state.paused = false;
+    lastTime = now;
+  }
+
+  function drawPauseOverlay(){
+    ctx.save();
+    ctx.fillStyle = 'rgba(4,8,14,.62)';
+    ctx.fillRect(0,0,W,H);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.fillStyle = '#eaf1ff';
+    ctx.font = '900 26px system-ui';
+    ctx.fillText('TẠM DỪNG', W/2, H/2 - 14);
+
+    ctx.fillStyle = '#8d9bb3';
+    ctx.font = '600 14px system-ui';
+    ctx.fillText('Chạm lại màn hình để tiếp tục', W/2, H/2 + 18);
+    ctx.restore();
+  }
+
+  function brickTone(brick){
+    const ratio = clamp(brick.hp / brick.maxHp,0,1);
+    const hue = ratio * 120; // red -> yellow -> green
+    const light = 46 + ratio * 10;
+    return `hsl(${hue} 82% ${light}%)`;
+  }
+
+  function drawBackground(now){
+    ctx.fillStyle = '#0b111b';
+    ctx.fillRect(0,0,W,H);
+
+    // Dải sao lấp lánh nhẹ + thị sai theo vị trí thanh trượt, tạo chiều sâu.
+    const parallax = (paddle.x - W/2) * 0.02;
+    for(const s of stars){
+      const tw = 0.55 + Math.sin(now*0.001*s.speed + s.phase) * 0.45;
+      ctx.globalAlpha = tw * s.depth;
+      ctx.fillStyle = '#cfe3ff';
+      ctx.beginPath();
+      ctx.arc(s.x - parallax*s.depth, s.y, s.r, 0, Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(x,y,w,h,r){
+    const rr=Math.min(r,w/2,h/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+function drawBricks(){
+  for(const b of state.bricks){
+    ctx.save();
+
+    const y = b.drawY ?? b.y;
+
+    if (b.boss) {
+      drawBossBrick(b, y);
+      ctx.restore();
+      continue;
+    }
+
+    // GẠCH THƯỜNG
+    const shadow = Math.min(22, b.w*.3);
+
+    ctx.shadowColor = 'rgba(0,0,0,.35)';
+    ctx.shadowBlur = shadow;
+
+    ctx.fillStyle = brickTone(b);
+    roundRect(b.x,y,b.w,b.h,8);
+    ctx.fill();
+
+    ctx.shadowBlur = 0;
+
+    if(b.hitFlash>0){
+      ctx.fillStyle=`rgba(255,255,255,${b.hitFlash*.75})`;
+      roundRect(b.x,y,b.w,b.h,8);
+      ctx.fill();
+    }
+
+    ctx.fillStyle='rgba(5,10,18,.78)';
+    ctx.font=`800 ${Math.max(11,Math.min(16,b.w*.22))}px system-ui`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText(
+      Math.max(0,b.hp),
+      b.x+b.w/2,
+      y+b.h/2+1
+    );
+
+    ctx.restore();
+  }
+}
+  
+function drawBossBrick(b, y){
+  const x = b.x;
+  const w = b.w;
+  const h = b.h;
+
+  // Bóng đỏ phía sau
+  ctx.save();
+
+  ctx.shadowColor = 'rgba(255,35,35,.65)';
+  ctx.shadowBlur = 22;
+
+  // Thân BOSS
+  ctx.fillStyle = '#9d1515';
+  roundRect(x, y, w, h, 12);
+  ctx.fill();
+
+  ctx.shadowBlur = 0;
+
+  // Viền ngoài
+  ctx.strokeStyle = '#ff4a4a';
+  ctx.lineWidth = 2;
+  roundRect(x + 1, y + 1, w - 2, h - 2, 11);
+  ctx.stroke();
+
+  // Hoạ tiết sọc chéo
+  ctx.save();
+
+  roundRect(x, y, w, h, 12);
+  ctx.clip();
+
+  for(let i = -h; i < w + h; i += 18){
+    ctx.strokeStyle = 'rgba(255,255,255,.10)';
+    ctx.lineWidth = 6;
+
+    ctx.beginPath();
+    ctx.moveTo(x + i, y);
+    ctx.lineTo(x + i + h, y + h);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+
+  // =========================
+  // HP — chính giữa viên gạch
+  // =========================
+
+  const cx = x + w / 2;
+  const cy = y + h / 2;
+
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+
+  // Kích thước chữ lớn hơn
+  const hpFontSize = Math.max(
+    18,
+    Math.min(28, h * 0.72)
+  );
+
+  // Viền tối giúp số nổi bật trên nền đỏ
+  ctx.lineWidth = 4;
+  ctx.strokeStyle = 'rgba(30,0,0,.75)';
+  ctx.font = `900 ${hpFontSize}px system-ui`;
+
+  ctx.strokeText(
+    Math.max(0, b.hp),
+    cx,
+    cy
+  );
+
+  // Chữ HP
+  ctx.fillStyle = '#fff';
+  ctx.fillText(
+    Math.max(0, b.hp),
+    cx,
+    cy
+  );
+
+  // Flash khi bị đánh
+  if(b.hitFlash > 0){
+    ctx.fillStyle =
+      `rgba(255,255,255,${b.hitFlash * .8})`;
+
+    roundRect(x, y, w, h, 12);
+    ctx.fill();
+  }
+
+  ctx.restore();
+}
+  function drawPowerUps(){
+    for(const item of state.powerUps){
+      if(!item.active || item.collected) continue;
+
+      const x=item.x,y=item.y,r=item.r;
+
+      ctx.save();
+      ctx.beginPath();
+      ctx.arc(x,y,r+3,0,Math.PI*2);
+      ctx.fillStyle='rgba(255,255,255,.10)';
+      ctx.fill();
+
+      ctx.beginPath();
+      ctx.arc(x,y,r,0,Math.PI*2);
+      ctx.fillStyle='#edf4ff';
+      ctx.fill();
+
+      ctx.fillStyle='#0b111b';
+      ctx.font=`900 ${Math.max(9,r*1.2)}px system-ui`;
+      ctx.textAlign='center';
+      ctx.textBaseline='middle';
+      ctx.fillText('+',x,y);
+      ctx.restore();
+    }
+  }
+
+  function drawDangerLine(){
+    const y=dangerY();
+    ctx.save();
+    ctx.strokeStyle='rgba(255,55,55,.95)';
+    ctx.lineWidth=2;
+    ctx.setLineDash([7,7]);
+    ctx.beginPath();
+    ctx.moveTo(0,y);
+    ctx.lineTo(W,y);
+    ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawPaddle(){
+    ctx.save();
+    ctx.shadowColor='rgba(98,216,255,.45)';
+    ctx.shadowBlur=14;
+    ctx.fillStyle='#62d8ff';
+    roundRect(paddle.x,paddle.y,paddle.w,paddle.h,paddle.h/2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  function drawBalls(){
+    for(const b of balls){
+      ctx.save();
+      ctx.shadowColor='rgba(255,255,255,.75)';
+      ctx.shadowBlur=16;
+      ctx.fillStyle='#fff';
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.r,0,Math.PI*2);
+      ctx.fill();
+      ctx.restore();
+    }
+  }
+
+  function drawX3(){
+    if(!state.x3 || !state.x3.active) return;
+    const x=state.x3.x,y=state.x3.y,r=state.x3.r;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(x,y,r+3,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.10)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle='#edf4ff';
+    ctx.fill();
+
+    ctx.fillStyle='#0b111b';
+    ctx.font=`900 ${Math.max(8,r*.9)}px system-ui`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('×3',x,y);
+    ctx.restore();
+  }
+
+
+  function drawSizeUp(){
+    if(!state.sizeUp || !state.sizeUp.active) return;
+
+    const x=state.sizeUp.x,y=state.sizeUp.y,r=state.sizeUp.r;
+    ctx.save();
+
+    ctx.beginPath();
+    ctx.arc(x,y,r+3,0,Math.PI*2);
+    ctx.fillStyle='rgba(255,255,255,.10)';
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.arc(x,y,r,0,Math.PI*2);
+    ctx.fillStyle='#edf4ff';
+    ctx.fill();
+
+    ctx.fillStyle='#0b111b';
+    ctx.font=`900 ${Math.max(8,r*.85)}px system-ui`;
+    ctx.textAlign='center';
+    ctx.textBaseline='middle';
+    ctx.fillText('●',x,y);
+
+    ctx.restore();
+  }
+
+  function drawParticles(){
+    for(const p of particles){
+      ctx.globalAlpha=clamp(p.life/.5,0,1);
+      ctx.fillStyle='#cfe8ff';
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.size,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function draw(now){
+    ctx.save();
+
+    if(shakeMag > 0.05){
+      const ox = rand(-shakeMag, shakeMag);
+      const oy = rand(-shakeMag, shakeMag);
+      ctx.translate(ox, oy);
+    }
+
+    drawBackground(now);
+    drawBricks();
+    drawPowerUps();
+    drawX3();
+    drawSizeUp();
+    drawParticles();
+    drawFloatTexts();
+    drawDangerLine();
+    drawPaddle();
+    drawBalls();
+
+    ctx.restore();
+  }
+
+  function setPointer(clientX){
+    const rect=canvas.getBoundingClientRect();
+    const x=clientX-rect.left;
+    paddle.targetX = clamp(x-paddle.w/2, 8, W-paddle.w-8);
+  }
+
+  let lastTapTime = 0;
+  const DOUBLE_TAP_MS = 300;
+
+  canvas.addEventListener('pointerdown', e=>{
+    const now = performance.now();
+
+    if(state.paused){
+      resumeGame(now);
+      return;
+    }
+
+    if(now - lastTapTime < DOUBLE_TAP_MS){
+      pauseGame(now);
+      lastTapTime = 0;
+      return;
+    }
+    lastTapTime = now;
+
+    pointerActive=true;
+    canvas.setPointerCapture?.(e.pointerId);
+    setPointer(e.clientX);
+  });
+
+  canvas.addEventListener('pointermove', e=>{
+    if(pointerActive) setPointer(e.clientX);
+  });
+
+  canvas.addEventListener('pointerup', ()=>{
+    pointerActive=false;
+  });
+
+  canvas.addEventListener('pointercancel', ()=>{
+    pointerActive=false;
+  });
+
+  restartBtn.addEventListener('click', resetGame);
+  window.addEventListener('resize', resize);
+
+  function loop(now){
+    if(!state.paused){
+      const dt=Math.min(MAX_DT,(now-lastTime)/1000);
+      lastTime=now;
+
+      const remain=Math.max(0,10000-(now-state.waveStartedAt));
+      timerEl.textContent=Math.ceil(remain/1000);
+
+      update(dt,now);
+      updateParticles(dt);
+      updateFloatTexts(dt);
+      shakeMag = Math.max(0, shakeMag - dt*40);
+    } else {
+  
+      lastTime = now;
+    }
+
+    draw(now);
+    if(state.paused) drawPauseOverlay();
+    requestAnimationFrame(loop);
+  }
+
+  resize();
+  resetGame();
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
