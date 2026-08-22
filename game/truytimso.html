@@ -1,0 +1,1079 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Truy tìm số</title>
+<style>
+:root{
+    --bg:#07111f;
+    --panel:rgba(13,27,45,.78);
+    --panel2:rgba(20,39,62,.84);
+    --text:#edf6ff;
+    --muted:#91a7be;
+    --accent:#5eead4;
+    --accent2:#60a5fa;
+    --danger:#fb7185;
+    --warning:#fbbf24;
+    --line:rgba(255,255,255,.09);
+    --shadow:0 18px 60px rgba(0,0,0,.35);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{width:100%;min-height:100%;margin:0;overflow-x:hidden;overflow-y:auto}
+body{
+    font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif;
+    color:var(--text);
+    background:
+      radial-gradient(circle at 15% 15%,rgba(96,165,250,.14),transparent 30%),
+      radial-gradient(circle at 85% 85%,rgba(94,234,212,.10),transparent 30%),
+      var(--bg);
+}
+button{font:inherit;color:inherit}
+.app{
+    width:100%;
+    max-height:100dvh;
+    display:grid;
+    grid-template-rows:auto auto 1fr;
+    gap:12px;
+    padding:14px;
+}
+.topbar{
+    display:grid;
+    grid-template-columns:auto 1fr auto;
+    align-items:center;
+    gap:14px;
+    max-width:1050px;
+    width:min(1050px,100%);
+    margin:0 auto;
+}
+.brand{
+    display:flex;align-items:center;gap:10px;
+    min-width:155px;
+}
+.logo{
+    width:38px;height:38px;border-radius:12px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    color:#06121d;font-weight:900;font-size:17px;
+    box-shadow:0 8px 24px rgba(94,234,212,.18);
+}
+.brandText{font-size:14px;font-weight:800;letter-spacing:.06em;text-transform:uppercase}
+.mode{
+    justify-self:center;
+    display:flex;
+    padding:4px;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.035);
+    border-radius:999px;
+    backdrop-filter:blur(14px);
+}
+.mode button{
+    border:0;background:transparent;
+    padding:9px 14px;border-radius:999px;
+    font-weight:800;font-size:13px;
+    color:var(--muted);
+    cursor:pointer;
+    opacity:.45;
+    transition:.2s ease;
+}
+.mode button:not(.active):hover{
+    opacity:.75;
+}
+.mode button.active{
+    background:linear-gradient(135deg,rgba(96,165,250,.92),rgba(94,234,212,.92));
+    color:#06121d;
+    opacity:1;
+    box-shadow:0 6px 18px rgba(94,234,212,.13);
+}
+.stats{
+    display:flex;align-items:center;gap:16px;
+    justify-self:end;
+}
+.stat{text-align:right;min-width:55px}
+.recordStat{min-width:128px}
+.stat small{display:block;color:var(--muted);font-size:10px;text-transform:uppercase;letter-spacing:.08em}
+.stat strong{font-size:19px;line-height:1.1}
+.timerWrap{
+    width:min(95vw,1050px);
+    margin:0 auto;
+    position:relative;
+}
+.timeTrack{
+    height:6px;border-radius:999px;
+    background:rgba(255,255,255,.07);
+    overflow:hidden;
+}
+.timeBar{
+    height:100%;width:100%;
+    border-radius:inherit;
+    background:linear-gradient(90deg,var(--accent),var(--accent2));
+    transform-origin:left center;
+    transition:width .1s linear,background .25s ease;
+}
+.main{
+    min-height:0;
+    display:grid;
+    place-items:center;
+    overflow:visible;
+}
+.boardShell{
+    width:min(1050px,100%);
+    height:min(calc(100dvh - 140px),760px);
+    min-height:320px;
+    margin-bottom:14px;
+    position:relative;
+    padding:18px;
+    border:1px solid var(--line);
+    border-radius:28px;
+    background:linear-gradient(145deg,rgba(17,34,54,.86),rgba(7,18,31,.92));
+    box-shadow:var(--shadow);
+    overflow:hidden;
+}
+.boardShell::before{
+    content:"";
+    position:absolute;inset:-30% auto auto -10%;
+    width:320px;height:320px;border-radius:50%;
+    background:radial-gradient(circle,rgba(96,165,250,.11),transparent 70%);
+    pointer-events:none;
+}
+.boardInfo{
+    display:flex;justify-content:space-between;align-items:end;
+    gap:12px;margin:0 2px 14px;
+}
+.targetBlock .eyebrow{
+    color:var(--muted);font-size:11px;letter-spacing:.09em;text-transform:uppercase;
+}
+.targetBlock{
+    width:100%;
+    text-align:center;
+}
+
+.targetBlock .eyebrow{
+    color:var(--muted);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    margin-bottom:7px;
+}
+
+.targetBlock{
+    width:100%;
+    text-align:center;
+}
+
+.targetBlock .eyebrow{
+    color:var(--muted);
+    font-size:11px;
+    letter-spacing:.12em;
+    text-transform:uppercase;
+    margin-bottom:7px;
+}
+
+/* Khung nhìn cố định */
+.targetViewport{
+    width:min(300px,80vw);
+    height:58px;
+    margin:0 auto;
+    overflow:hidden;
+    position:relative;
+}
+
+/* Dải số di chuyển */
+.targetTrack{
+    height:100%;
+    display:flex;
+    align-items:center;
+    justify-content:flex-start;
+
+    will-change:transform;
+
+    transition:
+        transform .32s cubic-bezier(.22,.8,.25,1);
+}
+
+/* Mỗi số chiếm một slot cố định */
+.targetNumber{
+    flex:0 0 70px;
+    width:70px;
+    text-align:center;
+    line-height:1;
+    font-weight:900;
+
+    color:#6f8499;
+    opacity:.32;
+    transform:scale(.68);
+
+    transition:
+        transform .32s cubic-bezier(.22,.8,.25,1),
+        opacity .32s ease,
+        color .32s ease,
+        filter .32s ease;
+}
+
+/* Số hiện tại */
+.targetNumber.current{
+    color:var(--accent);
+    opacity:1;
+    transform:scale(1.28);
+
+    text-shadow:
+        0 0 12px rgba(94,234,212,.35),
+        0 0 26px rgba(94,234,212,.15);
+}
+
+/* Hai số sát bên */
+.targetNumber.near{
+    opacity:.42;
+    transform:scale(.76);
+}
+
+/* Các số xa hơn */
+.targetNumber.far{
+    opacity:.08;
+    transform:scale(.55);
+    filter:blur(.3px);
+}
+
+/* Ở đầu/cuối */
+.targetNumber.hiddenNumber{
+    opacity:0;
+}
+
+/* Mobile */
+@media (max-width:760px){
+    .targetViewport{
+        width:240px;
+        height:52px;
+    }
+
+    .targetNumber{
+        flex-basis:58px;
+        width:58px;
+    }
+
+    .targetNumber.current{
+        font-size:28px;
+    }
+}
+
+
+.nextHint{display:none;}
+.board{
+    position:relative;
+    height:calc(100% - 66px);
+    min-height:250px;
+    border-radius:22px;
+    border:1px solid rgba(255,255,255,.06);
+    background:
+      linear-gradient(rgba(255,255,255,.018) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(255,255,255,.018) 1px,transparent 1px),
+      rgba(4,12,23,.54);
+    background-size:28px 28px;
+    overflow:hidden;
+    touch-action:manipulation;
+}
+.number{
+    position:absolute;
+    width:clamp(42px,7vw,68px);
+    aspect-ratio:1/1;
+    border:1px solid rgba(255,255,255,.11);
+    border-radius:16px;
+    background:linear-gradient(145deg,rgba(32,56,82,.98),rgba(17,34,55,.98));
+    box-shadow:
+      0 8px 18px rgba(0,0,0,.28),
+      inset 0 1px 0 rgba(255,255,255,.06);
+    font-size:clamp(15px,2.6vw,22px);
+    font-weight:900;
+    cursor:pointer;
+    transform:translate(-50%,-50%) scale(1);
+    transition:transform .16s ease,opacity .16s ease,background .16s ease;
+}
+.number:active{transform:translate(-50%,-50%) scale(.9)}
+.board[data-mode="hard"] .number,
+.board[data-mode="veryHard"] .number{
+    width:clamp(38px,4.6vw,50px);
+}
+.board[data-mode="superHard"] .number,
+.board[data-mode="master"] .number{
+    width:clamp(30px,3.7vw,42px);
+}
+
+.board.numbers-hidden .number:not(.done){
+    opacity:0;
+    transform:translate(-50%,-50%) scale(.82);
+}
+.board[data-mode="master"] .number.master-blink{
+    --master-alpha:var(--master-opacity,1);
+    transition:none;
+    /* Ô vẫn luôn hiện; chỉ độ sáng nội dung thay đổi. */
+    background:
+        linear-gradient(
+            145deg,
+            rgba(32,56,82,calc(.34 + var(--master-alpha) * .66)),
+            rgba(17,34,55,calc(.34 + var(--master-alpha) * .66))
+        );
+    border-color:rgba(
+        255,255,255,
+        calc(.07 + var(--master-alpha) * .18)
+    );
+    box-shadow:
+        0 8px 18px rgba(0,0,0,.28),
+        inset 0 1px 0 rgba(255,255,255,calc(.03 + var(--master-alpha) * .08));
+    color:rgba(237,246,255,calc(.16 + var(--master-alpha) * .84));
+    text-shadow:0 0 calc(10px * var(--master-alpha))
+        rgba(94,234,212,calc(.15 * var(--master-alpha)));
+}
+.board[data-mode="master"] .number.master-blink.good{
+    --master-alpha:1;
+    background:
+        linear-gradient(
+            145deg,
+            rgba(82,227,194,calc(.30 + var(--master-alpha) * .70)),
+            rgba(66,183,163,calc(.30 + var(--master-alpha) * .70))
+        );
+    color:rgba(6,35,30,calc(.20 + var(--master-alpha) * .80));
+    border-color:rgba(255,255,255,calc(.10 + var(--master-alpha) * .22));
+    box-shadow:
+        0 0 0 4px rgba(94,234,212,calc(.025 + var(--master-alpha) * .065)),
+        0 9px 20px rgba(94,234,212,calc(.05 + var(--master-alpha) * .15));
+}
+.number.good{
+    background:linear-gradient(145deg,#52e3c2,#42b7a3);
+    color:#06231e;
+    border-color:rgba(255,255,255,.25);
+    box-shadow:0 0 0 4px rgba(94,234,212,.07),0 9px 20px rgba(94,234,212,.2);
+}
+.number.bad{animation:shake .28s ease}
+.number.done{
+    opacity:0;
+    pointer-events:none;
+    transform:translate(-50%,-50%) scale(.65);
+}
+@keyframes shake{
+  0%,100%{translate:0 0}
+  25%{translate:-5px 0}
+  75%{translate:5px 0}
+}
+.screen{
+    position:absolute;inset:0;
+    display:grid;place-items:center;
+    background:rgba(3,10,18,.72);
+    backdrop-filter:blur(10px);
+    z-index:10;
+    padding:24px;
+}
+.card{
+    width:min(430px,100%);
+    text-align:center;
+    padding:30px 24px 24px;
+    border:1px solid var(--line);
+    border-radius:24px;
+    background:linear-gradient(145deg,rgba(20,39,62,.97),rgba(10,23,40,.98));
+    box-shadow:0 24px 70px rgba(0,0,0,.42);
+}
+.card .icon{
+    width:58px;height:58px;border-radius:18px;
+    margin:0 auto 16px;
+    display:grid;place-items:center;
+    background:linear-gradient(135deg,rgba(96,165,250,.22),rgba(94,234,212,.2));
+    color:var(--accent);font-size:25px;font-weight:900;
+}
+.card h1{margin:0 0 8px;font-size:28px}
+.card p{margin:0 auto 18px;color:var(--muted);line-height:1.55;font-size:14px;max-width:340px}
+.rule{
+    display:flex;gap:8px;justify-content:center;flex-wrap:wrap;
+    margin:0 0 20px;
+}
+.pill{
+    padding:7px 11px;border-radius:999px;
+    background:rgba(255,255,255,.055);
+    border:1px solid rgba(255,255,255,.06);
+    font-size:11px;color:#c9d8e8;font-weight:700;
+}
+.primary{
+    width:100%;border:0;border-radius:16px;
+    padding:14px 18px;
+    font-size:15px;font-weight:900;
+    background:linear-gradient(135deg,var(--accent2),var(--accent));
+    color:#05131e;
+    cursor:pointer;
+    box-shadow:0 10px 26px rgba(94,234,212,.14);
+}
+.secondary{
+    margin-top:9px;width:100%;
+    border:1px solid var(--line);
+    background:rgba(255,255,255,.035);
+    border-radius:14px;padding:12px;
+    font-size:13px;font-weight:800;color:#bfd0df;
+    cursor:pointer;
+}
+.hidden{display:none!important}
+.resultScore{
+    font-size:44px;font-weight:950;
+    color:var(--accent);
+    margin:6px 0;
+}
+.resultMeta{display:none}
+@media (max-width:760px){
+    .app{padding:10px;gap:9px;min-height:90dvh}
+    .boardShell{max-height:none}
+    .topbar{
+        grid-template-columns:1fr auto;
+        grid-template-areas:"brand stats" "mode mode";
+        gap:8px;
+    }
+    .brand{grid-area:brand}
+    .mode{grid-area:mode;justify-self:stretch}
+    .mode button{flex:1;padding:8px 7px;font-size:11px}
+    .stats{grid-area:stats;gap:11px}
+    .boardShell{
+        height:min(calc(100vh - 125px),700px);
+        padding:12px;border-radius:22px;
+    }
+    .boardInfo{margin-bottom:10px}
+    .targetBlock .target{font-size:25px}
+    .nextHint{font-size:11px}
+    .number{border-radius:13px}
+}
+@media (max-height:520px) and (orientation:landscape){
+    .app{padding:8px;gap:6px;min-height:100dvh}
+
+    .topbar{gap:8px}
+    .brand{min-width:130px}
+    .logo{width:32px;height:32px;border-radius:10px}
+    .mode button{padding:7px 14px}
+    .boardShell{
+        height:calc(100vh - 90px);
+        padding:10px;border-radius:19px;
+    }
+    .boardInfo{margin-bottom:8px}
+    .targetBlock .target{font-size:22px}
+    .board{height:calc(100% - 54px)}
+}
+    
+    footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+
+</style>
+</head>
+<body>
+<div class="app">
+    <header class="topbar">
+        <div class="brand">
+            <div class="logo">30</div>
+            <div class="brandText">TRUY TÌM SỐ</div>
+        </div>
+
+        <div class="mode" role="tablist" aria-label="Độ khó">
+            <button id="normalBtn" class="active" type="button">Thường</button>
+            <button id="hardBtn" type="button">Khó</button>
+            <button id="veryHardBtn" type="button">Rất khó</button>
+            <button id="superHardBtn" type="button">Siêu khó</button>
+            <button id="masterBtn" type="button">Bậc thầy</button>
+        </div>
+
+        <div class="stats">
+            <div class="stat recordStat">
+                <small>Kỉ lục</small>
+                <strong id="best">--:--:---</strong>
+            </div>
+        </div>
+    </header>
+
+    <div class="timerWrap">
+        <div class="timeTrack"><div id="timeBar" class="timeBar"></div></div>
+    </div>
+
+    <main class="main">
+        <section class="boardShell">
+          <div class="boardInfo">
+    <div class="targetBlock">
+        <div class="eyebrow">ĐANG TRUY TÌM SỐ</div>
+
+        <div class="targetViewport">
+            <div class="targetTrack" id="targetTrack"></div>
+        </div>
+    </div>
+</div>
+            <div id="board" class="board"></div>
+
+            <div id="startScreen" class="screen">
+                <div class="card">
+                    <div class="icon">30</div>
+                    <h1>Truy tìm số</h1>
+                    <p>Vui lòng lựa chọn chế độ<br>Chạm các số theo đúng thứ tự càng nhanh càng tốt.</p>
+                    <div class="rule">
+                        <span class="pill">Thường - Khó · 30 số</span>
+                        <span class="pill">Rất khó - Bậc thầy · 50 số</span>
+                  
+                    </div>
+                    <button id="startBtn" class="primary">Bắt đầu</button>
+                </div>
+            </div>
+
+            <div id="resultScreen" class="screen hidden">
+                <div class="card">
+                    <div class="icon" id="resultIcon">✓</div>
+                    <h1 id="resultTitle">Hoàn thành!</h1>
+                    <div class="resultScore" id="resultScore">00:00:000</div>
+                    <div class="resultMeta" id="resultMeta"></div>
+                    <button id="againBtn" class="primary">Chơi lại</button>
+                    <button id="changeModeBtn" class="secondary">Đổi độ khó</button>
+                </div>
+            </div>
+        </section>
+    </main>
+</div>
+<footer> Version:D20262208-H00M20T8910 »»» developed by Tran Gia Bao</footer>
+
+<script>
+(() => {
+    const targetTrack = document.getElementById('targetTrack');
+    const board = document.getElementById('board');
+const logoEl = document.querySelector('.logo');
+const startIconEl = document.querySelector('.card .icon');
+    
+    const scoreEl = null;
+    const bestEl = document.getElementById('best');
+    const timeBar = document.getElementById('timeBar');
+    const startScreen = document.getElementById('startScreen');
+    const resultScreen = document.getElementById('resultScreen');
+    const resultTitle = document.getElementById('resultTitle');
+    const resultScore = document.getElementById('resultScore');
+    const resultMeta = document.getElementById('resultMeta');
+    const resultIcon = document.getElementById('resultIcon');
+    const normalBtn = document.getElementById('normalBtn');
+    const hardBtn = document.getElementById('hardBtn');
+    const veryHardBtn = document.getElementById('veryHardBtn');
+    const superHardBtn = document.getElementById('superHardBtn');
+    const masterBtn = document.getElementById('masterBtn');
+    const startBtn = document.getElementById('startBtn');
+    const againBtn = document.getElementById('againBtn');
+    const changeModeBtn = document.getElementById('changeModeBtn');
+
+    const MODES = {
+    normal:    { count: 30, time: 60, label: 'Thường', persistent: false, pulse: false, master: false },
+    hard:      { count: 30, time: 60, label: 'Khó', persistent: false, pulse: false, master: false },
+    veryHard:  { count: 50, time: 75, label: 'Rất khó', persistent: true,  pulse: false, master: false },
+    superHard: { count: 50, time: 75, label: 'Siêu khó', persistent: true,  pulse: true,  master: false },
+    master:    { count: 50, time: 75, label: 'Bậc thầy', persistent: true,  pulse: false, master: true }
+};
+
+    // Ánh xạ chế độ -> khóa lưu trữ (dùng chung cho window.storage).
+    const BEST_KEYS = {
+        normal: 'findNumberBestNormal',
+        hard: 'findNumberBestHard',
+        veryHard: 'findNumberBestVeryHard',
+        superHard: 'findNumberBestSuperHard',
+        master: 'findNumberBestMaster'
+    };
+
+    let mode = 'normal';
+    let count = 30;
+    let limit = 30;
+    let target = 1;
+    let score = 0;
+    let startedAt = 0;
+    let raf = 0;
+    let running = false;
+    let cells = [];
+    let hiddenPulseActive = false;
+    let hidePulseTimer = 0;
+    let restorePulseTimer = 0;
+    let masterBlinkFrame = 0;
+    let masterBlinkStart = 0;
+
+    // Kỉ lục được lưu bằng window.storage (bền vững trong artifact Claude),
+    // KHÔNG dùng localStorage vì localStorage không được hỗ trợ trong artifact
+    // và mọi lệnh gọi tới nó sẽ thất bại âm thầm (không lưu được kỉ lục).
+    
+
+function loadBests() {
+    updateBest();
+}
+
+ function saveBest(modeKey, valueMs) {
+    localStorage.setItem(
+        BEST_KEYS[modeKey],
+        String(Math.round(valueMs))
+    );
+}
+    
+    function updateTargetDisplay(animate = true){
+    targetTrack.innerHTML = '';
+
+    /*
+     * Hiển thị một khoảng số xung quanh số hiện tại.
+     * Ví dụ target = 10:
+     *
+     * 7  8  9  10  11  12  13
+     *
+     * Số 10 sẽ nằm giữa.
+     */
+
+    const start = Math.max(1, target - 3);
+    const end = Math.min(count, target + 3);
+
+    for(let n = start; n <= end; n++){
+        const number = document.createElement('span');
+
+        number.className = 'targetNumber';
+
+        if(n === target){
+            number.classList.add('current');
+        }
+        else if(Math.abs(n - target) === 1){
+            number.classList.add('near');
+        }
+        else{
+            number.classList.add('far');
+        }
+
+        number.textContent = n;
+
+        targetTrack.appendChild(number);
+    }
+
+    /*
+     * Kích thước slot phải giống với CSS.
+     */
+    const slotWidth =
+        window.innerWidth <= 760 ? 58 : 70;
+
+    const viewportWidth =
+        window.innerWidth <= 760 ? 240 : 300;
+
+    /*
+     * Vị trí của target trong track.
+     */
+    const currentIndex = target - start;
+
+    /*
+     * Đưa target vào chính giữa viewport.
+     */
+    const translateX =
+        viewportWidth / 2
+        - slotWidth / 2
+        - currentIndex * slotWidth;
+
+    /*
+     * Animation hay không.
+     */
+    if(!animate){
+        targetTrack.style.transition = 'none';
+    }
+    else{
+        targetTrack.style.transition =
+            'transform .32s cubic-bezier(.22,.8,.25,1)';
+    }
+
+    targetTrack.style.transform =
+        `translateX(${translateX}px)`;
+}
+function updateModeUI() {
+    normalBtn.classList.toggle('active', mode === 'normal');
+    hardBtn.classList.toggle('active', mode === 'hard');
+    veryHardBtn.classList.toggle('active', mode === 'veryHard');
+    superHardBtn.classList.toggle('active', mode === 'superHard');
+    masterBtn.classList.toggle('active', mode === 'master');
+
+    const cfg = MODES[mode];
+count = cfg.count;
+limit = cfg.time;
+
+logoEl.textContent = cfg.count;
+startIconEl.textContent = cfg.count;
+
+updateBest();
+}
+    function formatTime(ms) {
+        const totalMs = Math.max(0, Math.round(ms));
+        const minutes = Math.floor(totalMs / 60000);
+        const seconds = Math.floor((totalMs % 60000) / 1000);
+        const millis = totalMs % 1000;
+
+        return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}:${String(millis).padStart(3, '0')}`;
+    }
+
+ function getBestValue() {
+    return localStorage.getItem(BEST_KEYS[mode]) || '';
+}
+    function updateBest() {
+    const value = localStorage.getItem(BEST_KEYS[mode]);
+
+    bestEl.textContent =
+        value
+            ? formatTime(Number(value))
+            : '--:--:---';
+}
+
+    function setMode(next) {
+        if (running) return;
+        mode = next;
+        updateModeUI();
+        startScreen.classList.remove('hidden');
+        resultScreen.classList.add('hidden');
+        updateTargetDisplay(false);
+    }
+
+    function shuffle(arr) {
+        for (let i = arr.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [arr[i], arr[j]] = [arr[j], arr[i]];
+        }
+        return arr;
+    }
+
+    function getScatterLayout(size) {
+        const rect = board.getBoundingClientRect();
+        const width = rect.width;
+        const height = rect.height;
+
+        // Kích thước ô thực tế theo từng chế độ.
+        const buttonSize = size >= 50
+            ? Math.min(42, Math.max(30, width * 0.037))
+            : Math.min(50, Math.max(38, width * 0.046));
+
+        const half = buttonSize / 2;
+        const edge = half + 5;
+        const availableW = Math.max(1, width - edge * 2);
+        const availableH = Math.max(1, height - edge * 2);
+        const aspect = availableW / availableH;
+
+        // Chọn số cột/hàng gần với tỉ lệ màn hình.
+        let cols = Math.round(Math.sqrt(size * aspect));
+        cols = Math.max(1, Math.min(size, cols));
+        let rows = Math.ceil(size / cols);
+
+        // Bảo đảm mỗi ô lưới đủ rộng/cao cho số + khoảng hở.
+        while (
+            (availableW / cols) < (buttonSize + 8) ||
+            (availableH / rows) < (buttonSize + 8)
+        ) {
+            if (availableW / cols < buttonSize + 8 && cols > 1) cols--;
+            else if (rows > 1) rows++;
+            else break;
+            rows = Math.ceil(size / cols);
+        }
+
+        return { width, height, buttonSize, half, edge, cols, rows };
+    }
+
+    function createEvenScatterPositions(size) {
+        const layout = getScatterLayout(size);
+        const {
+            width, height, half, edge, cols, rows
+        } = layout;
+
+        const usableW = width - edge * 2;
+        const usableH = height - edge * 2;
+        const cellW = usableW / cols;
+        const cellH = usableH / rows;
+
+        // Tạo một vùng cho mỗi số. Các vùng được xáo trộn
+        // để phá cảm giác "xếp theo thứ tự", nhưng vẫn phân bố đều.
+        const slots = [];
+        for (let row = 0; row < rows; row++) {
+            for (let col = 0; col < cols; col++) {
+                slots.push({ row, col });
+            }
+        }
+
+        shuffle(slots);
+
+        // Khi rows*cols > size, lấy các slot xa nhau nhất có thể
+        // bằng cách ưu tiên slot đã được trộn; phần dư được bỏ qua.
+        const selected = slots.slice(0, size);
+
+        return selected.map(slot => {
+            const cx = edge + (slot.col + 0.5) * cellW;
+            const cy = edge + (slot.row + 0.5) * cellH;
+
+            // Jitter giới hạn để vị trí vẫn nằm trong vùng và không va chạm.
+            const jitterX = Math.min(cellW * 0.22, Math.max(0, cellW / 2 - half - 4));
+            const jitterY = Math.min(cellH * 0.22, Math.max(0, cellH / 2 - half - 4));
+
+            return {
+                x: cx + (Math.random() * 2 - 1) * jitterX,
+                y: cy + (Math.random() * 2 - 1) * jitterY,
+                half
+            };
+        });
+    }
+
+    function buildBoard() {
+        board.innerHTML = '';
+        cells = [];
+        hiddenPulseActive = false;
+
+        const nums = shuffle(Array.from({length: count}, (_, i) => i + 1));
+        const isNormal = mode === 'normal';
+
+        board.dataset.mode = mode;
+        board.style.setProperty(
+            '--scatter-size',
+            isNormal ? '0px' : (count >= 50 ? '34px' : '44px')
+        );
+
+        if (isNormal) {
+            // 30 số: 5 cột × 6 hàng, ngay ngắn nhưng thứ tự số ngẫu nhiên.
+            const cols = 5;
+            const rows = 6;
+            const cellW = 100 / cols;
+            const cellH = 100 / rows;
+
+            nums.forEach((n, index) => {
+                const btn = document.createElement('button');
+                btn.className = 'number';
+                btn.type = 'button';
+                btn.textContent = n;
+                btn.dataset.number = n;
+
+                const col = index % cols;
+                const row = Math.floor(index / cols);
+
+                btn.style.left = `${(col + 0.5) * cellW}%`;
+                btn.style.top = `${(row + 0.5) * cellH}%`;
+
+                btn.addEventListener('click', () => handleNumber(btn, n));
+                board.appendChild(btn);
+                cells.push(btn);
+            });
+            return;
+        }
+
+        // Khó / Rất khó / Cực khó:
+        // chia bàn thành các vùng, mỗi vùng tối đa 1 số,
+        // sau đó xáo trộn vùng + jitter để vừa đều vừa ngẫu nhiên.
+        const scatterPositions = createEvenScatterPositions(count);
+
+        nums.forEach((n, index) => {
+            const btn = document.createElement('button');
+            btn.className = 'number';
+            btn.type = 'button';
+            if (MODES[mode].master) btn.classList.add('master-blink');
+            btn.textContent = n;
+            btn.dataset.number = n;
+
+            const pos = scatterPositions[index];
+            btn.style.left = pos.x + 'px';
+            btn.style.top = pos.y + 'px';
+
+            btn.addEventListener('click', () => handleNumber(btn, n));
+            board.appendChild(btn);
+            cells.push(btn);
+        });
+    }
+
+    function handleNumber(btn, n) {
+        if (!running) return;
+
+        if (n === target) {
+            btn.classList.add('good');
+
+            // Bậc thầy: khi tìm đúng, ô phải sáng cố định ngay lập tức
+            // thay vì tiếp tục nhấp nháy mờ/tỏ theo vòng lặp.
+            if (MODES[mode].master) {
+                btn.style.setProperty('--master-opacity', '1');
+            }
+
+            score = target;
+            target++;
+
+            if (!MODES[mode].persistent) {
+                setTimeout(() => btn.classList.add('done'), 70);
+            }
+
+            if (target > count) {
+                finish(true);
+                return;
+            }
+
+            updateTargetDisplay(true);
+        } else {
+            btn.classList.remove('bad');
+            void btn.offsetWidth;
+            btn.classList.add('bad');
+        }
+    }
+
+    function startSuperHardPulse() {
+        stopSuperHardPulse();
+        if (!MODES[mode].pulse || !running) return;
+
+        // Khoảng 10 giây lặp lại một lần. Các số đang còn trên bàn cùng ẩn 0.75s.
+        hidePulseTimer = window.setInterval(() => {
+            if (!running || !MODES[mode].pulse) return;
+
+            hiddenPulseActive = true;
+            board.classList.add('numbers-hidden');
+
+            restorePulseTimer = window.setTimeout(() => {
+                hiddenPulseActive = false;
+                board.classList.remove('numbers-hidden');
+            }, 750);
+        }, 10000);
+    }
+
+    function stopSuperHardPulse() {
+        if (hidePulseTimer) {
+            clearInterval(hidePulseTimer);
+            hidePulseTimer = 0;
+        }
+        if (restorePulseTimer) {
+            clearTimeout(restorePulseTimer);
+            restorePulseTimer = 0;
+        }
+        hiddenPulseActive = false;
+        board.classList.remove('numbers-hidden');
+    }
+
+    function startMasterBlink() {
+        stopMasterBlink();
+        if (!MODES[mode].master || !running) return;
+
+        // Mỗi số có một phase riêng, được xác định cố định khi ván bắt đầu.
+        // Chu kỳ 5 giây: opacity 0 → 1 → 0, chạy độc lập giữa các số.
+        cells.forEach((btn) => {
+            btn.style.setProperty('--blink-phase', String(Math.random() * 5));
+        });
+
+        masterBlinkStart = performance.now();
+        const tick = (now) => {
+            if (!running || !MODES[mode].master) {
+                masterBlinkFrame = 0;
+                return;
+            }
+
+            const elapsed = (now - masterBlinkStart) / 1000;
+
+            cells.forEach(btn => {
+                // Số đã hoàn thành ('done') hoặc đã trả lời đúng ('good')
+                // phải luôn sáng, không tiếp tục nhấp nháy mờ/tỏ.
+                if (btn.classList.contains('done') || btn.classList.contains('good')) return;
+
+                const phase = Number(btn.style.getPropertyValue('--blink-phase') || 0);
+                const t = ((elapsed + phase) % 5) / 5;
+
+                // 0 → 1 trong nửa chu kỳ, rồi 1 → 0 trong nửa chu kỳ.
+                const opacity = t < 0.5
+                    ? t * 2
+                    : 2 - t * 2;
+
+                btn.style.setProperty('--master-opacity', opacity.toFixed(3));
+            });
+
+            masterBlinkFrame = requestAnimationFrame(tick);
+        };
+
+        masterBlinkFrame = requestAnimationFrame(tick);
+    }
+
+    function stopMasterBlink() {
+        if (masterBlinkFrame) {
+            cancelAnimationFrame(masterBlinkFrame);
+            masterBlinkFrame = 0;
+        }
+
+        cells.forEach(btn => {
+            btn.style.removeProperty('--blink-phase');
+            btn.style.removeProperty('--master-opacity');
+        });
+    }
+
+    function updateTimer() {
+        if (!running) return;
+        const elapsed = (performance.now() - startedAt) / 1000;
+        const left = Math.max(0, limit - elapsed);
+        const pct = Math.max(0, Math.min(1, left / limit));
+
+        timeBar.style.width = (pct * 100) + '%';
+        if (pct < 0.25) {
+            timeBar.style.background = 'linear-gradient(90deg,#fb7185,#fbbf24)';
+        } else {
+            timeBar.style.background = 'linear-gradient(90deg,var(--accent),var(--accent2))';
+        }
+
+        if (left <= 0) {
+            finish(false);
+            return;
+        }
+
+        raf = requestAnimationFrame(updateTimer);
+    }
+
+    function startGame() {
+        cancelAnimationFrame(raf);
+        running = true;
+  target = 1;
+score = 0;
+updateTargetDisplay(false);
+        startScreen.classList.add('hidden');
+        resultScreen.classList.add('hidden');
+
+        buildBoard();
+
+        requestAnimationFrame(() => {
+            startedAt = performance.now();
+            timeBar.style.width = '100%';
+            timeBar.style.background = 'linear-gradient(90deg,var(--accent),var(--accent2))';
+            if (MODES[mode].pulse) startSuperHardPulse();
+            if (MODES[mode].master) startMasterBlink();
+            raf = requestAnimationFrame(updateTimer);
+        });
+    }
+
+    function finish(won) {
+        if (!running) return;
+        running = false;
+        cancelAnimationFrame(raf);
+        stopSuperHardPulse();
+        stopMasterBlink();
+
+        // Thời gian đã trôi qua tính bằng mili-giây, giới hạn không vượt quá thời gian cho phép.
+        const elapsedMs = Math.min(limit * 1000, performance.now() - startedAt);
+
+        if (won) {
+            resultIcon.textContent = '✓';
+            resultTitle.textContent = 'Hoàn thành!';
+            resultScore.classList.remove('hidden');
+            resultScore.textContent = formatTime(elapsedMs);
+            resultMeta.textContent = `${MODES[mode].label} · ${count} số`;
+
+            const best = Number(localStorage.getItem(BEST_KEYS[mode]));
+
+if (!best || elapsedMs < best) {
+    saveBest(mode, elapsedMs);
+    updateBest();
+}
+        } else {
+            // Hết giờ luôn xảy ra ở đúng mốc thời gian giới hạn (vd 1:00:000),
+            // nên không cần hiển thị con số này vì nó không mang thêm thông tin.
+            resultIcon.textContent = '×';
+            resultTitle.textContent = 'Hết giờ';
+            resultScore.classList.add('hidden');
+            resultScore.textContent = '';
+            resultMeta.textContent = '';
+        }
+
+        resultScreen.classList.remove('hidden');
+    }
+
+    normalBtn.addEventListener('click', () => setMode('normal'));
+    hardBtn.addEventListener('click', () => setMode('hard'));
+    veryHardBtn.addEventListener('click', () => setMode('veryHard'));
+    superHardBtn.addEventListener('click', () => setMode('superHard'));
+    masterBtn.addEventListener('click', () => setMode('master'));
+    startBtn.addEventListener('click', startGame);
+    againBtn.addEventListener('click', startGame);
+    changeModeBtn.addEventListener('click', () => {
+        resultScreen.classList.add('hidden');
+        startScreen.classList.remove('hidden');
+        updateModeUI();
+    });
+
+    updateModeUI();
+    loadBests();
+})();
+</script>
+</body>
+</html>
