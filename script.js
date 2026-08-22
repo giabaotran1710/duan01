@@ -1,6 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ========== INTRO HANDLING ==========
+    // ============================================================
+    // 1. THAM CHIẾU PHẦN TỬ DOM
+    // ============================================================
     const overlay = document.getElementById('intro-overlay');
     const line1 = document.getElementById('intro-line1');
     const line2 = document.getElementById('intro-line2');
@@ -10,7 +12,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const utilityBar = document.getElementById('utilityBar');
     const toggleBtn = document.getElementById('toggleBar');
 
-    // ========== TẠO CÁNH HOA ANH ĐÀO ==========
+    // ============================================================
+    // 2. CÁNH HOA ANH ĐÀO (INTRO)
+    // ============================================================
     function createPetals(count = 35) {
         for (let i = 0; i < count; i++) {
             const petal = document.createElement('div');
@@ -26,7 +30,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ========== DÒNG THỜI GIAN ==========
+    // ============================================================
+    // 3. GÕ CHỮ DÒNG GIỚI THIỆU (INTRO TYPING)
+    // ============================================================
     const text1 = 'Thách thức mọi giới hạn của bản thân.';
     let charIndex = 0;
     const typingSpeed = 70;
@@ -37,15 +43,10 @@ document.addEventListener('DOMContentLoaded', function () {
             charIndex++;
             setTimeout(typeLine1, typingSpeed);
         } else {
-            // Gõ xong -> bỏ con trỏ, hiện dòng 2 ngay
             line1.style.borderRight = 'none';
             line2.style.opacity = '1';
-
-            // Sau khi dòng 2 hiện 1 giây, bắt đầu fade out overlay
             setTimeout(() => {
                 overlay.style.opacity = '0';
-
-                // Đợi transition kết thúc (1.2s) rồi xóa overlay và mở menu
                 setTimeout(() => {
                     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
                     openBar();
@@ -54,35 +55,35 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // 2 giây đầu: đen hoàn toàn
     setTimeout(() => {
-        createPetals(35);       // hoa bắt đầu rơi
-        // 1 giây sau khi hoa rơi -> bắt đầu gõ chữ
+        createPetals(35);
         setTimeout(typeLine1, 1000);
     }, 2000);
 
-    // ========== TOGGLE BAR ==========
+    // ============================================================
+    // 4. TOGGLE THANH TIỆN ÍCH (UTILITY BAR)
+    // ============================================================
     let autoCloseTimer;
 
     function closeBar() {
-    utilityBar.classList.remove('show');
-    contentEl.classList.remove('hide');
-    toggleBtn.classList.remove('active');
-    toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad"></i>';
-    if (autoCloseTimer) {
-        clearTimeout(autoCloseTimer);
-        autoCloseTimer = null;
+        utilityBar.classList.remove('show');
+        contentEl.classList.remove('hide');
+        toggleBtn.classList.remove('active');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad"></i>';
+        if (autoCloseTimer) {
+            clearTimeout(autoCloseTimer);
+            autoCloseTimer = null;
+        }
     }
-}
 
     function openBar() {
-    utilityBar.classList.add('show');
-    contentEl.classList.add('hide');
-    toggleBtn.classList.add('active');
-    toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
-    if (autoCloseTimer) clearTimeout(autoCloseTimer);
-    autoCloseTimer = setTimeout(closeBar, 30000);
-}
+        utilityBar.classList.add('show');
+        contentEl.classList.add('hide');
+        toggleBtn.classList.add('active');
+        toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        if (autoCloseTimer) clearTimeout(autoCloseTimer);
+        autoCloseTimer = setTimeout(closeBar, 30000);
+    }
 
     toggleBtn.addEventListener('click', function (e) {
         e.stopPropagation();
@@ -100,7 +101,9 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // ========== CANVAS BACKGROUND ==========
+    // ============================================================
+    // 5. NỀN CANVAS ĐỘNG (BIỂN + SAO)
+    // ============================================================
     const canvas = document.getElementById('bg');
     if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -199,21 +202,31 @@ document.addEventListener('DOMContentLoaded', function () {
         draw();
     }
 
-    // ========== WORD GAME LETTER CYCLE ==========
+    // ============================================================
+    // 6. CHỮ CÁI XOAY VÒNG (NÚT WORD GAME)
+    // ============================================================
     const LETTERS = [
         { ch: 'W' }, { ch: 'O' }, { ch: 'R' }, { ch: 'D' },
         { ch: 'G' }, { ch: 'A' }, { ch: 'M' }, { ch: 'E' },
     ];
-    let idx = 0;
-    const elLetter = document.getElementById('word-letter');
-    if (elLetter) {
-        setInterval(() => {
-            idx = (idx + 1) % LETTERS.length;
-            elLetter.classList.remove('pop');
-            void elLetter.offsetWidth;
-            elLetter.textContent = LETTERS[idx].ch;
-            elLetter.classList.add('pop');
-        }, 900);
+    
+    function applyWordAnimation() {
+        document.querySelectorAll('#word-game .tile-letter').forEach(elLetter => {
+            if (elLetter.dataset.animationStarted) return;
+            elLetter.dataset.animationStarted = 'true';
+            
+            let localIdx = 0;
+            setInterval(() => {
+                localIdx = (localIdx + 1) % LETTERS.length;
+                elLetter.classList.remove('pop');
+                void elLetter.offsetWidth;
+                elLetter.textContent = LETTERS[localIdx].ch;
+                elLetter.classList.add('pop');
+            }, 900);
+        });
     }
 
-});
+    // Gọi animation cho Word Game
+    applyWordAnimation();
+
+}); // END DOMContentLoaded
