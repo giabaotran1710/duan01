@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const utilityContainer = document.querySelector('.utility-container');
     const utilityBar = document.getElementById('utilityBar');
     const toggleBtn = document.getElementById('toggleBar');
+    const skipIntroBtn = document.getElementById('skip-intro');
 
     // ============================================================
     // 2. CÁNH HOA ANH ĐÀO (INTRO)
@@ -228,5 +229,72 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // Gọi animation cho Word Game
     applyWordAnimation();
+    
+    let introSkipped = false;
+let introTimer1 = null;
+let introTimer2 = null;
+let introTimer3 = null;
+
+function skipIntro(){
+    if (introSkipped) return;
+
+    introSkipped = true;
+
+    clearTimeout(introTimer1);
+    clearTimeout(introTimer2);
+    clearTimeout(introTimer3);
+
+    overlay.style.opacity = '0';
+
+    setTimeout(() => {
+        if (overlay && overlay.parentNode) {
+            overlay.parentNode.removeChild(overlay);
+        }
+
+        openBar();
+    }, 500);
+}
+
+if (skipIntroBtn) {
+    skipIntroBtn.addEventListener('click', skipIntro);
+}
+    
+    function typeLine1() {
+
+    if (introSkipped) return;
+
+    if (charIndex < text1.length) {
+
+        line1.textContent += text1.charAt(charIndex);
+        charIndex++;
+
+        introTimer1 = setTimeout(typeLine1, typingSpeed);
+
+    } else {
+
+        line1.style.borderRight = 'none';
+        line2.style.opacity = '1';
+
+        introTimer2 = setTimeout(() => {
+
+            if (introSkipped) return;
+
+            overlay.style.opacity = '0';
+
+            introTimer3 = setTimeout(() => {
+
+                if (introSkipped) return;
+
+                if (overlay.parentNode) {
+                    overlay.parentNode.removeChild(overlay);
+                }
+
+                openBar();
+
+            }, 1200);
+
+        }, 1000);
+    }
+}
 
 }); // END DOMContentLoaded
