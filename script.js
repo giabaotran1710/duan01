@@ -1,8 +1,8 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ============================================================
-    // 1. THAM CHIẾU PHẦN TỬ DOM
-    // ============================================================
+    // ============================================================  
+    // 1. THAM CHIẾU PHẦN TỬ DOM  
+    // ============================================================  
     const overlay = document.getElementById('intro-overlay');
     const line1 = document.getElementById('intro-line1');
     const line2 = document.getElementById('intro-line2');
@@ -12,10 +12,44 @@ document.addEventListener('DOMContentLoaded', function () {
     const utilityBar = document.getElementById('utilityBar');
     const toggleBtn = document.getElementById('toggleBar');
     const skipIntroBtn = document.getElementById('skip-intro');
+    const chillBtn = document.getElementById('chillBar');          // Nút bấm mở Chill Bar
+    const chillPanel = document.getElementById('chillBarPanel'); // Panel chứa danh sách game
+
+    // Kiểm tra null (phòng trường hợp thiếu phần tử)
+    if (!overlay || !line1 || !line2 || !petalContainer || !contentEl ||
+        !utilityBar || !toggleBtn || !skipIntroBtn || !chillBtn || !chillPanel) {
+        console.error('Thiếu phần tử DOM cần thiết. Kiểm tra lại HTML.');
+        return;
+    }
 
     // ============================================================
-    // 2. CÁNH HOA ANH ĐÀO (INTRO)
+    // TÁCH chillPanel RA KHỎI utilityBar
     // ============================================================
+    // Đảm bảo chillPanel không nằm bên trong utilityBar nữa,
+    // để hai menu độc lập và không chồng nhau.
+    if (chillPanel.parentElement === utilityBar) {
+    utilityContainer.appendChild(chillPanel);
+    
+    // Áp style để chillPanel hiển thị giống utility bar (bên dưới nút toggle)
+    chillPanel.style.position = 'absolute';
+    chillPanel.style.top = '62px';      // Cùng vị trí top như utilityBar
+    chillPanel.style.left = '1px';     // Bên cạnh nút chill, giống utilityBar (left: 0 so với container)
+    chillPanel.style.bottom = 'auto';   // Bỏ bottom
+    chillPanel.style.transform = 'none'; // Bỏ translateX
+    chillPanel.style.zIndex = '999';    // Đảm bảo hiển thị đè lên nhưng dưới utilityBar
+    chillPanel.style.width = '250px';   // Giữ nguyên width như CSS
+    chillPanel.style.maxHeight = 'calc(100vh - 140px)';
+}
+
+    // Biến cho intro skip & timers
+    let introSkipped = false;
+    let introTimer1 = null;
+    let introTimer2 = null;
+    let introTimer3 = null;
+
+    // ============================================================  
+    // 2. CÁNH HOA ANH ĐÀO (INTRO)  
+    // ============================================================  
     function createPetals(count = 35) {
         for (let i = 0; i < count; i++) {
             const petal = document.createElement('div');
@@ -31,42 +65,48 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    // ============================================================
-    // 3. GÕ CHỮ DÒNG GIỚI THIỆU (INTRO TYPING)
-    // ============================================================
+    // ============================================================  
+    // 3. GÕ CHỮ DÒNG GIỚI THIỆU (INTRO TYPING)  
+    // ============================================================  
     const text1 = 'Thách thức mọi giới hạn của bản thân.';
     let charIndex = 0;
     const typingSpeed = 70;
 
     function typeLine1() {
+        if (introSkipped) return;
+
         if (charIndex < text1.length) {
             line1.textContent += text1.charAt(charIndex);
             charIndex++;
-            setTimeout(typeLine1, typingSpeed);
+            introTimer1 = setTimeout(typeLine1, typingSpeed);
         } else {
             line1.style.borderRight = 'none';
             line2.style.opacity = '1';
-            setTimeout(() => {
+            introTimer2 = setTimeout(() => {
+                if (introSkipped) return;
                 overlay.style.opacity = '0';
-                setTimeout(() => {
+                introTimer3 = setTimeout(() => {
+                    if (introSkipped) return;
                     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                    openBar();
+                    openUtilityBar();
                 }, 1200);
             }, 1000);
         }
     }
 
-    setTimeout(() => {
+    // Khởi động intro
+    introTimer1 = setTimeout(() => {
+        if (introSkipped) return;
         createPetals(35);
-        setTimeout(typeLine1, 1000);
+        introTimer2 = setTimeout(typeLine1, 1000);
     }, 2000);
 
-    // ============================================================
-    // 4. TOGGLE THANH TIỆN ÍCH (UTILITY BAR)
-    // ============================================================
+    // ============================================================  
+    // 4. QUẢN LÝ UTILITY BAR & CHILL BAR  
+    // ============================================================  
     let autoCloseTimer;
 
-    function closeBar() {
+    function closeUtilityBar() {
         utilityBar.classList.remove('show');
         contentEl.classList.remove('hide');
         toggleBtn.classList.remove('active');
@@ -75,36 +115,100 @@ document.addEventListener('DOMContentLoaded', function () {
             clearTimeout(autoCloseTimer);
             autoCloseTimer = null;
         }
+        // Đóng luôn chill bar nếu đang mở (phòng trường hợp)
+        closeChillBar();
     }
 
-    function openBar() {
+    function openUtilityBar() {
+        // Đóng Chill Bar nếu đang mở
+        closeChillBar();
+
         utilityBar.classList.add('show');
         contentEl.classList.add('hide');
         toggleBtn.classList.add('active');
         toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
         if (autoCloseTimer) clearTimeout(autoCloseTimer);
-        autoCloseTimer = setTimeout(closeBar, 30000);
+        autoCloseTimer = setTimeout(closeUtilityBar, 30000);
     }
 
+    function openChillBar() {
+    // Đóng Utility Bar nếu đang mở
+    closeUtilityBar();
+
+    // Ẩn nội dung chính (TRẦN GIA BẢO...)
+    contentEl.classList.add('hide');
+
+    // Mở chill panel
+    chillPanel.classList.add('open');
+    chillBtn.classList.add('active');
+    
+    // Quay icon 180°
+    const chillIcon = chillBtn.querySelector('i');
+    if (chillIcon) {
+        chillIcon.style.transform = 'rotate(180deg)';
+        chillIcon.style.transition = 'transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
+    }
+}
+
+function closeChillBar() {
+    chillPanel.classList.remove('open');
+    chillBtn.classList.remove('active');
+    
+    // Reset icon về 0°
+    const chillIcon = chillBtn.querySelector('i');
+    if (chillIcon) {
+        chillIcon.style.transform = 'rotate(0deg)';
+    }
+    
+    // Hiện lại nội dung chính nếu utility bar cũng đang đóng
+    if (!utilityBar.classList.contains('show')) {
+        contentEl.classList.remove('hide');
+    }
+}
+
+    // Gắn sự kiện click
     toggleBtn.addEventListener('click', function (e) {
         e.stopPropagation();
         if (utilityBar.classList.contains('show')) {
-            closeBar();
+            closeUtilityBar();
         } else {
-            openBar();
+            openUtilityBar();
         }
     });
 
+    chillBtn.addEventListener('click', function (e) {
+        e.stopPropagation();
+        if (chillPanel.classList.contains('open')) {
+            closeChillBar();
+        } else {
+            openChillBar();
+        }
+    });
+
+    // Khi click bên trong utility bar, reset thời gian tự đóng
     utilityBar.addEventListener('click', function () {
         if (autoCloseTimer) {
             clearTimeout(autoCloseTimer);
-            autoCloseTimer = setTimeout(closeBar, 30000);
+            autoCloseTimer = setTimeout(closeUtilityBar, 30000);
         }
     });
 
-    // ============================================================
-    // 5. NỀN CANVAS ĐỘNG (BIỂN + SAO)
-    // ============================================================
+    // Đóng tất cả khi click ra ngoài
+    document.addEventListener('click', function (e) {
+        if (
+            !utilityBar.contains(e.target) &&
+            !toggleBtn.contains(e.target) &&
+            !chillPanel.contains(e.target) &&
+            !chillBtn.contains(e.target)
+        ) {
+            closeUtilityBar();
+            closeChillBar();
+        }
+    });
+
+    // ============================================================  
+    // 5. NỀN CANVAS ĐỘNG (BIỂN + SAO)  
+    // ============================================================  
     const canvas = document.getElementById('bg');
     if (canvas) {
         const ctx = canvas.getContext('2d');
@@ -203,19 +307,19 @@ document.addEventListener('DOMContentLoaded', function () {
         draw();
     }
 
-    // ============================================================
-    // 6. CHỮ CÁI XOAY VÒNG (NÚT WORD GAME)
-    // ============================================================
+    // ============================================================  
+    // 6. CHỮ CÁI XOAY VÒNG (NÚT WORD GAME)  
+    // ============================================================  
     const LETTERS = [
         { ch: 'W' }, { ch: 'O' }, { ch: 'R' }, { ch: 'D' },
         { ch: 'G' }, { ch: 'A' }, { ch: 'M' }, { ch: 'E' },
     ];
-    
+
     function applyWordAnimation() {
         document.querySelectorAll('#word-game .tile-letter').forEach(elLetter => {
             if (elLetter.dataset.animationStarted) return;
             elLetter.dataset.animationStarted = 'true';
-            
+
             let localIdx = 0;
             setInterval(() => {
                 localIdx = (localIdx + 1) % LETTERS.length;
@@ -227,74 +331,45 @@ document.addEventListener('DOMContentLoaded', function () {
         });
     }
 
-    // Gọi animation cho Word Game
     applyWordAnimation();
-    
-    let introSkipped = false;
-let introTimer1 = null;
-let introTimer2 = null;
-let introTimer3 = null;
 
-function skipIntro(){
-    if (introSkipped) return;
+    // ============================================================  
+    // 7. SKIP INTRO  
+    // ============================================================  
+    function skipIntro() {
+        if (introSkipped) return;
+        introSkipped = true;
 
-    introSkipped = true;
+        clearTimeout(introTimer1);
+        clearTimeout(introTimer2);
+        clearTimeout(introTimer3);
 
-    clearTimeout(introTimer1);
-    clearTimeout(introTimer2);
-    clearTimeout(introTimer3);
+        overlay.style.opacity = '0';
 
-    overlay.style.opacity = '0';
-
-    setTimeout(() => {
-        if (overlay && overlay.parentNode) {
-            overlay.parentNode.removeChild(overlay);
-        }
-
-        openBar();
-    }, 500);
-}
-
-if (skipIntroBtn) {
-    skipIntroBtn.addEventListener('click', skipIntro);
-}
-    
-    function typeLine1() {
-
-    if (introSkipped) return;
-
-    if (charIndex < text1.length) {
-
-        line1.textContent += text1.charAt(charIndex);
-        charIndex++;
-
-        introTimer1 = setTimeout(typeLine1, typingSpeed);
-
-    } else {
-
-        line1.style.borderRight = 'none';
-        line2.style.opacity = '1';
-
-        introTimer2 = setTimeout(() => {
-
-            if (introSkipped) return;
-
-            overlay.style.opacity = '0';
-
-            introTimer3 = setTimeout(() => {
-
-                if (introSkipped) return;
-
-                if (overlay.parentNode) {
-                    overlay.parentNode.removeChild(overlay);
-                }
-
-                openBar();
-
-            }, 1200);
-
-        }, 1000);
+        setTimeout(() => {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+            openUtilityBar();
+        }, 500);
     }
-}
+
+    skipIntroBtn.addEventListener('click', skipIntro);
+    
+    window.navigateToGame = function(url, gameName) {
+    const loadingOverlay = document.getElementById('loading-overlay');
+    const loadingGameName = document.getElementById('loading-game-name');
+    
+    if (loadingOverlay && loadingGameName) {
+        loadingGameName.innerHTML = '<span style="opacity:0.7;">Đang mở:</span> ' + gameName;
+        loadingOverlay.style.display = 'flex';
+        
+        const randomDelay = Math.floor(Math.random() * 4501) + 1500;
+        
+        setTimeout(() => {
+            window.location.href = url;
+        }, randomDelay);
+    } else {
+        window.location.href = url;
+    }
+};
 
 }); // END DOMContentLoaded
