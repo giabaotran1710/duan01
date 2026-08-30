@@ -1,0 +1,1445 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>ĐIỀU KHIỂN GIAO LỘ</title>
+<style>
+  :root{
+    --bg:#0b1020;
+    --panel:rgba(14,20,38,.9);
+    --line:rgba(255,255,255,.1);
+    --text:#eef4ff;
+    --muted:#9aabd0;
+    --good:#3cff92;
+    --warn:#ffd34d;
+    --bad:#ff5577;
+    --road:#303747;
+    --road2:#3a4354;
+  }
+
+  *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+  html,body{margin:0;width:100%;height:100%;overflow:hidden;background:var(--bg);color:var(--text);font-family:system-ui,-apple-system,Segoe UI,Roboto,Arial,sans-serif}
+  body{display:flex;align-items:center;justify-content:center}
+  button{font:inherit;color:inherit}
+
+  #gameWrap{
+    width:100vw;
+    height:100vh;
+    position:relative;
+    overflow:hidden;
+    background:
+      radial-gradient(circle at 50% 50%,rgba(45,70,120,.14),transparent 45%),
+      #0b1020;
+  }
+
+  canvas{
+    width:100%;
+    height:100%;
+    display:block;
+  }
+
+  .hud{
+    position:absolute;
+    inset:35px 1px auto 10px;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    gap:20px;
+    z-index:3;
+    pointer-events:none;
+  }
+
+  .hudGroup{
+    display:flex;
+    gap:8px;
+    flex-wrap:wrap;
+  }
+
+  .panel{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:8px 11px;
+    min-width:110px;
+    box-shadow:0 8px 25px rgba(0,0,0,.25);
+    backdrop-filter:blur(10px);
+    opacity:0.8;
+  }
+
+  .label{
+    color:var(--muted);
+    font-size:10px;
+    text-transform:uppercase;
+    letter-spacing:.1em;
+  }
+  .value{
+    font-size:19px;
+    line-height:1.05;
+    font-weight:800;
+    margin-top:2px;
+  }
+
+  #message{
+    position:absolute;
+    left:50%;
+    top:28%;
+    transform:translateX(-50%);
+    z-index:4;
+    background:rgba(10,15,28,.86);
+    border:1px solid var(--line);
+    border-radius:999px;
+    padding:7px 13px;
+    color:#dfe8ff;
+    font-size:10px;
+    opacity:0;
+    pointer-events:none;
+    transition:opacity .2s;
+    white-space:nowrap;
+  }
+  #message.show{opacity:1}
+
+  .bottom{
+    position:absolute;
+    left:50%;
+    bottom:12px;
+    transform:translateX(-50%);
+    z-index:4;
+    display:flex;
+    gap:10px;
+    align-items:center;
+    justify-content:center;
+    width:min(94vw,720px);
+  }
+
+  .lightBtn{
+    min-width:110px;
+    flex:1;
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:16px;
+    padding:11px 12px;
+    cursor:pointer;
+    background:rgba(15,21,38,.92);
+    box-shadow:0 8px 20px rgba(0,0,0,.25);
+    transition:transform .08s,background .15s,border-color .15s;
+  }
+  .lightBtn:active{transform:scale(.97)}
+  .lightBtn.active{
+    background:linear-gradient(180deg,rgba(60,255,146,.18),rgba(15,21,38,.95));
+    border-color:rgba(60,255,146,.55);
+  }
+  .dir{
+    display:block;
+    font-size:11px;
+    color:var(--muted);
+  }
+  .state{
+    display:block;
+    font-size:15px;
+    font-weight:800;
+    margin-top:2px;
+  }
+
+  #overlay{
+    position:absolute;
+    inset:0;
+    z-index:10;
+    display:none;
+    place-items:center;
+    background:rgba(5,8,17,.68);
+    backdrop-filter:blur(8px);
+    padding:20px;
+  }
+  #overlay.show{display:grid}
+
+  .modal{
+    width:min(92vw,430px);
+    background:rgba(15,22,40,.96);
+    border:1px solid rgba(255,255,255,.12);
+    border-radius:24px;
+    padding:22px;
+    box-shadow:0 25px 80px rgba(0,0,0,.42);
+    text-align:center;
+  }
+  .modal h1{margin:0 0 6px;font-size: clamp(18px, 4vw, 28px);
+    white-space:nowrap;}
+  .modal p{margin:0 0 18px;color:var(--muted);line-height:1.5}
+  .primary{
+    width:100%;
+    border:0;
+    border-radius:15px;
+    padding:13px 16px;
+    font-weight:900;
+    cursor:pointer;
+    background:linear-gradient(180deg,#44ff99,#19d872);
+    color:#04150c;
+  }
+
+  #help{
+    position:absolute;
+    right:2%;
+    top:4%;
+    z-index:5;
+    width:32px;height:32px;
+    border:1px solid var(--line);
+    background:var(--panel);
+    border-radius:50%;
+    cursor:pointer;
+  }
+
+  #legend{
+    position:absolute;
+    top:50px;right:10px;
+    z-index:5;
+    width:225px;
+    display:none;
+    padding:12px;
+    border-radius:14px;
+    background:var(--panel);
+    border:1px solid var(--line);
+    font-size:12px;
+    color:#ccd7f2;
+    line-height:1.5;
+  }
+  #legend.show{display:block}
+  .dot{
+    display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px
+  }
+  .dot.g{background:var(--good)}
+  .dot.r{background:var(--bad)}
+  .dot.y{background:var(--warn)}
+
+  .lifeRecover{
+    position:absolute;
+    left:50%;
+    bottom:auto;
+    top:80px;
+    transform:translateX(-50%);
+    z-index:4;
+    width:min(30vw,80px);
+    display:none;
+    flex-direction:column;
+    align-items:center;
+    gap:3px;
+    pointer-events:none;
+  }
+  .lifeRecover.show{display:flex}
+  .lifeRecoverLabel{
+    font-size:10px;
+    color:var(--muted);
+    letter-spacing:.05em;
+  }
+  .lifeRecoverTrack{
+    width:100%;
+    height:6px;
+    border-radius:999px;
+    background:rgba(255,255,255,.12);
+    overflow:hidden;
+    border:1px solid rgba(255,255,255,.1);
+  }
+  .lifeRecoverFill{
+    height:100%;
+    width:0%;
+    background:linear-gradient(90deg,#3cff92,#19d872);
+    border-radius:999px;
+    transition:width .1s linear;
+  }
+
+    footer{
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: Tahoma;
+}
+</style>
+</head>
+<body>
+<div id="gameWrap">
+  <canvas id="game"></canvas>
+
+  <div class="hud">
+    <div class="hudGroup">
+      <div class="panel"><div class="label">Điểm</div><div class="value" id="score">0</div></div>
+      <div class="panel"><div class="label">Màn ải</div><div class="value" id="wave">1</div></div>
+      <div class="panel"><div class="label">Xe trên đường</div><div class="value" id="queue">0</div></div>
+    </div>
+    <div class="hudGroup">
+      <div class="panel"><div class="label">Mạng</div><div class="value" id="lives">❤️❤️❤️</div></div>
+      <div class="panel"><div class="label">Kỷ lục</div><div class="value" id="best">0</div></div>
+    </div>
+  </div>
+
+  <div class="lifeRecover" id="lifeRecover">
+    <div class="lifeRecoverLabel">Hồi phục mạng...</div>
+    <div class="lifeRecoverTrack"><div class="lifeRecoverFill" id="lifeRecoverFill"></div></div>
+  </div>
+
+  <button id="help" aria-label="Hướng dẫn">?</button>
+  <div id="legend">
+    <b>Điều khiển:</b><br>
+    🚗 Xe tự do lưu thông, không có đèn giao thông.<br>🚗 Tối đa 8 xe cùng lúc trên giao lộ.<br>🔶 Xi-nhan nhấp nháy cho biết xe sắp rẽ trái/phải.<br>👆 Chạm vào bất kỳ xe nào để loại bỏ xe đó.<br><br>
+    🚗 Xe có thể <b>rẽ trái / rẽ phải / đi thẳng</b>.<br>👮 Chạm vào xe có vòng <b>vàng</b> để bắt xe vượt đèn đỏ.<br>
+    💥 Va chạm = mất 1 mạng.<br>
+    🏆 Cho xe đi an toàn để tăng điểm.<br>
+    🏎️ Cẩn thận với "quái xế" phóng rất nhanh!<br>
+    ❤️ Mạng tự hồi phục theo thời gian, xem thanh tiến trình phía trên.<br>
+    <br><b>Mẹo:</b> Quan sát toàn bộ giao lộ và xử lý xe thật nhanh.
+  </div>
+
+  <div id="message"></div>
+
+  <div id="overlay">
+    <div class="modal">
+      <h1>🚦 GIAO LỘ TẮC NGHẼN</h1>
+      <p id="gameOverText">Bạn đã để xảy ra quá nhiều va chạm.</p>
+      <button class="primary" id="restart">CHƠI LẠI</button>
+    </div>
+  </div>
+</div>
+  <footer> Version:D20263008-H23M43T2724    »»»   developed by Tran Gia Bao</footer>
+<script>
+(() => {
+  const canvas = document.getElementById('game');
+  const ctx = canvas.getContext('2d');
+const bgMusic = new Audio('../audio/dieukhiengiaolo.mp3');
+  bgMusic.loop = true;
+  bgMusic.volume = 0.35;
+
+  let musicStarted = false;
+
+  function startBackgroundMusic(){
+    if(musicStarted) return;
+
+    bgMusic.play()
+      .then(() => {
+        musicStarted = true;
+      })
+      .catch(() => {
+        
+      });
+  }
+  const scoreEl = document.getElementById('score');
+  const waveEl = document.getElementById('wave');
+  const queueEl = document.getElementById('queue');
+  const livesEl = document.getElementById('lives');
+  const bestEl = document.getElementById('best');
+  const overlay = document.getElementById('overlay');
+  const gameOverText = document.getElementById('gameOverText');
+  const messageEl = document.getElementById('message');
+  const help = document.getElementById('help');
+  const legend = document.getElementById('legend');
+  const lifeRecoverEl = document.getElementById('lifeRecover');
+  const lifeRecoverFillEl = document.getElementById('lifeRecoverFill');
+
+
+  let W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
+
+  const MAX_LIVES = 3;
+  const LIFE_RECOVER_SECONDS = 20; // thời gian hồi 1 mạng
+  const SPEED_RAMP_INTERVAL = 10;   // mỗi 10 giây tăng tốc
+  const SPEED_RAMP_STEP = 0.01;     // mỗi lần tăng 1%
+  const SPEED_RAMP_MAX = 0.25;      // tối đa tăng 25%
+  const WAVE_INTERVAL = 25;         // mỗi 25 giây qua màn
+
+  const state = {
+    running: true, score: 0, lives: 3,
+    best: Number(localStorage.getItem('crossroadBest') || 0),
+    wave: 1, elapsed: 0, spawnTimer: 0, nextWaveAt: WAVE_INTERVAL, carId: 0,
+    // Pha đèn: hGreen -> hYellow -> allRed -> vGreen -> vYellow -> allRed...
+hitFlash: 0, shake: 0, messageTimer: 0,
+    speedRampTimer: SPEED_RAMP_INTERVAL,
+    speedBonus: 0,
+    lifeRecoverTimer: 0
+  };
+
+  const MAX_CARS_ON_SCREEN = 8;
+
+  const cars = [];
+  const particles = [];
+  let scenery = { buildings: [], trees: [] };
+
+  const colors = ['#54a8ff','#ff6c8d','#ffd34d','#72e8b2','#b78cff','#ff955b','#4de0e8'];
+
+  function resize(){
+    W = innerWidth; H = innerHeight;
+    dpr = Math.min(devicePixelRatio || 1, 2);
+    canvas.width = Math.floor(W*dpr);
+    canvas.height = Math.floor(H*dpr);
+    canvas.style.width = W+'px';
+    canvas.style.height = H+'px';
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    generateScenery();
+  }
+  addEventListener('resize', resize);
+  resize();
+
+  function roadGeom(){
+    const size = Math.min(W,H) * 0.34;
+    const roadW = Math.max(130, size*0.42);
+    const cx = W/2, cy = H/2;
+    return {
+      cx, cy,
+      roadW,
+      left: cx-roadW/2,
+      right: cx+roadW/2,
+      top: cy-roadW/2,
+      bottom: cy+roadW/2,
+      // Hai làn tổng cộng: mỗi hướng chiếm nửa mặt đường.
+      lane: roadW*0.5,
+      laneOffset: roadW*0.25
+    };
+  }
+
+  function clamp(v,a,b){ return Math.max(a,Math.min(b,v)); }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function choose(arr){ return arr[(Math.random()*arr.length)|0]; }
+
+  function generateScenery(){
+    const g = roadGeom();
+    const margin = 22;
+    scenery = { buildings: [], trees: [] };
+
+    const quadrants = [
+      {x0:0, y0:0, x1:g.left-margin, y1:g.top-margin},
+      {x0:g.right+margin, y0:0, x1:W, y1:g.top-margin},
+      {x0:0, y0:g.bottom+margin, x1:g.left-margin, y1:H},
+      {x0:g.right+margin, y0:g.bottom+margin, x1:W, y1:H}
+    ];
+
+    for(const q of quadrants){
+      const qw = q.x1-q.x0, qh = q.y1-q.y0;
+      if(qw<50 || qh<50) continue;
+
+      const cols = Math.max(1, Math.floor(qw/95));
+      const rows = Math.max(1, Math.floor(qh/95));
+
+      for(let r=0; r<rows; r++){
+        for(let c=0; c<cols; c++){
+          if(Math.random()<0.32) continue;
+
+          const cellW = qw/cols, cellH = qh/rows;
+          const bw = cellW*rand(0.52,0.8);
+          const bh = cellH*rand(0.52,0.8);
+          const bx = q.x0 + c*cellW + (cellW-bw)/2;
+          const by = q.y0 + r*cellH + (cellH-bh)/2;
+
+          scenery.buildings.push({
+            x:bx, y:by, w:bw, h:bh,
+            color: choose(['#3a4560','#425068','#39445a','#4a5570','#3d4a5e']),
+            roof: choose(['#2b3550','#333f5c','#2c374e']),
+            rows: Math.max(2, Math.floor(bh/24))
+          });
+        }
+      }
+
+      const treeCount = 2 + Math.floor(Math.random()*3);
+      for(let i=0; i<treeCount; i++){
+        scenery.trees.push({
+          x: rand(q.x0+12, q.x1-12),
+          y: rand(q.y0+12, q.y1-12),
+          r: rand(9,16)
+        });
+      }
+    }
+  }
+
+  function drawScenery(){
+    for(const b of scenery.buildings){
+      ctx.fillStyle = b.color;
+      roundRect(b.x,b.y,b.w,b.h,4);
+      ctx.fill();
+
+      ctx.fillStyle = b.roof;
+      ctx.fillRect(b.x, b.y, b.w, Math.min(8, b.h*0.12));
+
+      ctx.fillStyle = 'rgba(255,222,140,.5)';
+      const wCols = Math.max(1, Math.floor(b.w/18));
+      const wRows = b.rows;
+      const padX = b.w*0.14, padY = b.h*0.2;
+      const cellW = (b.w-2*padX)/wCols;
+      const cellH = (b.h-2*padY)/wRows;
+      const winW = cellW*0.55;
+      const winH = cellH*0.45;
+
+      for(let r=0; r<wRows; r++){
+        for(let c=0; c<wCols; c++){
+          const wx = b.x+padX + c*cellW;
+          const wy = b.y+padY + r*cellH;
+          ctx.fillRect(wx,wy,winW,winH);
+        }
+      }
+    }
+
+    for(const t of scenery.trees){
+      ctx.fillStyle='#6b4a2f';
+      ctx.fillRect(t.x-t.r*0.12, t.y+t.r*0.35, t.r*0.24, t.r*0.65);
+
+      ctx.fillStyle='#2f6b45';
+      ctx.beginPath();
+      ctx.arc(t.x, t.y, t.r, 0, Math.PI*2);
+      ctx.fill();
+
+      ctx.fillStyle='#3f8a58';
+      ctx.beginPath();
+      ctx.arc(t.x-t.r*0.32, t.y-t.r*0.28, t.r*0.62, 0, Math.PI*2);
+      ctx.fill();
+    }
+  }
+
+  function setMessage(text, duration=1400){
+    messageEl.textContent = text;
+    messageEl.classList.add('show');
+    state.messageTimer = duration;
+  }
+
+  function updateHud(){
+    scoreEl.textContent = Math.floor(state.score);
+    waveEl.textContent = state.wave;
+    queueEl.textContent = cars.length;
+    livesEl.textContent = '❤️'.repeat(state.lives) + '🖤'.repeat(MAX_LIVES-state.lives);
+    bestEl.textContent = state.best;
+
+    if(state.lives < MAX_LIVES && state.running){
+      lifeRecoverEl.classList.add('show');
+      const pct = clamp((state.lifeRecoverTimer / LIFE_RECOVER_SECONDS) * 100, 0, 100);
+      lifeRecoverFillEl.style.width = pct + '%';
+    }else{
+      lifeRecoverEl.classList.remove('show');
+      lifeRecoverFillEl.style.width = '0%';
+    }
+  }
+
+
+  help.addEventListener('click', () => {
+    startBackgroundMusic();
+    legend.classList.toggle('show');
+  });
+
+  function laneCenter(axis, dir){
+    const g = roadGeom();
+
+
+    if(axis === 'h'){
+      return g.cy + (dir === 1 ? g.laneOffset : -g.laneOffset);
+    }
+
+    return g.cx + (dir === 1 ? -g.laneOffset : g.laneOffset);
+  }
+
+
+  function spawnCar(){
+    const dirs = [
+      {axis:'h',dir:1,name:'Tây → Đông'},
+      {axis:'h',dir:-1,name:'Đông → Tây'},
+      {axis:'v',dir:1,name:'Bắc → Nam'},
+      {axis:'v',dir:-1,name:'Nam → Bắc'}
+    ];
+
+    const choice = choose(dirs);
+    const axis = choice.axis;
+    const dir = choice.dir;
+    const g = roadGeom();
+
+    // Mỗi xe có "tính cách tốc độ" riêng.
+    // Chênh lệch đủ rõ để người chơi nhận biết xe nhanh/chậm.
+    // Thêm hạng "racer" (quái xế): hiếm gặp nhưng cực nhanh.
+    const rSpeed = Math.random();
+    let speedClass, speedMultiplier;
+    if(rSpeed < 0.06){
+      speedClass = 'racer';
+      speedMultiplier = rand(1.55,1.85);
+    }else if(rSpeed < 0.30){
+      speedClass = 'fast';
+      speedMultiplier = rand(1.15,1.36);
+    }else if(rSpeed < 0.55){
+      speedClass = 'slow';
+      speedMultiplier = rand(0.72,0.86);
+    }else{
+      speedClass = 'normal';
+      speedMultiplier = rand(0.92,1.08);
+    }
+
+    // speedBonus tăng dần theo thời gian (tối đa +25%), áp dụng cho mọi xe.
+    const speed = (62 + state.wave*7) * speedMultiplier * (1 + state.speedBonus);
+
+    // 50% đi thẳng, 25% rẽ trái, 25% rẽ phải.
+    const r = Math.random();
+    const turn = r < 0.50 ? 'straight' : (r < 0.75 ? 'left' : 'right');
+
+    const car = {
+      id: ++state.carId,
+      axis,
+      dir,
+      turn,
+
+      x:0,
+      y:0,
+
+      speed,
+      baseSpeed:speed,
+      minSpeed:speed*0.78,
+      maxSpeed:speed*1.08,
+      speedClass,
+      trailTimer: 0,
+
+      w: Math.min(30, g.lane*0.42),
+      h: Math.min(16, g.lane*0.42),
+
+      color: speedClass==='racer' ? choose(['#ff3b3b','#ff8a00','#fff200']) : choose(colors),
+
+      stopped:false,
+      entered:false,
+      scored:false,
+      dead:false,
+
+      turning:false,
+      turnT:0,
+      turnStartX:0,
+      turnStartY:0,
+      turnEndX:0,
+      turnEndY:0,
+      turnControl1X:0,
+      turnControl1Y:0,
+      turnControl2X:0,
+      turnControl2Y:0,
+
+      visualAngle:
+        axis==='h'
+          ? (dir===1 ? 0 : Math.PI)
+          : (dir===1 ? Math.PI/2 : -Math.PI/2),
+
+      // Xi-nhan: chỉ bật khi xe có ý định rẽ.
+      indicator: turn === 'left' ? 'left' :
+                 turn === 'right' ? 'right' : null,
+      indicatorTimer: rand(0.25,0.9),
+      indicatorOn:false,
+      turnSignalStarted:false,
+
+      // Thời điểm bắt đầu giảm tốc chuẩn bị rẽ.
+      turnPrepStarted:false,
+    };
+
+    if(axis==='h'){
+      car.y = laneCenter('h',dir);
+      car.x = dir===1 ? -70 : W+70;
+    }else{
+      car.x = laneCenter('v',dir);
+      car.y = dir===1 ? -70 : H+70;
+    }
+
+    cars.push(car);
+
+    if(speedClass==='racer'){
+      setMessage('🏎️ Cẩn thận, xuất hiện quái xế phóng với tốc độ cao', 1200);
+    }
+  }
+
+  function carFront(c){
+    if(c.axis==='h') return c.dir===1 ? c.x+c.w/2 : c.x-c.w/2;
+    return c.dir===1 ? c.y+c.h/2 : c.y-c.h/2;
+  }
+
+  function distanceToIntersection(c){
+    const g = roadGeom();
+
+    if(c.axis === 'h'){
+      return c.dir === 1
+        ? g.left - c.x
+        : c.x - g.right;
+    }
+
+    return c.dir === 1
+      ? g.top - c.y
+      : c.y - g.bottom;
+  }
+
+  function updateCarIndicator(c, dt){
+    if(!c.indicator) return;
+
+    const d = distanceToIntersection(c);
+
+    // Xi-nhan bắt đầu nhấp nháy khi còn cách giao lộ khoảng 120 px.
+    if(d < 125){
+      c.turnSignalStarted = true;
+    }
+
+    if(c.turning){
+      // Trong lúc đang cua, xi-nhan vẫn bật.
+      c.indicatorOn = true;
+      return;
+    }
+
+    if(c.turnSignalStarted){
+      c.indicatorTimer -= dt;
+      if(c.indicatorTimer <= 0){
+        c.indicatorTimer = 0.42;
+        c.indicatorOn = !c.indicatorOn;
+      }
+    }
+  }
+
+  function startTurn(c){
+    if(c.turn==='straight' || c.turning) return;
+
+    const g = roadGeom();
+    const cx = g.cx;
+    const cy = g.cy;
+    const offset = g.laneOffset;
+
+    c.turning = true;
+    c.turnT = 0;
+    c.turnSignalStarted = true;
+    c.indicatorOn = true;
+
+    c.turnStartX = c.x;
+    c.turnStartY = c.y;
+
+    let targetX = c.x;
+    let targetY = c.y;
+
+    /*
+      Mỗi hướng có 2 khả năng rẽ:
+        - left
+        - right
+      Tọa độ đích nằm trên làn đầu ra tương ứng.
+    */
+
+    if(c.axis==='h'){
+      // Tây -> Đông
+      if(c.dir===1){
+        if(c.turn==='left'){
+          // sang Bắc
+          targetX = cx + offset;
+          targetY = -70;
+        }else{
+          // sang Nam
+          targetX = cx - offset;
+          targetY = H + 70;
+        }
+      }
+      // Đông -> Tây
+      else{
+        if(c.turn==='left'){
+          // sang Nam
+          targetX = cx - offset;
+          targetY = H + 70;
+        }else{
+          // sang Bắc
+          targetX = cx + offset;
+          targetY = -70;
+        }
+      }
+    }else{
+      // Bắc -> Nam
+      if(c.dir===1){
+        if(c.turn==='left'){
+          // sang Đông
+          targetX = W + 70;
+          targetY = cy + offset;
+        }else{
+          // sang Tây
+          targetX = -70;
+          targetY = cy - offset;
+        }
+      }
+      // Nam -> Bắc
+      else{
+        if(c.turn==='left'){
+          // sang Tây
+          targetX = -70;
+          targetY = cy - offset;
+        }else{
+          // sang Đông
+          targetX = W + 70;
+          targetY = cy + offset;
+        }
+      }
+    }
+
+    c.turnEndX = targetX;
+    c.turnEndY = targetY;
+
+    // Hai điểm điều khiển tạo cung mềm qua tâm giao lộ.
+    const bend = g.roadW * 0.72;
+
+    if(c.axis==='h'){
+      c.turnControl1X = c.turnStartX + (cx-c.turnStartX)*0.58;
+      c.turnControl1Y = c.turnStartY;
+
+      c.turnControl2X = cx;
+      c.turnControl2Y = c.turnEndY > cy ? cy + bend : cy - bend;
+    }else{
+      c.turnControl1X = c.turnStartX;
+      c.turnControl1Y = c.turnStartY + (cy-c.turnStartY)*0.58;
+
+      c.turnControl2X = c.turnEndX > cx ? cx + bend : cx - bend;
+      c.turnControl2Y = cy;
+    }
+  }
+
+  function updateTurnPath(c,dt){
+    if(!c.turning) return false;
+
+    c.turnT += dt * 0.95;
+    const t = clamp(c.turnT,0,1);
+    const u = 1-t;
+
+    // Cubic Bézier.
+    c.x =
+      u*u*u*c.turnStartX +
+      3*u*u*t*c.turnControl1X +
+      3*u*t*t*c.turnControl2X +
+      t*t*t*c.turnEndX;
+
+    c.y =
+      u*u*u*c.turnStartY +
+      3*u*u*t*c.turnControl1Y +
+      3*u*t*t*c.turnControl2Y +
+      t*t*t*c.turnEndY;
+
+    // Xoay xe theo tiếp tuyến.
+    const dx =
+      3*u*u*(c.turnControl1X-c.turnStartX) +
+      6*u*t*(c.turnControl2X-c.turnControl1X) +
+      3*t*t*(c.turnEndX-c.turnControl2X);
+
+    const dy =
+      3*u*u*(c.turnControl1Y-c.turnStartY) +
+      6*u*t*(c.turnControl2Y-c.turnControl1Y) +
+      3*t*t*(c.turnEndY-c.turnControl2Y);
+
+    c.visualAngle = Math.atan2(dy,dx);
+
+    if(c.turnT>=1){
+      c.turning=false;
+
+      // Sau khi cua xong, xác định trục VÀ chiều di chuyển thực tế
+      // dựa theo tiếp tuyến cuối cùng của đường cong, thay vì giữ
+      // nguyên "dir" cũ (đây là nguyên nhân khiến xe rẽ trái/phải
+      // xong lại chạy... ngược chiều dù vẫn nháy xi-nhan).
+      if(Math.abs(dx) > Math.abs(dy)){
+        c.axis = 'h';
+        c.dir = dx > 0 ? 1 : -1;
+      }else{
+        c.axis = 'v';
+        c.dir = dy > 0 ? 1 : -1;
+      }
+
+      c.x = c.turnEndX;
+      c.y = c.turnEndY;
+      c.indicatorOn = false;
+      c.turnSignalStarted = false;
+      c.visualAngle = Math.atan2(dy,dx);
+
+      return true;
+    }
+    return false;
+  }
+
+  function distanceToCenter(c){
+    const g = roadGeom();
+    if(c.axis==='h') return Math.abs(c.x-g.cx);
+    return Math.abs(c.y-g.cy);
+  }
+
+  function inIntersection(c){
+    const g=roadGeom();
+    return c.axis==='h'
+      ? c.x > g.left-20 && c.x < g.right+20
+      : c.y > g.top-20 && c.y < g.bottom+20;
+  }
+
+  function predictCollision(a,b){
+    if(a.dead || b.dead || a.turning || b.turning) return false;
+
+    const dx = b.x - a.x;
+    const dy = b.y - a.y;
+
+    // Chỉ dự đoán ở khu vực giao nhau/chuẩn bị giao nhau.
+    const g = roadGeom();
+    const nearIntersection =
+      (a.x > g.left-100 && a.x < g.right+100 &&
+       a.y > g.top-100 && a.y < g.bottom+100) ||
+      (b.x > g.left-100 && b.x < g.right+100 &&
+       b.y > g.top-100 && b.y < g.bottom+100);
+
+    if(!nearIntersection) return false;
+
+    // Nếu hai xe cùng trục/làn thì không phải tình huống cắt nhau.
+    if(a.axis === b.axis) return false;
+
+    return Math.hypot(dx,dy) < 78;
+  }
+
+
+
+  function shouldStop(c){
+    // Không có đèn giao thông: chỉ giảm tốc để giữ khoảng cách an toàn.
+    if(c.turning) return false;
+
+    const safeGap = 46 + Math.min(22, state.wave * 1.2);
+
+    for(const o of cars){
+      if(o===c || o.dead || o.turning) continue;
+      if(o.axis!==c.axis || o.dir!==c.dir) continue;
+
+      const d = c.axis==='h'
+        ? (c.dir===1 ? o.x-c.x : c.x-o.x)
+        : (c.dir===1 ? o.y-c.y : c.y-o.y);
+
+      if(d > 0 && d < safeGap) return true;
+    }
+    return false;
+  }
+
+  function updateCars(dt){
+    for(const c of cars){
+      if(c.dead) continue;
+
+      updateCarIndicator(c, dt);
+      // Xe đang cua theo Bézier.
+      if(c.turning){
+        updateTurnPath(c, dt);
+
+        const outside =
+          c.x < -120 || c.x > W + 120 ||
+          c.y < -120 || c.y > H + 120;
+
+        if(outside){
+          if(!c.scored){
+            c.scored = true;
+            state.score += 12 + state.wave * 2;
+          }
+          c.dead = true;
+        }
+        continue;
+      }
+
+      c.stopped = shouldStop(c);
+
+      if(c.stopped){
+        c.speed = Math.max(0, c.speed - dt * c.maxSpeed * 2.8);
+      }else{
+        // Mỗi xe tăng/giảm quanh tốc độ riêng của nó.
+        c.speed += (c.baseSpeed - c.speed) * Math.min(1, dt * 2.8);
+        c.speed = clamp(c.speed, c.minSpeed, c.maxSpeed);
+      }
+
+      if(c.axis === 'h'){
+        c.x += c.dir * c.speed * dt;
+      }else{
+        c.y += c.dir * c.speed * dt;
+      }
+
+      // Vệt khói/bụi phía sau cho "quái xế" để dễ nhận diện.
+      if(c.speedClass==='racer' && !c.stopped){
+        c.trailTimer -= dt;
+        if(c.trailTimer<=0){
+          c.trailTimer = 0.03;
+          const backX = c.axis==='h' ? c.x - c.dir*c.w*0.5 : c.x;
+          const backY = c.axis==='v' ? c.y - c.dir*c.h*0.5 : c.y;
+          particles.push({
+            x:backX, y:backY,
+            vx:rand(-8,8), vy:rand(-8,8),
+            life:rand(.18,.32), max:.32,
+            r:rand(1,2.2),
+            color:'rgba(255,180,80,.8)'
+          });
+        }
+      }
+
+      if(!c.entered && inIntersection(c)){
+        c.entered = true;
+
+        if(c.turn !== 'straight'){
+          startTurn(c);
+        }
+      }
+
+      const outside =
+        c.axis === 'h'
+          ? ((c.dir === 1 && c.x > W + 80) || (c.dir === -1 && c.x < -80))
+          : ((c.dir === 1 && c.y > H + 80) || (c.dir === -1 && c.y < -80));
+
+      if(outside){
+        if(!c.scored){
+          c.scored = true;
+          state.score += 12 + state.wave * 2;
+        }
+        c.dead = true;
+      }
+    }
+
+    // Va chạm chỉ được tính khi vị trí va chạm thực sự nằm
+    // trong vùng người chơi đang nhìn thấy.
+    function collisionPointVisible(a,b){
+      const x=(a.x+b.x)*0.5;
+      const y=(a.y+b.y)*0.5;
+      return x>=0 && x<=W && y>=0 && y<=H;
+    }
+
+    function carVisible(c){
+      const w=c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.w : c.h);
+      const h=c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.h : c.w);
+
+      return c.x+w*.5>=0 && c.x-w*.5<=W &&
+             c.y+h*.5>=0 && c.y-h*.5<=H;
+    }
+
+    for(let i=0;i<cars.length;i++){
+      const a=cars[i];
+      if(a.dead || !carVisible(a)) continue;
+
+      for(let j=i+1;j<cars.length;j++){
+        const b=cars[j];
+        if(b.dead || !carVisible(b)) continue;
+        if(!collisionPointVisible(a,b)) continue;
+
+        const aw=a.turning ? Math.max(a.w,a.h) : (a.axis==='h' ? a.w : a.h);
+        const ah=a.turning ? Math.max(a.w,a.h) : (a.axis==='h' ? a.h : a.w);
+        const bw=b.turning ? Math.max(b.w,b.h) : (b.axis==='h' ? b.w : b.h);
+        const bh=b.turning ? Math.max(b.w,b.h) : (b.axis==='h' ? b.h : b.w);
+
+        if(Math.abs(a.x-b.x)<(aw+bw)*0.5 &&
+           Math.abs(a.y-b.y)<(ah+bh)*0.5){
+          hit(a,b);
+        }
+      }
+    }
+
+    for(let i=cars.length-1; i>=0; i--){
+      if(cars[i].dead) cars.splice(i,1);
+    }
+  }
+
+  function hit(a,b){
+    if(!a || !b || a.dead || b.dead) return;
+
+    a.dead=true;
+    b.dead=true;
+
+    state.lives--;
+    state.score=Math.max(0,state.score-25);
+    state.hitFlash=1;
+    state.shake=12;
+
+    // Mỗi lần mất mạng, tính lại đồng hồ hồi phục từ đầu.
+    state.lifeRecoverTimer = 0;
+
+    explode(a.x,a.y,'#ff5577');
+    explode(b.x,b.y,'#ff5577');
+
+    setMessage('Đã xảy ra tai nạn!',1200);
+
+    if(state.lives<=0){
+      endGame();
+    }
+  }
+
+  function explode(x,y,color){
+    for(let i=0;i<16;i++){
+      const p={
+        x,y,
+        vx:Math.cos(Math.random()*Math.PI*2)*rand(20,100),
+        vy:Math.sin(Math.random()*Math.PI*2)*rand(20,100),
+        life:rand(.3,.7),
+        max:.7,
+        r:rand(1.5,4),
+        color
+      };
+      particles.push(p);
+    }
+  }
+
+  function updateParticles(dt){
+    for(const p of particles){
+      p.life-=dt;
+      p.x += p.vx*dt;
+      p.y += p.vy*dt;
+      p.vx*=.97;
+      p.vy*=.97;
+    }
+    for(let i=particles.length-1;i>=0;i--){
+      if(particles[i].life<=0) particles.splice(i,1);
+    }
+  }
+
+  function updateLifeRecovery(dt){
+    if(state.lives >= MAX_LIVES){
+      state.lifeRecoverTimer = 0;
+      return;
+    }
+
+    state.lifeRecoverTimer += dt;
+
+    if(state.lifeRecoverTimer >= LIFE_RECOVER_SECONDS){
+      state.lifeRecoverTimer = 0;
+      state.lives = Math.min(MAX_LIVES, state.lives + 1);
+      setMessage('❤️ Đã hồi phục 1 mạng!', 1200);
+    }
+  }
+
+  function updateGame(dt){
+    if(!state.running) return;
+
+    state.elapsed += dt;
+    state.spawnTimer -= dt;
+    state.messageTimer -= dt*1000;
+    if(state.messageTimer<=0) messageEl.classList.remove('show');
+
+    if(state.hitFlash>0) state.hitFlash=Math.max(0,state.hitFlash-dt*2.6);
+    if(state.shake>0) state.shake=Math.max(0,state.shake-dt*30);
+
+    // Cứ mỗi SPEED_RAMP_INTERVAL giây, tăng tốc độ chung thêm 1%, tối đa 25%.
+    state.speedRampTimer -= dt;
+    if(state.speedRampTimer<=0){
+      state.speedRampTimer += SPEED_RAMP_INTERVAL;
+      if(state.speedBonus < SPEED_RAMP_MAX){
+        state.speedBonus = Math.min(SPEED_RAMP_MAX, state.speedBonus + SPEED_RAMP_STEP);
+      }
+    }
+
+    // Wave gression: cố định mỗi WAVE_INTERVAL giây qua 1 màn.
+    if(state.elapsed >= state.nextWaveAt){
+      state.wave++;
+      state.nextWaveAt += WAVE_INTERVAL;
+      setMessage(`ẢI ${state.wave}`,1100);
+    }
+
+    updateLifeRecovery(dt);
+
+    const baseSpawn = Math.max(0.62, 1.30 - state.wave*0.040);
+    const pressure = Math.min(1.3, cars.length/12);
+    const interval = baseSpawn + pressure*0.35;
+
+    if(state.spawnTimer<=0){
+      if(cars.length < MAX_CARS_ON_SCREEN){
+        spawnCar();
+      }
+
+      // Chỉ spawn thêm khi vẫn còn chỗ, tuyệt đối không vượt quá MAX_CARS_ON_SCREEN xe.
+      if(cars.length < MAX_CARS_ON_SCREEN &&
+         Math.random()<0.12 + state.wave*.006){
+        spawnCar();
+      }
+
+      state.spawnTimer = rand(interval*.9, interval*1.35);
+    }
+
+    updateCars(dt);
+    updateParticles(dt);
+
+    if(state.score>state.best){
+      state.best=Math.floor(state.score);
+      localStorage.setItem('crossroadBest',state.best);
+    }
+
+    updateHud();
+  }
+
+  function drawBackground(){
+    ctx.fillStyle='#11182a';
+    ctx.fillRect(0,0,W,H);
+
+    // subtle grid
+    ctx.save();
+    ctx.globalAlpha=.08;
+    ctx.strokeStyle='#9bb3e8';
+    ctx.lineWidth=1;
+    const s=40;
+    for(let x=0;x<W;x+=s){ctx.beginPath();ctx.moveTo(x,0);ctx.lineTo(x,H);ctx.stroke();}
+    for(let y=0;y<H;y+=s){ctx.beginPath();ctx.moveTo(0,y);ctx.lineTo(W,y);ctx.stroke();}
+    ctx.restore();
+  }
+
+  function drawRoad(){
+    const g = roadGeom();
+
+    // Nền hai bên đường.
+    ctx.fillStyle='#17231f';
+    ctx.fillRect(0,0,W,H);
+
+    // Hai mặt đường vuông góc.
+    ctx.fillStyle='#2e3646';
+    ctx.fillRect(0,g.cy-g.roadW/2,W,g.roadW);
+    ctx.fillRect(g.cx-g.roadW/2,0,g.roadW,H);
+
+    // Phần giao lộ sáng hơn.
+    ctx.fillStyle='#353d4e';
+    ctx.fillRect(g.left,g.top,g.roadW,g.roadW);
+
+    // Mép đường.
+    ctx.strokeStyle='rgba(255,255,255,.10)';
+    ctx.lineWidth=2;
+    ctx.strokeRect(0,g.cy-g.roadW/2,W,g.roadW);
+    ctx.strokeRect(g.cx-g.roadW/2,0,g.roadW,H);
+
+    // Vạch tim đường vàng nét đứt.
+    // Đây là vạch phân chia 2 chiều lưu thông.
+    ctx.save();
+    ctx.setLineDash([24,18]);
+    ctx.lineWidth=3;
+    ctx.strokeStyle='#e6c63a';
+
+    // Ngang.
+    ctx.beginPath();
+    ctx.moveTo(0,g.cy);
+    ctx.lineTo(g.left-8,g.cy);
+    ctx.moveTo(g.right+8,g.cy);
+    ctx.lineTo(W,g.cy);
+    ctx.stroke();
+
+    // Dọc.
+    ctx.beginPath();
+    ctx.moveTo(g.cx,g.top-8);
+    ctx.lineTo(g.cx,0);
+    ctx.moveTo(g.cx,g.bottom+8);
+    ctx.lineTo(g.cx,H);
+    ctx.stroke();
+    ctx.restore();
+
+    // Đường kẻ ngắn ở 4 cửa vào để nhấn mạnh tim đường.
+    ctx.save();
+    ctx.setLineDash([]);
+    ctx.lineWidth=2;
+    ctx.strokeStyle='rgba(255,255,255,.12)';
+    ctx.beginPath();
+    ctx.moveTo(g.left-1,g.cy-g.roadW/2+4);
+    ctx.lineTo(g.left-1,g.cy+g.roadW/2-4);
+    ctx.moveTo(g.right+1,g.cy-g.roadW/2+4);
+    ctx.lineTo(g.right+1,g.cy+g.roadW/2-4);
+    ctx.stroke();
+
+    ctx.moveTo(g.cx-g.roadW/2+4,g.top-1);
+    ctx.lineTo(g.cx+g.roadW/2-4,g.top-1);
+    ctx.moveTo(g.cx-g.roadW/2+4,g.bottom+1);
+    ctx.lineTo(g.cx+g.roadW/2-4,g.bottom+1);
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawCars(){
+    for(const c of cars){
+      ctx.save();
+      ctx.translate(c.x,c.y);
+
+      // Mọi xe dùng cùng một hình học; hướng dọc chỉ xoay 90°.
+      let angle;
+      if(c.turning){
+        angle = c.visualAngle;
+      }else{
+        angle = c.axis==='h'
+          ? (c.dir===1 ? 0 : Math.PI)
+          : (c.dir===1 ? Math.PI/2 : -Math.PI/2);
+      }
+      ctx.rotate(angle);
+
+      // Bóng
+      ctx.fillStyle='rgba(0,0,0,.28)';
+      roundRect(-c.w/2+2,-c.h/2+3,c.w,c.h,4);
+      ctx.fill();
+
+      // Thân
+      ctx.fillStyle=c.color;
+      roundRect(-c.w/2,-c.h/2,c.w,c.h,4);
+      ctx.fill();
+
+      // Sọc đua cho quái xế
+      if(c.speedClass==='racer'){
+        ctx.fillStyle='rgba(255,255,255,.85)';
+        ctx.fillRect(-c.w/2,-c.h*0.09,c.w,c.h*0.18);
+      }
+
+      // Kính trước/sau
+      ctx.fillStyle='rgba(235,250,255,.82)';
+      roundRect(c.w*.02,-c.h*.36,c.w*.32,c.h*.72,2.5);
+      ctx.fill();
+
+      // Cabin sau
+      ctx.fillStyle='rgba(185,215,235,.62)';
+      roundRect(-c.w*.37,-c.h*.36,c.w*.22,c.h*.72,2.5);
+      ctx.fill();
+
+      // Đèn trước
+      ctx.fillStyle='#fff2bd';
+      ctx.fillRect(c.w*.43,-c.h*.30,2.5,3.3);
+      ctx.fillRect(c.w*.43,c.h*.08,2.5,3.3);
+
+      // Đèn phanh
+      if(c.stopped){
+        ctx.fillStyle='#ff4e63';
+        ctx.fillRect(-c.w*.46,-c.h*.30,2.5,3.3);
+        ctx.fillRect(-c.w*.46,c.h*.08,2.5,3.3);
+      }
+
+      if(c.indicator && c.indicatorOn){
+        // Sau khi xoay xe theo hướng di chuyển, đầu xe luôn ở phía +X.
+        const blinkX = c.w * 0.46;
+        const blinkY = c.indicator === 'left' ? -c.h*0.34 : c.h*0.34;
+
+        ctx.fillStyle='#ffb02e';
+        ctx.shadowBlur=10;
+        ctx.shadowColor='#ff9d1f';
+        ctx.beginPath();
+        ctx.arc(blinkX,blinkY,2.3,0,Math.PI*2);
+        ctx.fill();
+        ctx.shadowBlur=0;
+      }
+
+      ctx.restore();
+    }
+  }
+
+  function roundRect(x,y,w,h,r){
+    const rr=Math.min(r,Math.abs(w)/2,Math.abs(h)/2);
+    ctx.beginPath();
+    ctx.moveTo(x+rr,y);
+    ctx.arcTo(x+w,y,x+w,y+h,rr);
+    ctx.arcTo(x+w,y+h,x,y+h,rr);
+    ctx.arcTo(x,y+h,x,y,rr);
+    ctx.arcTo(x,y,x+w,y,rr);
+    ctx.closePath();
+  }
+
+  function drawParticles(){
+    for(const p of particles){
+      ctx.globalAlpha=clamp(p.life/p.max,0,1);
+      ctx.fillStyle=p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,p.r,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha=1;
+  }
+
+  function draw(){
+    ctx.save();
+
+    if(state.shake>0){
+      ctx.translate(rand(-state.shake,state.shake),rand(-state.shake,state.shake));
+    }
+
+    drawBackground();
+    drawRoad();
+    drawScenery();
+    drawCars();
+    drawParticles();
+
+    if(state.hitFlash>0){
+      ctx.fillStyle=`rgba(255,50,90,${state.hitFlash*.15})`;
+      ctx.fillRect(0,0,W,H);
+    }
+
+    ctx.restore();
+  }
+
+  function pickCarAt(x,y){
+    let best = null;
+    let bestDist = Infinity;
+
+    for(const c of cars){
+      if(c.dead) continue;
+
+      const rw = c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.w : c.h);
+      const rh = c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.h : c.w);
+
+      const dx = Math.abs(x-c.x);
+      const dy = Math.abs(y-c.y);
+
+      // Hitbox lớn hơn hình vẽ một chút để dễ chạm trên mobile.
+      if(dx <= Math.max(18,rw*0.72) && dy <= Math.max(18,rh*0.72)){
+        const d = dx*dx + dy*dy;
+        if(d < bestDist){
+          bestDist = d;
+          best = c;
+        }
+      }
+    }
+
+    return best;
+  }
+
+  function removeCarByPlayer(c){
+    if(!c || c.dead || !state.running) return;
+
+    c.dead = true;
+    state.score += 5;
+
+    explode(c.x,c.y,'#7fd8ff');
+    setMessage('Đã loại bỏ xe khả nghi...',500);
+  }
+
+  canvas.addEventListener('pointerdown', e=>{
+    startBackgroundMusic();
+
+    if(!state.running) return;
+
+    const rect = canvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (W / rect.width);
+    const y = (e.clientY - rect.top) * (H / rect.height);
+
+    const car = pickCarAt(x,y);
+    if(car) removeCarByPlayer(car);
+  });
+
+  function endGame(){
+    state.running=false;
+    if(state.score>state.best){
+      state.best=Math.floor(state.score);
+      localStorage.setItem('crossroadBest',state.best);
+    }
+    gameOverText.textContent=`Điểm: ${Math.floor(state.score)} — Kỷ lục: ${state.best}`;
+    overlay.classList.add('show');
+  }
+
+  function reset(){
+    state.running = true;
+    state.score = 0;
+    state.lives = MAX_LIVES;
+    state.wave = 1;
+    state.elapsed = 0;
+    state.spawnTimer = 0.35;
+    state.nextWaveAt = WAVE_INTERVAL;
+    state.carId = 0;
+    state.hitFlash = 0;
+    state.shake = 0;
+    state.messageTimer = 0;
+    state.speedRampTimer = SPEED_RAMP_INTERVAL;
+    state.speedBonus = 0;
+    state.lifeRecoverTimer = 0;
+
+    cars.length = 0;
+    particles.length = 0;
+
+    overlay.classList.remove('show');
+    legend.classList.remove('show');
+
+    updateHud();
+    setMessage('Chạm vào các chiếc xe mà bạn cảm thấy nguy hiểm. Hãy loại bỏ chúng!', 1500);
+  }
+
+  document.getElementById('restart').addEventListener('click', ()=>{
+    startBackgroundMusic();
+    reset();
+  });
+
+  let last=performance.now();
+  function loop(now){
+    const dt=Math.min(.05,(now-last)/1000);
+    last=now;
+    updateGame(dt);
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  updateHud();
+  setMessage('🚗 Hãy chạm vào những chiếc xe gây nguy hiểm và loại bỏ nó',1500);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
