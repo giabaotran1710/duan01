@@ -1,0 +1,1679 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>DŨNG SĨ DIỆT VIRUS </title>
+<style>
+  * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
+  html,body {
+    width:100%; height:100%; overflow:hidden;
+    background:#020806;
+    font-family:'Segoe UI', Arial, sans-serif;
+    touch-action:none;
+  }
+  #gameContainer {
+    position:relative;
+    width:100vw; height:100vh;
+    display:flex; align-items:center; justify-content:center;
+    background: radial-gradient(ellipse at 50% 0%, #0d2f1a 0%, #020806 70%);
+  }
+  #gameCanvas {
+    display:block;
+    background: transparent;
+    touch-action:none;
+    box-shadow: 0 0 60px rgba(57,255,140,0.15) inset;
+  }
+footer{
+  position: fixed;
+  bottom: 5px;
+  left: 10px;
+
+  font-size: 10px;
+  color: #aaa;
+  opacity: 0.7;
+  font-family: Tahoma;
+}
+  #hud {
+  position:absolute;
+  top:0;
+  left:0;
+  right:0;
+
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+
+  padding:30px 14px;
+
+  pointer-events:none;
+  z-index:5;
+}
+
+/* =========================
+   HUD LEFT
+   ========================= */
+#hudLeft {
+  display:flex;
+  flex-direction:column;
+  align-items:flex-start;
+  gap:6px;
+}
+
+/* =========================
+   HUD BOX
+   ========================= */
+.hud-box {
+  background:rgba(6,20,12,0.75);
+  border:1px solid rgba(57,255,140,0.45);
+  border-radius:10px;
+
+  padding:6px 12px;
+
+  color:#8dffb0;
+  font-weight:700;
+  font-size:15px;
+
+  text-shadow:
+    0 0 8px rgba(57,255,140,0.6);
+
+  box-shadow:
+    0 0 14px rgba(0,255,120,0.15);
+
+  letter-spacing:0.5px;
+  width:max-content;
+}
+
+/* =========================
+   POINTS
+   ========================= */
+#pointsDisplay {
+  color:#e2ff5c;
+
+  text-shadow:
+    0 0 8px rgba(226,255,92,0.6);
+
+  border-color:rgba(226,255,92,0.35);
+
+  box-shadow:
+    0 0 14px rgba(226,255,92,0.12);
+}
+
+/* =========================
+   WAVE
+   ========================= */
+#waveHUD {
+  position:absolute;
+  left:50%;
+  top:12px;
+
+  transform:translateX(-50%);
+
+  width:min(27vw,220px);
+
+  text-align:center;
+  pointer-events:none;
+}
+
+.wave-label {
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+
+  margin-bottom:5px;
+
+  color:#c8ffdc;
+
+  font-size:11px;
+  font-weight:800;
+  letter-spacing:1px;
+
+  text-shadow:
+    0 0 8px rgba(57,255,140,0.5);
+}
+
+#waveCurrent {
+  color:#e2ff5c;
+}
+
+#waveNext {
+  color:#8dffb0;
+  opacity:.75;
+}
+
+.wave-bar {
+  width:100%;
+  height:8px;
+
+  background:rgba(4,20,10,.85);
+
+  border:1px solid rgba(57,255,140,.4);
+  border-radius:999px;
+
+  overflow:hidden;
+
+  box-shadow:
+    0 0 10px rgba(57,255,140,.15),
+    inset 0 0 8px rgba(0,0,0,.6);
+}
+
+#waveProgress {
+  width:0%;
+  height:100%;
+
+  background:linear-gradient(
+    90deg,
+    #39ff8c,
+    #e2ff5c
+  );
+
+  border-radius:999px;
+
+  box-shadow:
+    0 0 10px rgba(57,255,140,.7);
+}
+
+/* =========================
+   UPGRADE BUTTON
+   ========================= */
+#upgradeBtn {
+  pointer-events:auto;
+  align-self:flex-start;
+
+  background:linear-gradient(
+    180deg,
+    #1c4b2e,
+    #0c2617
+  );
+
+  border:1px solid #39ff8c;
+
+  color:#c8ffdc;
+
+  font-weight:700;
+  font-size:14px;
+
+  padding:8px 12px;
+
+  border-radius:10px;
+
+  box-shadow:
+    0 0 12px rgba(57,255,140,0.35);
+
+  cursor:pointer;
+}
+
+#upgradeBtn:active {
+  transform:scale(0.96);
+}
+
+.hidden {
+  display:none !important;
+}
+  .hidden { display:none !important; }
+
+  .overlay {
+    position:absolute; inset:0;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    background:rgba(1,8,4,0.88);
+    z-index:20;
+    text-align:center;
+    padding:20px;
+  }
+  .overlay h1 {
+    color:#39ff8c;
+    font-size:39px;
+    letter-spacing:5px;
+    text-shadow:0 0 20px rgba(57,255,140,0.8), 0 0 40px rgba(57,255,140,0.4);
+    margin-bottom:12px;
+    margin-left: 30px;
+    margin-right:30px;
+  }
+  
+  /* ============================================================
+   GAME OVER — HIỆU ỨNG ĐỔ VỠ
+   ============================================================ */
+
+/* ============================================================
+   GAME OVER
+   ============================================================ */
+
+#gameOverTitle {
+  display:flex;
+  justify-content:center;
+  align-items:center;
+
+  gap:8px;
+
+  white-space:nowrap;
+
+  color:#000;
+  text-shadow:none;
+}
+
+/* GAME + OVER */
+#gameOverTitle .game-word,
+#gameOverTitle #overGroup {
+  display:flex;
+  align-items:center;
+}
+
+/* Từng chữ */
+#gameOverTitle .game-word span,
+#gameOverTitle #overGroup span {
+  display:inline-block;
+
+  color:#000;
+  text-shadow:none;
+
+  transition:
+    color .18s ease,
+    text-shadow .18s ease;
+}
+
+/* Chữ đã sáng */
+/* ============================================================
+   CHỮ GAME + OVER ĐƯỢC KÍCH HOẠT
+   ============================================================ */
+
+#gameOverTitle .game-word > span.active,
+#gameOverTitle #overGroup > span.active {
+
+  color:#39ff8c;
+
+  text-shadow:
+    0 0 8px rgba(57,255,140,.95),
+    0 0 18px rgba(57,255,140,.85),
+    0 0 35px rgba(57,255,140,.65),
+    0 0 55px rgba(57,255,140,.35);
+}
+
+/* ============================================================
+   KHỐI OVER RUNG TRƯỚC KHI VỠ
+   ============================================================ */
+
+/* ============================================================
+   OVER — XOAY 67° LẤY TÂM TẠI CHỮ R
+   ============================================================ */
+
+#overGroup {
+  display:flex;
+  align-items:center;
+
+  transform-origin:100% 50%;
+}
+
+/* Sau khi toàn bộ OVER phát sáng */
+#overGroup.rotated {
+  animation: overRotate 100ms cubic-bezier(.2,.8,.25,1) forwards;
+}
+
+@keyframes overRotate {
+
+  0% {
+    transform:rotate(0deg);
+  }
+
+  100% {
+    transform:rotate(-35deg);
+  }
+}
+  .overlay p { color:#a6f5c0; font-size:16px; margin:6px 0 18px; line-height:1.5; max-width:280px;
+   
+  }
+  .overlay .bigbtn {
+    background:linear-gradient(180deg,#39ff8c,#159a52);
+    border:none;
+    color:#031a0e;
+    font-weight:800;
+    font-size:18px;
+    padding:14px 38px;
+    border-radius:30px;
+    box-shadow:0 0 25px rgba(57,255,140,0.6);
+    cursor:pointer;
+    letter-spacing:1px;
+  }
+  .overlay .bigbtn:active { transform:scale(0.95); }
+  .virus-icon-demo { font-size:70px; margin-bottom:6px; filter: drop-shadow(0 0 10px #39ff8c); }
+
+  #upgradePanel {
+    position:absolute; left:0; right:0; bottom:0;top:20%;
+    background:linear-gradient(180deg,#0a1f13,#04120a);
+    border-top:2px solid #39ff8c;
+    border-radius:18px 18px 0 0;
+    padding:14px 16px 22px;
+    z-index:15;
+    box-shadow:0 -10px 30px rgba(0,0,0,0.6);
+  }
+  .upgrade-header {
+    display:flex; justify-content:space-between; align-items:center;
+    color:#c8ffdc; font-weight:800; font-size:16px; margin-bottom:10px;
+    letter-spacing:1px;
+  }
+  .upgrade-header button {
+    background:none; border:1px solid rgba(200,255,220,0.4); color:#c8ffdc;
+    width:28px; height:28px; border-radius:8px; font-size:14px; cursor:pointer;
+  }
+  .upgrade-item {
+    display:flex; align-items:center; justify-content:space-between;
+    background:rgba(57,255,140,0.06);
+    border:1px solid rgba(57,255,140,0.25);
+    border-radius:12px;
+    padding:9px 12px;
+    margin-bottom:8px;
+  }
+  .upgrade-info { color:#d5ffe4; font-size:13px; line-height:1.4; }
+  .upgrade-info .u-name { font-weight:700; color:#8dffb0; font-size:13.5px; }
+  .upgrade-info .u-cost { color:#e2ff5c; font-weight:700; }
+  .upgrade-item button {
+    background:linear-gradient(180deg,#39ff8c,#159a52);
+    border:none; color:#03170c; font-weight:800; font-size:12.5px;
+    padding:9px 14px; border-radius:20px; cursor:pointer; white-space:nowrap;
+    min-width:100px;
+  }
+  .upgrade-item button:disabled {
+    background:#2a3a30; color:#6c8a78; cursor:not-allowed;
+    min-width:100px;
+  }
+
+  #pointsRow { display:flex; gap:8px; }
+</style>
+</head>
+<body>
+  <audio id="bgMusic" src='../audio/dungsidietvirus.mp3' loop preload="auto"></audio>
+<div id="gameContainer">
+  <canvas id="gameCanvas"></canvas>
+
+  <div id="hud">
+
+  <div id="hudLeft">
+    <div class="hud-box" id="scoreDisplay">
+      HẠ: 0
+    </div>
+
+    <div class="hud-box" id="pointsDisplay">
+      💰 0
+    </div>
+  </div>
+
+  <div id="waveHUD">
+    <div class="wave-label">
+      <span id="waveCurrent">WAVE 1</span>
+      <span id="waveNext">WAVE 2</span>
+    </div>
+
+    <div class="wave-bar">
+      <div id="waveProgress"></div>
+    </div>
+  </div>
+
+  <button id="upgradeBtn">⚙ NÂNG CẤP</button>
+
+</div>
+
+  <div id="upgradePanel" class="hidden">
+    <div class="upgrade-header">
+      <span>🧬 NÂNG CẤP XE TĂNG</span>
+      <button id="closeUpgrade">✕</button>
+    </div>
+
+    <div class="upgrade-item">
+      <div class="upgrade-info">
+        <div class="u-name">🔫 Số lượng đạn — Lv <span id="lvlBullets">1</span></div>
+        <div>Giá: <span class="u-cost" id="costBullets">45</span> điểm</div>
+      </div>
+      <button data-type="bullets" id="btnBullets">NÂNG</button>
+    </div>
+
+    <div class="upgrade-item">
+      <div class="upgrade-info">
+        <div class="u-name">⚡ Tốc độ bắn — Lv <span id="lvlRate">1</span></div>
+        <div>Giá: <span class="u-cost" id="costRate">35</span> điểm</div>
+      </div>
+      <button data-type="rate" id="btnRate">NÂNG</button>
+    </div>
+
+    <div class="upgrade-item">
+      <div class="upgrade-info">
+        <div class="u-name">💥 Sát thương — Lv <span id="lvlDamage">1</span></div>
+        <div>Giá: <span class="u-cost" id="costDamage">40</span> điểm</div>
+      </div>
+      <button data-type="damage" id="btnDamage">NÂNG</button>
+    </div>
+    
+    <div class="upgrade-item">
+  <div class="upgrade-info">
+    <div class="u-name">
+      ❤️ Máu tối đa — Lv <span id="lvlMaxHp">0</span>
+    </div>
+    <div>
+      Giá:
+      <span class="u-cost" id="costMaxHp">500</span> điểm
+    </div>
+  </div>
+
+  <button data-type="maxHp" id="btnMaxHp">NÂNG</button>
+</div>
+
+<div class="upgrade-item">
+  <div class="upgrade-info">
+    <div class="u-name">
+      🔧 Sửa chữa — Lv <span id="lvlRepair">0</span>
+    </div>
+    <div>
+      Hồi máu mỗi:
+      <span class="u-cost" id="repairTime">60</span> giây
+    </div>
+    <div>
+      Giá:
+      <span class="u-cost" id="costRepair">800</span> điểm
+    </div>
+  </div>
+
+  <button data-type="repair" id="btnRepair">NÂNG</button>
+</div>
+  </div>
+
+  <div id="startScreen" class="overlay">
+    <div class="virus-icon-demo">🦠</div>
+    <h1>DŨNG SĨ DIỆT VIRUS</h1>
+    <p>Kéo xe tăng để né và tiêu diệt virus.<br>
+    Các virus có kích thước lớn sẽ phân tách khi bị tiêu diệt.<br>
+    Dùng điểm nhận được trong màn chơi để nâng cấp xe tăng. Để virus chạm trúng 3 lần là thua!</p>
+    <button class="bigbtn" id="startBtn">BẮT ĐẦU</button>
+  </div>
+
+  <div id="gameOverScreen" class="overlay hidden">
+   <h1 id="gameOverTitle">
+  <span class="game-word">
+    <span>G</span><span>A</span><span>M</span><span>E</span>
+  </span>
+
+  <span id="overGroup">
+    <span>O</span><span>V</span><span>E</span><span>R</span>
+  </span>
+</h1>
+    <p>Xe tăng đã bị virus phá hủy!<br>Điểm số cuối cùng: <span id="finalScore" style="color:#e2ff5c;font-weight:800;"></span></p>
+    <button class="bigbtn hidden" id="restartBtn">CHƠI LẠI</button>
+  </div>
+</div>
+  <footer> Version:D20260109-H18M12T3720    »»»   developed by Tran Gia Bao</footer>
+
+<script>
+(function(){
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+  const bgMusic = document.getElementById('bgMusic');
+
+bgMusic.loop = true;
+bgMusic.volume = 0.45;
+
+  // ---------- Responsive canvas ----------
+  let W, H;
+  function resize(){
+    const maxW = Math.min(window.innerWidth, 500);
+    W = maxW;
+    H = window.innerHeight;
+    canvas.width = W;
+    canvas.height = H;
+    if (tank) {
+      tank.x = clamp(tank.x, tank.w/2, W - tank.w/2);
+      tank.y = H - 100;
+    }
+  }
+  function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
+  function rand(a,b){ return a + Math.random()*(b-a); }
+  function dist(x1,y1,x2,y2){ return Math.hypot(x1-x2, y1-y2); }
+
+  // ---------- Config ----------
+  const GRAVITY = 0.089;
+  const MAX_FALL_SPEED = 2.7;
+  const MAX_VIRUSES = 8;
+  const FLOOR_BOUNCE_DAMPING = 0.94;
+  const WALL_DAMPING = 1.0;
+
+  const SIZE_CONFIG = {
+    small:  { radius:17, hp:16,  points:6,  spikes:6 },
+    medium: { radius:27, hp:32,  points:10, spikes:10 },
+    large:  { radius:39, hp:64,  points:15, spikes:15 }
+  };
+
+  const UPGRADES = {
+    bullets: { level:1, max:10, base:45, growth:2.324223 },
+    rate:    { level:1, max:20, base:30, growth:1.57291},
+    damage:  { level:1, max:Infinity, base:40, growth:1.78 },
+    maxHp: { level: 0, max: 3, base: 500, growth: 10 },
+    repair: { level: 1, max: 7, base: 800, growth: 1.6 },
+  };
+ function upgradeCost(type){
+  const u = UPGRADES[type];
+
+  if (u.level >= u.max) return null;
+
+  // Máu tối đa có giá cố định theo từng lần nâng
+  if (type === 'maxHp') {
+    return u.level === 0 ? 500 : 5000;
+  }
+
+  return Math.round(
+    u.base * Math.pow(u.growth, u.level)
+  );
+}
+  
+  function currentRepairInterval(){
+  const lvl = UPGRADES.repair.level;
+
+  // Lv0 = 60 giây
+  // Lv7 = 30 giây
+  return Math.round(
+    60 - (30 / 7) * lvl
+  ) * 1000;
+}
+
+function currentMaxHp(){
+  return 3 + UPGRADES.maxHp.level;
+}
+
+  function currentFireInterval(){
+    // starts 460ms, -8% per rate level, floor 130ms
+    const lvl = UPGRADES.rate.level;
+    let interval = 460 * Math.pow(0.92, lvl - 1);
+    return Math.max(100, interval);
+  }
+  function currentBulletCount(){ return UPGRADES.bullets.level; }
+  function currentDamage(){
+  const lvl = UPGRADES.damage.level;
+  return Math.floor(
+    9 +
+    (lvl - 1) * 3 +
+    Math.pow(lvl - 1, 1.35)
+  );
+}
+  function currentHpMultiplier(){
+
+  return 1 + score * 0.015;
+}
+
+  // ---------- Game state ----------
+  let tank, bullets, viruses, particles;
+  let score, points, lives, maxLives;
+let running, gameStarted, paused;
+let fireTimer, spawnTimer, spawnInterval, elapsedTime;
+let wave;
+let waveTimer;
+let waveDuration;
+let healTimer;
+let healFlashTimer = 0;
+let healFlashText = '';
+  let shakeTime = 0, shakeMag = 0;
+  let invulnTimer = 0;
+  let gameOverAnimationId = 0;
+let gameOverDebris = [];
+  function initState(){
+    tank = { x: W/2, y: H-100, w:56, h:38, targetX: W/2, flashTimer:0 };
+    bullets = [];
+    viruses = [];
+    particles = [];
+    score = 0;
+points = 200;
+
+maxLives = 3;
+lives = maxLives;
+wave = 1;
+waveTimer = 0;
+waveDuration = 30000;
+healTimer = 0;
+healFlashTimer = 0;
+healFlashText = '';
+    running = false;
+    paused = false;
+    fireTimer = 0;
+    spawnTimer = 0;
+    spawnInterval = 1400;
+    elapsedTime = 0;
+    invulnTimer = 0;
+    UPGRADES.bullets.level = 1;
+UPGRADES.rate.level = 1;
+UPGRADES.damage.level = 1;
+
+UPGRADES.maxHp.level = 1;
+UPGRADES.repair.level = 1;
+    updateHUD();
+    updateUpgradePanel();
+  }
+function updateWave(dt){
+  waveTimer += dt;
+
+  if (waveTimer >= waveDuration){
+    waveTimer -= waveDuration;
+    wave += 1;
+  }
+
+  const progress =
+    Math.min(waveTimer / waveDuration, 1) * 100;
+
+  document.getElementById('waveCurrent').textContent =
+    'WAVE ' + wave;
+
+  document.getElementById('waveNext').textContent =
+    'WAVE ' + (wave + 1);
+
+  document.getElementById('waveProgress').style.width =
+    progress + '%';
+}
+  
+  // ---------- Virus factory ----------
+  function randomToxicColor(){
+    const hue = Math.floor(rand(70,330)); // avoid pure red band a bit, wide toxic palette
+    const sat = Math.floor(rand(65,95));
+    const light = Math.floor(rand(45,62));
+    return `hsl(${hue},${sat}%,${light}%)`;
+  }
+
+  function spawnVirus(size, x, y, vx, vy){
+    const cfg = SIZE_CONFIG[size];
+    const hp = Math.round(cfg.hp * currentHpMultiplier());
+    viruses.push({
+      size, x, y,
+      vx: vx !== undefined ? vx : rand(-1.4,1.4),
+      vy: vy !== undefined ? vy : rand(0, 0.6),
+      radius: cfg.radius,
+      hp: hp,
+      maxHp: hp,
+      color: randomToxicColor(),
+      wobble: rand(0, Math.PI*2),
+      spikes: cfg.spikes
+    });
+  }
+
+  function spawnWaveVirus(){
+    if (viruses.length >= MAX_VIRUSES) return;
+    const t = clamp(elapsedTime / 60000, 0, 1); // ramps over 60s
+    let wSmall = 0.55 - 0.30*t;
+    let wMedium = 0.32;
+    let wLarge = 0.13 + 0.30*t;
+    const total = wSmall+wMedium+wLarge;
+    const r = Math.random()*total;
+    let size;
+    if (r < wSmall) size = 'small';
+    else if (r < wSmall+wMedium) size = 'medium';
+    else size = 'large';
+
+    const cfg = SIZE_CONFIG[size];
+    const x = rand(cfg.radius, W-cfg.radius);
+    spawnVirus(size, x, -cfg.radius-10, rand(-1,1), 0);
+  }
+
+  // ---------- Kill / split ----------
+  function killVirus(v, index){
+    score += 1;
+    points += SIZE_CONFIG[v.size].points;
+    spawnParticles(v.x, v.y, v.color, 14);
+
+    if (v.size === 'large'){
+      spawnVirus('medium', v.x-10, v.y, -Math.abs(v.vx)-1.0, -1.6);
+      spawnVirus('medium', v.x+10, v.y, Math.abs(v.vx)+1.0, -1.6);
+    } else if (v.size === 'medium'){
+      spawnVirus('small', v.x-8, v.y, -Math.abs(v.vx)-0.8, -1.4);
+      spawnVirus('small', v.x+8, v.y, Math.abs(v.vx)+0.8, -1.4);
+    }
+    viruses.splice(index,1);
+    updateHUD();
+  }
+
+  function spawnParticles(x,y,color,count){
+    for (let i=0;i<count;i++){
+      const ang = rand(0, Math.PI*2);
+      const spd = rand(1.5, 5);
+      particles.push({
+        x,y, vx:Math.cos(ang)*spd, vy:Math.sin(ang)*spd,
+        life: 1, color
+      });
+    }
+  }
+
+  // ---------- Input: drag tank ----------
+  let dragging = false;
+  let dragOffsetX = 0;
+  function pointerX(e){
+    const rect = canvas.getBoundingClientRect();
+    const cx = (e.touches ? e.touches[0].clientX : e.clientX);
+    return cx - rect.left;
+  }
+  function onPointerDown(e){
+    if (!running || paused) return;
+    dragging = true;
+    const px = pointerX(e);
+    dragOffsetX = px - tank.x;
+    tank.targetX = px - dragOffsetX;
+  }
+  function onPointerMove(e){
+    if (!dragging || !running || paused) return;
+    e.preventDefault();
+    const px = pointerX(e);
+    tank.targetX = px - dragOffsetX;
+  }
+  function onPointerUp(){ dragging = false; }
+
+  canvas.addEventListener('mousedown', onPointerDown);
+  canvas.addEventListener('mousemove', onPointerMove);
+  window.addEventListener('mouseup', onPointerUp);
+  canvas.addEventListener('touchstart', onPointerDown, {passive:true});
+  canvas.addEventListener('touchmove', onPointerMove, {passive:false});
+  window.addEventListener('touchend', onPointerUp);
+
+  // ---------- Update ----------
+function updateHealing(dt){
+  if (lives >= maxLives){
+    healTimer = 0;
+    healFlashTimer = 0;
+    return;
+  }
+
+  healTimer += dt;
+
+  const interval = currentRepairInterval();
+
+  if (healTimer >= interval){
+    lives = Math.min(lives + 1, maxLives);
+    healTimer = 0;
+
+    healFlashTimer = 1200;
+    healFlashText = '';
+
+    updateHUD();
+  }
+
+  if (healFlashTimer > 0){
+    healFlashTimer -= dt;
+  }
+}
+  
+  function drawHealBar(){
+  if (lives >= maxLives) return;
+
+  const barW = 100;
+  const barH = 6;
+
+  const bx = tank.x - barW / 2;
+  const by = tank.y + tank.h / 2 + 32;
+
+  const interval = currentRepairInterval();
+  const progress = Math.min(1, healTimer / interval);
+
+  // Nền
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  roundRect(bx, by, barW, barH, 3);
+  ctx.fill();
+
+  // Tiến trình
+  if (progress > 0){
+    ctx.fillStyle = '#e2ff5c';
+    roundRect(
+      bx,
+      by,
+      barW * progress,
+      barH,
+      3
+    );
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = 'rgba(226,255,92,0.45)';
+  ctx.lineWidth = 1;
+  roundRect(bx, by, barW, barH, 3);
+  ctx.stroke();
+
+  // Thời gian còn lại
+  const remaining = Math.max(
+    0,
+    Math.ceil((interval - healTimer) / 1000)
+  );
+
+  ctx.fillStyle = '#e2ff5c';
+  ctx.font = '700 10px Arial';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'bottom';
+  ctx.fillText(
+    '',
+    tank.x,
+    by - 3
+  );
+}
+  function updateTank(dt){
+    tank.targetX = clamp(tank.targetX, tank.w/2, W - tank.w/2);
+    tank.x += (tank.targetX - tank.x) * 0.28;
+    if (tank.flashTimer > 0) tank.flashTimer -= dt;
+    if (invulnTimer > 0) invulnTimer -= dt;
+  }
+
+  function tankGroundY(){
+    return tank.y - tank.h/2 - 2; // ground line viruses bounce/hit at
+  }
+
+  function fireBullets(){
+    const count = currentBulletCount();
+    const dmg = currentDamage();
+    const spread = count > 1 ? Math.min(46, 14 + count*6) : 0;
+    const startAngle = -90 - spread/2;
+    for (let i=0;i<count;i++){
+      const angle = count === 1 ? -90 : startAngle + (spread/(count-1))*i;
+      const rad = angle * Math.PI/180;
+      bullets.push({
+        x: tank.x, y: tank.y - tank.h/2 - 6,
+        vx: Math.cos(rad)*9, vy: Math.sin(rad)*9,
+        radius:4, damage: dmg
+      });
+    }
+    tank.flashTimer = 90;
+  }
+
+  function updateBullets(dt){
+    for (let i=bullets.length-1;i>=0;i--){
+      const b = bullets[i];
+      b.x += b.vx; b.y += b.vy;
+      if (b.y < -20 || b.x < -20 || b.x > W+20){ bullets.splice(i,1); continue; }
+    }
+  }
+
+  function updateViruses(dt){
+    const groundY = tankGroundY();
+    for (let i=viruses.length-1;i>=0;i--){
+      const v = viruses[i];
+      v.x += v.vx;
+      v.wobble += 0.05;
+
+      // wall bounce (horizontal only, always active)
+      if (v.x - v.radius < 0){ v.x = v.radius; v.vx = Math.abs(v.vx)*WALL_DAMPING; }
+      else if (v.x + v.radius > W){ v.x = W - v.radius; v.vx = -Math.abs(v.vx)*WALL_DAMPING; }
+
+      // real gravity governs both falling and rising — same slow-motion feel both ways
+      v.vy = Math.min(v.vy + GRAVITY, MAX_FALL_SPEED);
+      v.y += v.vy;
+
+      // top bounce
+      if (v.y - v.radius < 0){ v.y = v.radius; v.vy = Math.abs(v.vy)*FLOOR_BOUNCE_DAMPING; }
+
+      // ground / tank collision
+      if (v.y + v.radius >= groundY){
+        const overlapsTank = (v.x + v.radius > tank.x - tank.w/2) && (v.x - v.radius < tank.x + tank.w/2);
+        if (overlapsTank && invulnTimer <= 0){
+          hitTank();
+          spawnParticles(v.x, v.y, v.color, 10);
+          viruses.splice(i,1);
+          continue;
+        } else {
+          v.y = groundY - v.radius;
+          // launch upward immediately (no delay) with a velocity sized so gravity
+          // gently decelerates it to a high point — now nearly as high as where it spawned
+          const desiredHeight = rand(groundY * 0.65, groundY * 0.92);
+          v.vy = -Math.sqrt(2 * GRAVITY * desiredHeight);
+        }
+      }
+    }
+  }
+
+  function hitTank(){
+  lives -= 1;
+
+  // Bị đánh sẽ reset thời gian hồi máu
+  healTimer = 0;
+
+  invulnTimer = 1200;
+  tank.flashTimer = 500;
+  shakeTime = 260;
+  shakeMag = 8;
+
+  updateHUD();
+
+  if (lives <= 0){
+    endGame();
+  }
+}
+
+  function updateParticles(dt){
+    for (let i=particles.length-1;i>=0;i--){
+      const p = particles[i];
+      p.x += p.vx; p.y += p.vy;
+      p.vx *= 0.94; p.vy *= 0.94;
+      p.life -= 0.035;
+      if (p.life <= 0) particles.splice(i,1);
+    }
+  }
+
+  function checkBulletHits(){
+    for (let bi=bullets.length-1; bi>=0; bi--){
+      const b = bullets[bi];
+      for (let vi=viruses.length-1; vi>=0; vi--){
+        const v = viruses[vi];
+        if (dist(b.x,b.y,v.x,v.y) < b.radius + v.radius){
+          v.hp -= b.damage;
+          bullets.splice(bi,1);
+          spawnParticles(b.x,b.y, v.color, 4);
+          if (v.hp <= 0){ killVirus(v, vi); }
+          break;
+        }
+      }
+    }
+  }
+
+  // ---------- Draw ----------
+  function drawBackground(){
+    ctx.fillStyle = '#020806';
+    ctx.fillRect(0,0,W,H);
+    // subtle grid
+    ctx.strokeStyle = 'rgba(57,255,140,0.05)';
+    ctx.lineWidth = 1;
+    const grid = 40;
+    for (let x=0;x<W;x+=grid){ ctx.beginPath(); ctx.moveTo(x,0); ctx.lineTo(x,H); ctx.stroke(); }
+    for (let y=0;y<H;y+=grid){ ctx.beginPath(); ctx.moveTo(0,y); ctx.lineTo(W,y); ctx.stroke(); }
+    // vignette
+    const grad = ctx.createRadialGradient(W/2,H*0.3,20,W/2,H*0.5,H*0.8);
+    grad.addColorStop(0,'rgba(20,80,45,0.10)');
+    grad.addColorStop(1,'rgba(0,0,0,0.55)');
+    ctx.fillStyle = grad;
+    ctx.fillRect(0,0,W,H);
+  }
+
+  function drawVirus(v){
+    ctx.save();
+    ctx.translate(v.x, v.y);
+    // glow
+    ctx.shadowColor = v.color;
+    ctx.shadowBlur = 16;
+    // spikes
+    ctx.fillStyle = v.color;
+    ctx.beginPath();
+    const spikeLen = v.radius*0.32;
+    for (let i=0;i<v.spikes;i++){
+      const a = (Math.PI*2/v.spikes)*i + v.wobble;
+      const r1 = v.radius;
+      const r2 = v.radius + spikeLen + Math.sin(v.wobble*2+i)*2;
+      const a0 = a - 0.12, a1 = a + 0.12;
+      ctx.moveTo(Math.cos(a0)*r1, Math.sin(a0)*r1);
+      ctx.lineTo(Math.cos(a)*r2, Math.sin(a)*r2);
+      ctx.lineTo(Math.cos(a1)*r1, Math.sin(a1)*r1);
+    }
+    ctx.closePath();
+    ctx.fill();
+    // body
+    ctx.beginPath();
+    ctx.arc(0,0,v.radius,0,Math.PI*2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    // nucleus bumps
+    ctx.fillStyle = 'rgba(0,0,0,0.28)';
+    ctx.beginPath(); ctx.arc(-v.radius*0.28,-v.radius*0.22, v.radius*0.22, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(v.radius*0.3, v.radius*0.15, v.radius*0.16, 0, Math.PI*2); ctx.fill();
+    ctx.beginPath(); ctx.arc(v.radius*0.05, -v.radius*0.35, v.radius*0.12, 0, Math.PI*2); ctx.fill();
+    ctx.restore();
+
+    // hp number in center
+    ctx.save();
+    ctx.fillStyle = '#ffffff';
+    ctx.strokeStyle = 'rgba(0,0,0,0.6)';
+    ctx.lineWidth = 3;
+    ctx.font = `700 ${Math.max(12, Math.round(v.radius*0.55))}px Arial`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const hpText = Math.ceil(v.hp).toString();
+    ctx.strokeText(hpText, v.x, v.y);
+    ctx.fillText(hpText, v.x, v.y);
+    ctx.restore();
+  }
+
+  function drawBullets(){
+    ctx.save();
+    for (const b of bullets){
+      ctx.shadowColor = '#c8ffb0';
+      ctx.shadowBlur = 10;
+      ctx.fillStyle = '#e8ffbf';
+      ctx.beginPath();
+      ctx.arc(b.x,b.y,b.radius,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function drawParticles(){
+    for (const p of particles){
+      ctx.globalAlpha = Math.max(p.life,0);
+      ctx.fillStyle = p.color;
+      ctx.beginPath();
+      ctx.arc(p.x,p.y,3,0,Math.PI*2);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  function drawTank(){
+    const flashing = tank.flashTimer > 0;
+    const blink = invulnTimer > 0 && Math.floor(invulnTimer/120)%2===0;
+    if (blink) ctx.globalAlpha = 0.4;
+
+    ctx.save();
+    ctx.translate(tank.x, tank.y);
+
+    // treads
+    ctx.fillStyle = '#0d1f14';
+    ctx.fillRect(-tank.w/2-4, tank.h/2-10, tank.w+8, 12);
+
+    // body
+    const bodyGrad = ctx.createLinearGradient(0,-tank.h/2,0,tank.h/2);
+    bodyGrad.addColorStop(0, flashing ? '#ffffff' : '#3fae62');
+    bodyGrad.addColorStop(1, '#123a1f');
+    ctx.fillStyle = bodyGrad;
+    ctx.strokeStyle = '#39ff8c';
+    ctx.lineWidth = 2;
+    roundRect(-tank.w/2, -tank.h/2, tank.w, tank.h, 8);
+    ctx.fill(); ctx.stroke();
+
+    // turret
+    ctx.fillStyle = '#0d2b19';
+    ctx.strokeStyle = '#39ff8c';
+    ctx.beginPath();
+    ctx.arc(0, -tank.h/2, 12, 0, Math.PI*2);
+    ctx.fill(); ctx.stroke();
+
+    // barrel
+    ctx.fillStyle = '#8dffb0';
+    ctx.fillRect(-4, -tank.h/2-18, 8, 20);
+
+    // biohazard emblem
+    ctx.fillStyle = 'rgba(255,255,255,0.85)';
+    ctx.font = '14px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('☣', 0, 5);
+
+    ctx.restore();
+    ctx.globalAlpha = 1;
+  }
+
+  function roundRect(x,y,w,h,r){
+    ctx.beginPath();
+    ctx.moveTo(x+r,y);
+    ctx.arcTo(x+w,y,x+w,y+h,r);
+    ctx.arcTo(x+w,y+h,x,y+h,r);
+    ctx.arcTo(x,y+h,x,y,r);
+    ctx.arcTo(x,y,x+w,y,r);
+    ctx.closePath();
+  }
+
+ function drawHPBar(){
+  const barW = 100;
+  const barH = 12;
+
+  const bx = tank.x - barW/2;
+  const by = tank.y + tank.h/2 + 14;
+
+  ctx.fillStyle = 'rgba(0,0,0,0.5)';
+  roundRect(bx,by,barW,barH,6);
+  ctx.fill();
+
+  const segW = barW / maxLives;
+
+  for (let i=0;i<maxLives;i++){
+    const pad = 2;
+
+    ctx.fillStyle =
+      i < lives
+        ? '#39ff8c'
+        : 'rgba(120,30,30,0.6)';
+
+    roundRect(
+      bx + i * segW + pad,
+      by + pad,
+      segW - pad * 2,
+      barH - pad * 2,
+      4
+    );
+
+    ctx.fill();
+  }
+
+  ctx.strokeStyle = 'rgba(57,255,140,0.5)';
+  ctx.lineWidth = 1;
+
+  roundRect(bx,by,barW,barH,6);
+  ctx.stroke();
+}
+
+  function drawGroundLine(){
+    const gy = tankGroundY();
+    ctx.strokeStyle = 'rgba(57,255,140,0.12)';
+    ctx.setLineDash([6,6]);
+    ctx.beginPath(); ctx.moveTo(0,gy); ctx.lineTo(W,gy); ctx.stroke();
+    ctx.setLineDash([]);
+  }
+
+  // ---------- HUD / panel ----------
+  const scoreDisplay = document.getElementById('scoreDisplay');
+  const pointsDisplay = document.getElementById('pointsDisplay');
+  function updateHUD(){
+    scoreDisplay.textContent = 'HẠ: ' + score;
+    pointsDisplay.textContent = '💰 ' + points;
+  }
+
+  const upgradePanel = document.getElementById('upgradePanel');
+function updateUpgradePanel(){
+  const map = {
+    bullets: {
+      lvl:'lvlBullets',
+      cost:'costBullets',
+      btn:'btnBullets'
+    },
+
+    rate: {
+      lvl:'lvlRate',
+      cost:'costRate',
+      btn:'btnRate'
+    },
+
+    damage: {
+      lvl:'lvlDamage',
+      cost:'costDamage',
+      btn:'btnDamage'
+    },
+
+    maxHp: {
+      lvl:'lvlMaxHp',
+      cost:'costMaxHp',
+      btn:'btnMaxHp'
+    },
+
+    repair: {
+      lvl:'lvlRepair',
+      cost:'costRepair',
+      btn:'btnRepair'
+    }
+  };
+
+  for (const type in map){
+    const u = UPGRADES[type];
+    const cost = upgradeCost(type);
+
+    document.getElementById(map[type].lvl).textContent = u.level;
+
+    const btn = document.getElementById(map[type].btn);
+    const costEl = document.getElementById(map[type].cost);
+
+    if (cost === null){
+      costEl.textContent = '0';
+      btn.textContent = 'MAX';
+      btn.disabled = true;
+    } else {
+      costEl.textContent = cost;
+      btn.textContent = 'NÂNG CẤP';
+      btn.disabled = points < cost;
+    }
+  }
+
+  // Hiển thị thời gian hồi máu hiện tại
+  const repairTimeEl = document.getElementById('repairTime');
+
+  if (repairTimeEl){
+    repairTimeEl.textContent =
+      Math.round(currentRepairInterval() / 1000);
+  }
+}
+
+  // ============================================================
+// NÂNG CẤP — CLICK + PRESS & HOLD
+// ============================================================
+
+document.querySelectorAll('.upgrade-item button[data-type]').forEach(btn => {
+
+  let holdTimer = null;
+  let upgradeInterval = null;
+  let holding = false;
+
+  const type = btn.getAttribute('data-type');
+
+  // ----------------------------------------------------------
+  // Thực hiện nâng cấp 1 lần
+  // ----------------------------------------------------------
+  function doUpgrade(){
+
+    const cost = upgradeCost(type);
+
+    // Không đủ điểm hoặc đã MAX
+    if (cost === null || points < cost){
+      stopHolding();
+      return false;
+    }
+
+    points -= cost;
+    UPGRADES[type].level += 1;
+
+    // --------------------------------------------------------
+    // Tăng máu tối đa
+    // --------------------------------------------------------
+    if (type === 'maxHp'){
+      maxLives = currentMaxHp();
+
+      // Tăng thêm 1 HP hiện tại
+      lives = Math.min(lives + 1, maxLives);
+
+      healTimer = 0;
+    }
+
+    // --------------------------------------------------------
+    // Nâng tốc độ hồi máu
+    // --------------------------------------------------------
+    if (type === 'repair'){
+      healTimer = 0;
+    }
+
+    updateHUD();
+    updateUpgradePanel();
+
+    return true;
+  }
+
+  // ----------------------------------------------------------
+  // Bắt đầu giữ
+  // ----------------------------------------------------------
+  function startHolding(e){
+
+    if (e){
+      e.preventDefault();
+    }
+
+    if (holding) return;
+
+    holding = true;
+
+    // Nâng ngay lần đầu
+    if (!doUpgrade()){
+      holding = false;
+      return;
+    }
+
+    // Chờ một chút rồi mới bắt đầu nâng liên tục
+    holdTimer = setTimeout(() => {
+
+      if (!holding) return;
+
+      upgradeInterval = setInterval(() => {
+
+        if (!holding) return;
+
+        if (!doUpgrade()){
+          stopHolding();
+        }
+
+      }, 80);
+
+    }, 350);
+  }
+
+  // ----------------------------------------------------------
+  // Dừng giữ
+  // ----------------------------------------------------------
+  function stopHolding(){
+
+    holding = false;
+
+    if (holdTimer){
+      clearTimeout(holdTimer);
+      holdTimer = null;
+    }
+
+    if (upgradeInterval){
+      clearInterval(upgradeInterval);
+      upgradeInterval = null;
+    }
+  }
+
+  // ----------------------------------------------------------
+  // Chuột
+  // ----------------------------------------------------------
+  btn.addEventListener('mousedown', startHolding);
+  btn.addEventListener('mouseup', stopHolding);
+  btn.addEventListener('mouseleave', stopHolding);
+
+  // ----------------------------------------------------------
+  // Cảm ứng điện thoại
+  // ----------------------------------------------------------
+  btn.addEventListener('touchstart', startHolding, {
+    passive:false
+  });
+
+  btn.addEventListener('touchend', stopHolding);
+  btn.addEventListener('touchcancel', stopHolding);
+
+});
+
+  document.getElementById('upgradeBtn').addEventListener('click', ()=>{
+    updateUpgradePanel();
+    upgradePanel.classList.remove('hidden');
+    if (running) paused = true;
+  });
+  document.getElementById('closeUpgrade').addEventListener('click', ()=>{
+    upgradePanel.classList.add('hidden');
+    paused = false;
+  });
+
+  // ---------- Screens ----------
+  const startScreen = document.getElementById('startScreen');
+  const gameOverScreen = document.getElementById('gameOverScreen');
+  const finalScoreEl = document.getElementById('finalScore');
+
+  document.getElementById('startBtn').addEventListener('click', ()=>{
+    startScreen.classList.add('hidden');
+    startGame();
+  });
+  document.getElementById('restartBtn').addEventListener('click', ()=>{
+    // chỉ dọn dẹp hiện trường mảnh vụn khi người chơi bấm CHƠI LẠI
+    gameOverDebris.forEach(el => el.remove());
+    gameOverDebris = [];
+
+    gameOverScreen.classList.add('hidden');
+    startGame();
+  });
+
+ function startGame(){
+
+  gameOverAnimationId++;
+
+  const restartBtn =
+    document.getElementById('restartBtn');
+
+  restartBtn.classList.remove(
+    'explosion-show'
+  );
+
+  restartBtn.classList.add(
+    'explosion-hidden'
+  );
+
+  initState();
+
+  running = true;
+  gameStarted = true;
+
+  // Phát nhạc nền
+  bgMusic.currentTime = 0;
+
+  bgMusic.play().catch(err => {
+    console.log('Không thể phát nhạc:', err);
+  });
+}
+
+// ============================================================
+// GAME OVER — NỔ CHỮ (VẬT LÝ + DỘI TƯỜNG)
+// ============================================================
+
+function explodeGameOverText(onComplete){
+  const gameOverTitle = document.getElementById('gameOverTitle');
+  const gameLetters = gameOverTitle.querySelectorAll('.game-word > span');
+  const overGroupEl = document.getElementById('overGroup');
+  const overLetters = overGroupEl.querySelectorAll('span');
+  const allLetters = [...gameLetters, ...overLetters];
+
+  const GRAV = 0.6;
+  const DAMP = 0.62;
+  const maxFrames = 160;
+
+  const pieces = Array.from(allLetters).map(letter => {
+    const rect = letter.getBoundingClientRect();
+    const cs = getComputedStyle(letter);
+
+    const clone = document.createElement('div');
+    clone.textContent = letter.textContent;
+    Object.assign(clone.style, {
+      position: 'fixed',
+      left: rect.left + 'px',
+      top: rect.top + 'px',
+      fontSize: cs.fontSize,
+      fontWeight: cs.fontWeight,
+      fontFamily: cs.fontFamily,
+      lineHeight: cs.lineHeight,
+      color: '#39ff8c',
+      textShadow: '0 0 8px rgba(57,255,140,.95), 0 0 18px rgba(57,255,140,.85), 0 0 35px rgba(57,255,140,.55)',
+      zIndex: 30,
+      pointerEvents: 'none',
+      willChange: 'transform, left, top'
+    });
+    document.body.appendChild(clone);
+    gameOverDebris.push(clone);
+
+    // ẩn chữ gốc, để clone thay thế bay ra
+    letter.style.visibility = 'hidden';
+
+    return {
+      el: clone,
+      x: rect.left,
+      y: rect.top,
+      w: rect.width,
+      h: rect.height,
+      vx: rand(-10, 10),
+      vy: rand(-16, -7),
+      rot: 0,
+      vr: rand(-14, 14)
+    };
+  });
+
+  let frame = 0;
+
+  function step(){
+    frame++;
+    const vw = window.innerWidth;
+    const vh = window.innerHeight;
+    let moving = false;
+
+    pieces.forEach(p => {
+      p.vy += GRAV;
+      p.x += p.vx;
+      p.y += p.vy;
+      p.rot += p.vr;
+
+      // dội tường trái/phải
+      if (p.x < 0){ p.x = 0; p.vx = Math.abs(p.vx) * DAMP; }
+      else if (p.x + p.w > vw){ p.x = vw - p.w; p.vx = -Math.abs(p.vx) * DAMP; }
+
+      // dội trần/sàn
+      if (p.y < 0){ p.y = 0; p.vy = Math.abs(p.vy) * DAMP; }
+      else if (p.y + p.h > vh){ p.y = vh - p.h; p.vy = -Math.abs(p.vy) * DAMP; p.vr *= 0.75; }
+
+      p.el.style.left = p.x + 'px';
+      p.el.style.top = p.y + 'px';
+      p.el.style.transform = 'rotate(' + p.rot + 'deg)';
+
+      if (Math.abs(p.vx) > 0.4 || Math.abs(p.vy) > 0.4) moving = true;
+    });
+
+    if (frame < maxFrames && moving){
+      requestAnimationFrame(step);
+    } else {
+      // giữ nguyên hiện trường: không dọn dẹp các mảnh chữ đã nổ
+      if (onComplete) onComplete();
+    }
+  }
+
+  requestAnimationFrame(step);
+}
+
+// ============================================================
+// GAME OVER — HIỆU ỨNG TỪNG CHỮ + XOAY + NỔ
+// ============================================================
+
+function playGameOverAnimation(){
+
+  const title = document.getElementById('gameOverTitle');
+
+  const gameLetters =
+    title.querySelectorAll('.game-word > span');
+
+  const overGroup =
+    document.getElementById('overGroup');
+
+  const overLetters =
+    overGroup.querySelectorAll('span');
+
+  const restartBtn = document.getElementById('restartBtn');
+
+  /* ----------------------------------------------------------
+     RESET
+     ---------------------------------------------------------- */
+
+  overGroup.classList.remove('rotated');
+  restartBtn.classList.add('hidden');
+
+  gameLetters.forEach(letter => {
+    letter.classList.remove('active');
+    letter.style.visibility = '';
+  });
+
+  overLetters.forEach(letter => {
+    letter.classList.remove('active');
+    letter.style.visibility = '';
+  });
+
+  /* ----------------------------------------------------------
+     GAME
+     G → A → M → E
+     ---------------------------------------------------------- */
+
+  gameLetters.forEach((letter, index) => {
+
+    setTimeout(() => {
+      letter.classList.add('active');
+    }, 100 + index * 120);
+
+  });
+
+  /* ----------------------------------------------------------
+     OVER
+     O → V → E → R
+     ---------------------------------------------------------- */
+
+  const overStart =
+    50 +
+    gameLetters.length * 230 +
+    30;
+
+  overLetters.forEach((letter, index) => {
+
+    setTimeout(() => {
+      letter.classList.add('active');
+    }, overStart + index * 180);
+
+  });
+
+  /* ----------------------------------------------------------
+     SAU KHI R PHÁT SÁNG → XOAY CẢ CỤM OVER
+     ---------------------------------------------------------- */
+
+  const rotateDelay =
+    overStart +
+    overLetters.length * 230 +
+    200;
+
+  setTimeout(() => {
+
+    overGroup.classList.add('rotated');
+
+  }, rotateDelay);
+
+  /* ----------------------------------------------------------
+     1 GIÂY SAU KHI XOAY XONG → NỔ TOÀN BỘ CHỮ GAME OVER
+     CHỈ SAU KHI NỔ XONG MỚI HIỆN NÚT CHƠI LẠI
+     ---------------------------------------------------------- */
+
+  const rotateDuration = 100; // khớp với animation overRotate trong CSS
+  const explodeDelay = rotateDelay + rotateDuration + 1000;
+
+  setTimeout(() => {
+
+    explodeGameOverText(() => {
+      restartBtn.classList.remove('hidden');
+    });
+
+  }, explodeDelay);
+}
+
+  function endGame(){
+
+  running = false;
+
+  finalScoreEl.textContent = score;
+
+  setTimeout(() => {
+
+    gameOverScreen.classList.remove('hidden');
+
+    // Chạy hiệu ứng GAME OVER
+    playGameOverAnimation();
+
+  }, 400);
+}
+
+  // ---------- Main loop ----------
+  let lastTime = 0;
+  function loop(ts){
+    if (!lastTime) lastTime = ts;
+    let dt = ts - lastTime;
+    lastTime = ts;
+    dt = Math.min(dt, 40);
+
+    ctx.save();
+    if (shakeTime > 0){
+      shakeTime -= dt;
+      const mag = shakeMag * (shakeTime/260);
+      ctx.translate(rand(-mag,mag), rand(-mag,mag));
+    }
+
+    drawBackground();
+
+    if (running && !paused){
+      
+      elapsedTime += dt;
+      updateWave(dt);
+      spawnInterval = 1400;
+      spawnTimer += dt;
+      if (spawnTimer >= spawnInterval){
+        spawnTimer = 0;
+        spawnWaveVirus();
+      }
+
+      fireTimer += dt;
+      const interval = currentFireInterval();
+      if (fireTimer >= interval){
+        fireTimer = 0;
+        fireBullets();
+      }
+
+      updateTank(dt);
+updateBullets(dt);
+updateViruses(dt);
+updateHealing(dt);
+      checkBulletHits();
+      updateParticles(dt);
+    }
+
+    drawGroundLine();
+    drawParticles();
+    for (const v of viruses) drawVirus(v);
+    drawBullets();
+    if (tank) {
+  drawTank();
+  drawHPBar();
+  drawHealBar();
+}
+
+    ctx.restore();
+    requestAnimationFrame(loop);
+  }
+
+  // ---------- Init ----------
+  window.addEventListener('resize', resize);
+  resize();
+  tank = { x: W/2, y: H-100, w:56, h:38, targetX: W/2, flashTimer:0 };
+  bullets = []; viruses = []; particles = [];
+  score=0; points=0; lives=3; running=false;
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
