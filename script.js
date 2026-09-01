@@ -371,5 +371,26 @@ function closeChillBar() {
         window.location.href = url;
     }
 };
+    
+    function checkDescOverflow() {
+        document.querySelectorAll(".chill-game-desc-wrap").forEach(wrap => {
+            const text = wrap.querySelector(".chill-game-desc");
+            if (!text) return;
+            wrap.classList.remove("is-overflowing");
+            if (text.scrollWidth > wrap.clientWidth) {
+                wrap.classList.add("is-overflowing");
+            }
+        });
+    }
+
+    if (document.fonts && document.fonts.ready) {
+        document.fonts.ready.then(() => requestAnimationFrame(checkDescOverflow));
+    } else {
+        setTimeout(checkDescOverflow, 300);
+    }
+
+    chillBtn.addEventListener('click', () => {
+        requestAnimationFrame(checkDescOverflow);
+    });
 
 }); // END DOMContentLoaded
