@@ -47,6 +47,396 @@ canvas { display:block; }
 <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
 </head>
 <body>
+<audio id="bgMusic" src="../audio/nedan.mp3" loop preload="auto" autoplay></audio>
+<canvas id="c"></canvas>
+<div id="ui">
+  <div id="score-wrap">
+    <div id="score-display">0</div>
+    <button id="pause-btn" class="hidden">⏸</button>
+  </div>
+  <div id="wave-display">WAVE 1</div>
+</div>
+
+<div class="screen" id="startScreen">
+  <div class="screen-title">NÉ ĐẠN</div>
+  <div class="screen-sub">BULLET HELL</div>
+  <button class="btn" id="startBtn">BẮT ĐẦU</button>
+</div>
+<div class="screen hidden" id="gameoverScreen">
+  <div class="screen-title">GAME<br>OVER</div>
+  <div id="gameover-score">ĐIỂM: 0</div>
+  <div id="gameover-best">CAO NHẤT: 0</div>
+  <button class="btn" id="restartBtn">CHƠI LẠI</button>
+</div>
+<div class="screen hidden" id="pause-screen">
+  <div class="screen-title">TẠM DỪNG</div>
+  <button class="btn" id="resumeBtn">▶ TIẾP TỤC</button>
+  <button class="btn" id="quitBtn">✕ THOÁT</button>
+</div>
+<footer>Version:D20260301-H22M12T0992 »»» developed by Tran Gia Bao</footer>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CANVAS
+// ═══════════════════════════════════════════════════════════
+const canvas = document.getElementById('c');
+const ctx    = canvas.getContext('2d');
+const scoreEl   = document.getElementById('score-display');
+const waveEl    = document.getElementById('wave-display');
+const pauseBtn  = document.getElementById('pause-btn');
+const startScreen    = document.getElementById('startScreen');
+const gameoverScreen = document.getElementById('gameoverScreen');
+const pauseScreen    = document.getElementById('pause-screen');
+let W, H;
+function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
+resize(); window.addEventListener('resize', resize);
+
+// ═══════════════════════════════════════════════════════════
+//  WORLD SCALE — thu nhỏ toàn bộ map
+// ═══════════════════════════════════════════════════════════
+const WORLD_SCALE = 0.72; // cảnh vật nhỏ hơn → map rộng hơn
+
+// ═══════════════════════════════════════════════════════════
+//  STARS
+// ═══════════════════════════════════════════════════════════
+const STARS=[];
+for(let i=0;i<140;i++) STARS.push({x:Math.random()*1800,y:Math.random()*1800,
+  r:Math.random()*1.2+0.2,spd:Math.random()*0.9+0.2,a:Math.random()*0.6+0.15});
+function drawStars(){
+  for(const s of STARS){
+    ctx.globalAlpha=s.a; ctx.fillStyle='#aaccff';
+    ctx.beginPath(); ctx.arc(s.x%W,s.y%H,s.r,0,Math.PI*2); ctx.fill();
+    s.y+=s.spd; if(s.y>H){s.y=0;s.x=Math.random()*W;}
+  }
+  ctx.globalAlpha=1;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAW PLANE  (scaled by WORLD_SCALE)
+// ═══════════════════════════════════════════════════════════
+const PS = 0.62 * WORLD_SCALE;
+function drawPlane(x,y,hp){
+  ctx.save(); ctx.translate(x,y); ctx.scale(PS,PS);
+  ctx.globalAlpha=0.22;
+  const eg=ctx.createRadialGradient(0,18,0,0,18,28);
+  eg.addColorStop(0,'#00ccff'); eg.addColorStop(1,'transparent');
+  ctx.fillStyle=eg; ctx.fillRect(-28,8,56,36); ctx.globalAlpha=1;
+  const fl=12+Math.random()*6;
+  const fg=ctx.createLinearGradient(0,18,0,18+fl);
+  fg.addColorStop(0,'#00aaff'); fg.addColorStop(0.5,'rgba(0,68,255,.53)'); fg.addColorStop(1,'transparent');
+  ctx.fillStyle=fg;
+  ctx.beginPath(); ctx.ellipse(-8,20,5,fl*.5,0,0,Math.PI*2); ctx.fill();
+  ctx.beginPath(); ctx.ellipse(8,20,5,fl*.5,0,0,Math.PI*2); ctx.fill();
+  ctx.fillStyle='#c8d8e8'; ctx.beginPath();
+  ctx.moveTo(0,-32); ctx.bezierCurveTo(6,-18,7,0,6,18); ctx.lineTo(6,22);
+  ctx.bezierCurveTo(4,26,-4,26,-6,22); ctx.lineTo(-6,18);
+  ctx.bezierCurveTo(-7,0,-6,-18,0,-32); ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#e8f4ff'; ctx.beginPath();
+  ctx.moveTo(0,-30); ctx.bezierCurveTo(2,-16,3,0,2,16);
+  ctx.bezierCurveTo(0,17,-2,16,-2,16); ctx.bezierCurveTo(-3,0,-2,-16,0,-30); ctx.fill();
+  ctx.fillStyle='#99b0c8';
+  ctx.beginPath(); ctx.moveTo(-6,-4); ctx.lineTo(-32,6); ctx.lineTo(-30,14); ctx.lineTo(-6,10); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(6,-4);  ctx.lineTo(32,6);  ctx.lineTo(30,14);  ctx.lineTo(6,10);  ctx.closePath(); ctx.fill();
+  ctx.fillStyle='#bbccdd';
+  ctx.beginPath(); ctx.moveTo(-6,-2); ctx.lineTo(-28,7); ctx.lineTo(-26,9); ctx.lineTo(-6,2); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(6,-2);  ctx.lineTo(28,7);  ctx.lineTo(26,9);  ctx.lineTo(6,2);  ctx.fill();
+  ctx.fillStyle='#8899aa';
+  ctx.beginPath(); ctx.moveTo(-6,14); ctx.lineTo(-16,20); ctx.lineTo(-14,24); ctx.lineTo(-6,20); ctx.closePath(); ctx.fill();
+  ctx.beginPath(); ctx.moveTo(6,14);  ctx.lineTo(16,20);  ctx.lineTo(14,24);  ctx.lineTo(6,20);  ctx.closePath(); ctx.fill();
+  const cg=ctx.createRadialGradient(-1,-14,0,0,-12,6);
+  cg.addColorStop(0,'#aaeeff'); cg.addColorStop(.5,'#2266aa'); cg.addColorStop(1,'#001133');
+  ctx.fillStyle=cg; ctx.beginPath(); ctx.ellipse(0,-14,4,6,0,0,Math.PI*2); ctx.fill();
+  ctx.strokeStyle='#445566'; ctx.lineWidth=0.8; ctx.beginPath();
+  ctx.moveTo(0,-32); ctx.bezierCurveTo(6,-18,7,0,6,18); ctx.lineTo(6,22);
+  ctx.bezierCurveTo(4,26,-4,26,-6,22); ctx.lineTo(-6,18);
+  ctx.bezierCurveTo(-7,0,-6,-18,0,-32); ctx.stroke();
+  // HP bar — KHÔNG scale theo WORLD_SCALE (vẽ sau khi đã scale PS nên phải chia lại)
+  const bScaleInv = 1/PS; // nghịch đảo để giữ kích thước cố định
+  ctx.save();
+  ctx.scale(bScaleInv, bScaleInv);
+  const bW=52,bH=7,bX=-26,bY=-48;
+  ctx.strokeStyle='#fff'; ctx.lineWidth=1.5; ctx.strokeRect(bX,bY,bW,bH);
+  ctx.fillStyle='#110000'; ctx.fillRect(bX,bY,bW,bH);
+  const fr=hp/3;
+  ctx.fillStyle=fr>.66?'#ff2222':fr>.33?'#ff6600':'#ffaa00';
+  ctx.fillRect(bX,bY,bW*fr,bH);
+  ctx.restore();
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAW BULLETS
+// ═══════════════════════════════════════════════════════════
+function drawBullet(b){
+  ctx.save(); ctx.translate(b.x,b.y); ctx.rotate(b.angle+Math.PI/2);
+  const S = WORLD_SCALE;
+
+  if(b.type==='normal'){
+    ctx.scale(.65*S,.65*S);
+    const g=ctx.createLinearGradient(0,-10,0,10);
+    g.addColorStop(0,'#ffff44'); g.addColorStop(.5,'#ff8800'); g.addColorStop(1,'rgba(255,68,0,.4)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,4,10,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.35; ctx.fillStyle='#ffff00';
+    ctx.beginPath(); ctx.ellipse(0,0,7,15,0,0,Math.PI*2); ctx.fill();
+
+  } else if(b.type==='big'){
+    ctx.scale(.65*S,.65*S);
+    const g=ctx.createRadialGradient(0,0,0,0,0,9);
+    g.addColorStop(0,'#ff8888'); g.addColorStop(.5,'#cc0000'); g.addColorStop(1,'#440000');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,9,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.3; ctx.strokeStyle='#ff4444'; ctx.lineWidth=1.5; ctx.stroke();
+
+  } else if(b.type==='fast'){
+    ctx.scale(.65*S,.65*S);
+    const g=ctx.createLinearGradient(0,-14,0,14);
+    g.addColorStop(0,'#00ffff'); g.addColorStop(1,'rgba(0,255,255,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.ellipse(0,0,2.5,13,0,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.3; ctx.fillStyle='#00ffff';
+    ctx.beginPath(); ctx.ellipse(0,0,5,18,0,0,Math.PI*2); ctx.fill();
+
+  } else if(b.type==='ghost'){
+    ctx.scale(.65*S,.65*S);
+    const p=.65+.35*Math.sin(b.age*.06), r1=8*p;
+    const g=ctx.createRadialGradient(0,0,0,0,0,r1+4);
+    g.addColorStop(0,'#eeaaff'); g.addColorStop(.4,'#9900cc');
+    g.addColorStop(.75,'rgba(68,0,102,.5)'); g.addColorStop(1,'transparent');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r1+4,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.9; ctx.fillStyle='#ddaaff'; ctx.beginPath(); ctx.arc(0,0,3,0,Math.PI*2); ctx.fill();
+    ctx.globalAlpha=.5; ctx.strokeStyle='#cc66ff'; ctx.lineWidth=1;
+    ctx.beginPath(); ctx.arc(0,0,r1,0,Math.PI*2); ctx.stroke();
+
+  } else if(b.type==='homing'){
+    ctx.scale(S,S);
+    const g=ctx.createRadialGradient(0,0,0,0,0,7);
+    g.addColorStop(0,'#ffffff'); g.addColorStop(.3,'#ffaa00'); g.addColorStop(.7,'#ff4400'); g.addColorStop(1,'rgba(255,60,0,0)');
+    ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,7,0,Math.PI*2); ctx.fill();
+    ctx.rotate(b.age*.07);
+    ctx.globalAlpha=.6; ctx.strokeStyle='#ffaa00'; ctx.lineWidth=1.5;
+    ctx.beginPath(); ctx.arc(0,0,10,0,Math.PI*1.5); ctx.stroke();
+    ctx.globalAlpha=1; ctx.fillStyle='#ffaa00';
+    ctx.beginPath(); ctx.moveTo(0,-10); ctx.lineTo(-3,-7); ctx.lineTo(3,-7); ctx.closePath(); ctx.fill();
+
+  } else if(b.type==='charge'){
+    ctx.scale(S,S);
+    const r=16;
+    if(b.phase==='float'){
+      const timeRatio = b.age / b.floatTime; // 0→1
+      // Nhấp nháy mạnh dần khi gần dash
+      const flashSpeed = 0.10 + timeRatio * 0.35;
+      const pls = Math.abs(Math.sin(b.age * flashSpeed));
+      const intensity = 0.3 + timeRatio * 0.7; // càng gần dash càng sáng
+
+      // Outer warning glow — rộng, mạnh
+      ctx.globalAlpha=(0.12 + 0.25*pls)*intensity;
+      ctx.fillStyle='#ff0055';
+      ctx.beginPath(); ctx.arc(0,0,r+20,0,Math.PI*2); ctx.fill();
+
+      ctx.globalAlpha=(0.5 + 0.5*pls)*intensity;
+      const g=ctx.createRadialGradient(0,0,0,0,0,r);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(.3,'#ffaacc'); g.addColorStop(.6,'#ff0055'); g.addColorStop(1,'#330011');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+
+      // Đường đứt nét hướng tấn công — không rotate theo bullet angle
+      ctx.restore();
+      ctx.save();
+      ctx.translate(b.x, b.y);
+      const da = b.dashAngle;
+      ctx.globalAlpha=(0.35 + 0.55*pls)*intensity;
+      ctx.strokeStyle='#ff3377';
+      ctx.lineWidth=2*S;
+      ctx.setLineDash([8*S, 7*S]);
+      ctx.lineDashOffset = -(b.age * 3 % 30); // chạy về phía trước
+      ctx.beginPath();
+      const trailLen = (80 + timeRatio*120)*S;
+      ctx.moveTo(Math.cos(da)*(r+2)*S, Math.sin(da)*(r+2)*S);
+      ctx.lineTo(Math.cos(da)*trailLen, Math.sin(da)*trailLen);
+      ctx.stroke();
+      ctx.setLineDash([]);
+      // Mũi tên nhỏ ở cuối đường
+      ctx.globalAlpha=(0.6+0.4*pls)*intensity;
+      ctx.fillStyle='#ff3377';
+      const ax=Math.cos(da)*trailLen, ay=Math.sin(da)*trailLen;
+      const perpA=da+Math.PI/2;
+      ctx.beginPath();
+      ctx.moveTo(ax+Math.cos(da)*8*S, ay+Math.sin(da)*8*S);
+      ctx.lineTo(ax+Math.cos(perpA)*5*S, ay+Math.sin(perpA)*5*S);
+      ctx.lineTo(ax-Math.cos(perpA)*5*S, ay-Math.sin(perpA)*5*S);
+      ctx.closePath(); ctx.fill();
+
+    } else {
+      // Dashing — bright streak
+      ctx.globalAlpha=.92;
+      const g=ctx.createRadialGradient(0,0,0,0,0,r);
+      g.addColorStop(0,'#ffffff'); g.addColorStop(.4,'#ff88aa'); g.addColorStop(1,'rgba(255,0,60,0)');
+      ctx.fillStyle=g; ctx.beginPath(); ctx.arc(0,0,r,0,Math.PI*2); ctx.fill();
+      ctx.globalAlpha=.4; ctx.fillStyle='#ff0055';
+      ctx.beginPath(); ctx.arc(0,0,r+8,0,Math.PI*2); ctx.fill();
+    }
+
+  } else if(b.type==='bounce'){
+    ctx.scale(S,S);
+    ctx.rotate(-Math.PI/2);
+    const outer=9, inner=4.5, pts=5;
+    ctx.beginPath();
+    for(let i=0;i<pts*2;i++){
+      const r2=i%2===0?outer:inner;
+      const a=(i/pts)*Math.PI;
+      i===0?ctx.moveTo(Math.cos(a)*r2,Math.sin(a)*r2):ctx.lineTo(Math.cos(a)*r2,Math.sin(a)*r2);
+    }
+    ctx.closePath();
+    const g=ctx.createRadialGradient(0,0,0,0,0,outer);
+    g.addColorStop(0,'#ffffaa'); g.addColorStop(.5,'#aaff00'); g.addColorStop(1,'#224400');
+    ctx.fillStyle=g; ctx.fill();
+    ctx.strokeStyle='#88ff44'; ctx.lineWidth=1; ctx.globalAlpha=.8; ctx.stroke();
+    ctx.globalAlpha=.3; ctx.fillStyle='#aaff00';
+    ctx.beginPath(); ctx.arc(0,0,outer+4,0,Math.PI*2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DRAW ITEMS
+// ═══════════════════════════════════════════════════════════
+const IS = 0.78 * WORLD_SCALE;
+function drawItem(it){
+  ctx.save();
+  ctx.translate(it.x, it.y+Math.sin(it.age*.04)*3);
+  ctx.scale(IS,IS);
+  const pulse=.8+.2*Math.sin(it.age*.08);
+
+  if(it.type==='shield'){
+    ctx.globalAlpha=.18*pulse; ctx.fillStyle='#00ccff';
+    ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.beginPath();
+    for(let i=0;i<6;i++){const a=(i/6)*Math.PI*2-Math.PI/6;
+      i===0?ctx.moveTo(Math.cos(a)*18,Math.sin(a)*18):ctx.lineTo(Math.cos(a)*18,Math.sin(a)*18);}
+    ctx.closePath();
+    const sg=ctx.createRadialGradient(0,-4,0,0,0,18);
+    sg.addColorStop(0,'#aaeeff'); sg.addColorStop(.5,'#0088cc'); sg.addColorStop(1,'#003355');
+    ctx.fillStyle=sg; ctx.fill(); ctx.strokeStyle='#00eeff'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2;
+    ctx.beginPath(); ctx.arc(0,1,8,Math.PI*1.1,Math.PI*1.9,false); ctx.stroke();
+    ctx.beginPath();
+    ctx.moveTo(-8*Math.cos(.1*Math.PI),1+8*Math.sin(.1*Math.PI));
+    ctx.lineTo(0,9); ctx.lineTo(8*Math.cos(.1*Math.PI),1+8*Math.sin(.1*Math.PI)); ctx.stroke();
+    ctx.globalAlpha=.9; ctx.fillStyle='#00ffff'; ctx.font='bold 8px monospace'; ctx.textAlign='center';
+    ctx.fillText('SHIELD',0,30);
+
+  } else if(it.type==='repair'){
+    ctx.globalAlpha=.18*pulse; ctx.fillStyle='#00ff88';
+    ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(0,0,18,0,Math.PI*2);
+    const rg=ctx.createRadialGradient(0,-4,0,0,0,18);
+    rg.addColorStop(0,'#aaffcc'); rg.addColorStop(.5,'#00aa55'); rg.addColorStop(1,'#003322');
+    ctx.fillStyle=rg; ctx.fill(); ctx.strokeStyle='#00ff88'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.fillStyle='#fff'; ctx.fillRect(-2.5,-9,5,18); ctx.fillRect(-9,-2.5,18,5);
+    ctx.globalAlpha=.9; ctx.fillStyle='#00ff88'; ctx.font='bold 8px monospace'; ctx.textAlign='center';
+    ctx.fillText('REPAIR',0,30);
+
+  } else if(it.type==='slow'){
+    ctx.globalAlpha=.18*pulse; ctx.fillStyle='#ffaa00';
+    ctx.beginPath(); ctx.arc(0,0,28,0,Math.PI*2); ctx.fill(); ctx.globalAlpha=1;
+    ctx.beginPath(); ctx.arc(0,0,18,0,Math.PI*2);
+    const og=ctx.createRadialGradient(0,-4,0,0,0,18);
+    og.addColorStop(0,'#ffeeaa'); og.addColorStop(.5,'#dd7700'); og.addColorStop(1,'#441100');
+    ctx.fillStyle=og; ctx.fill(); ctx.strokeStyle='#ffcc44'; ctx.lineWidth=1.5; ctx.stroke();
+    ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.lineCap='round';
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(0,-9); ctx.stroke();
+    ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(6,4); ctx.stroke();
+    ctx.beginPath(); ctx.arc(0,0,2,0,Math.PI*2); ctx.fillStyle='#fff'; ctx.fill();
+    ctx.globalAlpha=.9; ctx.fillStyle='#ffcc00'; ctx.font='bold 8px monospace'; ctx.textAlign='center';
+    ctx.fillText('SLOW',0,30);
+  }
+  ctx.restore();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  PARTICLES
+// ═══════════════════════════════════════════════════════════
+let particles=[];
+function spawnHit(x,y){
+  for(let i=0;i<14;i++){
+    const a=Math.random()*Math.PI*2,s=1.5+Math.random()*3;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1,decay:.04+Math.random()*.05,r:2+Math.random()*4,
+      color:Math.random()<.5?'#ff4400':'#ffcc00'});
+  }
+}
+function spawnPickup(x,y,color){
+  for(let i=0;i<12;i++){
+    const a=(i/12)*Math.PI*2,s=1.5+Math.random()*2.5;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1,decay:.03+Math.random()*.03,r:2+Math.random()*3,color});
+  }
+}
+function updateParticles(T){
+  for(let i=particles.length-1;i>=0;i--){
+    const p=particles[i];
+    p.x+=p.vx; p.y+=p.vy; p.life-=p.decay;
+    if(p.life<=0){particles.splice(i,1);continue;}
+    ctx.globalAlpha=p.life*.9; ctx.fillStyle=p.color;
+    ctx.beginPath(); ctx.arc(p.x,p.y,p.r*p.life,0,Math.PI*2); ctx.fill();
+  }
+  ctx.globalAlpha=1;
+}
+
+// ═══════════════════════════════════════════════════════════
+//  EXPLOSION ANIMATION
+// ═══════════════════════════════════════════════════════════
+let exploding=false, explodeX=0, explodeY=0, explodeAge=0;
+let shockwaves=[], debrisList=[];
+
+function startExplosion(x,y){
+  exploding=true; explodeX=x; explodeY=y; explodeAge=0;
+  shockwaves=[]; debrisList=[];
+
+  // Mảnh vỡ máy bay — nhiều loại
+  for(let i=0;i<40;i++){
+    const a=Math.random()*Math.PI*2;
+    const s=1.5+Math.random()*5;
+    const size=2+Math.random()*7;
+    debrisList.push({
+      x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      rot:Math.random()*Math.PI*2, rotSpd:(Math.random()-.5)*.25,
+      life:1, decay:.008+Math.random()*.012,
+      size, color:Math.random()<.4?'#c8d8e8':Math.random()<.5?'#99b0c8':'#e8f4ff',
+      type: Math.random()<.5?'rect':'tri'
+    });
+  }
+  // Tia lửa lớn
+  for(let i=0;i<60;i++){
+    const a=Math.random()*Math.PI*2;
+    const s=2+Math.random()*8;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s,
+      life:1,decay:.012+Math.random()*.018,r:2+Math.random()*6,
+      color:Math.random()<.4?'#ffffff':Math.random()<.5?'#ffdd00':'#ff6600'});
+  }
+  // Khói đen
+  for(let i=0;i<25;i++){
+    const a=Math.random()*Math.PI*2, s=0.5+Math.random()*2;
+    particles.push({x,y,vx:Math.cos(a)*s,vy:Math.sin(a)*s-1,
+      life:1,decay:.005+Math.random()*.008,r:6+Math.random()*12,
+      color:`rgba(30,30,30,1)`});
+  }
+  // Shockwave rings
+  shockwaves.push({x,y,r:0,maxR:120,life:1});
+  setTimeout(()=>shockwaves.push({x,y,r:0,maxR:80,life:1}),180);
+  setTimeout(()=>shockwaves.push({x,y,r:0,maxR:160,life:1}),350);
+
+  // Afterbursts — thêm lửa theo thời gian
+    letter-spacing:3px; padding:14px 40px; background:transparent;
+  border:2px solid #00ffcc; color:#00ffcc; cursor:pointer; text-transform:uppercase;
+  transition:all .2s; -webkit-tap-highlight-color:transparent; margin:6px; }
+.btn:hover,.btn:active { background:#00ffcc22; box-shadow:0 0 20px #00ffcc88; }
+#gameover-score { font-family:'Orbitron',sans-serif; font-size:clamp(14px,3vw,20px);
+  color:#ff6600; margin-bottom:6px; letter-spacing:2px; }
+#gameover-best { font-size:13px; color:#556677; margin-bottom:36px; letter-spacing:1px; }
+#pause-screen .screen-title { font-size:clamp(28px,7vw,52px); }
+  footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:monospace;z-index:99999; }
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap" rel="stylesheet">
+</head>
+<body>
 <canvas id="c"></canvas>
 <div id="ui">
   <div id="score-wrap">
