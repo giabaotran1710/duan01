@@ -1,0 +1,2215 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<title>Cờ Caro</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<style>
+
+:root{
+  --bg:#171512;
+  --bg-deep:#11100d;
+  --surface:#211e19;
+  --surface-2:#28241e;
+  --board:#2b2924;
+  --grid:#686158;
+  --grid-soft:#4d4942;
+  --text:#f3eee5;
+  --muted:#aaa296;
+  --dim:#7e766a;
+  --x:#59b9d7;
+  --o:#e06e72;
+  --gold:#e4c16a;
+  --green:#74b98d;
+  --line:rgba(243,238,229,.10);
+  --line-strong:rgba(243,238,229,.17);
+}
+
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;min-height:100%;background:var(--bg);color:var(--text);font-family:'Be Vietnam Pro',sans-serif;user-select:none}
+body{min-height:100dvh;overflow-x:hidden;padding:0 14px calc(24px + env(safe-area-inset-bottom));}
+button{font:inherit;color:inherit}
+button:focus-visible{outline:2px solid rgba(89,185,215,.65);outline-offset:2px}
+
+.game-shell{width:min(100%,520px);margin:0 auto;padding-top:10px;display:flex;flex-direction:column;gap:10px}
+.game-header{height:40px;display:grid;grid-template-columns:40px 1fr 40px;align-items:center}
+#btnModeSelect{width:36px;height:36px;margin:0;border:0;background:transparent;color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:22px;line-height:1;cursor:pointer;border-radius:9px;transition:background .16s,color .16s,transform .16s}
+#btnModeSelect:active{transform:scale(.94);background:rgba(243,238,229,.06)}
+#btnModeSelect:hover{background:rgba(243,238,229,.05);color:var(--text)}
+#btnModeSelect:disabled{opacity:.4;pointer-events:none}
+.game-title{margin:0;text-align:center;font-size:17px;line-height:1;font-weight:800;letter-spacing:.12em;color:var(--text)}
+.header-spacer{width:36px;height:36px}
+
+#statusTop{min-height:28px;display:flex;align-items:center;justify-content:flex-start;padding:0 2px;position:relative;z-index:5;overflow:hidden;font-size:12px;font-weight:600;color:var(--muted);transition:opacity .25s ease,color .25s ease}
+#statusTop.win{min-height:31px;color:var(--gold);font-size:15px;font-weight:800;padding:0 2px}
+#turnBadge{display:inline-flex;align-items:center;gap:7px;animation:statusIn .25s ease both}
+#turnBadge .badge-symbol{display:inline-flex;align-items:center;justify-content:center;min-width:17px;height:17px;font-size:10px;font-weight:800;line-height:1}
+#turnBadge .badge-text{font-size:11px;letter-spacing:.01em}
+#turnBadge .badge-symbol::before{content:'';width:7px;height:7px;border-radius:50%;display:block;background:currentColor}
+#turnBadge .badge-symbol{font-size:0;color:var(--muted)}
+#turnBadge.badge-X .badge-symbol{color:var(--x)}
+#turnBadge.badge-O .badge-symbol{color:var(--o)}
+#turnBadge .badge-text:empty{display:none}
+#turnBadge.badge-X .badge-symbol:after,#turnBadge.badge-O .badge-symbol:after{content:''}
+
+.commentary-card{min-height:24px;display:flex;align-items:center;justify-content:flex-start;padding:0 2px}
+#commentary{display:block;max-width:100%;margin:0;padding:0;color:#c7beb1;font-size:10px;font-weight:500;line-height:1.45;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:opacity .2s ease,transform .2s ease}
+#commentary::before{content:'AI';display:inline-block;margin-right:7px;color:var(--dim);font-size:8px;font-weight:700;letter-spacing:.09em;vertical-align:1px}
+#commentary.shrink{opacity:.55;transform:translateX(2px)}
+
+#board-wrap{width:100%;padding:0;background:transparent;border:0;box-shadow:none}
+#board{display:grid;grid-template-columns:repeat(15,1fr);width:100%;max-width:500px;margin:0 auto;background:var(--board);border:1px solid rgba(255,255,255,.10);border-radius:4px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.22)}
+#board.disabled{pointer-events:none;opacity:.72}
+.cell{width:100%;aspect-ratio:1/1;border:1px solid var(--grid-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:clamp(12px,4.4vw,19px);font-weight:800;line-height:1;box-sizing:border-box;position:relative;transition:background .10s ease,transform .10s ease}
+.cell:active{transform:scale(.95)}
+.X{color:var(--x);text-shadow:0 0 3px rgba(89,185,215,.18);font-weight:800}
+.O{color:var(--o);text-shadow:0 0 3px rgba(224,110,114,.16);font-weight:800}
+.last{position:relative;animation:lastMove 1.05s ease-in-out infinite}
+.last::after{content:'';position:absolute;inset:22%;border:1px solid currentColor;border-radius:50%;opacity:.32}
+.win-cell{background:rgba(228,193,106,.16);border-color:rgba(228,193,106,.58);animation:winPulse .7s ease infinite alternate}
+@keyframes lastMove{0%,100%{opacity:1}50%{opacity:.66}}
+@keyframes winPulse{from{background:rgba(228,193,106,.10)}to{background:rgba(228,193,106,.24)}}
+@keyframes statusIn{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:translateY(0)}}
+
+#scoreBar{position:relative;width:100%;height:20px;margin:0;display:none;background:transparent;border:0;border-bottom:1px solid var(--line);overflow:hidden}
+#scoreX{position:absolute;left:0;bottom:0;height:3px;width:50%;background:var(--x);transition:width .35s ease}
+#scoreO{position:absolute;right:0;bottom:0;height:3px;width:50%;background:var(--o);transition:width .45s ease-out}
+#scoreText{position:absolute;inset:0;display:flex;justify-content:space-between;align-items:center;padding:0 1px;pointer-events:none;font-size:8px;font-weight:600;color:var(--dim);z-index:2}
+#textX,#textO{color:var(--dim)}
+
+.control-panel{display:flex;align-items:flex-start;justify-content:center;gap:0;border-top:1px solid var(--line);padding-top:8px}
+.action-card{flex:1;min-width:0;position:relative}
+.action-card + .action-card{border-left:1px solid var(--line)}
+.action-btn{width:100%;height:48px;margin:0;padding:4px 4px;border:0;border-radius:0;background:transparent;color:var(--muted);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;transition:color .16s ease,background .16s ease}
+.action-btn:active{background:rgba(243,238,229,.06)}
+.action-icon{font-size:18px;line-height:1;color:var(--muted)}
+.action-label{font-size:9px;font-weight:600;line-height:1;white-space:nowrap}
+#btnReset .action-icon{font-size:19px}
+#toggleScore .action-icon{font-size:17px}
+#btnUndo:disabled{opacity:.35;cursor:not-allowed}
+#btnUndo:enabled{color:var(--text);cursor:pointer}
+#btnUndo:enabled .action-icon{color:var(--green)}
+#btnReset{color:var(--text)}
+#toggleScore{color:var(--muted)}
+#toggleScore:not(.off){color:var(--gold)}
+#undolimit{height:11px;margin:0;text-align:center;color:var(--dim);font-size:8px;font-weight:500;line-height:11px}
+.control-spacer{height:11px}
+
+#blub{font-size:9px;color:var(--dim);margin:1px 0 0;line-height:1.4;max-width:300px;text-align:center;align-self:center}
+footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
+ 
+#overlay{position:fixed;inset:0;background:var(--bg-deep);display:flex;flex-direction:column;justify-content:center;align-items:center;z-index:10;padding:24px 20px calc(24px + env(safe-area-inset-bottom));overflow:hidden}
+.overlay-content{position:relative;z-index:2;width:min(100%,340px);display:flex;flex-direction:column;align-items:center}
+.overlay-title{font-size:34px;line-height:1;font-weight:800;letter-spacing:.14em;margin:0;color:var(--text)}
+.mode-label{margin:11px 0 15px;color:var(--dim);font-size:10px;font-weight:600;letter-spacing:.08em}
+.mode-btn{width:100%;height:50px;margin:0 0 8px;border:1px solid var(--line-strong);border-radius:8px;background:transparent;color:var(--text);font-size:12px;font-weight:700;letter-spacing:.02em;cursor:pointer;transition:background .16s,border-color .16s,transform .16s}
+.mode-btn:active{transform:translateY(1px)}
+.mode-btn:hover{background:rgba(243,238,229,.045);border-color:rgba(243,238,229,.28)}
+#startBtn{border-color:rgba(89,185,215,.38);color:#d6eef6}
+#pvpBtn{border-color:rgba(224,110,114,.34);color:#f3d8d8}
+#dice-container{width:92px;height:92px;perspective:500px;-webkit-perspective:500px;margin:18px auto 6px;position:relative;z-index:2}
+#dice-container.bounce{animation:diceBounce 3s ease-out forwards}
+#dice{width:100%;height:100%;position:relative;transform-style:preserve-3d;-webkit-transform-style:preserve-3d;transition:transform 3s cubic-bezier(.25,.1,.25,1)}
+.dice-face{position:absolute;width:92px;height:92px;background:#d9d2c4;border:2px solid #a99e8c;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:58px;font-weight:800;backface-visibility:hidden;-webkit-backface-visibility:hidden;box-shadow:inset 0 0 12px rgba(255,255,255,.35),0 8px 18px rgba(0,0,0,.24)}
+.dice-face span{display:block;line-height:1;text-shadow:1px 1px 0 rgba(0,0,0,.7),0 0 5px currentColor}
+.face-X span{color:var(--x)}
+.face-O span{color:var(--o)}
+.face-front{transform:translateZ(46px)}
+.face-back{transform:rotateY(180deg) translateZ(46px)}
+.face-left{transform:rotateY(-90deg) translateZ(46px)}
+.face-right{transform:rotateY(90deg) translateZ(46px)}
+.face-top{transform:rotateX(90deg) translateZ(46px)}
+.face-bottom{transform:rotateX(-90deg) translateZ(46px)}
+#status{font-size:11px;color:#cdc4b8;font-weight:500;margin:5px 0 0;min-height:17px;text-align:center}
+#blub{margin-top:9px}
+.site-return-btn{margin-top:28px;padding:4px 0;border:0;background:transparent;color:var(--dim);font-size:9px;font-weight:600;cursor:pointer;transition:color .16s}
+.site-return-btn:hover{color:var(--text)}
+.site-return-btn:active{color:#c7beb1}
+
+#draw-popup{position:fixed;inset:0;background:rgba(17,16,13,.82);z-index:100;display:none;align-items:center;justify-content:center;padding:20px}
+#draw-popup .popup-box{width:min(100%,300px);background:#211e19;border:1px solid rgba(228,193,106,.34);border-radius:10px;padding:20px;text-align:center;box-shadow:0 18px 42px rgba(0,0,0,.36)}
+#draw-popup .popup-text{font-size:14px;margin-bottom:17px;color:var(--text);font-weight:700}
+#draw-popup .popup-buttons{display:flex;gap:10px;justify-content:center}
+#draw-popup .popup-btn{width:52px;height:42px;font-size:21px;background:transparent;border:1px solid var(--line-strong);cursor:pointer;padding:0;border-radius:8px;transition:background .16s,color .16s,transform .12s}
+#draw-popup .popup-btn:active{transform:scale(.96)}
+#draw-popup .btn-draw-accept{color:var(--o)}
+#draw-popup .btn-draw-reject{color:var(--x)}
+
+#confettiCanvas{position:fixed;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:99999}
+
+@media (max-height:680px){
+  .game-shell{gap:6px;padding-top:7px}
+  .game-header{height:34px}
+  #btnModeSelect{width:32px;height:32px}
+  .game-title{font-size:15px}
+  #statusTop{min-height:24px}
+  .commentary-card{min-height:20px}
+  #commentary{font-size:9px}
+  .control-panel{padding-top:5px}
+  .action-btn{height:42px}
+  #dice-container{margin-top:12px;margin-bottom:4px}
+  .site-return-btn{margin-top:18px}
+}
+
+@media (min-width:600px){
+  body{padding-left:20px;padding-right:20px}
+  .game-shell{padding-top:18px}
+  .game-title{font-size:18px}
+}
+</style>
+</head>
+<body>
+<main class="game-shell">
+  <header class="game-header">
+    <button id="btnModeSelect" onclick="goToModeSelect()" aria-label="Chọn chế độ">←</button>
+    <h1 class="game-title">CỜ CARO</h1>
+    <div class="header-spacer" aria-hidden="true"></div>
+  </header>
+
+  <section id="statusTop">Đang chờ...</section>
+
+  <section class="commentary-card">
+    <div id="commentary">...</div>
+  </section>
+
+  <section id="board-wrap">
+    <div id="board"></div>
+  </section>
+
+  <div id="scoreBar" aria-hidden="true">
+    <div id="scoreX"></div>
+    <div id="scoreO"></div>
+    <div id="scoreText"><span id="textX">0</span><span id="textO">0</span></div>
+  </div>
+
+  <section class="control-panel" aria-label="Điều khiển ván chơi">
+    <div class="action-card">
+      <button class="action-btn" id="btnUndo" onclick="undoMove()">
+        <span class="action-icon">↶</span>
+        <span class="action-label">Hoàn tác</span>
+      </button>
+      <div id="undolimit">3/3</div>
+    </div>
+    <div class="action-card">
+      <button class="action-btn" id="btnReset" onclick="resetGame()">
+        <span class="action-icon">↻</span>
+        <span class="action-label">Ván mới</span>
+      </button>
+      <div class="control-spacer"></div>
+    </div>
+    <div class="action-card">
+      <button class="action-btn" id="toggleScore" aria-label="Đánh giá thế trận">
+        <span class="action-icon">◉</span>
+        <span class="action-label">Thế cờ</span>
+      </button>
+      <div class="control-spacer"></div>
+    </div>
+  </section>
+
+</main>
+
+<div id="overlay">
+  <div class="overlay-content">
+    <h1 class="overlay-title">CỜ CARO</h1>
+    <div class="mode-label">Chọn cách chơi</div>
+    <button class="mode-btn" id="startBtn" onclick="startGame()">VỚI MÁY</button>
+    <button class="mode-btn" id="pvpBtn" onclick="startPVP()">HAI NGƯỜI</button>
+
+    <div id="dice-container">
+      <div id="dice">
+        <div class="dice-face face-front face-O"><span>O</span></div>
+        <div class="dice-face face-back face-X"><span>X</span></div>
+        <div class="dice-face face-left face-O"><span>O</span></div>
+        <div class="dice-face face-right face-X"><span>X</span></div>
+        <div class="dice-face face-top face-O"><span>O</span></div>
+        <div class="dice-face face-bottom face-X"><span>X</span></div>
+      </div>
+    </div>
+
+    <div id="status">Tung xúc xắc để biết ai đi trước</div>
+    <div id="blub">Ấn biểu tượng thế cờ để xem đánh giá nước đi</div>
+    <button class="site-return-btn" id="btnSiteReturn" onclick="goToWebsite()">giabao1710.click</button>
+  </div>
+</div>
+
+<div id="draw-popup">
+  <div class="popup-box">
+    <div class="popup-text">AI đề nghị hòa</div>
+    <div class="popup-buttons">
+      <button class="popup-btn btn-draw-reject" id="btn-draw-reject" title="Từ chối">✕</button>
+      <button class="popup-btn btn-draw-accept" id="btn-draw-accept" title="Đồng ý">✓</button>
+    </div>
+  </div>
+</div>
+
+<canvas id="confettiCanvas"></canvas>
+<footer> Version:D20261809-H01M41T0050 »»» developed by Tran Gia Bao</footer>
+<script id="caro-ai-worker-source" type="text/plain">
+
+const SIZE = 15;
+const DIRS = [[1,0],[0,1],[1,1],[1,-1]];
+const CENTER = (SIZE - 1) / 2;
+const DEBUG_AI = false;
+
+let board = [];
+let human = "X";
+let ai = "O";
+let sideToMove = "O";
+
+// ============================================================
+// ZOBRIST
+// ============================================================
+function mul32(a, b) {
+  return Math.imul(a, b) >>> 0;
+}
+
+let zrng = 0x9e3779b9;
+function rand32() {
+  zrng ^= zrng << 13;
+  zrng ^= zrng >>> 17;
+  zrng ^= zrng << 5;
+  zrng >>>= 0;
+  return zrng;
+}
+
+const zobrist = Array.from({length: SIZE}, () =>
+  Array.from({length: SIZE}, () => ({ X: rand32(), O: rand32() }))
+);
+
+let boardHash = 0;
+
+// ============================================================
+// SEARCH STATE
+// ============================================================
+const FLAG_EXACT = 0;
+const FLAG_LOWER = 1;
+const FLAG_UPPER = 2;
+const FLAG_ABORTED = 3;
+
+const TT = new Map();
+const TT_MAX = 180000;
+let ttGeneration = 0;
+
+const MAX_PLY = 24;
+const killers = Array.from({length: MAX_PLY + 1}, () => [null, null]);
+const history = new Map();
+
+let nodes = 0;
+let startTime = 0;
+let softDeadline = 0;
+let hardDeadline = 0;
+let aborted = false;
+let currentRootDepth = 0;
+let bestCompletedDepth = 0;
+let rootBestMove = null;
+let rootBestScore = -Infinity;
+let rootPV = [];
+let lastReason = "SEARCH";
+
+let candidateLimit = 16;
+let tacticalCandidateLimit = 26;
+let maxDepth = 10;
+
+const INF = 1e15;
+const MATE = 1e12;
+
+// ============================================================
+// PATTERN / EVALUATION
+// ============================================================
+const SCORE = Object.freeze({
+  FIVE: 1_000_000_000,
+  OPEN_FOUR: 40_000_000,
+  FOUR: 8_000_000,
+  BROKEN_FOUR: 7_000_000,
+  OPEN_THREE: 700_000,
+  BROKEN_THREE: 320_000,
+  CLOSED_THREE: 55_000,
+  OPEN_TWO: 12_000,
+  CLOSED_TWO: 1_400,
+  ONE: 80
+});
+
+function inBounds(r, c) {
+  return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
+}
+
+function opponent(p) {
+  return p === "X" ? "O" : "X";
+}
+
+function countDir(r, c, dr, dc, p) {
+  let n = 0;
+  for (let i = r + dr, j = c + dc; inBounds(i,j) && board[i][j] === p; i += dr, j += dc) n++;
+  return n;
+}
+
+function checkWin(r, c, p) {
+  return DIRS.some(([dr,dc]) =>
+    countDir(r,c,dr,dc,p) + countDir(r,c,-dr,-dc,p) >= 4
+  );
+}
+
+function occupiedCount() {
+  let n = 0;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] !== "") n++;
+    }
+  }
+  return n;
+}
+
+function hasNeighbor(r, c, radius = 2) {
+  for (let dr = -radius; dr <= radius; dr++) {
+    for (let dc = -radius; dc <= radius; dc++) {
+      if (!dr && !dc) continue;
+      const nr = r + dr, nc = c + dc;
+      if (inBounds(nr,nc) && board[nr][nc] !== "") return true;
+    }
+  }
+  return false;
+}
+
+function centerBonus(r, c) {
+  const d = Math.abs(r - CENTER) + Math.abs(c - CENTER);
+  return Math.max(0, 90 - d * 9);
+}
+
+function lineString(r, c, dr, dc, p, radius = 5) {
+  let s = "";
+  for (let k = -radius; k <= radius; k++) {
+    const nr = r + dr * k, nc = c + dc * k;
+    if (!inBounds(nr,nc)) s += "#";
+    else {
+      const v = board[nr][nc];
+      s += v === "" ? "." : (v === p ? "P" : "Q");
+    }
+  }
+  return s;
+}
+
+const PATTERN_TABLE = [
+  [/PPPPP/, SCORE.FIVE],
+  [/\.PPPP\./, SCORE.OPEN_FOUR],
+  [/PPPP\./, SCORE.FOUR],
+  [/\.PPPP/, SCORE.FOUR],
+  [/PPP\.P/, SCORE.BROKEN_FOUR],
+  [/P\.PPP/, SCORE.BROKEN_FOUR],
+  [/PP\.PP/, SCORE.BROKEN_FOUR],
+  [/\.PPP\./, SCORE.OPEN_THREE],
+  [/\.PP\.P\./, SCORE.BROKEN_THREE],
+  [/\.P\.PP\./, SCORE.BROKEN_THREE],
+  [/PPP\./, SCORE.CLOSED_THREE],
+  [/\.PPP#/, SCORE.CLOSED_THREE],
+  [/\.PP\./, SCORE.OPEN_TWO],
+  [/PP\./, SCORE.CLOSED_TWO],
+  [/\.PP#/, SCORE.CLOSED_TWO],
+  [/\.P\./, SCORE.ONE]
+];
+
+function linePatternScore(s) {
+  let best = 0;
+  for (const [re, score] of PATTERN_TABLE) {
+    if (re.test(s)) best = Math.max(best, score);
+  }
+  return best;
+}
+
+function scorePlacedMove(r, c, p) {
+  let total = 0;
+  for (const [dr,dc] of DIRS) total += linePatternScore(lineString(r,c,dr,dc,p));
+  return total;
+}
+
+function directionalPatternStats(r, c, p) {
+  const out = {
+    five: 0,
+    openFour: 0,
+    four: 0,
+    brokenFour: 0,
+    openThree: 0,
+    brokenThree: 0,
+    openTwo: 0,
+    completionPoints: new Set(),
+    score: 0
+  };
+
+  for (const [dr,dc] of DIRS) {
+    let s = lineString(r,c,dr,dc,p);
+    if (s.includes("PPPPP")) out.five++;
+    if (/\.PPPP\./.test(s)) out.openFour++;
+    if (/(?:PPPP\.|\.PPPP)/.test(s)) out.four++;
+    if (/(?:PP\.PP|P\.PPP|PPP\.P)/.test(s)) out.brokenFour++;
+    if (/\.PPP\./.test(s)) out.openThree++;
+    if (/(?:\.PP\.P\.|\.P\.PP\.)/.test(s)) out.brokenThree++;
+    if (/\.PP\./.test(s)) out.openTwo++;
+    out.score += linePatternScore(s);
+
+    // Exact completion points for this direction.
+    for (let k = -4; k <= 4; k++) {
+      if (!k) continue;
+      const rr = r + dr*k, cc = c + dc*k;
+      if (!inBounds(rr,cc) || board[rr][cc] !== "") continue;
+      board[rr][cc] = p;
+      if (checkWin(rr,cc,p)) out.completionPoints.add(rr + "," + cc);
+      board[rr][cc] = "";
+    }
+  }
+  return out;
+}
+
+function evaluateBoard(p) {
+  const q = opponent(p);
+  let score = 0;
+
+  // Evaluate each maximal line once. This avoids the old "first pattern match"
+  // behaviour and captures multiple independent threats on the same line.
+  const evalLine = cells => {
+    const sP = lineValue(cells, p);
+    const sQ = lineValue(cells, q);
+    return sP - sQ * 1.08;
+  };
+
+  for (let r = 0; r < SIZE; r++) {
+    const row = [];
+    for (let c = 0; c < SIZE; c++) row.push(board[r][c]);
+    score += evalLine(row);
+  }
+  for (let c = 0; c < SIZE; c++) {
+    const col = [];
+    for (let r = 0; r < SIZE; r++) col.push(board[r][c]);
+    score += evalLine(col);
+  }
+  for (let start = -SIZE + 1; start < SIZE; start++) {
+    const d1 = [];
+    for (let r = 0, c = start; r < SIZE && c < SIZE; r++, c++) {
+      if (c >= 0) d1.push(board[r][c]);
+    }
+    if (d1.length >= 2) score += evalLine(d1);
+
+    const d2 = [];
+    for (let r = 0, c = SIZE - 1 - start; r < SIZE && c >= 0; r++, c--) {
+      if (c < SIZE) d2.push(board[r][c]);
+    }
+    if (d2.length >= 2) score += evalLine(d2);
+  }
+
+  // Positional influence — deliberately small compared with tactical scores.
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] === p) score += centerBonus(r,c);
+      else if (board[r][c] === q) score -= centerBonus(r,c) * 0.92;
+    }
+  }
+
+  return score;
+}
+
+function lineValue(cells, p) {
+  const q = opponent(p);
+  const n = cells.length;
+  let score = 0;
+  for (let i = 0; i < n; i++) {
+    if (cells[i] !== p) continue;
+    let j = i;
+    while (j < n && cells[j] === p) j++;
+    const len = j - i;
+    const leftOpen = i - 1 >= 0 && cells[i-1] === "";
+    const rightOpen = j < n && cells[j] === "";
+    const open = (leftOpen ? 1 : 0) + (rightOpen ? 1 : 0);
+    if (len >= 5) score += SCORE.FIVE;
+    else if (len === 4 && open === 2) score += SCORE.OPEN_FOUR;
+    else if (len === 4 && open === 1) score += SCORE.FOUR;
+    else if (len === 3 && open === 2) score += SCORE.OPEN_THREE;
+    else if (len === 3 && open === 1) score += SCORE.CLOSED_THREE;
+    else if (len === 2 && open === 2) score += SCORE.OPEN_TWO;
+    else if (len === 2 && open === 1) score += SCORE.CLOSED_TWO;
+    else if (len === 1 && open === 2) score += SCORE.ONE;
+    i = j - 1;
+  }
+
+  // Broken threats. Count only windows that contain exactly this player and empties,
+  // without a second opponent piece inside the tactical window.
+  const S = cells.map(v => v === p ? "P" : v === q ? "Q" : ".").join("");
+  if (/P\.PPP|PPP\.P|PP\.PP/.test(S)) score += SCORE.BROKEN_FOUR * 0.7;
+  if (/\.PP\.P\.|\.P\.PP\./.test(S)) score += SCORE.BROKEN_THREE * 0.55;
+  return score;
+}
+
+// ============================================================
+// HASH / BOARD MUTATION
+// ============================================================
+function xorPiece(r, c, p) {
+  boardHash = (boardHash ^ zobrist[r][c][p]) >>> 0;
+}
+
+function makeMove(r, c, p) {
+  board[r][c] = p;
+  xorPiece(r,c,p);
+}
+
+function unmakeMove(r, c, p) {
+  board[r][c] = "";
+  xorPiece(r,c,p);
+}
+
+function boardKey() {
+  // The player-to-move is derivable in legal play, but include it explicitly
+  // for safety when tactical helper branches create temporary states.
+  return (boardHash ^ (sideToMove === ai ? 0x13579bdf : 0x2468ace0)) >>> 0;
+}
+
+// ============================================================
+// EXACT TACTICAL QUERIES
+// ============================================================
+function allEmptyNearby(radius = 2) {
+  const list = [];
+  const seen = new Set();
+  let any = false;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] !== "") { any = true; continue; }
+    }
+  }
+  if (!any) return [[Math.floor(SIZE/2), Math.floor(SIZE/2)]];
+
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] !== "" || !hasNeighbor(r,c,radius)) continue;
+      const key = r*SIZE+c;
+      if (!seen.has(key)) { seen.add(key); list.push([r,c]); }
+    }
+  }
+  return list;
+}
+
+function getWinningMoves(p, source = null) {
+  const cells = source || allEmptyNearby(2);
+  const wins = [];
+  for (const [r,c] of cells) {
+    if (board[r][c] !== "") continue;
+    makeMove(r,c,p);
+    const w = checkWin(r,c,p);
+    unmakeMove(r,c,p);
+    if (w) wins.push([r,c]);
+  }
+  return wins;
+}
+
+function moveThreatInfo(r, c, p, exact = false) {
+  if (board[r][c] !== "") return null;
+  makeMove(r,c,p);
+  const stats = directionalPatternStats(r,c,p);
+  const immediate = exact ? getWinningMoves(p) : [];
+  const winningSet = immediate.map(([rr,cc]) => rr*SIZE+cc);
+  const info = {
+    move: [r,c],
+    winNow: checkWin(r,c,p),
+    completionPoints: winningSet,
+    completionCount: winningSet.length,
+    openFour: stats.openFour > 0,
+    four: stats.four > 0,
+    brokenFour: stats.brokenFour > 0,
+    openThree: stats.openThree > 0,
+    brokenThree: stats.brokenThree > 0,
+    tacticalScore: stats.score + stats.openFour*SCORE.OPEN_FOUR + stats.brokenFour*SCORE.BROKEN_FOUR,
+    center: centerBonus(r,c)
+  };
+  unmakeMove(r,c,p);
+  return info;
+}
+
+
+// ============================================================
+// ATTACK CONTINUITY / COMPOUND THREAT ANALYSIS
+// ============================================================
+function analyzeAttackContinuity(player, move) {
+  const [r,c] = move;
+  if (!inBounds(r,c) || board[r][c] !== "") return null;
+  const enemy = opponent(player);
+  makeMove(r,c,player);
+
+  const stats = directionalPatternStats(r,c,player);
+  const immediateWins = getWinningMoves(player).length;
+  const enemyWins = getWinningMoves(enemy).length;
+  let nextForcingMoves = 0;
+  let nextDoubleThreats = 0;
+  let viableDirections = 0;
+  let openThree = stats.openThree;
+  let brokenThree = stats.brokenThree;
+  let openFour = stats.openFour;
+  let brokenFour = stats.brokenFour;
+
+  // Only inspect a compact tactical pool. This is deliberately shallow:
+  // it measures whether the move creates a continuation, not a full search.
+  const followups = allEmptyNearby(2);
+  const ranked = [];
+  for (const [fr,fc] of followups) {
+    if (board[fr][fc] !== "") continue;
+    makeMove(fr,fc,player);
+    const fs = directionalPatternStats(fr,fc,player);
+    const wins = fs.completionPoints.size;
+    const force = wins >= 1 || fs.openFour > 0 || fs.four > 0 || fs.brokenFour > 0 || fs.openThree >= 2;
+    if (force) {
+      nextForcingMoves++;
+      if (wins >= 2 || fs.openThree >= 2) nextDoubleThreats++;
+      ranked.push({wins, score:fs.score + fs.openFour*SCORE.OPEN_FOUR + fs.brokenFour*SCORE.BROKEN_FOUR});
+    }
+    unmakeMove(fr,fc,player);
+    if (ranked.length >= 12) break;
+  }
+
+  // Count genuinely independent directions from the seed move.
+  for (const [dr,dc] of DIRS) {
+    let open = 0, own = 1;
+    let rr=r+dr, cc=c+dc;
+    while (inBounds(rr,cc) && board[rr][cc]===player) { own++; rr+=dr; cc+=dc; }
+    if (inBounds(rr,cc) && board[rr][cc]==="") open++;
+    rr=r-dr; cc=c-dc;
+    while (inBounds(rr,cc) && board[rr][cc]===player) { own++; rr-=dr; cc-=dc; }
+    if (inBounds(rr,cc) && board[rr][cc]==="") open++;
+    if (open >= 2 || own >= 3) viableDirections++;
+  }
+
+  unmakeMove(r,c,player);
+
+  const continuationScore =
+    openFour * 1800000 +
+    brokenFour * 420000 +
+    immediateWins * 2500000 +
+    nextForcingMoves * 52000 +
+    nextDoubleThreats * 320000 +
+    openThree * 42000 +
+    brokenThree * 12000 +
+    viableDirections * 9000;
+
+  const compoundScore =
+    nextDoubleThreats * 600000 +
+    Math.max(0, nextForcingMoves - 1) * 70000 +
+    Math.max(0, viableDirections - 1) * 50000 +
+    (openThree >= 2 ? 350000 : 0) +
+    (openThree > 0 && brokenThree > 0 ? 110000 : 0);
+
+  return {
+    move:[r,c], openThree, brokenThree, openFour, brokenFour,
+    directions:viableDirections, immediateWins, enemyWins,
+    nextForcingMoves, nextDoubleThreats,
+    continuationScore, compoundScore,
+    initiativeScore: continuationScore + compoundScore - enemyWins * 900000
+  };
+}
+
+function findAttackContinuation(player, limit = 8) {
+  const base = allEmptyNearby(2);
+  const quick = [];
+  for (const [r,c] of base) {
+    if (board[r][c] !== "") continue;
+    const atk = scorePlacedMove(r,c,player);
+    if (atk < SCORE.OPEN_TWO) continue;
+    quick.push({move:[r,c], seed:atk});
+  }
+  quick.sort((a,b)=>b.seed-a.seed);
+  const out = [];
+  for (const item of quick.slice(0, Math.min(18, quick.length))) {
+    const info = analyzeAttackContinuity(player,item.move);
+    if (!info) continue;
+    if (info.nextForcingMoves > 0 || info.openThree > 0 || info.brokenThree > 0 || info.openFour > 0) {
+      out.push(info);
+    }
+  }
+  out.sort((a,b)=>(b.initiativeScore-a.initiativeScore) || (b.continuationScore-a.continuationScore));
+  return out.slice(0,limit);
+}
+
+function defensiveUrgency(player) {
+  const enemy = opponent(player);
+  const wins = getWinningMoves(enemy).length;
+  if (wins >= 2) return 1e16;
+  if (wins === 1) return 9e15;
+  const forces = forcingCandidates(enemy, Math.min(10, tacticalCandidateLimit));
+  let urgency = 0;
+  for (const x of forces) {
+    if (x.kind === "DOUBLE_THREAT") urgency = Math.max(urgency, 8e15);
+    else if (x.kind === "OPEN_FOUR") urgency = Math.max(urgency, 7e15);
+    else if (x.kind === "FOUR") urgency = Math.max(urgency, 6e15);
+    else if (x.kind === "DOUBLE_THREE") urgency = Math.max(urgency, 4e15);
+    else if (x.kind === "THREE") urgency = Math.max(urgency, 1.2e15);
+  }
+  return urgency;
+}
+
+function forcingCandidates(p, limit = tacticalCandidateLimit) {
+  const cells = allEmptyNearby(2);
+  const result = [];
+
+  for (const [r,c] of cells) {
+    if (aborted) break;
+    if (board[r][c] !== "") continue;
+    makeMove(r,c,p);
+    if (checkWin(r,c,p)) {
+      result.push({move:[r,c], kind:"WIN_NOW", rank:1e16, completionCount:99});
+      unmakeMove(r,c,p);
+      continue;
+    }
+    const stats = directionalPatternStats(r,c,p);
+    const completionCount = stats.completionPoints.size;
+    let kind = null;
+    let rank = 0;
+    if (completionCount >= 2) {
+      kind = "DOUBLE_THREAT";
+      rank = 8e15 + completionCount*1e9;
+    } else if (stats.openFour > 0) {
+      kind = "OPEN_FOUR";
+      rank = 7e15;
+    } else if (stats.four > 0 || stats.brokenFour > 0 || completionCount === 1) {
+      kind = "FOUR";
+      rank = 6e15 + stats.score;
+    } else if (stats.openThree >= 2) {
+      kind = "DOUBLE_THREE";
+      rank = 4e15 + stats.score;
+    } else if (stats.openThree > 0 || stats.brokenThree > 0) {
+      kind = "THREE";
+      rank = 2e15 + stats.score;
+    }
+    if (kind) result.push({move:[r,c], kind, rank, completionCount, tacticalScore:stats.score, center:centerBonus(r,c)});
+    unmakeMove(r,c,p);
+  }
+
+  result.sort((a,b) => b.rank - a.rank || b.center - a.center);
+  return result.slice(0,limit);
+}
+
+function mustBlockMoves(p) {
+  return getWinningMoves(p);
+}
+
+function findDoubleThreat(player) {
+  const fc = forcingCandidates(player, tacticalCandidateLimit);
+  for (const item of fc) {
+    if (item.completionCount >= 2) return item.move;
+  }
+  return null;
+}
+
+function findOpenFour(player) {
+  const fc = forcingCandidates(player, tacticalCandidateLimit);
+  for (const item of fc) {
+    if (item.kind === "OPEN_FOUR" || item.completionCount >= 2) return item.move;
+  }
+  return null;
+}
+
+// ============================================================
+// VCF / VCT THREAT SEARCH
+// ============================================================
+function tacticalBlocksFor(p) {
+  const wins = getWinningMoves(p);
+  return wins;
+}
+
+function forcingRepliesFor(p) {
+  const items = forcingCandidates(p, tacticalCandidateLimit);
+  return items.filter(x => x.kind !== "THREE" || x.completionCount > 0);
+}
+
+function vcfSearch(player, defender, depth, deadline) {
+  if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
+  if (depth <= 0) return {status:"UNKNOWN"};
+
+  const playerWins = getWinningMoves(player);
+  if (playerWins.length) return {status:"WIN", line:[playerWins[0]]};
+
+  const defenderWins = getWinningMoves(defender);
+  if (defenderWins.length) return {status:"LOSS"};
+
+  const forcing = forcingCandidates(player, Math.min(14, tacticalCandidateLimit));
+  if (!forcing.length) return {status:"LOSS"};
+
+  for (const item of forcing) {
+    if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
+    const [r,c] = item.move;
+    makeMove(r,c,player);
+
+    if (checkWin(r,c,player)) {
+      unmakeMove(r,c,player);
+      return {status:"WIN", line:[[r,c]], reason:"WIN_NOW"};
+    }
+
+    const wins = getWinningMoves(player);
+    const oppWins = getWinningMoves(defender);
+    if (oppWins.length) {
+      unmakeMove(r,c,player);
+      continue;
+    }
+
+    // A double threat is already decisive in free-style 5-in-a-row.
+    if (wins.length >= 2) {
+      unmakeMove(r,c,player);
+      return {status:"WIN", line:[[r,c]], reason:"DOUBLE_THREAT"};
+    }
+
+    // A single winning point forces that exact defense.
+    if (wins.length === 1) {
+      const [br,bc] = wins[0];
+      makeMove(br,bc,defender);
+      const rest = vcfSearch(player, defender, depth - 2, deadline);
+      unmakeMove(br,bc,defender);
+      unmakeMove(r,c,player);
+      if (rest.status === "WIN") return {status:"WIN", line:[[r,c],[br,bc], ...(rest.line || [])], reason:item.kind};
+      if (rest.status === "UNKNOWN") return rest;
+      continue;
+    }
+
+    unmakeMove(r,c,player);
+  }
+
+  return {status:"LOSS"};
+}
+
+function vctSearch(player, defender, depth, deadline) {
+  if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
+  if (depth <= 0) return {status:"UNKNOWN"};
+
+  const wins = getWinningMoves(player);
+  if (wins.length) return {status:"WIN", line:[wins[0]]};
+
+  const enemyWins = getWinningMoves(defender);
+  if (enemyWins.length) return {status:"LOSS"};
+
+  const candidates = forcingCandidates(player, Math.min(18, tacticalCandidateLimit));
+  if (!candidates.length) return {status:"LOSS"};
+
+  for (const item of candidates) {
+    if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
+    const [r,c] = item.move;
+    makeMove(r,c,player);
+    const enemyImmediate = getWinningMoves(defender);
+    if (enemyImmediate.length) {
+      unmakeMove(r,c,player);
+      continue;
+    }
+    if (checkWin(r,c,player)) {
+      unmakeMove(r,c,player);
+      return {status:"WIN", line:[[r,c]], reason:"WIN_NOW"};
+    }
+
+    const myWins = getWinningMoves(player);
+    if (myWins.length >= 2) {
+      unmakeMove(r,c,player);
+      return {status:"WIN", line:[[r,c]], reason:"DOUBLE_THREAT"};
+    }
+
+    if (myWins.length === 1) {
+      const [br,bc] = myWins[0];
+      makeMove(br,bc,defender);
+      const rest = vctSearch(player, defender, depth - 2, deadline);
+      unmakeMove(br,bc,defender);
+      unmakeMove(r,c,player);
+      if (rest.status === "WIN") return {status:"WIN", line:[[r,c],[br,bc], ...(rest.line||[])], reason:item.kind};
+      if (rest.status === "UNKNOWN") return rest;
+      continue;
+    }
+
+    // Expand only strong multi-threat moves in VCT.
+    const nextForce = forcingCandidates(player, Math.min(10, tacticalCandidateLimit));
+    unmakeMove(r,c,player);
+    if (nextForce.length && depth >= 3) {
+      const rest = vctSearch(player, defender, depth - 2, deadline);
+      if (rest.status === "WIN") return rest;
+      if (rest.status === "UNKNOWN") return rest;
+    }
+  }
+  return {status:"LOSS"};
+}
+
+// ============================================================
+// GENERAL CANDIDATE ORDERING
+// ============================================================
+function candidateList(limit, ply, root = false) {
+  const base = allEmptyNearby(2);
+  const tt = TT.get(boardKey());
+  const kd = killers[Math.min(ply, MAX_PLY)] || [null,null];
+  const tacticalSet = new Map();
+
+  // Exact wins/blocks are always injected.
+  for (const [r,c] of getWinningMoves(ai)) {
+    tacticalSet.set(r*SIZE+c, {move:[r,c], priority:1e16, reason:"WIN_NOW"});
+  }
+  for (const [r,c] of getWinningMoves(human)) {
+    const key = r*SIZE+c;
+    const old = tacticalSet.get(key);
+    const entry = {move:[r,c], priority:9e15, reason:"BLOCK_WIN"};
+    if (!old || entry.priority > old.priority) tacticalSet.set(key, entry);
+  }
+
+  // Root gets the full forcing scan. Deeper nodes only inspect a small
+  // high-tactical subset so Alpha-Beta spends most of its budget on search.
+  const scoredBase = [];
+  for (const [r,c] of base) {
+    if (board[r][c] !== "") continue;
+    const atk = scorePlacedMove(r,c,ai);
+    const def = scorePlacedMove(r,c,human);
+    let continuity = null;
+    if (root || atk >= SCORE.OPEN_TWO || def >= SCORE.OPEN_THREE) {
+      continuity = analyzeAttackContinuity(ai,[r,c]);
+    }
+    const attackCont = continuity ? continuity.continuationScore + continuity.compoundScore : 0;
+    const attackPriority = atk * 1.18 + attackCont;
+    const defensePriority = def * 1.08;
+    let priority = Math.max(attackPriority, defensePriority) + centerBonus(r,c) * 140;
+    if (continuity && continuity.enemyWins === 0 && continuity.nextForcingMoves >= 2) priority += 280000;
+    if (continuity && continuity.nextDoubleThreats > 0) priority += 750000;
+    if (tt && tt.bestMove && tt.bestMove[0] === r && tt.bestMove[1] === c) priority += 5e14;
+    if (kd[0] && kd[0][0] === r && kd[0][1] === c) priority += 2e9;
+    if (kd[1] && kd[1][0] === r && kd[1][1] === c) priority += 1e9;
+    priority += history.get(r*SIZE+c) || 0;
+    scoredBase.push({move:[r,c], priority, atk, def});
+  }
+  scoredBase.sort((a,b) => b.priority-a.priority);
+
+  if (root) {
+    const forceAI = forcingCandidates(ai, Math.min(tacticalCandidateLimit, 18));
+    const forceHuman = forcingCandidates(human, Math.min(tacticalCandidateLimit, 18));
+    for (const item of forceAI) {
+      const key = item.move[0]*SIZE+item.move[1];
+      const old = tacticalSet.get(key);
+      if (!old || item.rank > old.priority) {
+        tacticalSet.set(key,{move:item.move,priority:item.rank,reason:item.kind});
+      }
+    }
+    for (const item of forceHuman) {
+      const key = item.move[0]*SIZE+item.move[1];
+      // Ordinary THREE is not an automatic block. Only hard forcing threats
+      // retain a near-tactical priority; search can compare the rest.
+      const defensiveFactor = item.kind === "THREE" ? 0.48 : 0.96;
+      const priority = item.rank * defensiveFactor;
+      const old = tacticalSet.get(key);
+      if (!old || priority > old.priority) {
+        tacticalSet.set(key,{move:item.move,priority,reason:"DEFENSE_"+item.kind});
+      }
+    }
+
+    // Explicitly inject moves that build a multi-step attack. These moves may
+    // be quieter than a block but create multiple forcing continuations.
+    const continuations = findAttackContinuation(ai, 10);
+    for (const info of continuations) {
+      const key = info.move[0]*SIZE+info.move[1];
+      let priority = 3.2e15 + info.initiativeScore;
+      if (info.nextDoubleThreats > 0) priority = 7.6e15 + info.compoundScore;
+      else if (info.nextForcingMoves >= 2) priority = 5.4e15 + info.continuationScore;
+      const old = tacticalSet.get(key);
+      if (!old || priority > old.priority) {
+        tacticalSet.set(key,{move:info.move,priority,reason:info.nextDoubleThreats>0?"ATTACK_COMPOUND":"ATTACK_CONTINUATION",continuity:info});
+      }
+    }
+  } else {
+    // Look for forcing moves only among the most tactical candidates.
+    const tacticalPoolAI = scoredBase.filter(x => x.atk >= SCORE.BROKEN_THREE).slice(0, 8);
+    const tacticalPoolHuman = scoredBase.filter(x => x.def >= SCORE.BROKEN_THREE).slice(0, 8);
+    for (const pool of [tacticalPoolAI, tacticalPoolHuman]) {
+      const p = pool === tacticalPoolAI ? ai : human;
+      for (const seed of pool) {
+        const [r,c] = seed.move;
+        const info = moveThreatInfo(r,c,p,true);
+        if (!info) continue;
+        let rank = info.completionCount >= 2 ? 8e15 :
+                   info.openFour ? 7e15 :
+                   info.four || info.brokenFour || info.completionCount===1 ? 6e15 :
+                   info.openThree ? 2e15 : 0;
+        if (!rank) continue;
+        const key = r*SIZE+c;
+        const old = tacticalSet.get(key);
+        const reason = p===ai ? (info.completionCount>=2 ? "DOUBLE_THREAT" : "FORCING") : (info.completionCount>=2 ? "DEFENSE_DOUBLE" : "DEFENSE_FORCING");
+        const entry = {move:[r,c],priority:rank,reason};
+        if (!old || rank > old.priority) tacticalSet.set(key,entry);
+      }
+    }
+  }
+
+  const out = Array.from(tacticalSet.values());
+  for (const item of scoredBase) {
+    const key = item.move[0]*SIZE+item.move[1];
+    if (!tacticalSet.has(key)) out.push({...item,reason:"POSITIONAL"});
+  }
+  out.sort((a,b)=>b.priority-a.priority);
+  return out.slice(0, Math.max(limit,tacticalSet.size));
+}
+
+// ============================================================
+// SEARCH
+// ============================================================
+function timeExpired() {
+  if (Date.now() >= hardDeadline) {
+    aborted = true;
+    return true;
+  }
+  return false;
+}
+
+function storeTT(hash, entry) {
+  if (TT.size >= TT_MAX) {
+    // Cheap generation-aware trim. Delete a bounded prefix instead of a full scan.
+    let removed = 0;
+    for (const [k,v] of TT) {
+      if (v.generation !== ttGeneration || removed < 2000) {
+        TT.delete(k);
+        removed++;
+        if (removed >= 2000) break;
+      }
+    }
+  }
+  TT.set(hash, {...entry, generation:ttGeneration});
+}
+
+function quiescence(alpha, beta, maximizing, ply, qdepth) {
+  if (timeExpired()) return {score:0, complete:false};
+  nodes++;
+
+  const p = maximizing ? ai : human;
+  const q = opponent(p);
+  const pWins = getWinningMoves(p);
+  if (pWins.length) return {score:MATE - ply, complete:true};
+  const qWins = getWinningMoves(q);
+  if (qWins.length) return {score:-MATE + ply, complete:true};
+
+  const standPat = evaluateBoard(ai);
+  if (qdepth <= 0 || Date.now() >= softDeadline) {
+    return {score:standPat, complete:true};
+  }
+
+  if (maximizing) {
+    if (standPat >= beta) return {score:standPat, complete:true};
+    if (standPat > alpha) alpha = standPat;
+  } else {
+    if (standPat <= alpha) return {score:standPat, complete:true};
+    if (standPat < beta) beta = standPat;
+  }
+
+  const tactical = forcingCandidates(p, Math.min(10, tacticalCandidateLimit));
+  if (!tactical.length) return {score:standPat, complete:true};
+
+  for (const item of tactical) {
+    const [r,c] = item.move;
+    makeMove(r,c,p);
+    const child = quiescence(alpha,beta,!maximizing,ply+1,qdepth-1);
+    unmakeMove(r,c,p);
+    if (!child.complete) return child;
+    if (maximizing) {
+      if (child.score >= beta) return {score:child.score,complete:true};
+      if (child.score > alpha) alpha = child.score;
+    } else {
+      if (child.score <= alpha) return {score:child.score,complete:true};
+      if (child.score < beta) beta = child.score;
+    }
+  }
+  return {score:maximizing ? alpha : beta, complete:true};
+}
+
+function minimax(depth, maximizing, alpha, beta, ply) {
+  if (timeExpired()) return {score:0, complete:false, move:null};
+  nodes++;
+
+  const current = maximizing ? ai : human;
+  const enemy = opponent(current);
+
+  // Immediate tactical proof before generic search.
+  const wins = getWinningMoves(current);
+  if (wins.length) return {score:maximizing ? MATE - ply : -MATE + ply, complete:true, move:wins[0]};
+  const enemyWins = getWinningMoves(enemy);
+  if (enemyWins.length) {
+    // If this side cannot block all, it is tactically lost.
+    if (wins.length === 0) return {score:maximizing ? -MATE + ply : MATE - ply, complete:true, move:enemyWins[0]};
+  }
+
+  if (depth <= 0) return quiescence(alpha,beta,maximizing,ply,4);
+
+  const hash = boardKey();
+  const tt = TT.get(hash);
+  if (tt && tt.depth >= depth && tt.flag !== FLAG_ABORTED) {
+    if (tt.flag === FLAG_EXACT) return {score:tt.score,complete:true,move:tt.bestMove};
+    if (tt.flag === FLAG_LOWER) alpha = Math.max(alpha,tt.score);
+    else if (tt.flag === FLAG_UPPER) beta = Math.min(beta,tt.score);
+    if (alpha >= beta) return {score:tt.score,complete:true,move:tt.bestMove};
+  }
+
+  const stand = evaluateBoard(ai);
+  if (depth === 1) {
+    storeTT(hash,{depth,score:stand,flag:FLAG_EXACT,bestMove:null});
+    return {score:stand,complete:true,move:null};
+  }
+
+  const candidates = candidateList(candidateLimit,ply);
+  if (!candidates.length) return {score:stand,complete:true,move:null};
+
+  let bestScore = maximizing ? -INF : INF;
+  let bestMove = null;
+  let completedAll = true;
+  const origAlpha = alpha;
+  const origBeta = beta;
+
+  for (const item of candidates) {
+    if (timeExpired()) { completedAll = false; break; }
+    const [r,c] = item.move;
+    if (board[r][c] !== "") continue;
+    makeMove(r,c,current);
+    sideToMove = opponent(current);
+    const child = minimax(depth-1,!maximizing,alpha,beta,ply+1);
+    sideToMove = current;
+    unmakeMove(r,c,current);
+
+    if (!child.complete) { completedAll = false; break; }
+
+    if (maximizing) {
+      if (child.score > bestScore) { bestScore = child.score; bestMove = [r,c]; }
+      alpha = Math.max(alpha,child.score);
+      if (alpha >= beta) {
+        const key = r*SIZE+c;
+        const k = killers[ply] || [null,null];
+        if (!k[0] || k[0][0] !== r || k[0][1] !== c) { k[1]=k[0]; k[0]=[r,c]; }
+        history.set(key,(history.get(key)||0) + depth*depth*100);
+        break;
+      }
+    } else {
+      if (child.score < bestScore) { bestScore = child.score; bestMove = [r,c]; }
+      beta = Math.min(beta,child.score);
+      if (alpha >= beta) {
+        const key = r*SIZE+c;
+        const k = killers[ply] || [null,null];
+        if (!k[0] || k[0][0] !== r || k[0][1] !== c) { k[1]=k[0]; k[0]=[r,c]; }
+        history.set(key,(history.get(key)||0) + depth*depth*100);
+        break;
+      }
+    }
+  }
+
+  if (!completedAll || bestMove === null) {
+    return {score:bestScore === (maximizing ? -INF : INF) ? stand : bestScore, complete:false, move:bestMove};
+  }
+
+  let flag = FLAG_EXACT;
+  if (bestScore <= origAlpha) flag = FLAG_UPPER;
+  else if (bestScore >= origBeta) flag = FLAG_LOWER;
+  storeTT(hash,{depth,score:bestScore,flag,bestMove});
+  return {score:bestScore,complete:true,move:bestMove};
+}
+
+function setDynamicParams() {
+  const occ = occupiedCount();
+  const density = occ / (SIZE*SIZE);
+  if (occ <= 6) {
+    softDeadline = startTime + 600;
+    hardDeadline = startTime + 1000;
+    maxDepth = 8;
+    candidateLimit = 14;
+  } else if (occ <= 28) {
+    softDeadline = startTime + 950;
+    hardDeadline = startTime + 1500;
+    maxDepth = 10;
+    candidateLimit = 16;
+  } else if (occ <= 70) {
+    softDeadline = startTime + 1200;
+    hardDeadline = startTime + 1850;
+    maxDepth = 11;
+    candidateLimit = 18;
+  } else {
+    softDeadline = startTime + 1350;
+    hardDeadline = startTime + 2050;
+    maxDepth = 12;
+    candidateLimit = 18;
+  }
+  if (density > 0.45) candidateLimit = 16;
+}
+
+function iterativeDeepening() {
+  let completedBest = rootBestMove;
+  let completedScore = rootBestScore;
+  let completedPV = rootPV;
+
+  for (let depth = 1; depth <= maxDepth; depth++) {
+    if (Date.now() >= hardDeadline) break;
+    currentRootDepth = depth;
+    let localBest = null;
+    let localScore = -INF;
+    let allComplete = true;
+    let alpha = -INF;
+    const beta = INF;
+
+    const candidates = candidateList(candidateLimit,0,true);
+    if (!candidates.length) break;
+
+    // Root move ordering: use previous completed best first.
+    if (completedBest) {
+      const idx = candidates.findIndex(x => x.move[0]===completedBest[0] && x.move[1]===completedBest[1]);
+      if (idx > 0) candidates.unshift(...candidates.splice(idx,1));
+    }
+
+    for (const item of candidates) {
+      if (timeExpired()) { allComplete=false; break; }
+      const [r,c] = item.move;
+      if (board[r][c] !== "") continue;
+      makeMove(r,c,ai);
+      sideToMove = human;
+      const res = minimax(depth-1,false,alpha,beta,1);
+      sideToMove = ai;
+      unmakeMove(r,c,ai);
+      if (!res.complete) { allComplete=false; break; }
+      if (res.score > localScore) {
+        localScore = res.score;
+        localBest = [r,c];
+      }
+      alpha = Math.max(alpha,localScore);
+    }
+
+    if (!allComplete || !localBest) break;
+    completedBest = localBest;
+    completedScore = localScore;
+    completedPV = [localBest];
+    bestCompletedDepth = depth;
+
+    if (completedScore >= MATE - 1000) break;
+  }
+
+  rootBestMove = completedBest;
+  rootBestScore = completedScore;
+  rootPV = completedPV;
+  return completedBest;
+}
+
+// ============================================================
+// ROOT / ENTRY
+// ============================================================
+function chooseOpeningMove() {
+  if (occupiedCount() === 0) return [Math.floor(SIZE/2), Math.floor(SIZE/2)];
+
+  // Strong, deterministic responses near the center when the position is quiet.
+  const candidates = allEmptyNearby(2);
+  let best = null;
+  let bestScore = -INF;
+  for (const [r,c] of candidates) {
+    let score = centerBonus(r,c) * 1000;
+    for (const [dr,dc] of DIRS) {
+      const nr=r+dr,nc=c+dc;
+      if (inBounds(nr,nc) && board[nr][nc]===human) score += 250;
+    }
+    if (score > bestScore) { bestScore=score; best=[r,c]; }
+  }
+  return best;
+}
+
+function getBestMove() {
+  const occ = occupiedCount();
+  if (occ === 0) {
+    lastReason = "OPENING";
+    return [Math.floor(SIZE/2),Math.floor(SIZE/2)];
+  }
+
+  const aiWins = getWinningMoves(ai);
+  if (aiWins.length) { lastReason="WIN_NOW"; return aiWins[0]; }
+
+  const humanWins = getWinningMoves(human);
+  if (humanWins.length) {
+    // If multiple winning points exist, no single defense can stop them all.
+    // Still choose the most forcing counterattack if available; otherwise block the strongest point.
+    if (humanWins.length >= 2) {
+      const counter = forcingCandidates(ai,8).find(x => x.completionCount >= 1);
+      if (counter) { lastReason="COUNTER_THREAT"; return counter.move; }
+    }
+    lastReason="BLOCK_WIN";
+    return humanWins[0];
+  }
+
+  // Short, bounded VCF before general search.
+  const tacticalDeadline = Math.min(hardDeadline, Date.now() + 420);
+  const vcf = vcfSearch(ai,human,12,tacticalDeadline);
+  if (vcf.status === "WIN" && vcf.line && vcf.line.length) {
+    lastReason = vcf.reason || "VCF";
+    return vcf.line[0];
+  }
+  if (aborted) aborted = false;
+
+  // VCT: slightly wider, still forcing-only.
+  const vctDeadline = Math.min(hardDeadline, Date.now() + 320);
+  const vct = vctSearch(ai,human,8,vctDeadline);
+  if (vct.status === "WIN" && vct.line && vct.line.length) {
+    lastReason = vct.reason || "VCT";
+    return vct.line[0];
+  }
+  if (aborted) aborted = false;
+
+  const doubleAI = findDoubleThreat(ai);
+  if (doubleAI) { lastReason="DOUBLE_THREAT"; return doubleAI; }
+
+  // Verified hard defensive threats remain mandatory. Ordinary Open Three is
+  // deliberately left to search so the AI can keep its initiative.
+  const openFourHuman = findOpenFour(human);
+  if (openFourHuman) {
+    const urgency = defensiveUrgency(ai);
+    if (urgency >= 6e15) { lastReason="BLOCK_OPEN_FOUR"; return openFourHuman; }
+  }
+
+  // A genuine opponent double threat is still a hard defensive priority.
+
+  // Before positional search, look for a quiet move that creates a compound
+  // attack. This is the key difference from the old defense-first behavior.
+  const attackContinuations = findAttackContinuation(ai, 6);
+  const bestAttack = attackContinuations[0];
+  if (bestAttack && bestAttack.enemyWins === 0 && (bestAttack.nextDoubleThreats > 0 || bestAttack.nextForcingMoves >= 2)) {
+    lastReason = bestAttack.nextDoubleThreats > 0 ? "ATTACK_COMPOUND" : "ATTACK_CONTINUATION";
+    return bestAttack.move;
+  }
+
+  const doubleHuman = findDoubleThreat(human);
+  if (doubleHuman) { lastReason="BLOCK_DOUBLE_THREAT"; return doubleHuman; }
+
+  const opening = occ <= 3 ? chooseOpeningMove() : null;
+  if (opening) {
+    // Let the general search override this when enough time remains.
+  }
+
+  rootBestMove = opening || candidateList(1,0,true)[0]?.move || [CENTER|0,CENTER|0];
+  rootBestScore = -INF;
+  rootPV = [rootBestMove];
+  bestCompletedDepth = 0;
+
+  const best = iterativeDeepening();
+  if (best) {
+    if (lastReason === "SEARCH") lastReason = "SEARCH";
+    return best;
+  }
+  lastReason = "FALLBACK";
+  return rootBestMove || [CENTER|0,CENTER|0];
+}
+
+function initFromData(data) {
+  board = data.board.map(row => row.slice());
+  human = data.human || "X";
+  ai = data.ai || "O";
+  sideToMove = ai;
+  boardHash = 0;
+  for (let r=0;r<SIZE;r++) {
+    for (let c=0;c<SIZE;c++) {
+      const p=board[r][c];
+      if (p === "X" || p === "O") boardHash = (boardHash ^ zobrist[r][c][p]) >>> 0;
+    }
+  }
+}
+
+self.onmessage = function(e) {
+  const data = e.data;
+  if (!data || data.type !== "think") return;
+
+  const requestId = data.requestId ?? null;
+  initFromData(data);
+  nodes = 0;
+  aborted = false;
+  rootBestMove = null;
+  rootBestScore = -INF;
+  rootPV = [];
+  bestCompletedDepth = 0;
+  lastReason = "SEARCH";
+  ttGeneration++;
+  TT.clear();
+  history.clear();
+  for (const k of killers) { k[0]=null; k[1]=null; }
+
+  startTime = Date.now();
+  setDynamicParams();
+
+  let move;
+  try {
+    move = getBestMove();
+  } catch (err) {
+    move = rootBestMove || [Math.floor(SIZE/2),Math.floor(SIZE/2)];
+    lastReason = "FALLBACK_ERROR";
+    if (DEBUG_AI) console.error(err);
+  }
+
+  const elapsed = Date.now() - startTime;
+  if (DEBUG_AI) {
+    console.log({move,depth:bestCompletedDepth,score:rootBestScore,nodes,elapsed,reason:lastReason});
+  }
+
+  self.postMessage({
+    type:"move",
+    move,
+    requestId,
+    depth:bestCompletedDepth,
+    score:rootBestScore,
+    elapsed,
+    nodes,
+    reason:lastReason
+  });
+};
+
+</script>
+
+<script>
+// ==================== THAM SỐ ====================
+const SIZE = 15;
+const CANDIDATE_LIMIT = 30; // chỉ dùng cho bình luận / dự phòng, engine chính nằm trong Worker
+
+let board = [];
+let cells = [];
+let gameOver = false;
+let lastCell = null;
+let human = "X", ai = "O", currentTurn = "X";
+let aiThinking = false, pvpMode = false;
+let moveHistory = [];
+let canUndo = false, undoUsed = false, undoLeft = 3, maxUndo = 3;
+let playerStartTime = 0;
+let drawMilestones = new Set();
+
+const boardDiv = document.getElementById("board");
+const statusOverlay = document.getElementById("status");
+const statusTop = document.getElementById("statusTop");
+const overlay = document.getElementById("overlay");
+const commentaryDiv = document.getElementById("commentary");
+const resetBtn = document.getElementById("btnReset");
+const btnUndo = document.getElementById("btnUndo");
+const diceContainer = document.getElementById("dice-container");
+const diceEl = document.getElementById("dice");
+const drawPopup = document.getElementById("draw-popup");
+const btnDrawAccept = document.getElementById("btn-draw-accept");
+const btnDrawReject = document.getElementById("btn-draw-reject");
+
+// ==================== ĐÁNH GIÁ (chỉ dùng để hiển thị thanh điểm + bình luận, KHÔNG dùng để quyết định nước đi) ====================
+const WEIGHTS = {
+  FIVE: 1000000, OPEN_FOUR: 100000, FOUR_ONE: 10000,
+  OPEN_THREE: 10000, THREE_ONE: 1000, OPEN_TWO: 500,
+  TWO_ONE: 100, OPEN_ONE: 20
+};
+
+function getSequenceScore(len, openEnds) {
+  if (len >= 5) return WEIGHTS.FIVE;
+  if (len === 4 && openEnds === 2) return WEIGHTS.OPEN_FOUR;
+  if (len === 4 && openEnds === 1) return WEIGHTS.FOUR_ONE;
+  if (len === 3 && openEnds === 2) return WEIGHTS.OPEN_THREE;
+  if (len === 3 && openEnds === 1) return WEIGHTS.THREE_ONE;
+  if (len === 2 && openEnds === 2) return WEIGHTS.OPEN_TWO;
+  if (len === 2 && openEnds === 1) return WEIGHTS.TWO_ONE;
+  if (len === 1 && openEnds === 2) return WEIGHTS.OPEN_ONE;
+  return 0;
+}
+
+function scoreCell(r, c, player) {
+  if (board[r][c] !== "") return 0;
+  board[r][c] = player;
+  let s = scoreDirection(r, c, 1, 0, player) + scoreDirection(r, c, 0, 1, player) +
+          scoreDirection(r, c, 1, 1, player) + scoreDirection(r, c, 1, -1, player);
+  board[r][c] = "";
+  return s;
+}
+
+function evaluateCell(r, c, player) {
+  if (board[r][c] !== player) return 0;
+  return scoreDirection(r, c, 1, 0, player) + scoreDirection(r, c, 0, 1, player) +
+         scoreDirection(r, c, 1, 1, player) + scoreDirection(r, c, 1, -1, player);
+}
+
+function scoreDirection(r, c, dr, dc, player) {
+  let count = 1, open = 0;
+  let i = r + dr, j = c + dc;
+  while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { count++; i += dr; j += dc; }
+  if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") open++;
+  i = r - dr; j = c - dc;
+  while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { count++; i -= dr; j -= dc; }
+  if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") open++;
+  return getSequenceScore(count, open);
+}
+
+// ==================== NƯỚC ỨNG VIÊN (dùng cho bình luận / dự phòng) ====================
+function hasNeighbor2(r, c) {
+  for (let dr = -2; dr <= 2; dr++) {
+    for (let dc = -2; dc <= 2; dc++) {
+      if (dr === 0 && dc === 0) continue;
+      const nr = r + dr, nc = c + dc;
+      if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] !== "") return true;
+    }
+  }
+  return false;
+}
+
+function getCandidateMoves() {
+  let moves = [];
+  const occupied = getOccupiedCount();
+
+  if (occupied < 6) {
+    const positions = [];
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] === human || board[r][c] === ai) positions.push([r, c]);
+      }
+    }
+    const candidateSet = new Set();
+    for (const [er, ec] of positions) {
+      for (let dr = -2; dr <= 2; dr++) {
+        for (let dc = -2; dc <= 2; dc++) {
+          const nr = er + dr, nc = ec + dc;
+          if (nr >= 0 && nr < SIZE && nc >= 0 && nc < SIZE && board[nr][nc] === "") {
+            candidateSet.add(`${nr},${nc}`);
+          }
+        }
+      }
+    }
+    moves = Array.from(candidateSet).map(s => s.split(',').map(Number));
+  } else {
+    for (let r = 0; r < SIZE; r++) {
+      for (let c = 0; c < SIZE; c++) {
+        if (board[r][c] !== "" || !hasNeighbor2(r, c)) continue;
+        moves.push([r, c]);
+      }
+    }
+  }
+
+  const scored = moves.map(([r, c]) => {
+    const atk = scoreCell(r, c, ai);
+    const def = scoreCell(r, c, human);
+    return { move: [r, c], score: Math.max(atk, def * 1.3) };
+  });
+  scored.sort((a, b) => b.score - a.score);
+  return scored.slice(0, CANDIDATE_LIMIT).map(item => item.move);
+}
+
+// ==================== CHIẾN THUẬT DÙNG CHO BÌNH LUẬN (không dùng để quyết định nước đi thật) ====================
+function isOpenFour(r, c, player) {
+  const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+  for (const [dr, dc] of dirs) {
+    let cnt = 1, openEnds = 0;
+    let i = r + dr, j = c + dc;
+    while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { cnt++; i += dr; j += dc; }
+    if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") openEnds++;
+    i = r - dr; j = c - dc;
+    while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { cnt++; i -= dr; j -= dc; }
+    if (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === "") openEnds++;
+    if (cnt === 4 && openEnds === 2) return true;
+  }
+  return false;
+}
+
+function findOpenFour(player) {
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] !== "") continue;
+      board[r][c] = player;
+      if (isOpenFour(r, c, player)) { board[r][c] = ""; return [r, c]; }
+      board[r][c] = "";
+    }
+  }
+  return null;
+}
+
+function countThreats(r, c, player) {
+  if (board[r][c] !== "") return 0;
+  board[r][c] = player;
+  let threats = 0;
+  const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+  for (const [dr, dc] of dirs) {
+    const val = scoreDirection(r, c, dr, dc, player);
+    if (val >= WEIGHTS.OPEN_THREE) threats++;
+  }
+  board[r][c] = "";
+  return threats;
+}
+
+function findDoubleThreat(player) {
+  let best = null, bestScore = 0;
+  for (const [r, c] of getCandidateMoves()) {
+    if (board[r][c] !== "") continue;
+    const t = countThreats(r, c, player);
+    if (t >= 2 && t > bestScore) { bestScore = t; best = [r, c]; }
+  }
+  return best;
+}
+
+// ==================== KIỂM TRA THẮNG ====================
+function checkWin(r, c, player) {
+  return (
+    count(r, c, 1, 0, player) + count(r, c, -1, 0, player) >= 4 ||
+    count(r, c, 0, 1, player) + count(r, c, 0, -1, player) >= 4 ||
+    count(r, c, 1, 1, player) + count(r, c, -1, -1, player) >= 4 ||
+    count(r, c, 1, -1, player) + count(r, c, -1, 1, player) >= 4
+  );
+}
+
+function count(r, c, dr, dc, player) {
+  let i = r + dr, j = c + dc, cnt = 0;
+  while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { cnt++; i += dr; j += dc; }
+  return cnt;
+}
+
+// ==================== HỖ TRỢ ====================
+function getOccupiedCount() {
+  let cnt = 0;
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) if (board[r][c] !== "") cnt++;
+  return cnt;
+}
+
+function getEmptyCells() {
+  const arr = [];
+  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) if (board[r][c] === "") arr.push([r, c]);
+  return arr;
+}
+
+// ==================== AI ENGINE — CHẠY TRONG WEB WORKER ====================
+// Toàn bộ minimax / VCF / đánh giá thế trận nằm trong caro-ai-worker.js để:
+//  1) Không làm treo giao diện khi AI suy nghĩ.
+//  2) Cho phép "nghĩ" lâu hơn (sâu hơn) mà không ảnh hưởng trải nghiệm.
+let aiWorker = null;
+let aiRequestId = 0;
+
+let aiWorkerURL = null;
+
+function initWorker() {
+  try {
+    const sourceEl = document.getElementById('caro-ai-worker-source');
+    if (!sourceEl) throw new Error('Không tìm thấy mã AI Worker nội tuyến.');
+
+    const workerCode = sourceEl.textContent || '';
+    const blob = new Blob([workerCode], { type: 'application/javascript' });
+    aiWorkerURL = URL.createObjectURL(blob);
+    aiWorker = new Worker(aiWorkerURL);
+
+    aiWorker.onerror = function (err) {
+      console.error("Lỗi AI Worker, chuyển sang chế độ dự phòng:", err.message || err);
+      aiWorker = null;
+    };
+  } catch (e) {
+    console.error("Không thể tạo AI Worker nội tuyến, dùng chế độ dự phòng:", e);
+    aiWorker = null;
+  }
+}
+
+window.addEventListener('beforeunload', () => {
+  if (aiWorker) aiWorker.terminate();
+  if (aiWorkerURL) URL.revokeObjectURL(aiWorkerURL);
+});
+initWorker();
+
+// Chế độ dự phòng (chỉ dùng nếu trình duyệt không tạo được Worker) — vẫn biết chặn thắng/thua ngay.
+function getFallbackMove() {
+  for (const [r, c] of getEmptyCells()) {
+    if (!hasNeighbor2(r, c)) continue;
+    board[r][c] = ai;
+    const win = checkWin(r, c, ai);
+    board[r][c] = "";
+    if (win) return [r, c];
+  }
+  for (const [r, c] of getEmptyCells()) {
+    if (!hasNeighbor2(r, c)) continue;
+    board[r][c] = human;
+    const win = checkWin(r, c, human);
+    board[r][c] = "";
+    if (win) return [r, c];
+  }
+  let move = findOpenFour(ai); if (move) return move;
+  move = findOpenFour(human); if (move) return move;
+  move = findDoubleThreat(ai); if (move) return move;
+  const candidates = getCandidateMoves();
+  if (candidates.length > 0) return candidates[0];
+  const empty = getEmptyCells().filter(([r, c]) => hasNeighbor2(r, c));
+  return empty.length > 0 ? empty[0] : [Math.floor(SIZE / 2), Math.floor(SIZE / 2)];
+}
+
+function aiMove() {
+  if (gameOver || currentTurn !== ai || aiThinking) return;
+  aiThinking = true;
+  setStatus("ai-thinking");
+  boardDiv.classList.add("disabled");
+
+  aiRequestId++;
+  const myRequestId = aiRequestId;
+
+  if (!aiWorker) {
+    setTimeout(() => {
+      if (myRequestId !== aiRequestId) return;
+      const mv = getFallbackMove();
+      finishAiMove(mv[0], mv[1]);
+    }, 300);
+    return;
+  }
+
+  aiWorker.onmessage = function (e) {
+    if (myRequestId !== aiRequestId) return; // yêu cầu cũ đã bị huỷ (reset/hoàn tác), bỏ qua
+    if (e.data && e.data.type === "move" && e.data.move) {
+      finishAiMove(e.data.move[0], e.data.move[1]);
+    }
+  };
+
+  aiWorker.postMessage({ type: "think", board, human, ai, requestId: myRequestId });
+}
+
+function finishAiMove(r, c) {
+  if (gameOver || board[r][c] !== "") { aiThinking = false; boardDiv.classList.remove("disabled"); return; }
+  place(r, c, ai);
+  if (checkWin(r, c, ai)) {
+    highlightWin(r, c, ai);
+    statusTop.textContent = "🤖 AI.GiaBao thắng!"; statusTop.classList.add("win");
+    resetBtn.textContent = "Chơi lại"; launchConfetti(); gameOver = true; aiThinking = false; updateUndoButton();
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+  currentTurn = human;
+  setStatus("your-turn");
+  playerStartTime = Date.now();
+  aiThinking = false;
+  boardDiv.classList.remove("disabled");
+
+  const total = getOccupiedCount();
+  if ([100, 150, 175].includes(total) && !drawMilestones.has(total)) {
+    drawMilestones.add(total);
+    offerDraw();
+  }
+}
+
+// ==================== GIAO DIỆN ====================
+function createBoard() {
+  board = [];
+  cells = [];
+  boardDiv.innerHTML = "";
+  for (let r = 0; r < SIZE; r++) {
+    board[r] = [];
+    cells[r] = [];
+    for (let c = 0; c < SIZE; c++) {
+      board[r][c] = "";
+      const cell = document.createElement("div");
+      cell.className = "cell";
+      cell.onclick = () => playerMove(r, c);
+      boardDiv.appendChild(cell);
+      cells[r][c] = cell;
+    }
+  }
+  boardDiv.classList.remove("disabled");
+}
+
+function place(r, c, player) {
+  board[r][c] = player;
+  moveHistory.push([r, c, player]);
+  const cell = cells[r][c];
+  cell.textContent = player;
+  cell.classList.add(player);
+  if (lastCell) lastCell.classList.remove("last");
+  cell.classList.add("last");
+  lastCell = cell;
+  try { showComment(r, c, player); } catch (e) {}
+  updateScore();
+}
+
+function highlightWin(r, c, player) {
+  const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
+  for (const [dr, dc] of dirs) {
+    let line = [[r, c]];
+    let i = r + dr, j = c + dc;
+    while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { line.push([i, j]); i += dr; j += dc; }
+    i = r - dr; j = c - dc;
+    while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { line.push([i, j]); i -= dr; j -= dc; }
+    if (line.length >= 5) { line.forEach(([row, col]) => cells[row][col].classList.add("win-cell")); return; }
+  }
+}
+
+function playerMove(r, c) {
+  if (gameOver || board[r][c] !== "") return;
+  if (pvpMode) {
+    if (currentTurn !== "X" && currentTurn !== "O") return;
+    const player = currentTurn;
+    place(r, c, player);
+    canUndo = true; undoUsed = false; updateUndoButton();
+    if (checkWin(r, c, player)) {
+      highlightWin(r, c, player);
+      statusTop.textContent = `🎉 ${player} thắng!`; statusTop.classList.add("win");
+      resetBtn.textContent = "Ván mới"; launchConfetti(); gameOver = true; updateUndoButton();
+      boardDiv.classList.remove("disabled");
+      return;
+    }
+    currentTurn = player === "X" ? "O" : "X";
+    setStatus("pvp-" + currentTurn);
+    return;
+  }
+  if (currentTurn !== human) return;
+  place(r, c, human);
+  canUndo = true; undoUsed = false; updateUndoButton();
+  currentTurn = ai;
+  if (checkWin(r, c, human)) {
+    highlightWin(r, c, human);
+    statusTop.textContent = "🎉 Người chơi thắng!"; statusTop.classList.add("win");
+    resetBtn.textContent = "Ván mới"; launchConfetti(); gameOver = true; updateUndoButton();
+    boardDiv.classList.remove("disabled");
+    return;
+  }
+  setStatus("ai-thinking");
+  boardDiv.classList.add("disabled");
+  setTimeout(aiMove, 50);
+}
+
+function offerDraw() {
+  drawPopup.style.display = "flex";
+  drawPopup.style.justifyContent = "center";
+  drawPopup.style.alignItems = "center";
+  boardDiv.classList.add("disabled");
+}
+
+btnDrawAccept.addEventListener("click", () => {
+  drawPopup.style.display = "none";
+  boardDiv.classList.remove("disabled");
+  gameOver = true;
+  statusTop.textContent = "🤝 Hòa!";
+  statusTop.classList.add("win");
+  resetBtn.textContent = "Chơi lại";
+  launchConfetti();
+  updateUndoButton();
+});
+
+btnDrawReject.addEventListener("click", () => {
+  drawPopup.style.display = "none";
+  boardDiv.classList.remove("disabled");
+});
+
+function undoMove() {
+  if (gameOver) return;
+  aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
+  if (pvpMode) {
+    if (moveHistory.length === 0) return;
+    const last = moveHistory.pop();
+    const [r, c] = last;
+    board[r][c] = ""; cells[r][c].textContent = ""; cells[r][c].classList.remove("X", "O", "last", "win-cell");
+    if (moveHistory.length > 0) { lastCell = cells[moveHistory[moveHistory.length-1][0]][moveHistory[moveHistory.length-1][1]]; lastCell.classList.add("last"); }
+    else lastCell = null;
+    currentTurn = currentTurn === "X" ? "O" : "X";
+    setStatus("pvp-" + currentTurn);
+    updateScore(); updateUndoButton();
+  } else {
+    if (undoLeft <= 0) { document.getElementById("undolimit").textContent = "Người chơi đã sử dụng hết lượt"; updateUndoButton(); return; }
+    if (moveHistory.length < 2) return;
+    const lastAI = moveHistory.pop();
+    board[lastAI[0]][lastAI[1]] = ""; cells[lastAI[0]][lastAI[1]].textContent = ""; cells[lastAI[0]][lastAI[1]].classList.remove("X", "O", "last", "win-cell");
+    const lastHuman = moveHistory.pop();
+    board[lastHuman[0]][lastHuman[1]] = ""; cells[lastHuman[0]][lastHuman[1]].textContent = ""; cells[lastHuman[0]][lastHuman[1]].classList.remove("X", "O", "last", "win-cell");
+    if (moveHistory.length > 0) { lastCell = cells[moveHistory[moveHistory.length-1][0]][moveHistory[moveHistory.length-1][1]]; lastCell.classList.add("last"); }
+    else lastCell = null;
+    undoLeft--; undoUsed = true;
+    currentTurn = human; boardDiv.classList.remove("disabled");
+    aiThinking = false;
+    setStatus("your-turn"); commentaryDiv.textContent = "↩️ Người chơi vừa hoàn tác";
+    updateUndoUI(); updateScore(); updateUndoButton();
+  }
+}
+
+function updateUndoButton() {
+  let active = false;
+  if (pvpMode) active = !gameOver && moveHistory.length > 0;
+  else active = !gameOver && !undoUsed && canUndo && getOccupiedCount() >= 10 && undoLeft > 0;
+  btnUndo.disabled = !active;
+  btnUndo.classList.toggle("active", active);
+}
+
+function updateUndoUI() {
+  const div = document.getElementById("undolimit");
+  if (pvpMode) div.style.display = "none";
+  else { div.style.display = "block"; div.textContent = `Số lần còn: ${undoLeft}/${maxUndo}`; }
+}
+
+// ==================== ĐIỂM SỐ ====================
+function updateScore() {
+  let scoreX = 0, scoreO = 0;
+  for (let r = 0; r < SIZE; r++) {
+    for (let c = 0; c < SIZE; c++) {
+      if (board[r][c] === "X") scoreX += evaluateCell(r, c, "X");
+      if (board[r][c] === "O") scoreO += evaluateCell(r, c, "O");
+    }
+  }
+  const total = scoreX + scoreO;
+  let percentX = 50, percentO = 50;
+  if (total > 0) {
+    percentX = Math.round(scoreX / total * 100);
+    percentO = 100 - percentX;
+  }
+  document.getElementById("scoreX").style.width = percentX + "%";
+  document.getElementById("scoreO").style.width = percentO + "%";
+  document.getElementById("textX").textContent = scoreX;
+  document.getElementById("textO").textContent = scoreO;
+}
+
+let showScore = false;
+const toggleBtn = document.getElementById("toggleScore");
+const scoreBar = document.getElementById("scoreBar");
+toggleBtn.classList.add("off");
+toggleBtn.onclick = () => {
+  showScore = !showScore;
+  scoreBar.style.display = showScore ? "flex" : "none";
+  toggleBtn.classList.toggle("off", !showScore);
+};
+
+// ==================== BÌNH LUẬN THÔNG MINH ====================
+function showComment(r, c, player) {
+  if (pvpMode || !commentaryDiv) return;
+  if (player === human) {
+    if (playerStartTime === 0) return;
+    const time = Math.floor((Date.now() - playerStartTime) / 1000);
+    let text = "";
+    if (time < 2) text = "Đánh gì nhanh thế!";
+    else if (time < 4) text = "😮 WOW!! Tốc độ bàn thờ.";
+    else if (time < 6) text = "Để xem ai thắng ai thua?!";
+    else text = `Quá chậm. Tốn tận ${time} giây.`;
+    commentaryDiv.textContent = text;
+    updateComment(text);
+    return;
+  }
+  if (player === ai) {
+    const humanOpenFour = findOpenFour(human);
+    const humanDoubleThree = findDoubleThreat(human);
+    const aiOpenFour = findOpenFour(ai);
+    const aiDoubleThree = findDoubleThreat(ai);
+    let text = "";
+    if (humanOpenFour) {
+      const loseComments = ["Có vẻ như tôi sắp thua rồi...","Nước đi này thật khó tin, bạn đã có 4 mở.","Tôi không thể chặn được đường 4 đó.","Thật không thể tin nổi, bạn đã dồn tôi vào chân tường.","Có lẽ đây là ván cuối cùng của tôi."];
+      text = loseComments[Math.floor(Math.random() * loseComments.length)];
+    } else if (humanDoubleThree) {
+      const dangerComments = ["Thật không ổn, bạn đang có 2 đường 3 mở.","Tôi cần một phép màu để thoát khỏi thế này.","Bạn đang tạo ra thế cờ không thể chặn.","Nguy hiểm thật, tôi phải tập trung cao độ.","Có vẻ như bạn đã lên kế hoạch từ trước."];
+      text = dangerComments[Math.floor(Math.random() * dangerComments.length)];
+    } else if (aiOpenFour) {
+      const aiWinningComments = ["Bạn có thấy đường 4 của tôi không?","Sắp kết thúc rồi, chỉ còn một bước nữa...","Lần này tôi sẽ không bỏ lỡ cơ hội.","Đòn kết liễu đang ở phía trước.","Cờ caro không dành cho người yếu tim!"];
+      text = aiWinningComments[Math.floor(Math.random() * aiWinningComments.length)];
+    } else if (aiDoubleThree) {
+      const aiTrapComments = ["Tôi đã tạo ra thế cờ không thể chặn.","Bạn sẽ phải đưa ra lựa chọn khó khăn đây.","Hai đường 3, bạn chặn đường nào đây?","Chiến thuật này không dễ phá đâu.","Đòn đánh kép đã sẵn sàng."];
+      text = aiTrapComments[Math.floor(Math.random() * aiTrapComments.length)];
+    } else {
+      const time = playerStartTime > 0 ? Math.floor((Date.now() - playerStartTime) / 1000) : 0;
+      if (time > 0) {
+        if (time < 2) text = "Bạn đi nhanh đấy, nhưng đừng vội.";
+        else if (time < 5) text = "Suy nghĩ kỹ vào, tôi đang chờ.";
+        else text = "Chậm quá, tôi sắp ngủ gật rồi.";
+      } else {
+        const neutralComments = ["Thế trận đang giằng co.","Tôi đang tính toán các phương án.","Hãy xem bạn sẽ làm gì tiếp theo.","Đừng để mất tập trung.","Mỗi nước đi đều quan trọng."];
+        text = neutralComments[Math.floor(Math.random() * neutralComments.length)];
+      }
+    }
+    if (text) {
+      commentaryDiv.textContent = text;
+      updateComment(text);
+    }
+    return;
+  }
+}
+
+function updateComment(text) {
+  commentaryDiv.classList.add("shrink");
+  setTimeout(() => { commentaryDiv.textContent = text; commentaryDiv.classList.remove("shrink"); }, 500);
+}
+
+function setStatus(type) {
+  statusTop.classList.remove("win");
+  const map = {
+    "your-turn": { cls: "badge-" + human, symbol: human, text: "Lượt của người chơi" },
+    "ai-thinking": { cls: "badge-" + ai, symbol: ai, text: "AI.GiaBao đang suy nghĩ..." },
+    "pvp-X": { cls: "badge-X", symbol: "ĐẾN LƯỢT: X", text: "" },
+    "pvp-O": { cls: "badge-O", symbol: "ĐẾN LƯỢT: O", text: "" }
+  };
+  const d = map[type]; if (!d) return;
+  statusTop.innerHTML = "";
+  const badge = document.createElement("div");
+  badge.id = "turnBadge"; badge.className = "turnBadge " + d.cls;
+  badge.innerHTML = `<span class="badge-symbol">${d.symbol}</span><span class="badge-text">${d.text}</span>`;
+  statusTop.appendChild(badge);
+}
+
+function showStatus(text) {
+  statusOverlay.textContent = text;
+  statusOverlay.classList.remove("show");
+  void statusOverlay.offsetWidth;
+  statusOverlay.classList.add("show");
+}
+
+// ==================== XÚC XẮC 3D ====================
+const faceTransformsToFront = {
+  front: { rx: 0, ry: 0 }, back: { rx: 0, ry: 180 },
+  left: { rx: 0, ry: -90 }, right: { rx: 0, ry: 90 },
+  top: { rx: -90, ry: 0 }, bottom: { rx: 90, ry: 0 }
+};
+const xFaces = ["back"];
+const oFaces = ["front"];
+
+function resetToModeSelectUI() {
+  gameOver = false;
+  aiThinking = false;
+  lastCell = null;
+  human = "X";
+  ai = "O";
+  currentTurn = "X";
+  playerStartTime = 0;
+  moveHistory = [];
+  canUndo = false;
+  undoUsed = false;
+  undoLeft = maxUndo;
+  pvpMode = false;
+  drawMilestones.clear();
+  drawPopup.style.display = "none";
+
+  createBoard();
+  boardDiv.classList.remove("disabled");
+  statusTop.classList.remove("win");
+  statusTop.textContent = "Đang chờ...";
+  commentaryDiv.textContent = "...";
+  showStatus("Tung xúc xắc để biết ai đi trước");
+
+  diceEl.style.transition = "none";
+  diceEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+  diceContainer.classList.remove("bounce");
+
+  document.getElementById("undolimit").style.display = "block";
+  document.getElementById("startBtn").style.display = "inline-block";
+  document.getElementById("pvpBtn").style.display = "inline-block";
+  resetBtn.textContent = "Chơi lại";
+
+  // Tắt thanh đánh giá để mỗi chế độ mới bắt đầu từ trạng thái sạch.
+  showScore = false;
+  scoreBar.style.display = "none";
+  toggleBtn.classList.add("off");
+  updateUndoUI();
+  updateScore();
+}
+
+function goToModeSelect() {
+  // Vô hiệu hóa mọi kết quả AI đang chạy; kết quả cũ sẽ bị bỏ qua.
+  aiRequestId++;
+  if (aiWorker) aiWorker.postMessage({ type: "cancel", requestId: aiRequestId });
+  resetToModeSelectUI();
+  overlay.style.display = "flex";
+}
+
+function goToWebsite() {
+  window.location.href = "https://giabao1710.click/";
+}
+
+function startPVP() {
+  pvpMode = true; human = "X"; ai = "O"; currentTurn = "X";
+  playerStartTime = Date.now();
+  document.getElementById("pvpBtn").style.display = "none";
+  document.getElementById("startBtn").style.display = "none";
+  document.getElementById("undolimit").style.display = "none";
+  diceEl.style.transition = "none";
+  diceEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+  diceContainer.classList.remove("bounce");
+  statusTop.classList.remove("win");
+  statusTop.textContent = "";
+  showStatus("X được quyền đi trước");
+  setTimeout(() => { overlay.style.display = "none"; setStatus("pvp-X"); commentaryDiv.textContent = "Chế độ PVP"; }, 500);
+}
+
+function startGame() {
+  pvpMode = false;
+  document.getElementById("startBtn").style.display = "none";
+  document.getElementById("pvpBtn").style.display = "none";
+  statusTop.classList.remove("win");
+  statusTop.textContent = "";
+  drawMilestones.clear();
+  drawPopup.style.display = "none";
+  createBoard();
+
+  const result = Math.random() < 0.5 ? "X" : "O";
+  const faces = result === "X" ? xFaces : oFaces;
+  const chosenFace = faces[Math.floor(Math.random() * faces.length)];
+  const base = faceTransformsToFront[chosenFace];
+  let baseRx = base.rx, baseRy = base.ry;
+  const extraTurnsX = (Math.floor(Math.random() * 4) + 2) * 360;
+  const extraTurnsY = (Math.floor(Math.random() * 4) + 2) * 360;
+  const finalRx = baseRx + extraTurnsX;
+  const finalRy = baseRy + extraTurnsY;
+  const finalTransform = `rotateX(${finalRx}deg) rotateY(${finalRy}deg)`;
+
+  diceEl.style.transition = "none";
+  diceEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+  diceEl.offsetHeight;
+  diceEl.style.transition = "transform 3s cubic-bezier(0.25, 0.1, 0.25, 1)";
+  diceEl.style.transform = finalTransform;
+  diceContainer.classList.add("bounce");
+
+  setTimeout(() => {
+    diceContainer.classList.remove("bounce");
+    diceEl.style.transition = "none";
+    diceEl.style.transform = finalTransform;
+
+    if (result === "X") {
+      human = "X"; ai = "O"; currentTurn = "X"; playerStartTime = Date.now();
+      showStatus("Người chơi được đánh trước");
+      setStatus("your-turn");
+      commentaryDiv.textContent = "Có vẻ như bạn là một cao thủ";
+    } else {
+      human = "O"; ai = "X"; currentTurn = "X";
+      showStatus("Người chơi được đánh sau");
+      statusTop.textContent = "🤖 AI.GiaBao đang đi...";
+      commentaryDiv.textContent = "Nói trước. Tôi sẽ không nhường đâu!";
+    }
+    setTimeout(() => {
+      overlay.style.display = "none";
+      boardDiv.classList.remove("disabled");
+      if (currentTurn === ai) setTimeout(aiMove, 200);
+    }, 1000);
+  }, 3500);
+}
+
+function resetGame() {
+  aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
+  gameOver = false; lastCell = null;
+  human = "X"; ai = "O"; currentTurn = "X";
+  playerStartTime = 0;
+  moveHistory = []; canUndo = false; undoUsed = false; pvpMode = false;
+  drawMilestones.clear();
+  drawPopup.style.display = "none";
+  createBoard();
+  showStatus("Tung xúc xắc để biết ai đi trước");
+  statusTop.classList.remove("win");
+  statusTop.textContent = "Đang chờ...";
+  statusTop.innerHTML = "Đang chờ...";
+  diceEl.style.transition = "none";
+  diceEl.style.transform = "rotateX(0deg) rotateY(0deg)";
+  diceContainer.classList.remove("bounce");
+  document.getElementById("undolimit").style.display = "block";
+  overlay.style.display = "flex";
+  document.getElementById("startBtn").style.display = "inline-block";
+  document.getElementById("pvpBtn").style.display = "inline-block";
+  commentaryDiv.textContent = "Người chơi đã ấn chơi lại";
+  resetBtn.textContent = "Chơi lại";
+  undoLeft = maxUndo; updateUndoUI(); updateScore();
+  aiThinking = false;
+  boardDiv.classList.remove("disabled");
+}
+
+// ==================== CONFETTI ====================
+const canvas = document.getElementById("confettiCanvas");
+const ctx = canvas.getContext("2d");
+canvas.width = window.innerWidth; canvas.height = window.innerHeight;
+let confetti = [];
+function randomColor() { return ["#ff4d4d","#00d4ff","#00ff88","#ffd700","#ff00ff","#ff8800","#ffffff","#a855f7"][Math.floor(Math.random()*8)]; }
+function launchConfetti() {
+  confetti = [];
+  for (let i = 0; i < 200; i++) {
+    const fromLeft = Math.random() < 0.5;
+    confetti.push({
+      x: fromLeft ? 0 : canvas.width, y: canvas.height,
+      vx: (Math.random() * 6 + 2) * (fromLeft ? 1 : -1), vy: -(Math.random() * 7 + 3),
+      gravity: 0.05, size: Math.random() * 9 + 2, color: randomColor(),
+      angle: Math.random() * 360, spin: Math.random() * 15 - 5,
+      shape: Math.random() < 0.5 ? "rect" : "line"
+    });
+  }
+  animateConfetti();
+}
+function animateConfetti() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  confetti.forEach(p => {
+    p.vx *= 0.985; p.vy += p.gravity; p.x += p.vx; p.y += p.vy; p.angle += p.spin;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.angle * Math.PI / 180); ctx.fillStyle = p.color;
+    if (p.shape === "rect") ctx.fillRect(-p.size/2, -p.size/2, p.size, p.size * 0.6);
+    else ctx.fillRect(-p.size/2, -p.size/2, p.size * 0.2, p.size * 1.5);
+    ctx.restore();
+  });
+  confetti = confetti.filter(p => p.y < canvas.height + 20);
+  if (confetti.length > 0) requestAnimationFrame(animateConfetti);
+}
+
+// Khởi tạo
+createBoard();
+updateUndoButton();
+</script>
+</body>
+</html>
