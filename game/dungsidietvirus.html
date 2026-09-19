@@ -229,7 +229,7 @@ footer{
     margin-left: 30px;
     margin-right:30px;
   }
-  
+
   /* ============================================================
    GAME OVER — HIỆU ỨNG ĐỔ VỠ
    ============================================================ */
@@ -319,7 +319,7 @@ footer{
   }
 }
   .overlay p { color:#a6f5c0; font-size:16px; margin:6px 0 18px; line-height:1.5; max-width:280px;
-   
+
   }
   .overlay .bigbtn {
     background:linear-gradient(180deg,#39ff8c,#159a52);
@@ -377,6 +377,75 @@ footer{
   }
 
   #pointsRow { display:flex; gap:8px; }
+
+/* ============================================================
+   FULLSCREEN
+   ============================================================ */
+html, body {
+  width:100%;
+  height:100%;
+  min-height:100%;
+  overflow:hidden;
+  margin:0;
+  padding:0;
+}
+
+#gameContainer {
+  width:100vw;
+  height:100vh;
+  width:100dvw;
+  height:100dvh;
+  min-width:100%;
+  min-height:100%;
+  overflow:hidden;
+  padding:
+    env(safe-area-inset-top)
+    env(safe-area-inset-right)
+    env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+#hud {
+  padding:
+    calc(30px + env(safe-area-inset-top))
+    calc(14px + env(safe-area-inset-right))
+    12px
+    calc(14px + env(safe-area-inset-left));
+}
+
+:fullscreen #gameContainer,
+:-webkit-full-screen #gameContainer {
+  width:100vw;
+  height:100vh;
+  width:100dvw;
+  height:100dvh;
+}
+
+@media (display-mode: fullscreen) {
+  #gameContainer {
+    width:100vw;
+    height:100vh;
+    width:100dvw;
+    height:100dvh;
+  }
+}
+
+@media (max-height:600px) {
+  #hud {
+    padding-top:calc(12px + env(safe-area-inset-top));
+  }
+
+  .hud-box {
+    font-size:13px;
+    padding:5px 9px;
+  }
+
+  #upgradeBtn {
+    font-size:12px;
+    padding:7px 9px;
+  }
+}
+
 </style>
 </head>
 <body>
@@ -406,8 +475,8 @@ footer{
       <div id="waveProgress"></div>
     </div>
   </div>
-
-  <button id="upgradeBtn">⚙ NÂNG CẤP</button>
+        <button id="upgradeBtn">⚙ NÂNG CẤP</button>
+  </div>
 
 </div>
 
@@ -440,7 +509,7 @@ footer{
       </div>
       <button data-type="damage" id="btnDamage">NÂNG</button>
     </div>
-    
+
     <div class="upgrade-item">
   <div class="upgrade-info">
     <div class="u-name">
@@ -497,7 +566,7 @@ footer{
     <button class="bigbtn hidden" id="restartBtn">CHƠI LẠI</button>
   </div>
 </div>
-  <footer> Version:D20260109-H18M12T3720    »»»   developed by Tran Gia Bao</footer>
+  <footer> Version:D20262009-H01M22T3720    »»»   developed by Tran Gia Bao</footer>
 
 <script>
 (function(){
@@ -511,19 +580,77 @@ bgMusic.volume = 0.45;
   // ---------- Responsive canvas ----------
   let W, H;
   function resize(){
-    const maxW = Math.min(window.innerWidth, 500);
-    W = maxW;
-    H = window.innerHeight;
+    const viewport = window.visualViewport;
+    const viewportWidth = viewport ? viewport.width : window.innerWidth;
+    const viewportHeight = viewport ? viewport.height : window.innerHeight;
+
+    const maxW = Math.min(viewportWidth, 500);
+
+    W = Math.max(1, Math.round(maxW));
+    H = Math.max(1, Math.round(viewportHeight));
+
     canvas.width = W;
     canvas.height = H;
+
     if (tank) {
       tank.x = clamp(tank.x, tank.w/2, W - tank.w/2);
       tank.y = H - 100;
+      tank.targetX = clamp(tank.targetX, tank.w/2, W - tank.w/2);
     }
   }
   function clamp(v,a,b){ return Math.max(a, Math.min(b, v)); }
   function rand(a,b){ return a + Math.random()*(b-a); }
   function dist(x1,y1,x2,y2){ return Math.hypot(x1-x2, y1-y2); }
+
+  // ============================================================
+  // FULLSCREEN SYSTEM
+  // ============================================================
+  function isFullscreen(){
+    return !!(
+      document.fullscreenElement ||
+      document.webkitFullscreenElement
+    );
+  }
+
+  async function enterFullscreen(){
+    const target = document.documentElement;
+
+    try {
+      if (target.requestFullscreen) {
+        await target.requestFullscreen({ navigationUI:'hide' });
+      } else if (target.webkitRequestFullscreen) {
+        target.webkitRequestFullscreen();
+      }
+    } catch (error) {
+      // Một số browser/mobile có thể từ chối fullscreen.
+      // Game vẫn tiếp tục chạy bình thường.
+      console.log('Fullscreen không khả dụng:', error);
+    }
+
+    requestAnimationFrame(resize);
+  }
+
+  document.addEventListener('fullscreenchange' , function(){
+    
+    requestAnimationFrame(resize);
+  });
+
+  document.addEventListener('webkitfullscreenchange', function(){
+    
+    requestAnimationFrame(resize);
+  });
+
+  window.addEventListener('resize', resize);
+
+  window.addEventListener('orientationchange', function(){
+    setTimeout(resize, 100);
+  });
+
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', resize);
+  }
+
+  
 
   // ---------- Config ----------
   const GRAVITY = 0.089;
@@ -559,7 +686,7 @@ bgMusic.volume = 0.45;
     u.base * Math.pow(u.growth, u.level)
   );
 }
-  
+
   function currentRepairInterval(){
   const lvl = UPGRADES.repair.level;
 
@@ -661,7 +788,7 @@ function updateWave(dt){
   document.getElementById('waveProgress').style.width =
     progress + '%';
 }
-  
+
   // ---------- Virus factory ----------
   function randomToxicColor(){
     const hue = Math.floor(rand(70,330)); // avoid pure red band a bit, wide toxic palette
@@ -788,7 +915,7 @@ function updateHealing(dt){
     healFlashTimer -= dt;
   }
 }
-  
+
   function drawHealBar(){
   if (lives >= maxLives) return;
 
@@ -1359,8 +1486,12 @@ document.querySelectorAll('.upgrade-item button[data-type]').forEach(btn => {
   const gameOverScreen = document.getElementById('gameOverScreen');
   const finalScoreEl = document.getElementById('finalScore');
 
-  document.getElementById('startBtn').addEventListener('click', ()=>{
+  document.getElementById('startBtn').addEventListener('click', async ()=>{
     startScreen.classList.add('hidden');
+
+    // Fullscreen được yêu cầu trực tiếp từ thao tác người dùng.
+    await enterFullscreen();
+
     startGame();
   });
   document.getElementById('restartBtn').addEventListener('click', ()=>{
@@ -1391,6 +1522,9 @@ document.querySelectorAll('.upgrade-item button[data-type]').forEach(btn => {
 
   running = true;
   gameStarted = true;
+
+  // Đồng bộ canvas sau khi viewport/fullscreen thay đổi.
+  resize();
 
   // Phát nhạc nền
   bgMusic.currentTime = 0;
@@ -1458,8 +1592,9 @@ function explodeGameOverText(onComplete){
 
   function step(){
     frame++;
-    const vw = window.innerWidth;
-    const vh = window.innerHeight;
+    const viewport = window.visualViewport;
+    const vw = viewport ? viewport.width : window.innerWidth;
+    const vh = viewport ? viewport.height : window.innerHeight;
     let moving = false;
 
     pieces.forEach(p => {
@@ -1627,7 +1762,7 @@ function playGameOverAnimation(){
     drawBackground();
 
     if (running && !paused){
-      
+
       elapsedTime += dt;
       updateWave(dt);
       spawnInterval = 1400;
@@ -1667,7 +1802,6 @@ updateHealing(dt);
   }
 
   // ---------- Init ----------
-  window.addEventListener('resize', resize);
   resize();
   tank = { x: W/2, y: H-100, w:56, h:38, targetX: W/2, flashTimer:0 };
   bullets = []; viruses = []; particles = [];
