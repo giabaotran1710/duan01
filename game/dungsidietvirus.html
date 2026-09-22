@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-<title>DŨNG SĨ DIỆT VIRUS </title>
+<title>BẮN PHÁ VIRUS </title>
 <style>
   * { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; user-select:none; }
   html,body {
@@ -545,7 +545,7 @@ html, body {
 
   <div id="startScreen" class="overlay">
     <div class="virus-icon-demo">🦠</div>
-    <h1>DŨNG SĨ DIỆT VIRUS</h1>
+    <h1>BẮN PHÁ VIRUS</h1>
     <p>Kéo xe tăng để né và tiêu diệt virus.<br>
     Các virus có kích thước lớn sẽ phân tách khi bị tiêu diệt.<br>
     Dùng điểm nhận được trong màn chơi để nâng cấp xe tăng. Để virus chạm trúng 3 lần là thua!</p>
@@ -631,12 +631,12 @@ bgMusic.volume = 0.45;
   }
 
   document.addEventListener('fullscreenchange' , function(){
-    
+
     requestAnimationFrame(resize);
   });
 
   document.addEventListener('webkitfullscreenchange', function(){
-    
+
     requestAnimationFrame(resize);
   });
 
@@ -650,7 +650,7 @@ bgMusic.volume = 0.45;
     window.visualViewport.addEventListener('resize', resize);
   }
 
-  
+
 
   // ---------- Config ----------
   const GRAVITY = 0.089;
@@ -1005,37 +1005,64 @@ function updateHealing(dt){
 
   function updateViruses(dt){
     const groundY = tankGroundY();
+
+    // Chuẩn hóa vật lý theo thời gian thay vì theo FPS.
+    // 1.0 = tốc độ tương đương một frame 60 FPS.
+    const frameScale = dt / 16.6667;
+
     for (let i=viruses.length-1;i>=0;i--){
       const v = viruses[i];
-      v.x += v.vx;
-      v.wobble += 0.05;
 
-      // wall bounce (horizontal only, always active)
-      if (v.x - v.radius < 0){ v.x = v.radius; v.vx = Math.abs(v.vx)*WALL_DAMPING; }
-      else if (v.x + v.radius > W){ v.x = W - v.radius; v.vx = -Math.abs(v.vx)*WALL_DAMPING; }
+      // Chuyển động ngang ổn định theo thời gian
+      v.x += v.vx * frameScale;
+      v.wobble += 0.05 * frameScale;
 
-      // real gravity governs both falling and rising — same slow-motion feel both ways
-      v.vy = Math.min(v.vy + GRAVITY, MAX_FALL_SPEED);
-      v.y += v.vy;
+      // wall bounce
+      if (v.x - v.radius < 0){
+        v.x = v.radius;
+        v.vx = Math.abs(v.vx) * WALL_DAMPING;
+      }
+      else if (v.x + v.radius > W){
+        v.x = W - v.radius;
+        v.vx = -Math.abs(v.vx) * WALL_DAMPING;
+      }
+
+      // Trọng lực + rơi được tính theo dt
+      v.vy = Math.min(
+        v.vy + GRAVITY * frameScale,
+        MAX_FALL_SPEED
+      );
+
+      v.y += v.vy * frameScale;
 
       // top bounce
-      if (v.y - v.radius < 0){ v.y = v.radius; v.vy = Math.abs(v.vy)*FLOOR_BOUNCE_DAMPING; }
+      if (v.y - v.radius < 0){
+        v.y = v.radius;
+        v.vy = Math.abs(v.vy) * FLOOR_BOUNCE_DAMPING;
+      }
 
       // ground / tank collision
       if (v.y + v.radius >= groundY){
-        const overlapsTank = (v.x + v.radius > tank.x - tank.w/2) && (v.x - v.radius < tank.x + tank.w/2);
+        const overlapsTank =
+          (v.x + v.radius > tank.x - tank.w/2) &&
+          (v.x - v.radius < tank.x + tank.w/2);
+
         if (overlapsTank && invulnTimer <= 0){
           hitTank();
           spawnParticles(v.x, v.y, v.color, 10);
           viruses.splice(i,1);
           continue;
-        } else {
-          v.y = groundY - v.radius;
-          // launch upward immediately (no delay) with a velocity sized so gravity
-          // gently decelerates it to a high point — now nearly as high as where it spawned
-          const desiredHeight = rand(groundY * 0.65, groundY * 0.92);
-          v.vy = -Math.sqrt(2 * GRAVITY * desiredHeight);
         }
+
+        v.y = groundY - v.radius;
+
+        // Bật lên với vật lý ổn định, không phụ thuộc FPS
+        const desiredHeight =
+          rand(groundY * 0.65, groundY * 0.92);
+
+        v.vy = -Math.sqrt(
+          2 * GRAVITY * desiredHeight
+        );
       }
     }
   }
