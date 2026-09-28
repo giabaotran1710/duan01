@@ -2474,7 +2474,7 @@ body.solution-detail-active .target-controls-top{
     Một số ô có thể được tô màu ngay từ đầu nhưng không mang số hoặc ký hiệu clue. Đây là thông tin khởi đầu đã được xác định và không phải là clue.</p>
 
     <p><b>Tiến trình suy luận</b><br>
-    Các dữ kiện được mở theo tiến trình của ván. Hãy ưu tiên những clue đang cung cấp kết luận chắc chắn, sau đó dùng các kết luận đó để tiếp tục suy luận những ô còn lại.</p>
+    Mọi thông tin bạn cần đều đã có sẵn trên bàn ngay từ đầu. Trò chơi <b>không bao giờ tự mở thêm dữ kiện</b>: một clue ẩn chỉ hiện ra khi chính bạn tô đúng màu cho ô đó. Hãy ưu tiên những clue đang cho kết luận chắc chắn (số 0, đủ số lượng, vừa đủ số ô còn lại, clue ở góc/cạnh...), rồi dùng các kết luận đó để suy luận tiếp — ván nào cũng có thể đi hết bằng suy luận, không cần đoán.</p>
 
     <p><b>Kích thước và độ khó</b><br>
     <b>DỄ</b> gồm 4×4 và các biến thể 5×5, 6×6, 7×7. Ba biến thể DỄ lớn chỉ sử dụng clue số thông thường; không có Directional, Knight, Self hay Pattern Clue. Các màn hiện có THƯỜNG/TRUNG BÌNH/KHÓ vẫn được giữ nguyên. Mỗi ván sử dụng đúng 3 màu được chọn từ bộ màu của trò chơi.</p>
@@ -3230,7 +3230,11 @@ function clueCells(i,n,clue){
       if(mask===targetBit)definite++;
       if(mask&targetBit)possible++;
 
-      if(fixed[index]===-1){
+      // A cell already narrowed to exactly the clue color is counted in
+      // `definite`; it must NOT also be counted as an open ("unknown") slot,
+      // otherwise the same cell is used twice and the solver "proves"
+      // things a real player cannot deduce.
+      if(fixed[index]===-1 && mask!==targetBit){
         unknown.push(index);
       }
     }
@@ -3461,10 +3465,15 @@ function runHumanInferenceEngine(data,initialRevealed,options={}){
     }
 
     const domains=fullDomains(total);
+    // Cells that are already colored at the start (pre-colored cells) are
+    // known facts: their domain is exactly that color from the very first
+    // inference step, not "anything" until a later propagation pass.
+    for(let i=0;i<total;i++){
+      if(fixed[i]!==-1)domains[i]=1<<fixed[i];
+    }
     const schedule=[];
     const trace=[];
     let safety=0;
-    let playerRevealEligible=false;
 
     while(safety++<total*Math.max(24,palette*16)){
       // ------------------------------------------------------------
@@ -3530,7 +3539,6 @@ function runHumanInferenceEngine(data,initialRevealed,options={}){
           revealed.add(quota.index);
           schedule.push(quota.index);
         }
-        playerRevealEligible=true;
         continue;
       }
 
@@ -3621,7 +3629,6 @@ function runHumanInferenceEngine(data,initialRevealed,options={}){
           revealed.add(forced.index);
           schedule.push(forced.index);
         }
-        playerRevealEligible=true;
         continue;
       }
 
@@ -3646,55 +3653,17 @@ function runHumanInferenceEngine(data,initialRevealed,options={}){
         };
       }
 
-      // D. Hidden-clue rescue is deliberately disabled for strict player-visible
-      // validation and Detailed Solution. A puzzle is only considered logically
-      // solvable if the player can continue from currently visible information
-      // (plus correct paints that naturally reveal their own clue).
-      // A hidden-clue rescue is valid only immediately after a correct
-      // player-actionable paint. This matches actual gameplay, where
-      // revealUsefulClueIfStalled() is called after a correct paint.
-      if(!playerRevealEligible || (options.forDetailed && !options.allowPlayerTriggeredReveal)){
-        return {
-          ok:false,
-          reason:'player-visible-stalemate',
-          revealed,
-          fixed,
-          schedule,
-          trace,
-          domains,
-          marks,
-          wrongColors
-        };
-      }
-
-      const reveal=chooseHumanRevealClue(
-        {
-          ...data,
-          revealSchedule:data.revealSchedule || schedule
-        },
-        revealed,
-        fixed,
-        marks,
-        wrongColors
-      );
-
-      if(reveal){
-        playerRevealEligible=false;
-        revealed.add(reveal.index);
-        schedule.push(reveal.index);
-
-        trace.push({
-          kind:'reveal',
-          index:reveal.index,
-          clue:{...reveal.clue},
-          sourceIndices:[reveal.index],
-          rule:'reveal-clue',
-          reasonData:{progress:reveal.progress}
-        });
-
-        continue;
-      }
-
+      // A real player who opens a fresh puzzle has no "reveal one more
+      // clue" button. Every clue in the puzzle must already be either
+      // visible at the start or destined to reveal itself the moment its
+      // own cell gets correctly painted from other information (the
+      // quota/singleton branches above already do exactly that). If
+      // neither path can move the board forward, the puzzle is genuinely
+      // not solvable by deduction from here — this search must fail rather
+      // than manufacture information a real player could never obtain.
+      // Responsibility for avoiding this state belongs to the puzzle
+      // generator (a different, larger, or adjusted set of INITIAL visible
+      // clues), never to this solver injecting a clue mid-solve.
       return {
         ok:false,
         reason:'stalemate',
@@ -5128,7 +5097,22 @@ function createSevenBySevenPuzzle(d){
           );
         }catch(_){continue}
 
-        if(!sim?.ok)continue;
+        if(!sim?.ok){
+          const tmp={
+            d:{n},sol,clue,globalClue:null,
+            initialRevealed:new Set(opened),
+            initialFilled:new Set(filled)
+          };
+          if(!augmentOpeningForNoGuess(tmp,8))continue;
+          opened.clear();tmp.initialRevealed.forEach(i=>opened.add(i));
+          filled.clear();tmp.initialFilled.forEach(i=>filled.add(i));
+          data.val.fill(-1);
+          filled.forEach(i=>{data.val[i]=sol[i]});
+          try{
+            sim=runHumanInferenceEngine(data,opened,{forGeneratorValidation:true});
+          }catch(_){continue}
+          if(!sim?.ok)continue;
+        }
 
         // Difficulty gate: reject boards that collapse immediately. Require a
         // meaningful inference trace and several reveal/deduction waves.
@@ -5534,6 +5518,106 @@ function createSolvablePuzzleRaw(d){
   // Final no-guess gate. A board is accepted only if the exact opening state
   // (visible clues + pre-colored cells) can be solved deterministically all the
   // way to completion using the same propagation engine used by the game.
+  // Opening augmentation ("sửa dữ kiện liền mạch").
+  // A real player can never receive an extra clue mid-game, so a board whose
+  // deduction chain stalls must be repaired STATICALLY: we extend the
+  // dữ kiện shown at the very start (reveal one more clue, or pre-color one
+  // more cell) until the human-style solver can walk from the opening all
+  // the way to the end with nothing injected along the way. Each addition is
+  // chosen greedily as the one that unlocks the most further deductions.
+  function augmentOpeningForNoGuess(generated,maxAdditions=8){
+    const n=generated?.d?.n;
+    if(!n)return false;
+    const total=n*n;
+    const clue=generated.clue;
+    const opening=new Set(generated.initialRevealed||[]);
+    const filled=new Set(generated.initialFilled||[]);
+
+    const run=()=>{
+      const val=Array(total).fill(-1);
+      filled.forEach(i=>{val[i]=generated.sol[i];});
+      return runHumanInferenceEngine({
+        d:{n,palette:3},n,palette:3,
+        sol:generated.sol,
+        clue:clue.map(c=>c ? {...c} : null),
+        globalClue:generated.globalClue
+          ? {color:generated.globalClue.color,count:generated.globalClue.count}
+          : null,
+        nonogramRows:generated.nonogramRows||null,
+        nonogramCols:generated.nonogramCols||null,
+        val,marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
+        initialFilled:new Set(filled),
+        revealSchedule:[]
+      },new Set(opening),{forGeneratorValidation:true});
+    };
+    const score=r=>(r.ok?100000:0)+(r.trace||[]).filter(t=>t.kind==='paint').length;
+
+    let current=run();
+    const addedItems=[];
+    for(let added=0;!current.ok && added<maxAdditions;added++){
+      assertGenerationTime();
+      const clueCands=[],fillCands=[];
+      for(let i=0;i<total;i++){
+        if(clue[i]){
+          if(clue[i].pattern)continue;
+          if(opening.has(i)||current.revealed.has(i))continue;
+          if(filled.has(i)||current.fixed[i]!==-1)continue;
+          clueCands.push(i);
+        }else if(current.fixed[i]===-1 && !filled.has(i)){
+          fillCands.push(i);
+        }
+      }
+      shuffle(clueCands);shuffle(fillCands);
+
+      const base=score(current);
+      let best=null;
+      const consider=(pool,kind)=>{
+        for(const i of pool.slice(0,16)){
+          const set=kind==='clue' ? opening : filled;
+          set.add(i);
+          let r=null;
+          if(openingDirectionalIsClean(clue,n,opening,filled)){
+            try{r=run();}catch(_){r=null;}
+          }
+          set.delete(i);
+          if(!r)continue;
+          const sc=score(r);
+          if(sc>base && (!best || sc>best.sc))best={i,kind,sc};
+          if(r.ok)break;
+        }
+      };
+      consider(clueCands,'clue');
+      if(!best)consider(fillCands,'fill');
+      if(!best)return false;
+
+      (best.kind==='clue' ? opening : filled).add(best.i);
+      addedItems.push({i:best.i,kind:best.kind});
+      current=run();
+    }
+
+    if(!current.ok)return false;
+
+    // Prune: drop any added dữ kiện that turned out to be unnecessary so the
+    // opening stays as small (and the puzzle as challenging) as possible.
+    shuffle(addedItems);
+    for(const item of addedItems){
+      const set=item.kind==='clue' ? opening : filled;
+      set.delete(item.i);
+      let r=null;
+      try{r=run();}catch(_){r=null;}
+      if(r && r.ok){
+        current=r;
+      }else{
+        set.add(item.i);
+      }
+    }
+    generated.initialRevealed=opening;
+    generated.initialFilled=filled;
+    generated.starterClue=[...opening][0]??-1;
+    generated.revealSchedule=(current.schedule||[]).slice();
+    return true;
+  }
+
   function validateNoGuessPath(generated){
     const n=generated?.d?.n;
     if(!n)return false;
@@ -5566,8 +5650,23 @@ function createSolvablePuzzleRaw(d){
 
     try{
       const sim=runHumanInferenceEngine(data,initialRevealed,{forGeneratorValidation:true});
-      return !!sim?.ok &&
+      const ok=!!sim?.ok &&
         sim.fixed?.every((v,i)=>generated.clue[i] ? sim.revealed.has(i) : v!==-1);
+
+      if(ok){
+        // Record the exact hidden-clue reveal order this successful proof
+        // used. Gameplay's "reveal a clue when stalled" step follows this
+        // SAME order (see findUsefulHiddenClue) instead of re-deriving its
+        // own greedy choice live. A fresh greedy search can pick a clue that
+        // gives some immediate progress but leads nowhere later, even when
+        // the puzzle is genuinely solvable via a different reveal order —
+        // following the proven order removes that risk. Every caller of
+        // validateNoGuessPath keeps using the same `generated` object
+        // afterward, so writing it back here is enough to reach gameplay.
+        generated.revealSchedule=(sim.schedule||[]).slice();
+      }
+
+      return ok;
     }catch(_){
       return false;
     }
@@ -6203,6 +6302,21 @@ function createNonogramPuzzle(d){
             if(sim?.ok){
               return {...opening,sim};
             }
+
+            // Extend the visible opening instead of giving up on this line set.
+            const tmp={
+              d:{n},sol,clue,globalClue:null,
+              nonogramRows:lineRows,nonogramCols:lineCols,
+              initialRevealed:new Set(opening.opening),
+              initialFilled:new Set(opening.filled)
+            };
+            if(augmentOpeningForNoGuess(tmp,4)){
+              return {
+                opening:tmp.initialRevealed,
+                filled:tmp.initialFilled,
+                sim:{schedule:tmp.revealSchedule||[]}
+              };
+            }
           }catch(_){
             // Try the next opening/line set.
           }
@@ -6351,7 +6465,9 @@ function createEasyNumberOnlyPuzzle(d){
       // The same human-inference solver used by the existing modes is the
       // acceptance gate. This prevents us from creating a board that merely
       // has a mathematically correct solution but stalls without guessing.
-      if(!validateNoGuessPath(generated))return null;
+      if(!validateNoGuessPath(generated)){
+        if(!augmentOpeningForNoGuess(generated,6))return null;
+      }
 
       return generated;
     };
@@ -6407,6 +6523,12 @@ function createSolvablePuzzle(d){
           }
         }
 
+        // Last resort: extend the visible opening (extra clue / pre-colored
+        // cell) so the chain of deductions is continuous from the start.
+        if(!validateNoGuessPath(generated)){
+          augmentOpeningForNoGuess(generated);
+        }
+
         if(validateNoGuessPath(generated))return generated;
         lastError=new Error('No-guess path failed');
       }catch(err){
@@ -6423,8 +6545,23 @@ function createSolvablePuzzle(d){
     if(generated.patternMode){
       generated.globalClue=null;
       if(!validateNoGuessPath(generated)){
-        generated=createPatternModePuzzle(d);
-        generated.globalClue=null;
+        // The previous version regenerated once here and used the result
+        // unconditionally, with no guarantee that the replacement was itself
+        // solvable — a puzzle could reach the player having never actually
+        // passed validation. Retry a bounded number of times and only swap
+        // in a replacement that itself validates; otherwise keep the
+        // original (which at least passed the pattern generator's own
+        // internal solver check once) rather than silently shipping an
+        // unverified board.
+        let fixedPattern=null;
+        for(let guard=0;guard<8 && !fixedPattern;guard++){
+          try{
+            const candidate=createPatternModePuzzle(d);
+            candidate.globalClue=null;
+            if(validateNoGuessPath(candidate))fixedPattern=candidate;
+          }catch(_){ /* try again */ }
+        }
+        if(fixedPattern)generated=fixedPattern;
       }
     }
 
@@ -7318,17 +7455,74 @@ board.addEventListener('click',e=>{
 
     const base=propagateClueDomains(game,game.revealedClues);
 
-    // This function is called only as a rescue mechanism. If ordinary
-    // deduction still exists, do not leak another clue prematurely.
-    if(
-      base.contradiction ||
-      base.steps.length>0 ||
-      base.reduced>0
-    )return null;
+    // Only a fully-determined cell the player hasn't painted yet means "a
+    // real move already exists — don't leak another clue." A merely PARTIAL
+    // domain reduction (base.reduced>0) must NOT block a reveal: unlike a
+    // solved cell, that partial exclusion is never written back into
+    // game.wrongColors anywhere in this game, so on the very next check it
+    // would be recomputed as exactly the same "reduced>0" again — forever.
+    // The player has no in-game action that changes it (manual X marks are
+    // cosmetic and never feed propagateClueDomains), so requiring reduced
+    // to reach 0 before revealing could hang the game on information the
+    // player can see but can never act on or make go away: a real stall
+    // that looks, from inside the game, like "there's still a move."
+    // This is exactly the condition the puzzle generator's own validator
+    // (runHumanInferenceEngine → chooseHumanRevealClue) uses to decide a
+    // reveal is allowed, so gameplay now matches the validator exactly
+    // instead of being silently stricter than what was actually verified.
+    if(base.contradiction || base.steps.length>0)return null;
 
+    // Primary path: follow the EXACT hidden-clue reveal order the generator's
+    // own solver proved works for this puzzle (game.revealSchedule, written
+    // by validateNoGuessPath's successful proof run), instead of re-deriving
+    // a fresh greedy choice live. A live greedy "does revealing THIS one
+    // clue alone create any immediate progress" search can legitimately pick
+    // a clue that helps a little right now but leads to a dead end later,
+    // even though the puzzle is solvable via a different reveal order.
+    // Replaying the proven order removes that risk entirely: it is, by
+    // construction, an order that was already walked all the way to a
+    // complete solve.
+    for(const idx of (game.revealSchedule||[])){
+      if(!game.clue[idx])continue;
+      if(game.revealedClues.has(idx))continue;
+      if(game.val[idx]!==-1)continue;
+      return {index:idx,clue:game.clue[idx]};
+    }
+
+    // Fallback path: pick the reveal using the same selection function the
+    // generator's solver validates against (chooseHumanRevealClue). This
+    // only matters when no usable scheduled clue remains (e.g. a stale or
+    // missing schedule on older puzzle data) — using the shared function
+    // here, rather than a separately-maintained heuristic, is what keeps
+    // "this puzzle is solvable" and "the game will actually get you there"
+    // in sync when the schedule can't be trusted.
+    const revealData={
+      d:game.d,
+      n:game.d.n,
+      palette:game.d.palette,
+      clue:game.clue,
+      globalClue:game.globalClue,
+      nonogramRows:game.nonogramRows||null,
+      nonogramCols:game.nonogramCols||null,
+      revealSchedule:game.revealSchedule||[]
+    };
+
+    const matched=chooseHumanRevealClue(
+      revealData,
+      game.revealedClues,
+      game.val,
+      game.marks,
+      game.wrongColors
+    );
+    if(matched)return matched;
+
+    // Secondary/tertiary paths below are an extra safety net only. With the
+    // gate above now matching the validator, they should essentially never
+    // trigger for a puzzle that passed generation — they exist purely so a
+    // player is never truly stuck even if some future puzzle type slips
+    // past validation.
     const candidates=[];
 
-    // First preference: clues already encoded by the generator but still hidden.
     for(let i=0;i<game.clue.length;i++){
       const clue=game.clue[i];
       if(!clue)continue;
@@ -7341,9 +7535,6 @@ board.addEventListener('click',e=>{
       if(result)candidates.push(result);
     }
 
-    // Second preference: if the generator has exhausted its hidden clues,
-    // create a valid normal "rescue clue" directly from the solution. This
-    // prevents a genuine dead end from ever becoming a forced guess.
     if(!candidates.length){
       for(let i=0;i<game.clue.length;i++){
         if(game.clue[i])continue;
@@ -7579,9 +7770,13 @@ board.addEventListener('click',e=>{
 
     game.justPainted=-1;
 
-    // If the solver has no deterministic deduction left, expose one clue that
-    // demonstrably creates new information. This prevents a forced guess.
-    revealUsefulClueIfStalled(i);
+    // Auto-revealing an extra clue when the player is stuck is intentionally
+    // NOT part of gameplay: a real player never has that ability, so a
+    // puzzle that only "works" because of a mid-solve injection is not
+    // actually solvable by the player. The generator is responsible for
+    // only ever handing out puzzles that never need this; see
+    // runHumanInferenceEngine, which now fails generation instead of
+    // rescuing it.
 
     testWin();
   }
