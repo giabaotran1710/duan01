@@ -2,1362 +2,833 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Hải Chiến</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#03101d">
+<title>HẢI CHIẾN</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
 <style>
-  @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&family=Share+Tech+Mono&display=swap');
-
+  /* ═════════ VARIABLES ═════════ */
   :root {
-    --ocean-deep: #020c18;
-    --ocean-mid: #041628;
-    --ocean-surface: #062040;
-    --water-glow: #0a4a7a;
+    --bg0: #02090f;
+    --bg1: #061a2e;
+    --panel: rgba(8, 28, 48, 0.82);
+    --panel-edge: #17466b;
+    --brass: #c9a25a;
+    --water-a: #0d3d6b;
+    --water-b: #072645;
     --radar-green: #00ff88;
-    --radar-dim: #00994d;
     --danger-red: #ff2244;
-    --fire-orange: #ff6600;
+    --fire-orange: #ff7a1a;
     --torpedo-cyan: #00e5ff;
     --missile-yellow: #ffdd00;
     --stone-gray: #aabbcc;
-    --hit-flame: #ff4400;
-    --text-bright: #e0f4ff;
-    --text-dim: #4a7a9b;
-    --grid-line: #0d3a5c;
-    --ship-color: #1a4a6e;
-    --ship-head: #0077aa;
+    --bomb-red: #ff3b4a;
+    --text-bright: #e6f5ff;
+    --text-dim: #6f97b3;
+    --sel: var(--torpedo-cyan);
+    --font: 'Chakra Petch', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
+  body[data-weapon="torpedo"] { --sel: var(--torpedo-cyan); }
+  body[data-weapon="missile"] { --sel: var(--missile-yellow); }
+  body[data-weapon="stone"]   { --sel: var(--stone-gray); }
+  body[data-weapon="bomb"]    { --sel: var(--bomb-red); }
 
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-
+  /* ═════════ BASE ═════════ */
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+  html { -webkit-text-size-adjust: 100%; }
   body {
-    background: var(--ocean-deep);
-    font-family: 'Share Tech Mono', monospace;
+    font-family: var(--font);
     color: var(--text-bright);
-    min-height: 100vh;
-    overflow-x: hidden;
-    position: relative;
-  }
-
-  body::before {
-    content: '';
-    position: fixed;
-    inset: 0;
     background:
-      radial-gradient(ellipse at 20% 80%, rgba(0,100,160,0.15) 0%, transparent 50%),
-      radial-gradient(ellipse at 80% 20%, rgba(0,50,100,0.1) 0%, transparent 40%),
-      radial-gradient(ellipse at 50% 50%, rgba(2,40,80,0.3) 0%, transparent 70%);
-    pointer-events: none;
-    z-index: 0;
+      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,120,190,0.28), transparent 70%),
+      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(0,80,140,0.22), transparent 70%),
+      linear-gradient(180deg, var(--bg1), var(--bg0));
+    background-attachment: fixed;
+    min-height: 100vh; min-height: 100dvh;
+    overflow-x: hidden;
+    user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
+    touch-action: manipulation;
+  }
+  button { font-family: inherit; touch-action: manipulation; }
+  .hidden { display: none !important; }
+
+  .container {
+    position: relative; z-index: 1;
+    max-width: 640px; margin: 0 auto;
+    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; gap: 10px;
   }
 
-  body::after {
-    content: '';
-    position: fixed;
-    inset: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-    pointer-events: none;
-    z-index: 999;
-  }
-
-  /* ─── MODE SELECT SCREEN ─────────────────────────────── */
-  #mode-select {
-    position: fixed;
-    inset: 0;
-    z-index: 200;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 20px;
-    background: var(--ocean-deep);
-    transition: opacity 0.6s ease, transform 0.6s ease;
-  }
-  #mode-select.hide {
-    opacity: 0;
-    transform: scale(1.04);
-    pointer-events: none;
-  }
-
-  .mode-title {
-    font-family: 'Orbitron', monospace;
-    font-weight: 900;
-    font-size: clamp(24px, 5vw, 46px);
-    letter-spacing: 5px;
-    color: var(--torpedo-cyan);
-    text-shadow: 0 0 25px rgba(0,229,255,0.7), 0 0 70px rgba(0,229,255,0.25);
-    margin-bottom: 6px;
-    animation: titlePulse 3s ease-in-out infinite;
-  }
-  .mode-subtitle {
-    font-size: 11px;
-    letter-spacing: 4px;
-    color: var(--text-dim);
-    text-transform: uppercase;
-    margin-bottom: 40px;
-  }
-
-  .mode-cards {
-    display: flex;
-    gap: 28px;
-    flex-wrap: wrap;
-    justify-content: center;
-    margin-bottom: 36px;
-  }
-
-  .mode-card {
-    width: 240px;
-    background: rgba(4,22,40,0.85);
-    border: 1px solid var(--grid-line);
-    border-radius: 10px;
-    padding: 22px 18px 20px;
-    cursor: pointer;
-    transition: border-color 0.25s, box-shadow 0.25s, transform 0.2s;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 14px;
-    position: relative;
-    overflow: hidden;
-  }
-  .mode-card::before {
-    content: '';
-    position: absolute;
-    inset: 0;
-    opacity: 0;
-    transition: opacity 0.3s;
-    border-radius: inherit;
-  }
-  .mode-card.normal::before  { background: radial-gradient(ellipse at 50% 0%, rgba(0,229,255,0.07) 0%, transparent 70%); }
-  .mode-card.hard::before    { background: radial-gradient(ellipse at 50% 0%, rgba(255,120,0,0.1) 0%, transparent 70%); }
-  .mode-card:hover::before   { opacity: 1; }
-  .mode-card:hover           { transform: translateY(-4px); }
-  .mode-card.normal:hover    { border-color: var(--torpedo-cyan); box-shadow: 0 0 24px rgba(0,229,255,0.25), 0 8px 32px rgba(0,0,0,0.4); }
-  .mode-card.hard:hover      { border-color: #ff7700; box-shadow: 0 0 24px rgba(255,100,0,0.3), 0 8px 32px rgba(0,0,0,0.4); }
-  .mode-card.selected.normal { border-color: var(--torpedo-cyan); box-shadow: 0 0 30px rgba(0,229,255,0.4); }
-  .mode-card.selected.hard   { border-color: #ff7700; box-shadow: 0 0 30px rgba(255,120,0,0.45); }
-
-  .mode-card-illustration {
-    width: 100%;
-    height: 140px;
-    border-radius: 6px;
-    overflow: hidden;
-    position: relative;
-  }
-
-  .mode-card-label {
-    font-family: 'Orbitron', monospace;
-    font-weight: 700;
-    font-size: 13px;
-    letter-spacing: 3px;
-    text-transform: uppercase;
-  }
-  .mode-card.normal .mode-card-label { color: var(--torpedo-cyan); }
-  .mode-card.hard   .mode-card-label { color: #ff8800; }
-
-  .mode-card-desc {
-    font-size: 10px;
-    color: var(--text-dim);
-    text-align: center;
-    line-height: 1.7;
-  }
-
-  .mode-card-badge {
-    position: absolute;
-    top: 10px; right: 10px;
-    font-size: 8px;
-    letter-spacing: 2px;
-    padding: 3px 8px;
-    border-radius: 3px;
-    font-family: 'Orbitron', monospace;
-    font-weight: 700;
-  }
-  .mode-card.normal .mode-card-badge { background: rgba(0,229,255,0.15); color: var(--torpedo-cyan); border: 1px solid rgba(0,229,255,0.3); }
-  .mode-card.hard   .mode-card-badge { background: rgba(255,120,0,0.15); color: #ff8800; border: 1px solid rgba(255,120,0,0.3); }
-
-  .btn-start-mode {
-    background: transparent;
-    border: 1px solid var(--torpedo-cyan);
-    color: var(--torpedo-cyan);
-    font-family: 'Orbitron', monospace;
-    font-size: 13px;
-    letter-spacing: 4px;
-    padding: 14px 52px;
-    cursor: pointer;
-    border-radius: 5px;
-    transition: all 0.2s;
-    text-transform: uppercase;
-  }
-  .btn-start-mode:hover {
-    background: rgba(0,229,255,0.12);
-    box-shadow: 0 0 28px rgba(0,229,255,0.35);
-  }
-
-  /* Ship bob & smoke animations (used inside SVG via CSS animation) */
-  @keyframes shipBob { 0%,100%{transform:translateY(0px);} 50%{transform:translateY(-3px);} }
-  @keyframes smokeRise { 0%{transform:translateY(0) scaleX(1);opacity:0.7;} 100%{transform:translateY(-14px) scaleX(1.4);opacity:0;} }
-
-  /* ─── GAME CONTAINER ─────────────────────────────────── */
-  #game-wrap {
-    opacity: 0;
-    pointer-events: none;
-    transition: opacity 0.5s ease 0.1s;
-  }
-  #game-wrap.visible {
-    opacity: 1;
-    pointer-events: auto;
-  }
-
-  .container { position: relative; z-index: 1; max-width: 900px; margin: 0 auto; padding: 20px 16px; }
-
-  header { text-align: center; margin-bottom: 20px; }
-
+  /* ═════════ HEADER ═════════ */
+  header { display: flex; align-items: center; justify-content: center; gap: 10px; }
   .title {
-    font-family: 'Orbitron', monospace;
-    font-weight: 900;
-    font-size: clamp(22px, 5vw, 40px);
-    letter-spacing: 4px;
-    color: var(--torpedo-cyan);
-    text-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 60px rgba(0,229,255,0.2);
-    animation: titlePulse 3s ease-in-out infinite;
-  }
-
-  @keyframes titlePulse {
-    0%, 100% { text-shadow: 0 0 20px rgba(0,229,255,0.6), 0 0 60px rgba(0,229,255,0.2); }
-    50%       { text-shadow: 0 0 30px rgba(0,229,255,0.9), 0 0 80px rgba(0,229,255,0.4); }
-  }
-
-  .weapon-panel {
-    background: rgba(4,22,40,0.8);
-    border: 1px solid var(--grid-line);
-    border-radius: 4px;
-    padding: 12px 16px;
-    margin-bottom: 16px;
-  }
-  .weapon-panel-title { font-size: 9px; letter-spacing: 3px; color: var(--text-dim); text-transform: uppercase; margin-bottom: 10px; }
-  .weapons { display: flex; gap: 10px; flex-wrap: wrap; }
-
-  .weapon-btn {
-    flex: 1; min-width: 120px;
-    background: rgba(6,32,64,0.6);
-    border: none; border-radius: 6px;
-    padding: 10px; cursor: pointer;
-    transition: background 0.2s, box-shadow 0.2s, transform 0.15s;
+    display: flex; align-items: center; gap: 10px;
+    font-weight: 700; font-size: clamp(22px, 6vw, 32px); letter-spacing: 5px;
     color: var(--text-bright);
-    font-family: 'Share Tech Mono', monospace;
-    position: relative; overflow: visible;
+    text-shadow: 0 0 18px rgba(0,229,255,0.45);
   }
-  .weapon-btn .btn-svg-border { position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;border-radius:inherit; }
-  .weapon-btn .btn-svg-border rect { fill:none;stroke-width:2;rx:6;ry:6;transition:stroke 0.2s,stroke-opacity 0.2s; }
-  .weapon-btn .btn-bg { position:absolute;inset:0;border-radius:6px;opacity:0;transition:opacity 0.2s;pointer-events:none; }
-
-  .weapon-btn.torpedo .btn-bg { background: rgba(0,229,255,0.06); }
-  .weapon-btn.torpedo:hover:not(:disabled) .btn-bg { opacity:1; }
-  .weapon-btn.torpedo:hover:not(:disabled) { background:rgba(0,229,255,0.07); }
-  .weapon-btn.torpedo.active { background:rgba(0,229,255,0.13); box-shadow:0 0 18px rgba(0,229,255,0.35),inset 0 0 12px rgba(0,229,255,0.08); transform:translateY(-1px); }
-  .weapon-btn.torpedo.active .btn-bg { opacity:1; }
-
-  .weapon-btn.missile .btn-bg { background:rgba(255,221,0,0.06); }
-  .weapon-btn.missile:hover:not(:disabled) .btn-bg { opacity:1; }
-  .weapon-btn.missile:hover:not(:disabled) { background:rgba(255,221,0,0.07); }
-  .weapon-btn.missile.active { background:rgba(255,221,0,0.12); box-shadow:0 0 18px rgba(255,221,0,0.32),inset 0 0 12px rgba(255,221,0,0.07); transform:translateY(-1px); }
-  .weapon-btn.missile.active .btn-bg { opacity:1; }
-
-  .weapon-btn.stone .btn-bg { background:rgba(170,187,204,0.05); }
-  .weapon-btn.stone:hover:not(:disabled) .btn-bg { opacity:1; }
-  .weapon-btn.stone:hover:not(:disabled) { background:rgba(170,187,204,0.06); }
-  .weapon-btn.stone.active { background:rgba(170,187,204,0.11); box-shadow:0 0 16px rgba(170,187,204,0.22),inset 0 0 10px rgba(170,187,204,0.06); transform:translateY(-1px); }
-  .weapon-btn.stone.active .btn-bg { opacity:1; }
-
-  .weapon-btn .active-dot {
-    position:absolute; top:7px; right:7px; width:6px; height:6px; border-radius:50%;
-    pointer-events:none; z-index:5; display:none;
-    animation:activeDot 1.2s ease-in-out infinite alternate;
+  .title svg { width: 1.05em; height: 1.05em; color: var(--torpedo-cyan); flex: none; }
+  #btn-info, #btn-menu {
+    display: inline-flex; align-items: center; justify-content: center;
+    width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: none;
+    background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.5); color: var(--torpedo-cyan);
+    font-weight: 700; font-size: 16px; transition: background .2s, box-shadow .2s;
   }
-  .weapon-btn.active      .active-dot { display:block; }
-  .weapon-btn:disabled    .active-dot { display:none; }
-  .weapon-btn.torpedo     .active-dot { background:var(--torpedo-cyan);   box-shadow:0 0 6px var(--torpedo-cyan); }
-  .weapon-btn.missile     .active-dot { background:var(--missile-yellow); box-shadow:0 0 6px var(--missile-yellow); }
-  .weapon-btn.stone       .active-dot { background:var(--stone-gray);     box-shadow:0 0 6px var(--stone-gray); }
-  @keyframes activeDot { from{opacity:0.5;transform:scale(0.8);} to{opacity:1;transform:scale(1.2);} }
+  #btn-menu svg { width: 16px; height: 16px; }
+  #btn-info:active, #btn-menu:active { background: rgba(0,229,255,0.25); }
 
-  .weapon-btn:disabled { opacity:0.38; cursor:not-allowed; filter:grayscale(0.8); transform:none; box-shadow:none; animation:buttonShake 0.3s linear; }
+  /* ═════════ MODE ═════════ */
+  body[data-mode="hard"] .board-frame { border-color: rgba(255,59,74,0.65); }
+  body[data-mode="hard"] .title { text-shadow: 0 0 18px rgba(255,59,74,0.5); }
+
+  /* ═════════ MODE SCREEN ═════════ */
+  #mode-screen { z-index: 110; }
+  .mode-box { width: min(100%, 420px); }
+  .mode-card {
+    text-align: center; padding: 18px 16px; border-radius: 12px; cursor: pointer; color: var(--text-bright);
+    background: linear-gradient(180deg, rgba(14,44,74,0.9), rgba(6,24,42,0.95));
+    border: 1.5px solid var(--torpedo-cyan); transition: transform .1s, box-shadow .2s;
+  }
+  .mode-card:active { transform: scale(0.98); }
+  .mode-card b { display: block; font-size: 22px; letter-spacing: 4px; text-align: center; color: var(--torpedo-cyan); }
+  .mode-card.hard { border-color: var(--bomb-red); }
+  .mode-card.hard b { color: var(--bomb-red); }
+  .ship-art { width: 100%; max-width: 340px; height: auto; margin: 0 auto -2px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5)); }
+
+  /* ═════════ HUD ═════════ */
+  .hud {
+    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px;
+    padding: 8px 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px;
+  }
+  .hud-stat { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
+  .hud-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); font-weight: 600; }
+  .hud-val { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; transition: color .2s; }
+  .hud-val.low { color: var(--danger-red); }
+  .reload { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; }
+  .reload i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--stone-gray); opacity: .5; transition: all .2s; }
+  .reload i.on { background: var(--stone-gray); opacity: 1; box-shadow: 0 0 6px var(--stone-gray); }
+  .fleet {
+    grid-column: 1 / -1; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 12px;
+    padding-top: 7px; border-top: 1px dashed rgba(23,70,107,0.9);
+  }
+  .ship-item { display: flex; }
+  .ship-blocks { display: flex; gap: 2px; }
+  .ship-block { width: 9px; height: 9px; border-radius: 2px; background: linear-gradient(180deg,#5f8fb0,#2c5677); border: 1px solid #0d3454; }
+  .ship-item.dead { opacity: .55; }
+  .ship-item.dead .ship-block { background: linear-gradient(180deg,#ff5a4a,#8a1420); border-color: #4a0a10; }
+
+  /* ═════════ WEAPONS ═════════ */
+  .weapons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+  .weapon-btn {
+    --c: var(--torpedo-cyan);
+    position: relative; overflow: hidden; cursor: pointer; color: var(--text-bright);
+    background: linear-gradient(180deg, rgba(14,44,74,0.85), rgba(6,24,42,0.9));
+    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
+    padding: 9px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+    transition: transform .12s, border-color .2s, box-shadow .2s, background .2s;
+  }
+  .weapon-btn.torpedo { --c: var(--torpedo-cyan); }
+  .weapon-btn.missile { --c: var(--missile-yellow); }
+  .weapon-btn.stone   { --c: var(--stone-gray); }
+  .weapon-btn.bomb    { --c: var(--bomb-red); }
+  .weapon-btn::before {
+    content: ''; position: absolute; left: 20%; right: 20%; top: 0; height: 2px; border-radius: 0 0 2px 2px;
+    background: var(--c); opacity: 0; transition: opacity .2s;
+  }
+  .weapon-btn:active:not(:disabled) { transform: scale(0.96); }
+  .weapon-btn.active {
+    border-color: var(--c);
+    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 18%, #0a2440), rgba(6,24,42,0.95));
+    box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--c) 10%, transparent);
+  }
+  .weapon-btn.active::before { opacity: 1; }
+  .w-ico { width: 26px; height: 26px; color: var(--c); }
+  .w-ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .weapon-name { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--c); }
+  .weapon-count { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .weapon-desc { font-size: 9px; color: var(--text-dim); text-align: center; line-height: 1.3; }
+
+  .weapon-btn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.8); box-shadow: none; }
   .weapon-btn:disabled::after {
-    content:"HẾT ĐẠN"; position:absolute; top:50%; left:50%;
-    transform:translate(-50%,-50%) rotate(-15deg) scale(1);
-    background:rgba(220,20,60,0.9); color:white;
-    font-family:'Orbitron',sans-serif; font-weight:700; font-size:11px;
-    padding:3px 10px; border:1.5px solid rgba(255,255,255,0.8); border-radius:2px;
-    white-space:nowrap; z-index:10; pointer-events:none; box-shadow:0 0 10px rgba(0,0,0,0.5);
-    letter-spacing:1px; animation:stampEffect 0.3s cubic-bezier(0.175,0.885,0.32,1.275) forwards;
+    content: "HẾT ĐẠN"; position: absolute; top: 50%; left: 50%;
+    transform: translate(-50%,-50%) rotate(-14deg);
+    background: rgba(220,20,60,0.92); color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 1px;
+    padding: 2px 8px; border: 1.5px solid rgba(255,255,255,0.8); border-radius: 2px; white-space: nowrap;
+    pointer-events: none; animation: stampEffect .3s cubic-bezier(.175,.885,.32,1.275) forwards;
   }
   @keyframes stampEffect {
-    0%  {transform:translate(-50%,-50%) rotate(-15deg) scale(5);opacity:0;}
-    80% {transform:translate(-50%,-50%) rotate(-15deg) scale(0.9);opacity:1;}
-    100%{transform:translate(-50%,-50%) rotate(-15deg) scale(1);opacity:1;}
-  }
-  @keyframes buttonShake {
-    0%{transform:translateX(0);} 25%{transform:translateX(-2px);} 50%{transform:translateX(2px);} 75%{transform:translateX(-1px);} 100%{transform:translateX(0);}
+    0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(4); opacity: 0; }
+    100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1); opacity: 1; }
   }
 
-  .weapon-icon  { font-size:20px; display:block; margin-bottom:4px; }
-  .weapon-name  { font-size:11px; letter-spacing:1px; font-weight:bold; display:block; }
-  .weapon-count { font-size:13px; font-family:'Orbitron',monospace; font-weight:700; display:block; margin-top:4px; letter-spacing:1px; }
-  .weapon-btn.torpedo .weapon-count { color:var(--torpedo-cyan); }
-  .weapon-btn.missile .weapon-count { color:var(--missile-yellow); }
-  .weapon-btn.stone   .weapon-count { color:var(--stone-gray); }
-  .weapon-desc { font-size:9px; color:var(--text-dim); margin-top:4px; line-height:1.4; display:block; }
-
-  #fx-layer    { position:fixed;inset:0;pointer-events:none;z-index:500;overflow:hidden; }
-  #beam-canvas { position:fixed;inset:0;pointer-events:none;z-index:499;width:100%;height:100%; }
-
-  .ripple-ring {
-    position:absolute;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%);
-    animation:rippleGrow var(--rr-dur,0.65s) ease-out var(--rr-delay,0s) forwards;
-    border:var(--rr-w,2px) solid var(--rr-color,rgba(0,229,255,0.8));width:0;height:0;
+  /* ═════════ BOARD ═════════ */
+  .board-frame {
+    width: min(100%, clamp(300px, calc(100dvh - 380px), 600px)); margin: 0 auto;
+    padding: 8px; border-radius: 14px;
+    background: linear-gradient(145deg, #1d3a57, #08182a);
+    border: 1px solid rgba(201,162,90,0.55);
+    box-shadow: 0 12px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 3px rgba(0,0,0,0.25);
   }
-  @keyframes rippleGrow{0%{width:4px;height:4px;opacity:1;}100%{width:var(--rr-size,80px);height:var(--rr-size,80px);opacity:0;}}
-
-  .ripple-ellipse {
-    position:absolute;border-radius:50%;pointer-events:none;transform:translate(-50%,-50%) scaleY(0.4);
-    animation:rippleEllipse var(--re-dur,0.7s) ease-out var(--re-delay,0s) forwards;
-    border:1.5px solid var(--re-color,rgba(0,229,255,0.5));width:0;height:0;
+  .board-body { display: flex; }
+  .grid-wrap { position: relative; flex: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5); }
+  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; padding: 2px; background: #041424; }
+  .caustics {
+    position: absolute; inset: -50%; pointer-events: none; z-index: 3; mix-blend-mode: screen;
+    background:
+      radial-gradient(circle at 30% 40%, rgba(120,210,255,0.10) 0 10%, transparent 30%),
+      radial-gradient(circle at 72% 66%, rgba(120,210,255,0.08) 0 9%, transparent 28%);
+    background-size: 130px 130px;
+    animation: drift 16s linear infinite;
   }
-  @keyframes rippleEllipse{
-    0%  {width:4px;height:4px;opacity:0.8;transform:translate(-50%,-50%) scaleY(0.4);}
-    100%{width:var(--re-size,100px);height:var(--re-size,100px);opacity:0;transform:translate(-50%,-50%) scaleY(0.35);}
-  }
-
-  .drop {
-    position:absolute;width:3px;height:3px;border-radius:50%;pointer-events:none;
-    animation:dropFly var(--d-dur,0.45s) ease-out forwards;
-    background:var(--d-color,rgba(100,220,255,0.9));
-  }
-  @keyframes dropFly{
-    0%  {transform:translate(-50%,-50%) translate(0,0) scale(1);opacity:1;}
-    100%{transform:translate(-50%,-50%) translate(var(--d-x,0px),var(--d-y,0px)) scale(0);opacity:0;}
-  }
-
-  .detect-bang {
-    pointer-events:none;font-family:'Orbitron',monospace;font-weight:900;
-    color:#ffdd00;text-shadow:0 0 8px rgba(255,221,0,0.9),0 0 20px rgba(255,200,0,0.5);
-    display:flex;align-items:center;justify-content:center;
-    animation:bangAnim 2s cubic-bezier(0.34,1.56,0.64,1) forwards;
-    z-index:600;transform-origin:center center;
-  }
-  @keyframes bangAnim{
-    0%  {transform:scale(0);opacity:0;}
-    15% {transform:scale(1.5);opacity:1;}
-    80% {transform:scale(1.2);opacity:1;}
-    100%{transform:scale(0);opacity:0;}
-  }
-
-  body.firing-lock .cell:not(.revealed):not(.disabled) { cursor:wait !important; }
-
-  .grid-wrapper { position:relative;margin-bottom:16px; }
-  .grid-main    { display:grid;grid-template-columns:1fr;gap:2px; }
-  .grid         { display:grid;grid-template-columns:repeat(12,1fr);gap:2px; }
+  @keyframes drift { to { transform: translate(130px, 65px); } }
 
   .cell {
-    aspect-ratio:1;background:var(--ocean-surface);border:1px solid var(--grid-line);
-    border-radius:2px;cursor:pointer;position:relative;transition:background 0.15s,border-color 0.15s,transform 0.15s;overflow:hidden;
+    aspect-ratio: 1; position: relative; overflow: hidden; cursor: pointer; border-radius: 3px;
+    background: linear-gradient(160deg, var(--water-a), var(--water-b));
+    box-shadow: inset 0 1px 0 rgba(140,210,255,0.16), inset 0 -2px 4px rgba(0,0,0,0.35);
+    transition: background .15s, box-shadow .15s;
   }
   .cell::before {
-    content:'';position:absolute;inset:0;
-    background:linear-gradient(135deg,rgba(255,255,255,0.03) 0%,transparent 50%);
-    pointer-events:none;
+    content: ''; position: absolute; inset: 0; pointer-events: none;
+    background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 55%);
   }
-  .cell:hover:not(.revealed):not(.disabled):not(.fogged) {
-    background:var(--water-glow);border-color:var(--torpedo-cyan);
-    box-shadow:0 0 8px rgba(0,229,255,0.4);transform:scale(1.05);z-index:2;
+  @media (hover: hover) {
+    .cell:hover:not(.revealed):not(.disabled) {
+      background: linear-gradient(160deg, #14609a, #0a3a66);
+      box-shadow: inset 0 0 0 1.5px var(--sel), 0 0 8px color-mix(in srgb, var(--sel) 50%, transparent);
+      z-index: 2;
+    }
   }
-  .cell.revealed { cursor:default; }
-  .cell.disabled { cursor:default;pointer-events:none; }
+  .cell:active:not(.revealed):not(.disabled) { box-shadow: inset 0 0 0 2px var(--sel); }
+  .cell.revealed { cursor: default; }
+  .cell.disabled { cursor: default; pointer-events: none; }
+  body.firing-lock .cell:not(.revealed):not(.disabled) { cursor: wait; }
 
-  body.hard-mode .grid { gap: 0 !important; }
-  body.hard-mode .cell {
-    border: none !important;
-    border-radius: 0 !important;
-    background: var(--ocean-surface) !important;
-    transform: none !important;
-    box-shadow: none !important;
+  /* Trượt: vòng sóng */
+  .cell.miss { background: linear-gradient(160deg, #082a4a, #051c33); }
+  .cell.miss::after {
+    content: ''; position: absolute; inset: 27%; border-radius: 50%;
+    border: 1.5px solid rgba(150,205,245,0.55);
+    background: radial-gradient(circle, rgba(150,205,245,0.5) 0 12%, transparent 14%);
+    animation: ringIn .35s ease-out;
   }
-  body.hard-mode .cell::before { display: none !important; }
-  body.hard-mode .cell.miss { background: rgba(2,14,30,0.9) !important; }
-  body.hard-mode .cell.hit  { background: rgba(8,28,50,0.9) !important; }
-  body.hard-mode .cell.sunk { background: rgba(16,16,20,0.92) !important; }
-  body.hard-mode .cell:hover:not(.revealed):not(.disabled):not(.fogged) {
-    background: rgba(10,74,122,0.6) !important;
-    box-shadow: none !important;
-    transform: none !important;
+  @keyframes ringIn { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+
+  /* Trúng: lửa */
+  .cell.hit { background: radial-gradient(circle at 50% 60%, rgba(255,110,20,0.45), rgba(90,20,5,0.55) 75%), linear-gradient(160deg, var(--water-a), var(--water-b)); }
+  .cell.hit::after, .flame {
+    content: ''; position: absolute; inset: 14%; pointer-events: none;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5c1 4.2 6.2 6.3 6.2 12.4a6.2 6.2 0 0 1-12.4 0c0-3.2 2.1-4.4 3.1-7.4 1 1 2 2 2.1 3.2 1.1-2 1.2-5 1-8.2z' fill='%23ff5a0a'/%3E%3Cpath d='M12 10.5c.6 2.2 3.2 3.2 3.2 6.2a3.2 3.2 0 0 1-6.4 0c0-2.1 2.1-3.3 3.2-6.2z' fill='%23ffd23f'/%3E%3C/svg%3E") center / contain no-repeat;
+    filter: drop-shadow(0 0 4px rgba(255,90,10,0.9));
+    animation: burnFlicker .45s ease-in-out infinite alternate;
+    transform-origin: 50% 90%;
+  }
+  @keyframes burnFlicker { from { opacity: .8; transform: scale(.9) rotate(-2deg); } to { opacity: 1; transform: scale(1.08) rotate(2deg); } }
+
+  /* Tàu (chìm / lộ diện) */
+  .cell.sunk { background: #05121f; box-shadow: inset 0 0 8px rgba(255,60,30,0.45); }
+  .cell.sunk::after { content: none; }
+  .ship-part {
+    position: absolute; inset: 0; z-index: 1;
+    background: linear-gradient(180deg, #9db1c3, #566a7e 50%, #2d3d4d);
+    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 3px rgba(0,0,0,0.4);
+  }
+  .ship-part::before { content: ''; position: absolute; background: rgba(255,255,255,0.16); border-radius: 2px; }
+  .ship-part.h::before { left: 12%; right: 12%; top: 42%; bottom: 42%; }
+  .ship-part.v::before { top: 12%; bottom: 12%; left: 42%; right: 42%; }
+  .ship-part.h.start { border-radius: 40% 2px 2px 40%; }
+  .ship-part.h.end   { border-radius: 2px 40% 40% 2px; }
+  .ship-part.v.start { border-radius: 40% 40% 2px 2px; }
+  .ship-part.v.end   { border-radius: 2px 2px 40% 40%; }
+  .ship-part.head::after {
+    content: ''; position: absolute; inset: 27%; border-radius: 50%;
+    background: radial-gradient(circle at 35% 30%, #ffe08a, #c9852a 70%);
+    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
+  }
+  .cell.sunk .ship-part { filter: grayscale(.7) brightness(.5); }
+  .cell.sunk .flame { z-index: 2; inset: 20%; opacity: .75; }
+
+  /* Khiên đuôi tàu (đã vỡ lớp 1) */
+  .cell.shield {
+    background: radial-gradient(circle, rgba(0,229,255,0.35), rgba(0,60,100,0.4) 80%), linear-gradient(160deg, var(--water-a), var(--water-b));
+    box-shadow: inset 0 0 0 1.5px rgba(0,229,255,0.7), inset 0 0 8px rgba(0,229,255,0.4);
+  }
+  .cell.shield::after {
+    content: ''; position: absolute; inset: 16%; pointer-events: none; z-index: 2; animation: ringIn .35s ease-out;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5z' fill='%2300e5ff' fill-opacity='.35' stroke='%2300e5ff' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+    filter: drop-shadow(0 0 4px #00e5ff);
   }
 
-  .cell.miss { background:rgba(0,20,40,0.8); }
-  .cell.miss::after { content:'·';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:var(--text-dim);font-size:14px; }
-
-  .cell.hit { background:var(--ocean-surface);border-color:var(--grid-line); }
-  .cell.hit::after {
-    content:'🔥';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:clamp(14px,2.5vw,20px);filter:drop-shadow(0 0 4px #ff4400);
-    animation:burnFlicker 0.4s ease-in-out infinite alternate;
+  /* Ô bí mật */
+  .cell.secret { background: radial-gradient(circle, rgba(255,210,90,0.5), rgba(120,70,10,0.5) 80%), linear-gradient(160deg, var(--water-a), var(--water-b)); }
+  .cell.secret::after {
+    content: ''; position: absolute; inset: 16%; pointer-events: none; animation: ringIn .35s ease-out;
+    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z' fill='%23ffd23f' stroke='%238a5a00' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat;
+    filter: drop-shadow(0 0 4px rgba(255,200,60,0.9));
   }
+  .cell.secret.unfound { opacity: .55; }
 
-  .cell.sunk { background:rgba(20,20,25,0.9);border-color:#444;box-shadow:inset 0 0 10px rgba(0,0,0,0.8); }
-  .cell.sunk::after {
-    content:'🔥';position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
-    font-size:clamp(14px,2vw,18px);filter:grayscale(0.5) brightness(0.7);
-    animation:burnFlicker 0.8s ease-in-out infinite alternate;
-  }
-
-  @keyframes burnFlicker{from{opacity:0.7;transform:scale(0.9);}to{opacity:1;transform:scale(1.1);}}
-  .cell.detected::after { content:none; }
-  .cell.ship-reveal      { background:rgba(26,74,110,0.6);border-color:var(--ship-color); }
-  .cell.ship-head-reveal { background:rgba(0,119,170,0.6);border-color:var(--ship-head); }
-
-  .cell.fogged {
-    cursor: pointer !important;
-    pointer-events: auto !important;
-  }
-
-  #fog-canvas {
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    z-index: 50;
-    border-radius: 4px;
-  }
-
+  /* ═════════ LOG ═════════ */
   .log {
-    background:rgba(2,12,24,0.9);border:1px solid var(--grid-line);border-radius:4px;
-    padding:10px 14px;height:100px;overflow-y:auto;margin-bottom:16px;
-    scrollbar-width:thin;scrollbar-color:var(--grid-line) transparent;
+    background: rgba(2,10,20,0.88); border: 1px solid var(--panel-edge); border-radius: 10px;
+    padding: 8px 12px; height: 92px; overflow-y: auto;
+    scrollbar-width: thin; scrollbar-color: var(--panel-edge) transparent;
   }
-  .log-entry         {font-size:11px;line-height:1.8;color:var(--text-dim);transition:color 0.5s;}
-  .log-entry.new     {color:var(--text-bright);}
-  .log-entry.hit     {color:var(--fire-orange);}
-  .log-entry.sunk    {color:var(--danger-red);font-weight:bold;}
-  .log-entry.detect  {color:var(--missile-yellow);}
-  .log-entry.miss    {color:var(--text-dim);}
-  .log-entry.system  {color:var(--torpedo-cyan);}
-  .log-entry.fog     {color:#88aacc;}
+  .log-entry { font-size: 12px; line-height: 1.7; color: var(--text-dim); padding-left: 8px; border-left: 2px solid transparent; transition: color .5s; }
+  .log-entry.new    { color: var(--text-bright); }
+  .log-entry.hit    { color: var(--fire-orange); border-left-color: var(--fire-orange); }
+  .log-entry.sunk   { color: var(--danger-red); font-weight: 700; border-left-color: var(--danger-red); }
+  .log-entry.detect { color: var(--missile-yellow); border-left-color: var(--missile-yellow); }
+  .log-entry.system { color: var(--torpedo-cyan); }
 
-  .overlay { position:fixed;inset:0;background:rgba(2,8,16,0.92);display:flex;align-items:center;justify-content:center;z-index:100;backdrop-filter:blur(4px); }
-  .overlay.hidden{display:none !important;}
-  .hidden{display:none !important;}
+  footer { text-align: center; font-size: 10px; color: var(--text-dim); opacity: .6; padding: 2px 0 4px; }
 
+  /* ═════════ OVERLAY / MODAL ═════════ */
+  .overlay {
+    position: fixed; inset: 0; z-index: 100; padding: 16px;
+    background: rgba(2,8,16,0.9); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
+    display: flex; align-items: center; justify-content: center;
+  }
   .overlay-box {
-    background:var(--ocean-mid);border:1px solid var(--torpedo-cyan);border-radius:8px;
-    padding:40px;text-align:center;max-width:400px;
-    box-shadow:0 0 60px rgba(0,229,255,0.2);
-    animation:overlayIn 0.4s cubic-bezier(0.34,1.56,0.64,1);
-    display:flex;flex-direction:column;gap:10px;
+    width: min(100%, 400px); padding: 28px 22px 22px; text-align: center;
+    background: linear-gradient(160deg, #0d2c4a, #061a2e);
+    border: 1px solid rgba(201,162,90,0.6); border-radius: 14px;
+    box-shadow: 0 0 50px rgba(0,229,255,0.15), 0 20px 50px rgba(0,0,0,0.6);
+    display: flex; flex-direction: column; gap: 10px;
+    animation: overlayIn .35s cubic-bezier(.34,1.56,.64,1);
   }
-  @keyframes overlayIn{from{transform:scale(0.8);opacity:0;}to{transform:scale(1);opacity:1;}}
-
-  .overlay-title     {font-family:'Tahoma',Sans-serif;font-size:28px;font-weight:900;margin-bottom:12px;}
-  .overlay-title.win {color:var(--radar-green);text-shadow:0 0 20px rgba(0,255,136,0.6);}
-  .overlay-title.lose{color:var(--danger-red); text-shadow:0 0 20px rgba(255,34,68,0.6);}
-  .overlay-msg       {color:var(--text-dim);font-size:13px;line-height:1.8;margin-bottom:14px;}
-  .overlay-msg p     {margin-bottom:8px;line-height:1.5;}
+  @keyframes overlayIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+  .overlay-title { font-size: 26px; font-weight: 700; letter-spacing: 3px; margin-bottom: 4px; }
+  .overlay-title.win  { color: var(--radar-green); text-shadow: 0 0 18px rgba(0,255,136,0.5); }
+  .overlay-title.lose { color: var(--danger-red);  text-shadow: 0 0 18px rgba(255,34,68,0.5); }
+  .overlay-msg { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
+  .stats { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
+  .stats > div { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 8px 4px; display: flex; flex-direction: column; }
+  .stats b { font-size: 24px; color: var(--text-bright); font-variant-numeric: tabular-nums; }
+  .stats span { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); }
 
   .btn-restart {
-    background:transparent;border:1px solid var(--torpedo-cyan);color:var(--torpedo-cyan);
-    font-family:'Orbitron',monospace;font-size:12px;letter-spacing:3px;
-    padding:12px 32px;cursor:pointer;border-radius:4px;transition:all 0.2s;text-transform:uppercase;
+    font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
+    padding: 13px 24px; min-height: 46px; cursor: pointer; border-radius: 8px;
+    color: #02202b; background: linear-gradient(180deg, #33eeff, #00b8d4); border: none;
+    box-shadow: 0 3px 0 #007a8f, 0 6px 14px rgba(0,229,255,0.25); transition: transform .1s, box-shadow .1s;
   }
-  .btn-restart:hover{background:rgba(0,229,255,0.15);box-shadow:0 0 20px rgba(0,229,255,0.3);}
+  .btn-restart:active { transform: translateY(2px); box-shadow: 0 1px 0 #007a8f; }
+  .btn-restart.ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--panel-edge); box-shadow: none; }
+  .btn-restart.ghost:active { transform: scale(.97); }
 
-  #floating-restart { position:fixed;bottom:20px;right:20px;z-index:1000;background:var(--ocean-surface);box-shadow:0 4px 10px rgba(0,0,0,0.5); }
-
-  #btn-info {
-    background:transparent;border:1px solid var(--torpedo-cyan);color:var(--torpedo-cyan);
-    width:28px;height:28px;border-radius:50%;cursor:pointer;
-    font-family:'Orbitron',sans-serif;font-weight:bold;font-size:16px;
-    transition:all 0.3s;vertical-align:middle;
+  #floating-restart {
+    position: fixed; z-index: 90; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
+    padding: 12px 20px;
   }
-  #btn-info:hover{background:rgba(0,229,255,0.2);box-shadow:0 0 10px var(--torpedo-cyan);}
 
-  .ship-part { position:absolute;inset:0;background:linear-gradient(145deg,#556677,#223344);z-index:1; }
-  .cell.sunk .ship-part { background:linear-gradient(145deg,#2d3748,#1a202c);filter:grayscale(0.7) brightness(0.5);border:1px solid rgba(255,0,0,0.2); }
+  .info-box { text-align: left; width: min(100%, 480px); }
+  .info-box .overlay-title { font-size: 18px; color: var(--torpedo-cyan); border-bottom: 1px solid var(--panel-edge); padding-bottom: 10px; }
+  .info-box p { margin-bottom: 8px; color: var(--text-bright); font-size: 13px; }
+  .info-box hr { border: 0; border-top: 1px solid var(--panel-edge); margin: 10px 0; }
+  .info-box [data-only] { display: none; }
+  body[data-mode="normal"] .info-box [data-only="normal"],
+  body[data-mode="hard"]   .info-box [data-only="hard"] { display: block; }
+  .info-box .mode-tag { font-weight: 700; letter-spacing: 3px; font-size: 12px; }
+  .info-box .note { font-size: 11px; color: var(--text-dim); }
 
-  footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:monospace;z-index:99999; }
+  /* ═════════ FX ═════════ */
+  #fx-layer    { position: fixed; inset: 0; pointer-events: none; z-index: 500; overflow: hidden; }
+  #beam-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 499; width: 100%; height: 100%; }
 
-  @media(max-width:500px){
-    .weapons{gap:6px;} .weapon-btn{min-width:90px;padding:8px 6px;} .weapon-desc{display:none;} .overlay-box{padding:24px 16px;margin:16px;}
-    .mode-cards { gap: 16px; }
-    .mode-card { width: 200px; }
-    .mode-card-illustration { height: 110px; }
+  .ripple-ring {
+    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%);
+    animation: rippleGrow var(--rr-dur, .65s) ease-out var(--rr-delay, 0s) forwards;
+    border: var(--rr-w, 2px) solid var(--rr-color, rgba(0,229,255,0.8)); width: 0; height: 0;
+  }
+  @keyframes rippleGrow { 0% { width: 4px; height: 4px; opacity: 1; } 100% { width: var(--rr-size, 80px); height: var(--rr-size, 80px); opacity: 0; } }
+  .ripple-ellipse {
+    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%) scaleY(.4);
+    animation: rippleEllipse var(--re-dur, .7s) ease-out var(--re-delay, 0s) forwards;
+    border: 1.5px solid var(--re-color, rgba(0,229,255,0.5)); width: 0; height: 0;
+  }
+  @keyframes rippleEllipse {
+    0%   { width: 4px; height: 4px; opacity: .8; transform: translate(-50%,-50%) scaleY(.4); }
+    100% { width: var(--re-size, 100px); height: var(--re-size, 100px); opacity: 0; transform: translate(-50%,-50%) scaleY(.35); }
+  }
+  .drop {
+    position: absolute; width: 3px; height: 3px; border-radius: 50%; pointer-events: none;
+    animation: dropFly var(--d-dur, .45s) ease-out forwards; background: var(--d-color, rgba(100,220,255,0.9));
+  }
+  @keyframes dropFly {
+    0%   { transform: translate(-50%,-50%) translate(0,0) scale(1); opacity: 1; }
+    100% { transform: translate(-50%,-50%) translate(var(--d-x,0px), var(--d-y,0px)) scale(0); opacity: 0; }
+  }
+  .blast {
+    position: fixed; pointer-events: none; border-radius: 6px; transform-origin: center;
+    background: radial-gradient(circle, rgba(255,240,180,0.95) 0%, rgba(255,90,40,0.75) 40%, rgba(255,40,60,0.25) 75%, transparent 100%);
+    box-shadow: 0 0 30px 8px rgba(255,60,50,0.6);
+    animation: blastAnim .6s ease-out forwards;
+  }
+  @keyframes blastAnim { 0% { transform: scale(.3); opacity: 1; } 60% { transform: scale(1.05); opacity: .9; } 100% { transform: scale(1.15); opacity: 0; } }
+  .detect-bang {
+    pointer-events: none; font-family: var(--font); font-weight: 700; color: #ffdd00;
+    text-shadow: 0 0 8px rgba(255,221,0,0.9), 0 0 20px rgba(255,200,0,0.5);
+    animation: bangAnim 2s cubic-bezier(.34,1.56,.64,1) forwards; transform-origin: center;
+  }
+  @keyframes bangAnim { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.5); opacity: 1; } 80% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+
+  /* ═════════ RESPONSIVE ═════════ */
+  @media (max-width: 520px) {
+    .weapons { gap: 5px; }
+    .weapon-name { font-size: 10px; letter-spacing: .5px; }
+    .weapon-desc { display: none; }
+    .weapon-btn { padding: 8px 4px 7px; }
+    .weapon-btn:disabled::after { font-size: 10px; padding: 2px 6px; }
+    .overlay-box { padding: 24px 16px 18px; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .caustics { animation: none; }
+    .cell.hit::after, .flame { animation: none; }
   }
 </style>
 </head>
-<body>
+<body data-weapon="torpedo">
 
 <svg id="beam-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
 <div id="fx-layer"></div>
 
-<!-- ══ MODE SELECT ══════════════════════════════════════ -->
-<div id="mode-select">
-  <div class="mode-title">⚓ HẢI CHIẾN</div>
-  <div class="mode-subtitle">Chọn chế độ tác chiến</div>
-
-  <div class="mode-cards">
-
-    <!-- NORMAL CARD -->
-    <div class="mode-card normal selected" id="card-normal" onclick="selectMode('normal')">
-      <span class="mode-card-badge">THƯỜNG</span>
-      <div class="mode-card-illustration">
-        <svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
-          <defs>
-            <linearGradient id="skyNorm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#021428"/>
-              <stop offset="100%" stop-color="#062e50"/>
-            </linearGradient>
-            <linearGradient id="seaNorm" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#063a6a"/>
-              <stop offset="100%" stop-color="#020e22"/>
-            </linearGradient>
-            <linearGradient id="shipBodyN" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#1d5a88"/>
-              <stop offset="100%" stop-color="#0a2d4a"/>
-            </linearGradient>
-            <radialGradient id="moonN" cx="50%" cy="50%" r="50%">
-              <stop offset="0%" stop-color="#e8f4ff"/>
-              <stop offset="70%" stop-color="#c4dff7"/>
-              <stop offset="100%" stop-color="transparent"/>
-            </radialGradient>
-          </defs>
-          <rect width="240" height="140" fill="url(#skyNorm)"/>
-          <circle cx="20" cy="12" r="0.8" fill="white" opacity="0.7"/>
-          <circle cx="55" cy="8" r="0.6" fill="white" opacity="0.5"/>
-          <circle cx="90" cy="15" r="0.7" fill="white" opacity="0.6"/>
-          <circle cx="140" cy="6" r="0.8" fill="white" opacity="0.8"/>
-          <circle cx="170" cy="20" r="0.5" fill="white" opacity="0.5"/>
-          <circle cx="200" cy="10" r="0.7" fill="white" opacity="0.6"/>
-          <circle cx="225" cy="18" r="0.6" fill="white" opacity="0.4"/>
-          <circle cx="35" cy="28" r="0.5" fill="white" opacity="0.4"/>
-          <circle cx="115" cy="22" r="0.5" fill="white" opacity="0.5"/>
-          <circle cx="188" cy="32" r="0.6" fill="white" opacity="0.4"/>
-          <circle cx="195" cy="22" r="10" fill="url(#moonN)" opacity="0.9"/>
-          <circle cx="195" cy="22" r="10" fill="none" stroke="rgba(200,230,255,0.3)" stroke-width="1"/>
-          <circle cx="195" cy="22" r="16" fill="rgba(180,220,255,0.06)"/>
-          <ellipse cx="195" cy="92" rx="6" ry="12" fill="rgba(180,220,255,0.12)"/>
-          <ellipse cx="195" cy="100" rx="3" ry="6" fill="rgba(180,220,255,0.08)"/>
-          <rect x="0" y="78" width="240" height="62" fill="url(#seaNorm)"/>
-          <line x1="0" y1="78" x2="240" y2="78" stroke="rgba(0,180,255,0.25)" stroke-width="1.5"/>
-          <path fill="rgba(5,60,110,0.6)" opacity="0.8">
-            <animate attributeName="d" dur="4s" repeatCount="indefinite"
-              values="M0,86 Q30,80 60,86 Q90,92 120,85 Q150,78 180,85 Q210,92 240,86 L240,140 L0,140Z;
-                      M0,82 Q30,90 60,82 Q90,74 120,84 Q150,92 180,82 Q210,74 240,82 L240,140 L0,140Z;
-                      M0,86 Q30,80 60,86 Q90,92 120,85 Q150,78 180,85 Q210,92 240,86 L240,140 L0,140Z"/>
-          </path>
-          <path fill="rgba(8,75,130,0.5)" opacity="0.7">
-            <animate attributeName="d" dur="3.2s" repeatCount="indefinite"
-              values="M0,90 Q40,84 80,90 Q120,96 160,88 Q200,80 240,90 L240,140 L0,140Z;
-                      M0,86 Q40,94 80,86 Q120,78 160,88 Q200,96 240,86 L240,140 L0,140Z;
-                      M0,90 Q40,84 80,90 Q120,96 160,88 Q200,80 240,90 L240,140 L0,140Z"/>
-          </path>
-          <path d="M10,88 Q20,85 30,88" fill="none" stroke="rgba(100,200,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
-          <path d="M60,90 Q72,87 84,90" fill="none" stroke="rgba(100,200,255,0.3)" stroke-width="1" stroke-linecap="round"/>
-          <path d="M130,86 Q143,83 156,86" fill="none" stroke="rgba(100,200,255,0.35)" stroke-width="1.2" stroke-linecap="round"/>
-          <path d="M190,91 Q202,88 215,91" fill="none" stroke="rgba(100,200,255,0.28)" stroke-width="1" stroke-linecap="round"/>
-          <g style="animation: shipBob 2.8s ease-in-out infinite;">
-            <path d="M62,82 L178,82 L188,90 L52,90 Z" fill="url(#shipBodyN)"/>
-            <path d="M55,89 L185,89 L182,93 L58,93 Z" fill="#061e34"/>
-            <line x1="55" y1="90" x2="185" y2="90" stroke="rgba(0,180,255,0.4)" stroke-width="0.8"/>
-            <rect x="90" y="64" width="60" height="18" rx="1" fill="#0e3d63"/>
-            <rect x="95" y="58" width="40" height="12" rx="1" fill="#103f66"/>
-            <rect x="100" y="52" width="28" height="10" rx="1" fill="#0d3858"/>
-            <rect x="97" y="60" width="6" height="5" rx="1" fill="rgba(0,200,255,0.45)"/>
-            <rect x="106" y="60" width="6" height="5" rx="1" fill="rgba(0,200,255,0.45)"/>
-            <rect x="115" y="60" width="6" height="5" rx="1" fill="rgba(0,200,255,0.3)"/>
-            <rect x="124" y="60" width="6" height="5" rx="1" fill="rgba(0,200,255,0.45)"/>
-            <line x1="114" y1="52" x2="114" y2="36" stroke="#1a5a88" stroke-width="1.5"/>
-            <line x1="108" y1="40" x2="120" y2="40" stroke="#1e6a9e" stroke-width="1.2"/>
-            <ellipse cx="114" cy="36" rx="6" ry="3" fill="none" stroke="#00c8e8" stroke-width="1" opacity="0.8"/>
-            <circle cx="114" cy="36" r="2" fill="#00e5ff" opacity="0.9">
-              <animate attributeName="r" values="2;16;2" dur="2.5s" repeatCount="indefinite"/>
-              <animate attributeName="opacity" values="0.9;0;0.9" dur="2.5s" repeatCount="indefinite"/>
-            </circle>
-            <rect x="68" y="78" width="22" height="4" rx="2" fill="#0c3350"/>
-            <rect x="64" y="79" width="12" height="2.5" rx="1.2" fill="#0a2840"/>
-            <rect x="150" y="78" width="22" height="4" rx="2" fill="#0c3350"/>
-            <rect x="164" y="79" width="12" height="2.5" rx="1.2" fill="#0a2840"/>
-            <rect x="106" y="63" width="10" height="6" rx="1" fill="#0a2e4c"/>
-            <ellipse cx="111" cy="60" rx="4" ry="3" fill="rgba(100,130,160,0.35)" style="animation:smokeRise 1.8s ease-out infinite;"/>
-            <ellipse cx="113" cy="55" rx="3" ry="2.5" fill="rgba(80,110,140,0.22)" style="animation:smokeRise 1.8s ease-out infinite 0.6s;"/>
-            <line x1="114" y1="36" x2="114" y2="32" stroke="#1e6a9e" stroke-width="1"/>
-            <path d="M114,32 L122,34 L114,36 Z" fill="#e84040" opacity="0.9"/>
-          </g>
-          <line x1="0" y1="78" x2="240" y2="78" stroke="rgba(0,229,255,0.12)" stroke-width="1"/>
-        </svg>
-      </div>
-      <div class="mode-card-label">Chế Độ Thường</div>
-      <div class="mode-card-desc">Chiến trường quang đãng.<br>Radar hoạt động tốt.</div>
-    </div>
-
-    <!-- HARD CARD — amorphous fog using canvas -->
-    <div class="mode-card hard" id="card-hard" onclick="selectMode('hard')">
-      <span class="mode-card-badge">KHÓ</span>
-      <div class="mode-card-illustration" style="position:relative;">
-        <!-- Ship layer (same as normal but dimmed) -->
-        <svg viewBox="0 0 240 140" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%" style="position:absolute;inset:0;">
-          <defs>
-            <linearGradient id="skyHard" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#010810"/>
-              <stop offset="100%" stop-color="#031422"/>
-            </linearGradient>
-            <linearGradient id="seaHard" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#041e38"/>
-              <stop offset="100%" stop-color="#010812"/>
-            </linearGradient>
-            <linearGradient id="shipBodyH" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0%" stop-color="#12405e"/>
-              <stop offset="100%" stop-color="#07203a"/>
-            </linearGradient>
-          </defs>
-          <rect width="240" height="140" fill="url(#skyHard)"/>
-          <circle cx="195" cy="22" r="9" fill="rgba(180,210,240,0.15)"/>
-          <rect x="0" y="78" width="240" height="62" fill="url(#seaHard)"/>
-          <path fill="rgba(4,40,72,0.7)">
-            <animate attributeName="d" dur="5s" repeatCount="indefinite"
-              values="M0,86 Q30,81 60,86 Q90,91 120,85 Q150,79 180,85 Q210,91 240,86 L240,140 L0,140Z;
-                      M0,82 Q30,89 60,82 Q90,75 120,83 Q150,91 180,82 Q210,75 240,82 L240,140 L0,140Z;
-                      M0,86 Q30,81 60,86 Q90,91 120,85 Q150,79 180,85 Q210,91 240,86 L240,140 L0,140Z"/>
-          </path>
-          <g opacity="0.55" style="animation: shipBob 3.2s ease-in-out infinite;">
-            <path d="M62,82 L178,82 L188,90 L52,90 Z" fill="url(#shipBodyH)"/>
-            <path d="M55,89 L185,89 L182,93 L58,93 Z" fill="#040f1e"/>
-            <rect x="90" y="64" width="60" height="18" rx="1" fill="#0a2c42"/>
-            <rect x="95" y="58" width="40" height="12" rx="1" fill="#0b2e44"/>
-            <rect x="100" y="52" width="28" height="10" rx="1" fill="#092638"/>
-            <rect x="97" y="60" width="6" height="5" rx="1" fill="rgba(0,120,160,0.3)"/>
-            <rect x="106" y="60" width="6" height="5" rx="1" fill="rgba(0,120,160,0.3)"/>
-            <rect x="115" y="60" width="6" height="5" rx="1" fill="rgba(0,120,160,0.2)"/>
-            <rect x="124" y="60" width="6" height="5" rx="1" fill="rgba(0,120,160,0.3)"/>
-            <line x1="114" y1="52" x2="114" y2="36" stroke="#0e3a5a" stroke-width="1.5"/>
-            <line x1="108" y1="40" x2="120" y2="40" stroke="#103c5c" stroke-width="1.2"/>
-            <ellipse cx="114" cy="36" rx="6" ry="3" fill="none" stroke="rgba(0,180,210,0.3)" stroke-width="1" stroke-dasharray="2 2"/>
-            <rect x="68" y="78" width="22" height="4" rx="2" fill="#07243a"/>
-            <rect x="150" y="78" width="22" height="4" rx="2" fill="#07243a"/>
-            <path d="M114,32 L122,34 L114,36 Z" fill="#a03030" opacity="0.5"/>
-          </g>
-          <!-- radar disrupted badge -->
-          <g>
-            <circle cx="20" cy="20" r="7" fill="rgba(255,100,0,0.2)" stroke="rgba(255,100,0,0.6)" stroke-width="1"/>
-            <text x="20" y="24" text-anchor="middle" font-size="8" fill="#ff8800" font-family="monospace" font-weight="bold">!</text>
-          </g>
-        </svg>
-        <!-- Animated smoke/fog canvas on top -->
-        <canvas id="fog-preview-canvas" width="240" height="140" style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;"></canvas>
-      </div>
-      <div class="mode-card-label">Chế Độ Khó</div>
-      <div class="mode-card-desc">Sương mù chiến tranh.<br>Radar bị nhiễu loạn!</div>
-    </div>
-
-  </div>
-
-  <button class="btn-start-mode" id="btn-start" onclick="startGame()">
-    ▶ &nbsp;BẮT ĐẦU CHIẾN ĐẤU
-  </button>
-</div>
-
-<!-- ══ GAME ══════════════════════════════════════════════ -->
-<div id="game-wrap">
 <div class="container">
   <header>
+    <button id="btn-menu" onclick="openModeScreen()" aria-label="Chọn chế độ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
     <div class="title">
-      ⚓ HẢI CHIẾN
-      <button id="btn-info" onclick="toggleInfo()">?</button>
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M8 11h8M4 14c0 4 3.6 7 8 7s8-3 8-7M4 14l-1.5 2M20 14l1.5 2"/></svg>
+      HẢI CHIẾN
     </div>
+    <button id="btn-info" onclick="toggleInfo()" aria-label="Hướng dẫn">?</button>
   </header>
 
-  <div id="info-modal" class="overlay hidden" onclick="toggleInfo()">
-    <div class="overlay-box" style="max-width:500px;text-align:left;" onclick="event.stopPropagation()">
-      <div class="overlay-title" style="color:var(--torpedo-cyan);font-size:20px;border-bottom:1px solid var(--grid-line);padding-bottom:10px;">HƯỚNG DẪN TÁC CHIẾN</div>
-      <div class="overlay-msg" style="margin-top:15px;">
-        <p>• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 6 tàu địch trước khi hết đạn.</p>
-        <p>• <b>Đầu Tàu:</b> Mỗi tàu có 1 ô đầu não. Bắn trúng ô này sẽ <b>đánh chìm toàn bộ tàu</b> ngay lập tức!</p>
-        <hr style="border:0;border-top:1px solid var(--grid-line);margin:10px 0;">
-        <p style="color:var(--torpedo-cyan);">🚀 <b>NGƯ LÔI:</b> Quét radar sang <b>Trái &amp; Phải</b> ô vừa bắn.</p>
-        <p style="color:var(--missile-yellow);">🎯 <b>TÊN LỬA:</b> Quét radar lên <b>Trên &amp; Dưới</b> ô vừa bắn.</p>
-        <p style="color:var(--stone-gray);">💣 <b>ĐẠN ĐÁ:</b> Sát thương cơ bản, không có khả năng radar.</p>
-        <hr style="border:0;border-top:1px solid var(--grid-line);margin:10px 0;">
-        <p style="color:#ff9900;">⚠️ <b>CHẾ ĐỘ KHÓ:</b> Viền ô bị ẩn. Sau mỗi phát bắn có thể xuất hiện <b>Sương Mù</b> bao phủ. Trong sương mù: radar mù. Sương tan sau vài lượt.</p>
-        <p style="margin-top:10px;font-size:11px;color:#888;">* Nếu Radar phát hiện tàu, dấu <b>"!"</b> sẽ hiện lên tại vị trí đó.</p>
+  <div class="hud">
+    <div class="hud-stat"><span class="hud-label">TÀU ĐỊCH</span><span class="hud-val" id="hud-ships">6/6</span></div>
+    <div class="hud-stat"><span class="hud-label">ĐÃ BẮN</span><span class="hud-val" id="hud-shots">0</span></div>
+    <div class="hud-stat"><span class="hud-label">TỔNG ĐẠN</span><span class="hud-val" id="hud-ammo">36</span></div>
+    <div class="reload hidden" id="reload"><span class="hud-label">NẠP ĐẠN ĐÁ</span><i></i><i></i><i></i><i></i></div>
+    <div class="fleet" id="fleet"></div>
+  </div>
+
+  <div class="weapons">
+    <button class="weapon-btn bomb" id="btn-bomb" onclick="selectWeapon('bomb')">
+      <span class="w-ico"><svg viewBox="0 0 24 24"><path d="M12 2l2 4.6 4.8-1.6-1.6 4.8L22 12l-4.8 2.2 1.6 4.8-4.8-1.6L12 22l-2-4.6-4.8 1.6 1.6-4.8L2 12l4.8-2.2-1.6-4.8 4.8 1.6z"/><circle cx="12" cy="12" r="2.4"/></svg></span>
+      <span class="weapon-name">BOM</span>
+      <span class="weapon-count" id="count-bomb">×1</span>
+      <span class="weapon-desc">Nổ vùng 3×3</span>
+    </button>
+    <button class="weapon-btn torpedo active" id="btn-torpedo" onclick="selectWeapon('torpedo')">
+      <span class="w-ico"><svg viewBox="0 0 24 24"><rect x="4" y="9.5" width="13" height="5" rx="2.5"/><path d="M17 12h3M6 9.5V7M6 14.5V17M1.5 12h1M22 12h.5"/></svg></span>
+      <span class="weapon-name">NGƯ LÔI</span>
+      <span class="weapon-count" id="count-torpedo">×5</span>
+      <span class="weapon-desc">Quét TRÁI + PHẢI</span>
+    </button>
+    <button class="weapon-btn missile" id="btn-missile" onclick="selectWeapon('missile')">
+      <span class="w-ico"><svg viewBox="0 0 24 24"><path d="M12 2c3 3 4 7 4 11l-2 3h-4l-2-3c0-4 1-8 4-11z"/><path d="M8 14l-3 4v3l4-2M16 14l3 4v3l-4-2M12 18v3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
+      <span class="weapon-name">TÊN LỬA</span>
+      <span class="weapon-count" id="count-missile">×5</span>
+      <span class="weapon-desc">Quét TRÊN + DƯỚI</span>
+    </button>
+    <button class="weapon-btn stone" id="btn-stone" onclick="selectWeapon('stone')">
+      <span class="w-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="14" r="6.5"/><path d="M15.5 9.5L18 7M18 7l1.5-3M18 7l3 .5"/></svg></span>
+      <span class="weapon-name">ĐẠN ĐÁ</span>
+      <span class="weapon-count" id="count-stone">×25</span>
+      <span class="weapon-desc">Tấn công trực tiếp</span>
+    </button>
+  </div>
+
+  <div class="board-frame">
+    <div class="board-body">
+      <div class="grid-wrap">
+        <div class="grid" id="game-grid"></div>
+        <div class="caustics"></div>
       </div>
-      <button class="btn-restart" onclick="toggleInfo()">TÔI HIỂU</button>
-    </div>
-  </div>
-
-  <div class="weapon-panel">
-    <div class="weapon-panel-title">▶ Chọn Vũ Khí</div>
-    <div class="weapons">
-      <button class="weapon-btn torpedo active" id="btn-torpedo" onclick="selectWeapon('torpedo')">
-        <span class="btn-bg"></span><span class="active-dot"></span>
-        <span class="weapon-icon">🚀</span>
-        <span class="weapon-name" style="color:var(--torpedo-cyan)">NGƯ LÔI</span>
-        <span class="weapon-count" id="count-torpedo">×5</span>
-        <span class="weapon-desc">Phát hiện tàu TRÁI + PHẢI</span>
-      </button>
-      <button class="weapon-btn missile" id="btn-missile" onclick="selectWeapon('missile')">
-        <span class="btn-bg"></span><span class="active-dot"></span>
-        <span class="weapon-icon">🎯</span>
-        <span class="weapon-name" style="color:var(--missile-yellow)">TÊN LỬA</span>
-        <span class="weapon-count" id="count-missile">×5</span>
-        <span class="weapon-desc">Phát hiện tàu TRÊN + DƯỚI</span>
-      </button>
-      <button class="weapon-btn stone" id="btn-stone" onclick="selectWeapon('stone')">
-        <span class="btn-bg"></span><span class="active-dot"></span>
-        <span class="weapon-icon">💣</span>
-        <span class="weapon-name" style="color:var(--stone-gray)">ĐẠN ĐÁ</span>
-        <span class="weapon-count" id="count-stone">×30</span>
-        <span class="weapon-desc">Tấn công trực tiếp</span>
-      </button>
-    </div>
-  </div>
-
-  <div class="grid-wrapper">
-    <div class="grid-main" style="position:relative;">
-      <div class="grid" id="game-grid"></div>
-      <canvas id="fog-canvas"></canvas>
     </div>
   </div>
 
   <div class="log" id="log"></div>
+  <footer>Version:D20263009-H01M41T0945 &nbsp;»»»&nbsp; developed by Tran Gia Bao</footer>
+</div>
+
+<div id="info-modal" class="overlay hidden" onclick="toggleInfo()">
+  <div class="overlay-box info-box" onclick="event.stopPropagation()">
+    <div class="overlay-title">HƯỚNG DẪN TÁC CHIẾN</div>
+    <div>
+      <p class="mode-tag" data-only="normal" style="color:var(--torpedo-cyan)">CHẾ ĐỘ THƯỜNG</p>
+      <p class="mode-tag" data-only="hard" style="color:var(--bomb-red)">CHẾ ĐỘ KHÓ</p>
+      <p data-only="normal">• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 6 tàu địch trước khi hết đạn.</p>
+      <p data-only="hard">• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 7 tàu địch trước khi hết đạn.</p>
+      <p>• <b>Đầu Tàu:</b> Mỗi tàu có 1 ô đầu não. Bắn trúng ô này sẽ <b>đánh chìm toàn bộ tàu</b> ngay lập tức!</p>
+      <p data-only="hard">• <b>Khiên đuôi tàu:</b> Đuôi mỗi tàu có khiên bảo vệ, phải bắn <b>2 lần</b> mới bốc cháy. Bắn trúng đầu tàu sẽ bỏ qua khiên và tiêu diệt trực tiếp.</p>
+      <p data-only="hard">• <b>Nạp đạn:</b> Cứ <b>4 lần</b> bắn không trúng tàu sẽ nhận thêm <b>1 đạn đá</b>.</p>
+      <hr>
+      <p style="color:var(--bomb-red)"><b>BOM:</b> Phá hủy toàn bộ vùng <b>3×3</b> quanh ô bắn.</p>
+      <p style="color:var(--torpedo-cyan)"><b>NGƯ LÔI:</b> Quét radar sang <b>Trái &amp; Phải</b> ô vừa bắn.</p>
+      <p style="color:var(--missile-yellow)"><b>TÊN LỬA:</b> Quét radar lên <b>Trên &amp; Dưới</b> ô vừa bắn.</p>
+      <p style="color:var(--stone-gray)"><b>ĐẠN ĐÁ:</b> Không có công dụng gì đặc biệt, phá hủy 1 ô trên chiến trường.</p>
+      <hr>
+      <p style="color:var(--missile-yellow)"><b>Ô BÍ MẬT:</b> Một ô bí mật được đặt ngẫu nhiên trên chiến trường. Khi bắn trúng sẽ thả ngẫu nhiên <b>5 quả đạn đá</b> vào 5 ô ngẫu nhiên trên chiến trường.</p>
+      </div>
+    <button class="btn-restart" onclick="toggleInfo()">TÔI HIỂU</button>
+  </div>
 </div>
 
 <div class="overlay hidden" id="overlay">
   <div class="overlay-box">
-    <div class="overlay-title" id="overlay-title">CHIẾN THẮNG!</div>
+    <div class="overlay-title" id="overlay-title">CHIẾN THẮNG</div>
     <div class="overlay-msg" id="overlay-msg"></div>
-    <button class="btn-restart" onclick="returnToMenu()">🏠 MENU CHÍNH</button>
-    <button class="btn-restart" onclick="initGame()">🔄 CHƠI LẠI</button>
-    <button class="btn-restart" style="border-color:var(--text-dim);color:var(--text-dim);" onclick="viewMap()">XEM BẢN ĐỒ</button>
+    <button class="btn-restart" onclick="initGame()">CHƠI LẠI</button>
+    <button class="btn-restart ghost" onclick="openModeScreen()">ĐỔI CHẾ ĐỘ</button>
+    <button class="btn-restart ghost" onclick="viewMap()">XEM BẢN ĐỒ</button>
   </div>
 </div>
 
-<button id="floating-restart" class="btn-restart hidden" onclick="initGame()">🔄 CHƠI LẠI</button>
-</div><!-- end game-wrap -->
+<div class="overlay hidden" id="mode-screen">
+  <div class="overlay-box mode-box">
+    <svg class="ship-art" viewBox="0 0 320 112" aria-hidden="true">
+      <defs>
+        <linearGradient id="sh-hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b4c4d2"/><stop offset=".55" stop-color="#6a7f93"/><stop offset="1" stop-color="#2b3b4b"/></linearGradient>
+        <linearGradient id="sh-deck" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ea2b4"/><stop offset="1" stop-color="#4d6175"/></linearGradient>
+        <linearGradient id="sh-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3d6b" stop-opacity=".9"/><stop offset="1" stop-color="#061a2e" stop-opacity="0"/></linearGradient>
+      </defs>
+      <rect x="0" y="88" width="320" height="24" fill="url(#sh-sea)"/>
+      <!-- thân tàu -->
+      <path d="M14 62 H288 L312 52 L297 82 Q291 90 270 90 H54 Q34 90 26 79 Z" fill="url(#sh-hull)" stroke="#1b2a38" stroke-width="1.5"/>
+      <path d="M22 80 H298 L296 84 Q291 90 270 90 H54 Q34 90 26 82 Z" fill="#7a1622"/>
+      <path d="M14 62 H288 L296 58 H20 Z" fill="url(#sh-deck)"/>
+      <g stroke="#1b2a38" stroke-width="1" opacity=".55"><path d="M60 66v10M100 66v10M140 66v10M180 66v10M220 66v10M260 66v10"/></g>
+      <!-- tháp pháo sau -->
+      <rect x="46" y="49" width="34" height="10" rx="4" fill="#5d7185" stroke="#1b2a38"/>
+      <path d="M80 52H108M80 56H108" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
+      <!-- ống khói -->
+      <path d="M112 58L114 32H128L130 58Z" fill="#46596c" stroke="#1b2a38"/><rect x="113.5" y="34" width="15" height="5" fill="#1b2a38"/>
+      <!-- đài chỉ huy -->
+      <rect x="138" y="42" width="44" height="17" fill="#8095a8" stroke="#1b2a38"/>
+      <rect x="146" y="31" width="28" height="11" fill="#6f8397" stroke="#1b2a38"/>
+      <rect x="152" y="22" width="16" height="9" fill="#5d7185" stroke="#1b2a38"/>
+      <g fill="#0b1a28"><rect x="152" y="45" width="4" height="3"/><rect x="160" y="45" width="4" height="3"/><rect x="168" y="45" width="4" height="3"/><rect x="154" y="34" width="4" height="3"/><rect x="162" y="34" width="4" height="3"/></g>
+      <path d="M160 22V6M150 13H170" stroke="#1b2a38" stroke-width="2" stroke-linecap="round"/>
+      <path d="M152 6Q160 0 168 6" fill="none" stroke="#00e5ff" stroke-width="1.6" stroke-linecap="round"/>
+      <!-- tháp pháo trước -->
+      <rect x="196" y="49" width="34" height="10" rx="4" fill="#5d7185" stroke="#1b2a38"/>
+      <path d="M230 52H258M230 56H258" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
+      <rect x="236" y="41" width="30" height="9" rx="4" fill="#6a7f93" stroke="#1b2a38"/>
+      <path d="M266 44H292M266 47H292" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
+      <!-- sóng -->
+      <path d="M0 92q10-6 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#00e5ff" stroke-opacity=".55" stroke-width="2"/>
+      <path d="M-10 100q10-6 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#00e5ff" stroke-opacity=".3" stroke-width="2"/>
+    </svg>
+    <div class="overlay-title">CHỌN CHẾ ĐỘ</div>
+    <button class="mode-card" onclick="startGame('normal')"><b>THƯỜNG</b></button>
+    <button class="mode-card hard" onclick="startGame('hard')"><b>KHÓ</b></button>
+    <button class="btn-restart ghost hidden" id="mode-back" onclick="closeModeScreen()">QUAY LẠI</button>
+  </div>
+</div>
 
-<footer>Version:D20260506-H17M00T0945 »»» developed by Tran Gia Bao</footer>
+<button id="floating-restart" class="btn-restart hidden" onclick="initGame()">CHƠI LẠI</button>
 
 <script>
-// ════════════════════════════════════════════════════
-//  AMORPHOUS FOG PREVIEW (mode select card)
-// ════════════════════════════════════════════════════
-
-// Perlin noise for organic fog shapes
-const _perm = (()=>{
-  const p = new Uint8Array(512);
-  const base = Array.from({length:256},(_,i)=>i);
-  for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[base[i],base[j]]=[base[j],base[i]];}
-  for(let i=0;i<512;i++) p[i]=base[i&255];
-  return p;
-})();
-function _f(t){return t*t*t*(t*(t*6-15)+10);}
-function _lerp(a,b,t){return a+t*(b-a);}
-function _g(h,x,y){const v=h&3;return(v===0?x+y:v===1?-x+y:v===2?x-y:-x-y);}
-function pnoise(x,y){
-  const X=Math.floor(x)&255,Y=Math.floor(y)&255;
-  x-=Math.floor(x);y-=Math.floor(y);
-  const u=_f(x),v=_f(y);
-  const a=_perm[X]+Y,b=_perm[X+1]+Y;
-  return _lerp(_lerp(_g(_perm[a],x,y),_g(_perm[b],x-1,y),u),_lerp(_g(_perm[a+1],x,y-1),_g(_perm[b+1],x-1,y-1),u),v);
-}
-function fbmNoise(x,y,oct=5){
-  let v=0,a=0.5,f=1,mx=0;
-  for(let i=0;i<oct;i++){v+=pnoise(x*f,y*f)*a;mx+=a;a*=0.5;f*=2.1;}
-  return v/mx;
-}
-
-// Smoke puff descriptors — irregular blobs with tentacle-like protrusions
-function makeSmokePuff(){
-  return {
-    x: Math.random() * 240,         // Trải đều khắp chiều ngang canvas
-    y: Math.random() * 140,         // Trải đều khắp chiều dọc canvas
-    r: 50 + Math.random() * 60,     // Bán kính rất lớn để tạo độ mềm mại, hòa quyện
-    vx: 0.15 + Math.random() * 0.3, // Trôi ngang sang phải (tạo cảm giác gió biển)
-    vy: (Math.random() - 0.5) * 0.1,// Độ trôi dọc rất nhẹ
-    alpha: 0.1 + Math.random() * 0.15, // Rất mờ để thấy được tàu bên dưới
-    phase: Math.random() * Math.PI * 2 // Pha dao động để sương mù "thở"
-  };
-}
-
-const PUFF_COUNT = 15; // Giảm số lượng xuống vì bán kính sương mù đã được làm to ra
-let smokePuffs = Array.from({length:PUFF_COUNT}, makeSmokePuff);
-let fogPreviewTime = 0;
-let fogPreviewRaf = null;
-
-function drawFogPreview(){
-  const canvas = document.getElementById('fog-preview-canvas');
-  if(!canvas) return;
-  const W = canvas.width, H = canvas.height;
-  const ctx = canvas.getContext('2d');
-  
-  ctx.clearRect(0,0,W,H);
-
-  // Phủ một lớp sương mù nền mỏng màu xanh xám lên toàn bộ Canvas 
-  // Giúp tàu lặn vào trong sương nhưng vẫn nhìn thấy rõ
-  ctx.fillStyle = 'rgba(110, 140, 170, 0.25)';
-  ctx.fillRect(0, 0, W, H);
-
-  const t = fogPreviewTime;
-
-  smokePuffs.forEach(p => {
-    // Cập nhật vị trí trôi
-    p.x += p.vx;
-    p.y += p.vy;
-
-    // Vòng lặp vô tận: Nếu sương mù bay ra khỏi màn hình thì quay lại từ mép kia
-    if (p.x - p.r > W) p.x = -p.r;
-    if (p.x + p.r < 0) p.x = W + p.r;
-    if (p.y - p.r > H) p.y = -p.r;
-    if (p.y + p.r < 0) p.y = H + p.r;
-
-    // Hiệu ứng "thở" (opacity lúc đậm lúc nhạt)
-    const currentAlpha = p.alpha + Math.sin(t * 0.02 + p.phase) * 0.05;
-
-    // Vẽ từng cụm sương mù bằng Gradient tỏa tròn siêu mềm
-    const grad = ctx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.r);
-    grad.addColorStop(0,   `rgba(160, 190, 220, ${Math.max(0, currentAlpha)})`);
-    grad.addColorStop(1,   `rgba(160, 190, 220, 0)`);
-    
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-    ctx.fill();
-  });
-
-  fogPreviewTime += 1;
-  fogPreviewRaf = requestAnimationFrame(drawFogPreview);
-}
-
-// Start fog preview animation
-drawFogPreview();
-
-
-// ════════════════════════════════════════════════════
-//  MODE SELECT
-// ════════════════════════════════════════════════════
-let selectedMode = 'normal';
-
-function selectMode(mode) {
-  selectedMode = mode;
-  document.getElementById('card-normal').classList.toggle('selected', mode === 'normal');
-  document.getElementById('card-hard').classList.toggle('selected', mode === 'hard');
-}
-
-function startGame() {
-  hardMode = (selectedMode === 'hard');
-  // stop the fog preview animation to free resources
-  if(fogPreviewRaf){ cancelAnimationFrame(fogPreviewRaf); fogPreviewRaf=null; }
-  const modeEl = document.getElementById('mode-select');
-  const gameEl = document.getElementById('game-wrap');
-  modeEl.classList.add('hide');
-  setTimeout(() => {
-    modeEl.style.display = 'none';
-    gameEl.classList.add('visible');
-    initGame();
-  }, 600);
-}
-
-function returnToMenu() {
-  const modeEl = document.getElementById('mode-select');
-  const gameEl = document.getElementById('game-wrap');
-  document.getElementById('overlay').classList.add('hidden');
-  document.getElementById('floating-restart').classList.add('hidden');
-  gameEl.classList.remove('visible');
-  modeEl.style.display = '';
-  requestAnimationFrame(() => {
-    modeEl.classList.remove('hide');
-    // restart the fog preview
-    smokePuffs = Array.from({length:PUFF_COUNT}, makeSmokePuff);
-    fogPreviewTime = 0;
-    if(!fogPreviewRaf) drawFogPreview();
-    drawFogPreview();
-  });
-}
-
-// ════════════════════════════════════════════════════
-//  CONSTANTS & STATE
-// ════════════════════════════════════════════════════
 const GRID = 12;
-const SHIP_SIZES = [5,4,3,3,2,2];
-const SHIP_NAMES = ['Thiết Giáp Hạm','Tuần Dương Hạm','Khu Trục Hạm 1','Khu Trục Hạm 2','Tàu Hộ Tống 1','Tàu Hộ Tống 2'];
+const SHIP_NAMES = ['Thiết Giáp Hạm', 'Tuần Dương Hạm', 'Khu Trục Hạm 1', 'Khu Trục Hạm 2', 'Tàu Hộ Tống 1', 'Tàu Hộ Tống 2', 'Tàu Hộ Tống 3'];
+const LOW_AMMO = 8;
+const DIFFICULTY = {
+  normal: { label: 'THƯỜNG', ships: [5, 4, 3, 3, 2, 2],    ammo: { torpedo: 5, missile: 5, stone: 25, bomb: 1 }, secretDrops: 5, bangMs: 2000, shield: false, reload: false },
+  hard:   { label: 'KHÓ',    ships: [5, 4, 3, 3, 2, 2, 2], ammo: { torpedo: 5, missile: 5, stone: 25, bomb: 1 }, secretDrops: 5, bangMs: 500,  shield: true,  reload: true }
+};
+const RELOAD_EVERY = 4;
+const MODE_KEY = 'haichien_difficulty';
+let difficulty = 'normal';
+try { const v = localStorage.getItem(MODE_KEY); if (DIFFICULTY[v]) difficulty = v; } catch (e) {}
 
-let board=[],revealed=[],ships=[];
-let ammo={torpedo:5,missile:5,stone:30};
-let selectedWeapon='torpedo';
-let shotsCount=0,shipsAlive=6,gameOver=false,firingLocked=false;
+let board = [];
+let revealed = [];
+let ships = [];
+let ammo = {};
+let selectedWeapon = 'torpedo';
+let shotsCount = 0;
+let shipsAlive = 6;
+let totalShips = 6;
+let missCount = 0;   // số lần bắn không trúng tàu (chế độ Khó)
+let started = false;
+let gameOver = true;
+let firingLocked = false;
+let secretCell = null, secretTriggered = false, secretPending = false;
+let gen = 0; // tăng mỗi ván, huỷ callback trễ của ván cũ
 
-let hardMode = false;
-let foggedCells = new Set();
-let fogTimer = null;
-let fogShotsRemaining = 0;
+const $ = id => document.getElementById(id);
+const WEAPONS = ['bomb','torpedo','missile','stone'];
+function getTotalAmmo() { return ammo.torpedo + ammo.missile + ammo.stone + ammo.bomb; }
 
-// ════════════════════════════════════════════════════
-//  NOISE (game fog)
-// ════════════════════════════════════════════════════
-const _noiseP = (()=>{
-  const p=new Uint8Array(512);
-  const base=[];for(let i=0;i<256;i++)base.push(i);
-  for(let i=255;i>0;i--){const j=Math.floor(Math.random()*(i+1));[base[i],base[j]]=[base[j],base[i]];}
-  for(let i=0;i<512;i++) p[i]=base[i&255];
-  return p;
-})();
-function _fade(t){return t*t*t*(t*(t*6-15)+10);}
-function _lerpN(a,b,t){return a+t*(b-a);}
-function _grad(h,x,y){const v=h&3;return(v===0?x+y:v===1?-x+y:v===2?x-y:-x-y);}
-function perlin2(x,y){
-  const X=Math.floor(x)&255, Y=Math.floor(y)&255;
-  x-=Math.floor(x); y-=Math.floor(y);
-  const u=_fade(x),v=_fade(y);
-  const a=_noiseP[X]+Y, b=_noiseP[X+1]+Y;
-  return _lerpN(_lerpN(_grad(_noiseP[a],x,y),_grad(_noiseP[b],x-1,y),u),_lerpN(_grad(_noiseP[a+1],x,y-1),_grad(_noiseP[b+1],x-1,y-1),u),v);
-}
-function fbm(x,y,oct=4){
-  let v=0,amp=0.5,freq=1,max=0;
-  for(let i=0;i<oct;i++){v+=perlin2(x*freq,y*freq)*amp;max+=amp;amp*=0.5;freq*=2.1;}
-  return v/max;
-}
+function lockFiring()   { firingLocked = true;  document.body.classList.add('firing-lock'); }
+function unlockFiring() { firingLocked = false; document.body.classList.remove('firing-lock'); }
 
-// ════════════════════════════════════════════════════
-//  HELPERS
-// ════════════════════════════════════════════════════
-function getTotalAmmo(){ return ammo.torpedo+ammo.missile+ammo.stone; }
-function lockFiring()  { firingLocked=true;  document.body.classList.add('firing-lock'); }
-function unlockFiring(){ firingLocked=false; document.body.classList.remove('firing-lock'); }
-function toggleInfo()  { document.getElementById('info-modal').classList.toggle('hidden'); }
+function isOpen(st) { return st === '' || st === 'detected' || st === 'shield'; }
 
-// ════════════════════════════════════════════════════
-//  FOG LOGIC
-// ════════════════════════════════════════════════════
-let fogSweepAnim = null;
-let fogSweepPhase = 'idle';
-let fogSweepProgress = 0;
-let fogAlpha = 0;
-const FOG_SWEEP_IN_MS  = 800;
-const FOG_SWEEP_OUT_MS = 800;
-let fogCellOffset = {};
-let fogAnimTime = 0;
-let fogBlobs = [];
+function toggleInfo() { $('info-modal').classList.toggle('hidden'); }
 
-function regenerateFogBlobs(){
-  fogBlobs = [];
-  for(let i=0;i<32;i++){
-    fogBlobs.push({
-      x: Math.random(), y: Math.random(),
-      rx: 0.18+Math.random()*0.22, ry: 0.12+Math.random()*0.18,
-      angle: Math.random()*Math.PI,
-      phase: Math.random()*Math.PI*2,
-      speed: 0.3+Math.random()*0.5,
-      alpha: 0.28+Math.random()*0.30,
-    });
-  }
-}
-
-function spawnFog(triggerR, triggerC){
-  if(!hardMode) return;
-  if(foggedCells.size > 0) return;
-  if(Math.random() > 0.20) return;
-  const chosen = new Set();
-  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++) chosen.add(`${r},${c}`);
-  foggedCells = chosen;
-  fogShotsRemaining = 3;
-  regenerateFogBlobs();
-  fogCellOffset = {};
-  foggedCells.forEach(key=>{
-    const [r,c]=key.split(',').map(Number);
-    updateCell(r,c);
-  });
-  startFogSweep('in');
-  addLog('🌫️ Sương mù chiến tranh xuất hiện! Radar bị nhiễu trong vùng phủ sóng.','fog');
-}
-
-function tickFog(){
-  if(foggedCells.size===0) return;
-  fogShotsRemaining--;
-  if(fogShotsRemaining <= 0) clearFog(false);
-}
-
-function clearFog(instant){
-  if(fogTimer){ clearTimeout(fogTimer); fogTimer=null; }
-  if(foggedCells.size===0){
-    stopFogAnim();
-    clearFogCanvas();
-    return;
-  }
-  if(instant){
-    stopFogAnim();
-    foggedCells.forEach(key=>{
-      const [r,c]=key.split(',').map(Number);
-      restoreCell(r,c);
-    });
-    foggedCells.clear();
-    fogShotsRemaining=0;
-    fogAlpha=0;
-    fogCellOffset={};
-    clearFogCanvas();
-  } else {
-    startFogSweep('out');
-    addLog('☀️ Sương mù đã tan. Radar hoạt động trở lại.','fog');
-  }
-}
-
-function stopFogAnim(){
-  if(fogSweepAnim){ cancelAnimationFrame(fogSweepAnim); fogSweepAnim=null; }
-  fogSweepPhase='idle';
-  fogSweepProgress=0;
-  fogAlpha=0;
-}
-
-function startFogSweep(direction){
-  stopFogAnim();
-  fogSweepPhase = direction;
-  fogSweepProgress = (direction==='out') ? 1 : 0;
-  syncFogCanvas();
-  const canvas = getFogCanvas();
-  const ctx = canvas.getContext('2d');
-  let lastTs = null;
-  function frame(ts){
-    if(!lastTs) lastTs = ts;
-    const dt = (ts - lastTs) / 1000;
-    lastTs = ts;
-    fogAnimTime += dt;
-    if(fogSweepPhase === 'in'){
-      fogSweepProgress = Math.min(fogSweepProgress + dt / (FOG_SWEEP_IN_MS/1000), 1);
-      fogAlpha = easeInOutCubic(fogSweepProgress);
-      if(fogSweepProgress >= 1) fogSweepPhase = 'hold';
-    } else if(fogSweepPhase === 'out'){
-      fogSweepProgress = Math.max(fogSweepProgress - dt / (FOG_SWEEP_OUT_MS/1000), 0);
-      fogAlpha = easeInOutCubic(fogSweepProgress);
-      if(fogSweepProgress <= 0){
-        fogSweepPhase = 'idle';
-        fogAlpha = 0;
-        const keys = [...foggedCells];
-        foggedCells.clear();
-        fogShotsRemaining = 0;
-        fogCellOffset = {};
-        keys.forEach(key=>{
-          const [r,c]=key.split(',').map(Number);
-          restoreCell(r,c);
-        });
-        clearFogCanvas();
-        stopFogAnim();
-        return;
-      }
-    }
-    drawFogFrame(ctx, canvas.width, canvas.height);
-    fogSweepAnim = requestAnimationFrame(frame);
-  }
-  fogSweepAnim = requestAnimationFrame(frame);
-}
-
-function easeInOutCubic(t){ return t<0.5 ? 4*t*t*t : 1-Math.pow(-2*t+2,3)/2; }
-
-function drawFogFrame(ctx, W, H){
-  ctx.clearRect(0,0,W,H);
-  if(foggedCells.size===0||fogAlpha<=0) return;
-  const t = fogAnimTime;
-  const sweepEdge = easeInOutCubic(fogAlpha);
-  const halfW = W/2;
-  const SOFT  = W*0.15;
-  const offscreen = document.createElement('canvas');
-  offscreen.width=W; offscreen.height=H;
-  const oCtx = offscreen.getContext('2d');
-  const baseGrad = oCtx.createLinearGradient(0,0,W,0);
-  baseGrad.addColorStop(0,   `rgba(170,195,220,${0.18*fogAlpha})`);
-  baseGrad.addColorStop(0.5, `rgba(190,215,235,${0.30*fogAlpha})`);
-  baseGrad.addColorStop(1,   `rgba(170,195,220,${0.18*fogAlpha})`);
-  oCtx.fillStyle=baseGrad; oCtx.fillRect(0,0,W,H);
-  fogBlobs.forEach(b=>{
-    const dx=Math.sin(t*b.speed*0.4+b.phase)*0.04;
-    const dy=Math.cos(t*b.speed*0.3+b.phase*1.3)*0.03;
-    const bx=((b.x+dx+1)%1)*W, by=((b.y+dy+1)%1)*H;
-    const brx=b.rx*W*(0.9+0.1*Math.sin(t*0.5+b.phase));
-    const bry=b.ry*H*(0.9+0.1*Math.cos(t*0.4+b.phase));
-    const nx=bx/W*3.5+t*0.07, ny=by/H*3.5+t*0.05;
-    const noiseVal=fbm(nx,ny,4);
-    const bAlpha=b.alpha*fogAlpha*(0.7+noiseVal*0.6);
-    oCtx.save();
-    oCtx.translate(bx,by);
-    oCtx.rotate(b.angle+t*0.015*b.speed);
-    oCtx.scale(1,bry/brx);
-    const grad=oCtx.createRadialGradient(0,0,0,0,0,brx);
-    grad.addColorStop(0,   `rgba(205,225,245,${Math.min(0.92,bAlpha*1.1)})`);
-    grad.addColorStop(0.35,`rgba(185,210,232,${Math.min(0.75,bAlpha*0.85)})`);
-    grad.addColorStop(0.65,`rgba(160,190,215,${Math.min(0.45,bAlpha*0.5)})`);
-    grad.addColorStop(1,   'rgba(130,165,195,0)');
-    oCtx.fillStyle=grad;
-    oCtx.beginPath(); oCtx.arc(0,0,brx,0,Math.PI*2); oCtx.fill();
-    oCtx.restore();
-  });
-  const STEP=Math.max(6,Math.floor(W/60));
-  for(let px=0;px<W;px+=STEP){
-    for(let py=0;py<H;py+=STEP){
-      const n=fbm(px/W*6+t*0.11, py/H*6+t*0.08, 3);
-      if(n>0.08){ oCtx.fillStyle=`rgba(215,230,248,${Math.min(0.35,(n-0.08)*0.18*fogAlpha)})`; oCtx.fillRect(px,py,STEP,STEP); }
-    }
-  }
-  const leftEdge=sweepEdge*halfW, rightEdge=W-leftEdge;
-  const cl=(v)=>Math.max(0,Math.min(1,v));
-  const l0=cl((leftEdge-SOFT)/W), l1=cl(leftEdge/W);
-  const r0=cl(rightEdge/W),       r1=cl((rightEdge+SOFT)/W);
-  const mask=document.createElement('canvas'); mask.width=W; mask.height=H;
-  const mCtx=mask.getContext('2d');
-  const maskGrad=mCtx.createLinearGradient(0,0,W,0);
-  if(l1>=r0){
-    maskGrad.addColorStop(0,'rgba(0,0,0,1)'); maskGrad.addColorStop(1,'rgba(0,0,0,1)');
-  } else {
-    maskGrad.addColorStop(0,'rgba(0,0,0,1)');
-    if(l0>0) maskGrad.addColorStop(l0,'rgba(0,0,0,1)');
-    maskGrad.addColorStop(l1,'rgba(0,0,0,0)');
-    maskGrad.addColorStop(r0,'rgba(0,0,0,0)');
-    if(r1<1) maskGrad.addColorStop(r1,'rgba(0,0,0,1)');
-    maskGrad.addColorStop(1,'rgba(0,0,0,1)');
-  }
-  mCtx.fillStyle=maskGrad; mCtx.fillRect(0,0,W,H);
-  oCtx.globalCompositeOperation='destination-in';
-  oCtx.drawImage(mask,0,0);
-  ctx.drawImage(offscreen,0,0);
-}
-
-function getFogCanvas(){ return document.getElementById('fog-canvas'); }
-function syncFogCanvas(){
-  const canvas = getFogCanvas();
-  const gridEl = document.getElementById('game-grid');
-  const rect = gridEl.getBoundingClientRect();
-  const wrapper = gridEl.parentElement;
-  const wRect = wrapper.getBoundingClientRect();
-  canvas.width  = Math.round(rect.width);
-  canvas.height = Math.round(rect.height);
-  canvas.style.width  = rect.width+'px';
-  canvas.style.height = rect.height+'px';
-  canvas.style.left   = (rect.left - wRect.left)+'px';
-  canvas.style.top    = (rect.top  - wRect.top)+'px';
-}
-function clearFogCanvas(){
-  const canvas = getFogCanvas();
-  const ctx = canvas.getContext('2d');
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-}
-function isFogged(r,c){ return hardMode && foggedCells.has(`${r},${c}`); }
-
-// ════════════════════════════════════════════════════
-//  INIT
-// ════════════════════════════════════════════════════
-function initGame(){
-  board    = Array.from({length:GRID},()=>Array(GRID).fill(null));
-  revealed = Array.from({length:GRID},()=>Array(GRID).fill(''));
-  ships=[];
-  ammo={torpedo:5,missile:5,stone:30};
-  selectedWeapon='torpedo';
-  shotsCount=0; shipsAlive=6; gameOver=false;
+function initGame() {
+  board    = Array.from({length: GRID}, () => Array(GRID).fill(null));
+  revealed = Array.from({length: GRID}, () => Array(GRID).fill(''));
+  ships    = [];
+  ammo     = { ...DIFFICULTY[difficulty].ammo };
+  selectedWeapon = 'torpedo';
+  shotsCount = 0;
+  shipsAlive = 0;
+  missCount  = 0;
+  gameOver   = false;
+  gen++;
+  secretPending = false;
   unlockFiring();
-  clearFog(true);
-  fogShotsRemaining=0;
-  fogAnimTime=0;
-
-  document.body.classList.toggle('hard-mode', hardMode);
 
   placeShips();
+  placeSecret();
+  shipsAlive = totalShips = ships.length;
   renderGrid();
   updateAmmoButtons();
   clearLog();
-  injectSvgBorders();
-  updateSvgBorders();
-  addLog('⚓ Trận hải chiến bắt đầu! Hãy tiêu diệt toàn bộ hạm đội địch.','system');
-  addLog('💡 Bắn trúng ĐẦU TÀU sẽ đánh chìm toàn bộ tàu đó!','system');
-  if(hardMode) addLog('⚠️ Chế độ KHÓ đang hoạt động!','system');
+  applyMode();
+  addLog(`⚓ Trận hải chiến bắt đầu! (Chế độ ${DIFFICULTY[difficulty].label}) Hãy tiêu diệt toàn bộ hạm đội địch.`, 'system');
+  addLog('💡 Bắn trúng ĐẦU TÀU sẽ đánh chìm toàn bộ tàu đó!', 'system');
 
-  document.getElementById('overlay').classList.add('hidden');
-  document.getElementById('floating-restart').classList.add('hidden');
-  ['torpedo','missile','stone'].forEach(n=>{ const b=document.getElementById(`btn-${n}`); b.disabled=false; b.classList.remove('active'); });
+  $('overlay').classList.add('hidden');
+  $('floating-restart').classList.add('hidden');
+
+  WEAPONS.forEach(n => {
+    const btn = $(`btn-${n}`);
+    btn.disabled = false;
+    btn.classList.remove('active');
+  });
   selectWeapon('torpedo');
+  updateHud();
 }
 
-// ════════════════════════════════════════════════════
-//  SHIP PLACEMENT
-// ════════════════════════════════════════════════════
-function placeShips(){
-  SHIP_SIZES.forEach((size,idx)=>{
-    let placed=false,attempts=0;
-    while(!placed&&attempts<1000){
+function placeShips() {
+  DIFFICULTY[difficulty].ships.forEach((size, idx) => {
+    let placed = false, attempts = 0;
+    while (!placed && attempts < 1000) {
       attempts++;
-      const horizontal=Math.random()<0.5;
-      const maxR=horizontal?GRID:GRID-size, maxC=horizontal?GRID-size:GRID;
-      const r=Math.floor(Math.random()*maxR), c=Math.floor(Math.random()*maxC);
-      let fits=true; const cells=[];
-      for(let i=0;i<size;i++){
-        const nr=horizontal?r:r+i, nc=horizontal?c+i:c;
-        if(board[nr][nc]!==null){fits=false;break;}
-        for(let dr=-1;dr<=1;dr++){
-          for(let dc=-1;dc<=1;dc++){
-            const br=nr+dr,bc=nc+dc;
-            if(br>=0&&br<GRID&&bc>=0&&bc<GRID&&board[br][bc]!==null){fits=false;break;}
+      const horizontal = Math.random() < 0.5;
+      const maxR = horizontal ? GRID : GRID - size;
+      const maxC = horizontal ? GRID - size : GRID;
+      const r = Math.floor(Math.random() * maxR);
+      const c = Math.floor(Math.random() * maxC);
+
+      let fits = true;
+      const cells = [];
+      for (let i = 0; i < size; i++) {
+        const nr = horizontal ? r : r + i;
+        const nc = horizontal ? c + i : c;
+        if (board[nr][nc] !== null) { fits = false; break; }
+        for (let dr = -1; dr <= 1; dr++) {
+          for (let dc = -1; dc <= 1; dc++) {
+            const br = nr + dr, bc = nc + dc;
+            if (br >= 0 && br < GRID && bc >= 0 && bc < GRID && board[br][bc] !== null) { fits = false; break; }
           }
-          if(!fits) break;
+          if (!fits) break;
         }
-        if(!fits) break;
-        cells.push({r:nr,c:nc});
+        if (!fits) break;
+        cells.push({r: nr, c: nc});
       }
-      if(fits){
-        const isReverse=Math.random()<0.5;
-        const headCell=isReverse?cells[cells.length-1]:cells[0];
-        const ship={id:idx,name:SHIP_NAMES[idx],size,cells,alive:true,headCell,hit:new Set(),isHorizontal:horizontal};
+
+      if (fits) {
+        const isReverse = Math.random() < 0.5;
+        const headCell  = isReverse ? cells[cells.length - 1] : cells[0];
+        const tailCell  = isReverse ? cells[0] : cells[cells.length - 1];
+        const ship = { id: idx, name: SHIP_NAMES[idx], size, cells, alive: true, headCell, tailCell, shieldUp: DIFFICULTY[difficulty].shield, hit: new Set(), isHorizontal: horizontal };
         ships.push(ship);
-        cells.forEach(({r,c})=>{ board[r][c]={shipId:idx,isHead:(r===headCell.r&&c===headCell.c)}; });
-        placed=true;
+        cells.forEach(({r, c}) => { board[r][c] = { shipId: idx, isHead: (r === headCell.r && c === headCell.c), isTail: (r === tailCell.r && c === tailCell.c) }; });
+        placed = true;
       }
     }
   });
 }
 
-// ════════════════════════════════════════════════════
-//  GRID RENDER
-// ════════════════════════════════════════════════════
-function renderGrid(){
-  const grid=document.getElementById('game-grid');
-  grid.innerHTML='';
-  for(let r=0;r<GRID;r++){
-    for(let c=0;c<GRID;c++){
-      const cell=document.createElement('div');
-      cell.className='cell'; cell.id=`cell-${r}-${c}`;
-      cell.dataset.r=r; cell.dataset.c=c;
-      cell.onclick=()=>fire(r,c);
+function applyMode() {
+  document.body.dataset.mode = difficulty;
+}
+
+function registerMiss() {
+  if (!DIFFICULTY[difficulty].reload) return;
+  if (++missCount >= RELOAD_EVERY) {
+    missCount = 0;
+    ammo.stone++;
+    addLog('🔄 Nạp đạn: +1 ĐẠN ĐÁ (đã bắn trượt 4 lần)!', 'system');
+    updateAmmoButtons();
+  } else {
+    updateHud();
+  }
+}
+
+function openModeScreen() {
+  if (firingLocked) return;
+  $('mode-back').classList.toggle('hidden', !started);
+  $('mode-screen').classList.remove('hidden');
+}
+
+function closeModeScreen() { $('mode-screen').classList.add('hidden'); }
+
+function startGame(m) {
+  if (!DIFFICULTY[m] || firingLocked) return;
+  if (started && !gameOver && shotsCount > 0 && !confirm('Bắt đầu ván mới? Ván hiện tại sẽ bị hủy.')) return;
+  difficulty = m;
+  started = true;
+  try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
+  closeModeScreen();
+  initGame();
+}
+
+function placeSecret() {
+  const free = [];
+  for (let r = 0; r < GRID; r++) for (let c = 0; c < GRID; c++) if (board[r][c] === null) free.push({r, c});
+  secretCell = free[Math.floor(Math.random() * free.length)];
+  secretTriggered = false;
+}
+
+function renderGrid() {
+  const grid = $('game-grid');
+  grid.innerHTML = '';
+  for (let r = 0; r < GRID; r++) {
+    for (let c = 0; c < GRID; c++) {
+      const cell = document.createElement('div');
+      cell.className = 'cell';
+      cell.id = `cell-${r}-${c}`;
+      cell.dataset.r = r; cell.dataset.c = c;
+      cell.onclick = () => fire(r, c);
       grid.appendChild(cell);
     }
   }
-  requestAnimationFrame(()=>{ syncFogCanvas(); });
 }
 
-function updateCell(r,c){
-  const cell=document.getElementById(`cell-${r}-${c}`);
-  if(!cell) return;
-  if(isFogged(r,c)){
-    cell.className='cell fogged';
-    return;
-  }
-  restoreCell(r,c);
-}
-
-function restoreCell(r,c){
-  const cell=document.getElementById(`cell-${r}-${c}`);
-  if(!cell) return;
-  const state=revealed[r][c];
-  cell.className='cell';
-  if(!state){ return; }
-  cell.classList.add('revealed', state);
-  cell.classList.add('disabled');
-  if(state==='sunk' && board[r][c]){
-    if(!cell.querySelector('.ship-part')){
-      cell.innerHTML='';
-      const part=document.createElement('div'); part.className='ship-part'; cell.appendChild(part);
-      const fire=document.createElement('div');
-      fire.textContent='🔥';
-      fire.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0.6;';
-      cell.appendChild(fire);
-    }
+function updateCell(r, c) {
+  const cell = $(`cell-${r}-${c}`);
+  if (!cell) return;
+  cell.className = 'cell';
+  const state = revealed[r][c];
+  if (state === 'shield') {
+    cell.classList.add('shield');   // vẫn bắn được lần nữa
+  } else if (state) {
+    cell.classList.add('revealed', state, 'disabled');
   }
 }
 
-// ════════════════════════════════════════════════════
-//  EFFECTS
-// ════════════════════════════════════════════════════
-const SVG_NS='http://www.w3.org/2000/svg';
-
-function getCellCenter(r,c){
-  const el=document.getElementById(`cell-${r}-${c}`);
-  if(!el) return null;
-  const rect=el.getBoundingClientRect();
-  return{x:rect.left+rect.width/2,y:rect.top+rect.height/2,w:rect.width,h:rect.height};
+function updateHud() {
+  $('hud-ships').textContent = `${shipsAlive}/${totalShips}`;
+  $('hud-shots').textContent = shotsCount;
+  const total = getTotalAmmo();
+  const ammoEl = $('hud-ammo');
+  ammoEl.textContent = total;
+  ammoEl.classList.toggle('low', total <= LOW_AMMO);
+  $('reload').classList.toggle('hidden', !DIFFICULTY[difficulty].reload);
+  $('reload').querySelectorAll('i').forEach((p, i) => p.classList.toggle('on', i < missCount));
+  $('fleet').innerHTML = ships.map(s =>
+    `<div class="ship-item ${s.alive ? 'alive' : 'dead'}"><div class="ship-blocks">${'<i class="ship-block"></i>'.repeat(s.size)}</div></div>`
+  ).join('');
 }
 
-function launchBeam(r,c,weapon,onImpact){
-  const target=getCellCenter(r,c);
-  if(!target){onImpact();return;}
-  const svg=document.getElementById('beam-canvas');
-  const palette={torpedo:{head:'#00e5ff',glow:'#00b8d4'},missile:{head:'#ffdd00',glow:'#ffaa00'},stone:{head:'#c8dff0',glow:'#7ab0cc'}};
-  const p=palette[weapon];
-  const fromLeft=Math.random()<0.5;
-  const startX=fromLeft?-30:window.innerWidth+30;
-  const startY=target.y-70-Math.random()*50;
-  const endX=target.x,endY=target.y;
-  const dur=weapon==='stone'?540:430;
-  const head=document.createElement('div');
-  head.style.cssText=`position:fixed;pointer-events:none;z-index:502;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#fff 0%,${p.head} 50%,transparent 100%);box-shadow:0 0 16px 6px ${p.head},0 0 35px 12px ${p.glow};transform:translate(-50%,-50%);left:${startX}px;top:${startY}px;`;
+// ── EFFECTS ──────────────────────────────────────────────────────────
+const SVG_NS = 'http://www.w3.org/2000/svg';
+
+function getCellCenter(r, c) {
+  const el = $(`cell-${r}-${c}`);
+  if (!el) return null;
+  const rect = el.getBoundingClientRect();
+  return { x: rect.left + rect.width/2, y: rect.top + rect.height/2, w: rect.width, h: rect.height };
+}
+
+function launchBeam(r, c, weapon, onImpact) {
+  const target = getCellCenter(r, c);
+  if (!target) { onImpact(); return; }
+  const svg = $('beam-canvas');
+  const palette = { torpedo:{head:'#00e5ff',glow:'#00b8d4'}, missile:{head:'#ffdd00',glow:'#ffaa00'}, stone:{head:'#c8dff0',glow:'#7ab0cc'}, bomb:{head:'#ff3b4a',glow:'#c8102e'} };
+  const p = palette[weapon];
+  const fromLeft = Math.random() < 0.5;
+  const startX = fromLeft ? -30 : window.innerWidth + 30;
+  const startY = target.y - 70 - Math.random() * 50;
+  const endX = target.x, endY = target.y;
+  const dur = (weapon === 'stone' || weapon === 'bomb') ? 540 : 430;
+
+  const head = document.createElement('div');
+  head.style.cssText = `position:fixed;pointer-events:none;z-index:502;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#fff 0%,${p.head} 50%,transparent 100%);box-shadow:0 0 16px 6px ${p.head},0 0 35px 12px ${p.glow};transform:translate(-50%,-50%);left:${startX}px;top:${startY}px;`;
   document.body.appendChild(head);
-  const defs=document.createElementNS(SVG_NS,'defs');
-  const grad=document.createElementNS(SVG_NS,'linearGradient');
-  const gid='bg'+Date.now()+Math.random().toString(36).slice(2);
+
+  const defs = document.createElementNS(SVG_NS,'defs');
+  const grad = document.createElementNS(SVG_NS,'linearGradient');
+  const gid = 'bg'+Date.now()+Math.random().toString(36).slice(2);
   grad.setAttribute('id',gid); grad.setAttribute('gradientUnits','userSpaceOnUse');
   const s1=document.createElementNS(SVG_NS,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color',p.head); s1.setAttribute('stop-opacity','0');
   const s2=document.createElementNS(SVG_NS,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color',p.head); s2.setAttribute('stop-opacity','0.85');
   grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad); svg.appendChild(defs);
+
   const line=document.createElementNS(SVG_NS,'line');
   line.setAttribute('x1',startX); line.setAttribute('y1',startY); line.setAttribute('x2',startX); line.setAttribute('y2',startY);
   line.setAttribute('stroke',`url(#${gid})`); line.setAttribute('stroke-width',weapon==='stone'?'2':'3'); line.setAttribute('stroke-linecap','round');
   svg.appendChild(line);
+
   const t0=performance.now();
   function easeOut(t){return 1-Math.pow(1-t,3);}
   let impactFired=false;
+
   function step(now){
-    const prog=Math.min((now-t0)/dur,1),e=easeOut(prog);
-    const cx=startX+(endX-startX)*e,cy=startY+(endY-startY)*e;
+    const prog=Math.min((now-t0)/dur,1), e=easeOut(prog);
+    const cx=startX+(endX-startX)*e, cy=startY+(endY-startY)*e;
     const trailProg=Math.max(0,e-0.28);
-    const tx=startX+(endX-startX)*trailProg,ty=startY+(endY-startY)*trailProg;
+    const tx=startX+(endX-startX)*trailProg, ty=startY+(endY-startY)*trailProg;
     head.style.left=cx+'px'; head.style.top=cy+'px';
     line.setAttribute('x1',tx); line.setAttribute('y1',ty); line.setAttribute('x2',cx); line.setAttribute('y2',cy);
     grad.setAttribute('x1',tx); grad.setAttribute('y1',ty); grad.setAttribute('x2',cx); grad.setAttribute('y2',cy);
-    if(prog>=0.86&&!impactFired){impactFired=true;spawnWaterRipple(endX,endY,weapon);onImpact();}
+    if(prog>=0.86&&!impactFired){ impactFired=true; spawnWaterRipple(endX,endY,weapon); onImpact(); }
     if(prog<1) requestAnimationFrame(step);
-    else{head.style.opacity='0';setTimeout(()=>{head.remove();line.remove();defs.remove();},200);}
+    else{ head.style.opacity='0'; setTimeout(()=>{head.remove();line.remove();defs.remove();},200); }
   }
   requestAnimationFrame(step);
 }
 
 function spawnWaterRipple(cx,cy,weapon){
-  const fx=document.getElementById('fx-layer');
-  const col={torpedo:'rgba(0,229,255,',missile:'rgba(255,221,0,',stone:'rgba(180,210,240,'}[weapon];
+  const fx=$('fx-layer');
+  const c={torpedo:'rgba(0,229,255,',missile:'rgba(255,221,0,',stone:'rgba(180,210,240,',bomb:'rgba(255,70,80,'}[weapon];
   [[55,0,2],[80,0.09,1.5],[115,0.2,1]].forEach(([size,delay,w])=>{
     const r=document.createElement('div'); r.className='ripple-ring'; r.style.left=cx+'px'; r.style.top=cy+'px';
-    r.style.setProperty('--rr-size',size+'px'); r.style.setProperty('--rr-dur','0.72s'); r.style.setProperty('--rr-delay',delay+'s'); r.style.setProperty('--rr-color',col+'0.75)'); r.style.setProperty('--rr-w',w+'px');
+    r.style.setProperty('--rr-size',size+'px'); r.style.setProperty('--rr-dur','0.72s'); r.style.setProperty('--rr-delay',delay+'s'); r.style.setProperty('--rr-color',c+'0.75)'); r.style.setProperty('--rr-w',w+'px');
     fx.appendChild(r); setTimeout(()=>r.remove(),1000);
   });
   [[70,0.05],[105,0.16]].forEach(([size,delay])=>{
     const e=document.createElement('div'); e.className='ripple-ellipse'; e.style.left=cx+'px'; e.style.top=cy+'px';
-    e.style.setProperty('--re-size',size+'px'); e.style.setProperty('--re-dur','0.65s'); e.style.setProperty('--re-delay',delay+'s'); e.style.setProperty('--re-color',col+'0.4)');
+    e.style.setProperty('--re-size',size+'px'); e.style.setProperty('--re-dur','0.65s'); e.style.setProperty('--re-delay',delay+'s'); e.style.setProperty('--re-color',c+'0.4)');
     fx.appendChild(e); setTimeout(()=>e.remove(),900);
   });
   for(let i=0;i<8;i++){
-    const angle=(Math.PI*2*i/8)+(Math.random()-0.5)*0.6,dist=14+Math.random()*20;
+    const angle=(Math.PI*2*i/8)+(Math.random()-0.5)*0.6, dist=14+Math.random()*20;
     const d=document.createElement('div'); d.className='drop'; d.style.left=cx+'px'; d.style.top=cy+'px';
-    d.style.setProperty('--d-x',Math.cos(angle)*dist+'px'); d.style.setProperty('--d-y',(Math.sin(angle)*dist-18)+'px'); d.style.setProperty('--d-dur',(0.3+Math.random()*0.2)+'s'); d.style.setProperty('--d-color',col+'0.9)');
+    d.style.setProperty('--d-x',Math.cos(angle)*dist+'px'); d.style.setProperty('--d-y',(Math.sin(angle)*dist-18)+'px'); d.style.setProperty('--d-dur',(0.3+Math.random()*0.2)+'s'); d.style.setProperty('--d-color',c+'0.9)');
     fx.appendChild(d); setTimeout(()=>d.remove(),600);
   }
 }
 
 function spawnWifiShockwave(r,c,dir){
   const origin=getCellCenter(r,c); if(!origin) return;
-  const svg=document.getElementById('beam-canvas');
+  const svg=$('beam-canvas');
   const color=dir==='horizontal'?'#00e5ff':'#ffdd00';
   const maxRadius=origin.w*2.0;
   for(let side=-1;side<=1;side+=2){
     for(let i=0;i<3;i++){
-      const delay=i*100,radius=(i+1)*(maxRadius/3);
+      const delay=i*100, radius=(i+1)*(maxRadius/3);
       setTimeout(()=>{
         const path=document.createElementNS(SVG_NS,'path');
         path.setAttribute('fill','none'); path.setAttribute('stroke',color);
         path.setAttribute('stroke-width',(2.2-i*0.6).toString()); path.setAttribute('stroke-linecap','round');
-        const ox=origin.x,oy=origin.y; let d;
+        const ox=origin.x, oy=origin.y; let d;
         if(dir==='horizontal'){
-          const sx=ox+side*(radius*0.3),sy1=oy-radius*0.5,sy2=oy+radius*0.5,cpx=ox+side*radius;
+          const sx=ox+side*(radius*0.3), sy1=oy-radius*0.5, sy2=oy+radius*0.5, cpx=ox+side*radius;
           d=`M ${sx} ${sy1} Q ${cpx} ${oy} ${sx} ${sy2}`;
-        }else{
-          const sy=oy+side*(radius*0.3),sx1=ox-radius*0.5,sx2=ox+radius*0.5,cpy=oy+side*radius;
+        } else {
+          const sy=oy+side*(radius*0.3), sx1=ox-radius*0.5, sx2=ox+radius*0.5, cpy=oy+side*radius;
           d=`M ${sx1} ${sy} Q ${ox} ${cpy} ${sx2} ${sy}`;
         }
         path.setAttribute('d',d); path.setAttribute('opacity','0'); svg.appendChild(path);
-        const fadeDur=500,t0=performance.now();
+        const fadeDur=500, t0=performance.now();
         function animArc(now){
           const p=Math.min((now-t0)/fadeDur,1);
           const opacity=p<0.2?(p/0.2):(1-(p-0.2)/0.8);
@@ -1372,232 +843,283 @@ function spawnWifiShockwave(r,c,dir){
 
 function spawnDetectBang(r,c){
   const center=getCellCenter(r,c); if(!center) return;
-  const fx=document.getElementById('fx-layer');
+  const fx=$('fx-layer');
   const bang=document.createElement('div'); bang.className='detect-bang'; bang.textContent='!';
   const sz=Math.max(center.w*0.9,20);
   bang.style.cssText=`position:fixed;pointer-events:none;z-index:600;font-size:${sz}px;width:${center.w}px;height:${center.h}px;left:${center.x-center.w/2}px;top:${center.y-center.h/2}px;display:flex;align-items:center;justify-content:center;`;
-  fx.appendChild(bang); setTimeout(()=>bang.remove(),2500);
+  const ms=DIFFICULTY[difficulty].bangMs;
+  bang.style.animationDuration=ms+'ms';
+  fx.appendChild(bang); setTimeout(()=>bang.remove(),ms+500);
 }
 
-// ════════════════════════════════════════════════════
-//  SVG DASHED BORDERS
-// ════════════════════════════════════════════════════
-const WEAPON_COLORS={
-  torpedo:{idle:'rgba(0,229,255,0.45)',   active:'#00e5ff'},
-  missile:{idle:'rgba(255,221,0,0.4)',    active:'#ffdd00'},
-  stone:  {idle:'rgba(170,187,204,0.35)', active:'#aabbcc'}
-};
-const DASH='14 6', DASH_ACTIVE='0 0';
-
-function injectSvgBorders(){
-  ['torpedo','missile','stone'].forEach(w=>{
-    const btn=document.getElementById(`btn-${w}`); if(!btn) return;
-    const old=btn.querySelector('.btn-svg-border');
-    if(old) old.remove();
-    const ns='http://www.w3.org/2000/svg';
-    const svg=document.createElementNS(ns,'svg');
-    svg.setAttribute('class','btn-svg-border'); svg.setAttribute('xmlns',ns);
-    svg.style.cssText='position:absolute;inset:0;width:100%;height:100%;pointer-events:none;overflow:visible;';
-    const rect=document.createElementNS(ns,'rect');
-    rect.setAttribute('x','1'); rect.setAttribute('y','1');
-    rect.setAttribute('width','calc(100% - 2px)'); rect.setAttribute('height','calc(100% - 2px)');
-    rect.setAttribute('rx','5'); rect.setAttribute('ry','5');
-    rect.setAttribute('fill','none'); rect.setAttribute('stroke-width','2');
-    rect.setAttribute('stroke',WEAPON_COLORS[w].idle);
-    rect.setAttribute('stroke-dasharray',DASH); rect.setAttribute('stroke-linecap','round');
-    rect.style.transition='stroke 0.2s,stroke-dasharray 0.15s,stroke-width 0.15s';
-    svg.appendChild(rect); btn.appendChild(svg);
-    btn._svgRect=rect; btn._weaponKey=w;
-  });
-}
-
-function updateSvgBorders(){
-  ['torpedo','missile','stone'].forEach(w=>{
-    const btn=document.getElementById(`btn-${w}`); if(!btn||!btn._svgRect) return;
-    const rect=btn._svgRect;
-    const isActive=btn.classList.contains('active');
-    rect.setAttribute('stroke', isActive?WEAPON_COLORS[w].active:WEAPON_COLORS[w].idle);
-    rect.setAttribute('stroke-dasharray', isActive?DASH_ACTIVE:DASH);
-    rect.setAttribute('stroke-width', isActive?'2.5':'2');
-  });
-}
-
-// ════════════════════════════════════════════════════
-//  FIRE
-// ════════════════════════════════════════════════════
+// ── GAMEPLAY ─────────────────────────────────────────────────────────
 function fire(r,c){
-  if(gameOver||firingLocked) return;
-  const fogged = isFogged(r,c);
-  if(!fogged){
-    if(revealed[r][c]!==''&&revealed[r][c]!=='detected') return;
-  }
+  if(gameOver || firingLocked) return;
+  if(!isOpen(revealed[r][c])) return;
+
   const weapon=selectedWeapon;
   if(ammo[weapon]<=0){
     addLog(`⚠ Hết ${weaponName(weapon).toUpperCase()}!`,'system');
-    const alt=['stone','torpedo','missile'].find(w=>ammo[w]>0);
-    if(alt){addLog(`💡 Chuyển sang: ${weaponName(alt).toUpperCase()}`,'system');selectWeapon(alt);}
+    const alt=['stone','torpedo','missile','bomb'].find(w=>ammo[w]>0);
+    if(alt){ addLog(`💡 Chuyển sang: ${weaponName(alt).toUpperCase()}`,'system'); selectWeapon(alt); }
     return;
   }
+
   lockFiring();
   ammo[weapon]--;
   shotsCount++;
   updateAmmoButtons();
-  const wName=weaponName(weapon);
+
+  const wName = weaponName(weapon);
   const logs={
-    sunk:[`💥 Tuyệt đỉnh! ${wName} trúng ngay đầu não! Tiễn biệt đối thủ!`,`💥 Cú bắn thần sầu! Một chiếc tàu địch đã chìm sâu dưới đáy biển!`,`💥 Bùm! Đầu tàu nổ tung, mục tiêu đã bị xóa sổ!`],
-    hit:[`🔥 Trúng đích! ${wName} đã khiến chúng bốc cháy!`,`🔥 Một cú va chạm mạnh! Thân tàu địch đang hư hỏng nặng!`,`🔥 Kim loại rách nát! ${wName} đã xuyên thủng lớp giáp của chúng!`],
-    miss:[`❓ Chệch mục tiêu! ${wName} chỉ tạo ra một cột nước khổng lồ.`,`❓ Trượt rồi! Chúng ta cần căn chỉnh lại thước ngắm!`,`❓ Không có gì cả! Chỉ là một đàn cá vừa bơi qua.`],
-    miss_fog:[`🌫️ Sương mù che mắt! Không rõ kết quả phát bắn vừa rồi.`,`🌫️ Radar nhiễu trong vùng sương. Mục tiêu không xác định được.`,`🌫️ Tín hiệu mất trong sương mù. Kết quả chưa rõ ràng!`],
-    radar_none:[`📡 [RADAR]: Vùng biển xung quanh hoàn toàn yên tĩnh.`,`📡 [RADAR]: Không có tín hiệu kim loại trong phạm vi quét.`,`📡 [RADAR]: Khu vực này có vẻ sạch bóng quân thù.`],
-    radar_fog:[`🌫️ [RADAR]: Sóng radar bị hấp thụ bởi sương mù. Không có dữ liệu.`,`🌫️ [RADAR]: Nhiễu sương mù — không thể xác nhận vị trí mục tiêu.`]
+    sunk:[
+      `💥 Tuyệt đỉnh! ${wName} trúng ngay đầu não! Tiễn biệt đối thủ!`,
+      `💥 Cú bắn thần sầu! Một chiếc tàu địch đã chìm sâu dưới đáy biển!`,
+      `💥 Tuyệt vời chỉ huy! Chúng ta đã đánh chìm hoàn toàn tàu địch!`,
+      `💥 Bùm! Đầu tàu nổ tung, mục tiêu đã bị xóa sổ!`,
+      `💥 Xác nhận tiêu diệt! Đã loại bỏ một tàu chiến địch khỏi bản đồ!`
+    ],
+    hit:[
+      `🔥 Trúng đích! ${wName} đã khiến chúng bốc cháy!`,
+      `🔥 Khá lắm! Tàu địch đã trúng đạn, chúng không thoát được đâu!`,
+      `🔥 Một cú va chạm mạnh! Thân tàu địch đang hư hỏng nặng!`,
+      `🔥 Tốt! Chúng ta đã gây thiệt hại cho hạm đội địch!`,
+      `🔥 Kim loại rách nát! ${wName} đã xuyên thủng lớp giáp của chúng!`
+    ],
+    miss:[
+      `❓ Chệch mục tiêu! ${wName} chỉ tạo ra một cột nước khổng lồ.`,
+      `❓ Trượt rồi! Chúng ta cần căn chỉnh lại thước ngắm!`,
+      `❓ Đạn rơi xuống biển! Một sự lãng phí tài nguyên, thưa chỉ huy.`,
+      `❓ Không có gì cả! Chỉ là một đàn cá vừa bơi qua.`,
+      `❓ Có vẻ như dòng hải lưu đã làm lệch đường đi của ${wName}.`
+    ],
+    shield:[
+      `🛡️ Trúng khiên đuôi tàu! Cần bắn thêm một lần nữa!`,
+      `🛡️ Lớp khiên đã rạn nứt! Bắn tiếp để xuyên thủng!`,
+      `🛡️ ${wName} bị khiên chặn lại! Khiên chỉ chịu được thêm một đòn!`
+    ],
+    radar_none:[
+      `📡 [RADAR]: Vùng biển xung quanh hoàn toàn yên tĩnh.`,
+      `📡 [RADAR]: Không có tín hiệu kim loại nào trong phạm vi quét.`,
+      `📡 [RADAR]: Sóng âm không phản hồi, không thấy mục tiêu lân cận.`,
+      `📡 [RADAR]: Khu vực này có vẻ sạch bóng quân thù.`,
+      `📡 [RADAR]: Tín hiệu phẳng lặng, không có dấu hiệu chuyển động.`
+    ]
   };
   const rnd=(arr)=>arr[Math.floor(Math.random()*arr.length)];
+
   launchBeam(r,c,weapon,()=>{
     if(weapon==='torpedo') spawnWifiShockwave(r,c,'horizontal');
     if(weapon==='missile') spawnWifiShockwave(r,c,'vertical');
-    const result = attackCell(r,c,fogged);
-    if(fogged){
-      if(result==='sunk') addLog(rnd(logs.sunk),'sunk');
-      else addLog(rnd(logs.miss_fog),'fog');
+
+    let damaged=false;   // có gây sát thương lên tàu không
+    if(weapon==='bomb'){
+      damaged=blastArea(r,c);
     } else {
-      if(result==='sunk') addLog(rnd(logs.sunk),'sunk');
-      else if(result==='hit') addLog(rnd(logs.hit),'hit');
-      else addLog(rnd(logs.miss),'miss');
+      const result=attackCell(r,c);
+      if(result==='sunk'){ addLog(rnd(logs.sunk),'sunk'); damaged=true; }
+      else if(result==='hit'){ addLog(rnd(logs.hit),'hit'); damaged=true; }
+      else if(result==='shield'){ addLog(rnd(logs.shield),'hit'); damaged=true; }
+      else if(result!=='secret') addLog(rnd(logs.miss),'miss');
     }
+
     if(weapon==='torpedo'||weapon==='missile'){
       const dirs=(weapon==='torpedo')?[[0,-1],[0,1]]:[[-1,0],[1,0]];
-      let foundInFog=false, foundNormal=false;
-      dirs.forEach(([dr,dc])=>{
-        const nr=r+dr,nc=c+dc;
-        if(nr<0||nr>=GRID||nc<0||nc>=GRID) return;
-        if(board[nr][nc]!==null&&(revealed[nr][nc]===''||revealed[nr][nc]==='detected')){
-          if(isFogged(nr,nc)) foundInFog=true;
-          else foundNormal=true;
-        }
-      });
-      if(foundInFog) addLog(rnd(logs.radar_fog),'fog');
-      else if(foundNormal) detectCells(r,c,dirs);
+      let found=false;
+      dirs.forEach(([dr,dc])=>{ const nr=r+dr,nc=c+dc; if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&(revealed[nr][nc]===''||revealed[nr][nc]==='detected')) found=true; });
+      if(found) detectCells(r,c,dirs);
       else addLog(rnd(logs.radar_none),'detect');
     }
-    checkEndGame();
-    tickFog();
-    spawnFog(r,c);
-    unlockFiring();
+
+    if(!damaged&&!secretPending) registerMiss();
+    const finish=()=>{ checkEndGame(); unlockFiring(); };
+    if(secretPending&&shipsAlive>0){ secretPending=false; dropSecretShells(finish); }
+    else { secretPending=false; finish(); }
   });
 }
 
-function attackCell(r,c,fogged){
+function attackCell(r,c){
+  if(secretCell&&!secretTriggered&&r===secretCell.r&&c===secretCell.c){
+    secretTriggered=true; secretPending=true;
+    revealed[r][c]='secret'; updateCell(r,c);
+    return 'secret';
+  }
   if(board[r][c]!==null){
-    const{shipId,isHead}=board[r][c],ship=ships[shipId];
+    const{shipId,isHead,isTail}=board[r][c], ship=ships[shipId];
     if(isHead&&ship.alive){
       ship.alive=false; shipsAlive--;
-      ship.cells.forEach(({r:sr,c:sc})=>{
-        revealed[sr][sc]='sunk';
-        updateCell(sr,sc);
-        addShipPartVisual(sr,sc);
-      });
+      ship.cells.forEach(({r:sr,c:sc})=>{ revealed[sr][sc]='sunk'; updateCell(sr,sc); addShipPartVisual(sr,sc,true); });
+      updateHud();
       return 'sunk';
     } else if(ship.alive){
-      if(revealed[r][c]!=='hit'){
-        revealed[r][c]='hit'; ship.hit.add(`${r},${c}`);
-      }
-      if(!fogged) updateCell(r,c);
-      return 'hit';
+      if(isTail&&ship.shieldUp){ ship.shieldUp=false; revealed[r][c]='shield'; updateCell(r,c); return 'shield'; }
+      revealed[r][c]='hit'; ship.hit.add(`${r},${c}`); updateCell(r,c); return 'hit';
     }
   }
-  if(!revealed[r][c]||revealed[r][c]==='detected'){
-    revealed[r][c]='miss';
-    if(!fogged) updateCell(r,c);
-  }
+  if(!revealed[r][c]||revealed[r][c]==='detected'){ revealed[r][c]='miss'; updateCell(r,c); }
   return 'miss';
 }
 
-function addShipPartVisual(r,c){
-  const cell=document.getElementById(`cell-${r}-${c}`); if(!cell) return;
+// Ô bí mật: thả 5 đạn đá xuống 5 ô chưa bắn (không tốn đạn)
+function dropSecretShells(done){
+  const g=gen;
+  const pool=[];
+  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
+    const st=revealed[r][c];
+    if(st===''||st==='detected') pool.push([r,c]);   // không thả vào ô đã bắn (kể cả ô khiên)
+  }
+  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
+  const targets=pool.slice(0,DIFFICULTY[difficulty].secretDrops);
+  addLog(`🎁 Ô BÍ MẬT! ${targets.length} quả đạn đá đang rơi xuống ngẫu nhiên trên bàn!`,'detect');
+  if(!targets.length){ done(); return; }
+
+  let landed=0, hits=0, sunk=0;
+  targets.forEach(([tr,tc],i)=>{
+    setTimeout(()=>{
+      if(g!==gen) return;
+      launchBeam(tr,tc,'stone',()=>{
+        if(g!==gen) return;
+        const st=revealed[tr][tc];
+        if(isOpen(st)){
+          const res=attackCell(tr,tc);
+          if(res==='sunk') sunk++; else if(res==='hit'||res==='shield') hits++;
+        }
+        if(++landed===targets.length){
+          if(sunk>0) addLog(`💥 Mưa đạn đá đánh chìm ${sunk} tàu${hits?`, trúng thêm ${hits} ô`:''}!`,'sunk');
+          else if(hits>0) addLog(`🔥 Mưa đạn đá trúng ${hits} ô tàu địch!`,'hit');
+          else addLog('❓ Mưa đạn đá rơi xuống biển, không trúng tàu nào.','miss');
+          done();
+        }
+      });
+    },i*150);
+  });
+}
+
+// Bom: tấn công mọi ô chưa lộ trong vùng 3x3 quanh (r,c)
+function blastArea(r,c){
+  spawnBlast(r,c);
+  let hits=0, sunk=0;
+  for(let dr=-1;dr<=1;dr++){
+    for(let dc=-1;dc<=1;dc++){
+      const nr=r+dr, nc=c+dc;
+      if(nr<0||nr>=GRID||nc<0||nc>=GRID) continue;
+      const st=revealed[nr][nc];
+      if(!isOpen(st)) continue;
+      const res=attackCell(nr,nc);
+      if(res==='sunk') sunk++; else if(res==='hit'||res==='shield') hits++;
+    }
+  }
+  if(sunk>0) addLog(`💥 Bom nổ tung vùng 3×3! Đánh chìm ${sunk} tàu${hits?`, trúng thêm ${hits} ô`:''}!`,'sunk');
+  else if(hits>0) addLog(`🔥 Bom trúng ${hits} ô tàu địch!`,'hit');
+  else addLog('❓ Bom nổ giữa biển khơi, không trúng mục tiêu nào.','miss');
+  return hits>0||sunk>0;
+}
+
+function spawnBlast(r,c){
+  const ctr=getCellCenter(r,c); if(!ctr) return;
+  const el=document.createElement('div'); el.className='blast';
+  const w=ctr.w*3, h=ctr.h*3;
+  el.style.cssText=`width:${w}px;height:${h}px;left:${ctr.x-w/2}px;top:${ctr.y-h/2}px;`;
+  $('fx-layer').appendChild(el); setTimeout(()=>el.remove(),700);
+}
+
+function addShipPartVisual(r,c,burning){
+  const cell=$(`cell-${r}-${c}`); if(!cell) return;
+  const info=board[r][c]; if(!info) return;
+  const ship=ships[info.shipId];
+  const idx=ship.cells.findIndex(p=>p.r===r&&p.c===c);
   cell.innerHTML='';
-  const part=document.createElement('div'); part.className='ship-part'; cell.appendChild(part);
-  const fire=document.createElement('div');
-  fire.textContent='🔥';
-  fire.style.cssText='position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:12px;opacity:0.6;';
-  cell.appendChild(fire);
+  const part=document.createElement('div');
+  part.className=`ship-part ${ship.isHorizontal?'h':'v'}${idx===0?' start':''}${idx===ship.cells.length-1?' end':''}${info.isHead?' head':''}`;
+  cell.appendChild(part);
+  if(burning){
+    const flame=document.createElement('div');
+    flame.className='flame';
+    cell.appendChild(flame);
+  }
 }
 
 function detectCells(r,c,dirs){
   dirs.forEach(([dr,dc])=>{
     const nr=r+dr,nc=c+dc;
-    if(nr<0||nr>=GRID||nc<0||nc>=GRID) return;
-    if(board[nr][nc]!==null&&revealed[nr][nc]===''&&!isFogged(nr,nc)){
-      revealed[nr][nc]='detected';
-      spawnDetectBang(nr,nc);
-      addLog(`  ❗ Phát hiện tàu tại ${String.fromCharCode(65+nc)}${nr+1}!`,'detect');
+    if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&revealed[nr][nc]===''){
+      revealed[nr][nc]='detected'; spawnDetectBang(nr,nc);
+      addLog('  ❗ Radar phát hiện tàu!','detect');
     }
   });
 }
 
-function weaponName(w){return{torpedo:'Ngư Lôi',missile:'Tên Lửa',stone:'Đạn Đá'}[w];}
+function weaponName(w){ return{torpedo:'Ngư Lôi',missile:'Tên Lửa',stone:'Đạn Đá',bomb:'Bom'}[w]; }
 
 function selectWeapon(w){
   if(ammo[w]<=0) return;
   selectedWeapon=w;
-  ['torpedo','missile','stone'].forEach(n=>{ document.getElementById(`btn-${n}`).classList.toggle('active',n===w); });
-  updateSvgBorders();
+  document.body.dataset.weapon=w;
+  WEAPONS.forEach(n=>{ $(`btn-${n}`).classList.toggle('active',n===w); });
 }
 
 function updateAmmoButtons(){
-  ['torpedo','missile','stone'].forEach(w=>{
-    const btn=document.getElementById(`btn-${w}`); if(!btn) return;
-    document.getElementById(`count-${w}`).textContent=`×${ammo[w]}`;
-    btn.disabled=ammo[w]<=0;
-    if(ammo[w]<=0&&selectedWeapon===w){
-      const next=['torpedo','missile','stone'].find(x=>ammo[x]>0);
+  WEAPONS.forEach(w=>{
+    const btn=$(`btn-${w}`);
+    if(!btn) return;
+    const count=ammo[w];
+    $(`count-${w}`).textContent=`×${count}`;
+    btn.disabled=count<=0;
+    if(count<=0&&selectedWeapon===w){
+      const next=['torpedo','missile','stone','bomb'].find(x=>ammo[x]>0);
       if(next) selectWeapon(next);
     }
   });
+  updateHud();
 }
 
 function checkEndGame(){
+  const stat=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
   if(shipsAlive===0){
     gameOver=true;
-    clearFog(true);
     setTimeout(()=>{
-      document.getElementById('overlay-title').textContent='🏆 CHIẾN THẮNG!';
-      document.getElementById('overlay-title').className='overlay-title win';
-      document.getElementById('overlay-msg').innerHTML=`Bạn đã tiêu diệt toàn bộ hạm đội địch!<br>Số phát đã bắn: <strong>${shotsCount}</strong><br>Đạn còn lại: <strong>${getTotalAmmo()}</strong>`;
-      document.getElementById('overlay').classList.remove('hidden');
-    },600); return;
+      $('overlay-title').textContent='CHIẾN THẮNG';
+      $('overlay-title').className='overlay-title win';
+      $('overlay-msg').innerHTML=`<div class="stats">${stat(shotsCount,'PHÁT BẮN')}${stat(getTotalAmmo(),'ĐẠN CÒN')}</div>Bạn đã tiêu diệt toàn bộ hạm đội địch!`;
+      $('overlay').classList.remove('hidden');
+    },600);
+    return;
   }
   if(getTotalAmmo()<=0){
     gameOver=true;
-    clearFog(true);
     revealAllShips();
     setTimeout(()=>{
-      document.getElementById('overlay-title').textContent='THẤT BẠI';
-      document.getElementById('overlay-title').className='overlay-title lose';
-      document.getElementById('overlay-msg').innerHTML=`Hết đạn! Còn <strong>${shipsAlive}</strong> tàu địch chưa bị tiêu diệt.<br>Vị trí tàu đã được hiển thị bên dưới.`;
-      document.getElementById('overlay').classList.remove('hidden');
+      $('overlay-title').textContent='THẤT BẠI';
+      $('overlay-title').className='overlay-title lose';
+      $('overlay-msg').innerHTML=`<div class="stats">${stat(shotsCount,'PHÁT BẮN')}${stat(shipsAlive,'TÀU ĐỊCH CÒN')}</div>Hết đạn! Vị trí tàu đã được hiển thị trên bản đồ.`;
+      $('overlay').classList.remove('hidden');
     },400);
   }
 }
 
 function viewMap(){
-  document.getElementById('overlay').classList.add('hidden');
-  document.getElementById('floating-restart').classList.remove('hidden');
+  $('overlay').classList.add('hidden');
+  $('floating-restart').classList.remove('hidden');
 }
 
 function revealAllShips(){
   for(let r=0;r<GRID;r++){
     for(let c=0;c<GRID;c++){
-      if(board[r][c]&&(revealed[r][c]===''||revealed[r][c]==='detected')){
-        addShipPartVisual(r,c);
-        const cell=document.getElementById(`cell-${r}-${c}`);
-        if(cell) cell.classList.add('revealed','disabled');
+      if(board[r][c]&&isOpen(revealed[r][c])){
+        addShipPartVisual(r,c,false);
+        const cell=$(`cell-${r}-${c}`);
+        if(cell){ cell.classList.add('revealed','disabled'); }
       }
     }
+  }
+  if(secretCell&&!secretTriggered){
+    const sc=$(`cell-${secretCell.r}-${secretCell.c}`);
+    if(sc) sc.classList.add('secret','unfound','revealed','disabled');
   }
 }
 
 function addLog(msg,type=''){
-  const log=document.getElementById('log');
+  const log=$('log');
   log.querySelectorAll('.log-entry.new').forEach(e=>e.classList.remove('new'));
   const entry=document.createElement('div');
   entry.className=`log-entry new ${type}`; entry.textContent=msg;
@@ -1605,13 +1127,9 @@ function addLog(msg,type=''){
   while(log.children.length>50) log.removeChild(log.firstChild);
 }
 
-function clearLog(){ document.getElementById('log').innerHTML=''; }
+function clearLog(){ $('log').innerHTML=''; }
 
-window.addEventListener('resize',()=>{
-  if(foggedCells.size>0 || fogSweepPhase!=='idle'){
-    syncFogCanvas();
-  }
-});
+openModeScreen();
 </script>
 </body>
 </html>
