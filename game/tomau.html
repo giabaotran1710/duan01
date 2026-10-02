@@ -1283,23 +1283,40 @@ body{
 
 
 /* ===== Interaction motion upgrade ===== */
-.cell.paint-pop{
-  animation:cellPaintPop .22s cubic-bezier(.18,.9,.24,1.08);
-  will-change:transform,filter;
+.cell .liquid-clip{position:absolute;inset:0;overflow:hidden;border-radius:inherit;pointer-events:none;z-index:0}
+.cell.paint-fill{
+  animation:none;
+  background:linear-gradient(145deg,#f8faff,#e5e9f1)!important;
 }
-@keyframes cellPaintPop{
-  0%{transform:scale(.86);filter:brightness(1.16)}
-  62%{transform:scale(1.045);filter:brightness(1.05)}
-  100%{transform:scale(1);filter:brightness(1)}
+/* The color "ink" rises from the bottom and fills the cell in 0.5s. */
+.cell.paint-fill .liquid,.cell.clue.clue-fill .liquid{
+  position:absolute;left:0;right:0;bottom:0;height:100%;
+  border-radius:0;background:var(--tile-fill);z-index:0;
+  animation:liquidRise .5s cubic-bezier(.4,.15,.3,1) both;
+  will-change:transform;
 }
-.cell.paint-pop .liquid{
-  animation:paintLiquidIn .22s cubic-bezier(.18,.85,.22,1);
+.cell.paint-fill,.cell.clue.clue-fill{
+  --wave:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 20' preserveAspectRatio='none'%3E%3Cpath d='M0 10C16.7 4 33.3 4 50 10S83.3 16 100 10V20H0Z'/%3E%3C/svg%3E");
 }
-@keyframes paintLiquidIn{
-  0%{transform:scale(.55);opacity:.45}
-  70%{transform:scale(1.04);opacity:1}
-  100%{transform:scale(1);opacity:1}
+/* Two layers of waves ride the front of the ink: 4 crests in front, 3 behind. */
+.cell.paint-fill .liquid::before,.cell.paint-fill .liquid::after,
+.cell.clue.clue-fill .liquid::before,.cell.clue.clue-fill .liquid::after{
+  content:"";position:absolute;left:0;width:200%;height:12px;pointer-events:none;
+  background:var(--tile-fill);
+  -webkit-mask:var(--wave) 0 0/25% 100% repeat-x;mask:var(--wave) 0 0/25% 100% repeat-x;
 }
+.cell.paint-fill .liquid::before,.cell.clue.clue-fill .liquid::before{top:-10px;-webkit-mask-size:25% 100%;mask-size:25% 100%;animation:liquidWaveA .5s ease-in-out both}
+.cell.paint-fill .liquid::after,.cell.clue.clue-fill .liquid::after{
+  top:-13px;height:12px;z-index:-1;opacity:.45;filter:brightness(1.2);
+  -webkit-mask-size:33.333% 100%;mask-size:33.333% 100%;
+  animation:liquidWaveB .5s ease-in-out both;
+}
+@keyframes liquidWaveA{from{transform:translateX(0)}to{transform:translateX(-25%)}}
+@keyframes liquidWaveB{from{transform:translateX(-20%)}to{transform:translateX(0)}}
+@keyframes liquidRise{from{transform:translateY(100%)}to{transform:translateY(0)}}
+.cell.clue.clue-fill{background:linear-gradient(145deg,#f8faff,#e5e9f1)!important}
+.cell.clue.clue-fill>:not(.liquid):not(.liquid-clip){opacity:0;animation:clueContentIn .2s ease-out .36s forwards}
+@keyframes clueContentIn{to{opacity:1}}
 .cell.prefilled.prefilled-pop{
   animation:prefilledSettle .38s cubic-bezier(.2,.88,.25,1.04) both;
   animation-delay:var(--prefilled-delay,0ms);
@@ -1440,7 +1457,7 @@ body{
   100%{transform:scale(1)}
 }
 @media (prefers-reduced-motion:reduce){
-  .cell.paint-pop,.cell.prefilled.prefilled-pop,.cell.clue.clue-reveal-pop
+  .cell.paint-fill .liquid,.cell.paint-fill .liquid::before,.cell.paint-fill .liquid::after,.cell.clue.clue-fill .liquid,.cell.clue.clue-fill .liquid::before,.cell.clue.clue-fill .liquid::after,.cell.clue.clue-fill>:not(.liquid):not(.liquid-clip),.cell.prefilled.prefilled-pop,.cell.clue.clue-reveal-pop
   .wrong-paint,.board.win-celebrate .cell,.target-hearts.heartbeat .heart-main{
     animation:none !important;
   }
@@ -2197,6 +2214,11 @@ body:not(.solution-detail-active) .game-stage{
 }
 
 /* Clean detailed-solution presentation */
+.sd-controls{display:flex;gap:8px;justify-content:center;margin-top:10px;pointer-events:auto}
+.sd-controls[hidden],.sd-ctl[hidden]{display:none!important}
+.sd-ctl{pointer-events:auto;border:0;border-radius:12px;padding:10px 16px;font:800 13px/1 Inter,system-ui,sans-serif;background:#e9edf5;color:#172033;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
+.sd-ctl.is-paused{background:#ffb300;color:#172033}
+.sd-ctl-primary{background:#172033;color:#fff;padding:12px 22px;letter-spacing:.03em}
 .clue-explain.solution-detail-panel{
   padding:10px 12px 11px;
   border-radius:18px 18px 0 0;
@@ -2333,6 +2355,8 @@ body.solution-detail-active .target-controls-top{
   filter:none!important;opacity:1!important;animation:sdTargetPulse 1.2s ease-in-out infinite}
 .sd-target-mark{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
   font:900 min(calc(48cqw + 6px),30px)/1 Inter,system-ui,sans-serif;color:#172033;pointer-events:none;z-index:5}
+.cell.paint-fill .solution-detail-cursor,.cell.clue-fill .solution-detail-cursor{display:none}
+.board.solution-detail-board .cell.sd-target.paint-fill,.board.solution-detail-board .cell.sd-target.clue-fill{animation:none;outline-color:#172033}
 @keyframes sdTargetPulse{0%,100%{outline-color:#172033}50%{outline-color:rgba(23,32,51,.35)}}
 
 
@@ -2350,6 +2374,56 @@ body.solution-detail-active .target-controls-top{
 #markMode.no-mark::after{content:"";position:absolute;inset:4px 8px;pointer-events:none;
   background:linear-gradient(to top right,transparent calc(50% - 1.5px),#e53935 calc(50% - 1.5px),#e53935 calc(50% + 1.5px),transparent calc(50% + 1.5px)),
              linear-gradient(to bottom right,transparent calc(50% - 1.5px),#e53935 calc(50% - 1.5px),#e53935 calc(50% + 1.5px),transparent calc(50% + 1.5px))}
+
+/* ---------- Toggle: text labels (Tô màu | Đánh dấu) ---------- */
+.target-controls-top .toolbar,.target-controls .toolbar{width:210px !important}
+.target-controls-top .mode,.target-controls .mode{font-size:13px !important;font-weight:800;letter-spacing:.01em;color:#fff}
+.target-controls-top .mode::before,.target-controls .mode::before{content:none !important}
+.target-controls-top .mode:not(.no-mark)::after,.target-controls .mode:not(.no-mark)::after{content:none !important}
+.target-controls-top .mode.active,.target-controls .mode.active{background:rgba(255,255,255,.22);box-shadow:inset 0 -3px 0 #ffb300}
+/* ---------- Header: Tutorial + Chọn chế độ ---------- */
+.target-top .top-actions{display:flex;align-items:flex-start;gap:7px}
+.target-pill{height:40px;border:0;border-radius:11px;background:#fff;color:#20242d;box-shadow:0 2px 3px rgba(40,48,65,.10);
+  display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;font-size:12px;font-weight:800;cursor:pointer}
+.target-pill[hidden]{display:none}
+.target-modesel{flex-direction:column;gap:1px;line-height:1.05;padding:0 10px}
+.target-modesel .pill-k{font-size:9.5px;color:#7a8191;letter-spacing:.04em}
+.target-modesel .pill-v{font-size:12px;color:#172033}
+@media(max-width:400px){.target-pill{padding:0 8px;font-size:11px}#tutorialBtn span{display:none}.target-sound,.target-gear{width:48px}}
+.mode-list{display:grid;gap:8px;margin:6px 0 12px}
+.mode-opt{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:14px;border:2px solid transparent;
+  background:#f1f4f9;font-weight:800;font-size:15px;color:#172033;cursor:pointer}
+.mode-opt small{font-weight:600;color:#6b7590;font-size:11.5px}
+.mode-opt.active{border-color:#172033;background:#fff}
+.mode-opt[data-tier="DỄ"]{color:#2e9d52}.mode-opt[data-tier="THƯỜNG"]{color:#1e88e5}.mode-opt[data-tier="TRUNG BÌNH"]{color:#ef8f00}
+.mode-opt[data-tier="KHÓ"]{color:#e53935}.mode-opt[data-tier="RẤT KHÓ"]{color:#8e1d1d}
+/* ---------- Tutorial ---------- */
+.tut-coach{position:fixed;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));z-index:30;max-width:560px;margin:0 auto;
+  background:#fff;border-radius:16px;padding:10px 13px 11px;box-shadow:0 8px 30px rgba(23,32,51,.25);border:2px solid #172033;
+  max-height:42vh;overflow-y:auto}
+.tut-coach[hidden]{display:none}
+.tut-stage{font-size:11px;font-weight:800;color:#7a8191;letter-spacing:.03em}
+.tut-title{font-size:15px;font-weight:900;color:#172033;margin:2px 0 3px}
+.tut-text{font-size:13px;line-height:1.45;color:#3a4254}
+.tut-act{margin-top:7px;padding:7px 10px;border-radius:10px;background:#fff6d6;color:#172033;font-weight:800;font-size:13px}
+.tut-act:empty{display:none}
+.tut-next{margin-top:8px;width:100%;padding:10px;border:0;border-radius:11px;background:#172033;color:#fff;font-weight:900;font-size:14px}
+.tut-next[hidden]{display:none}
+.tut-coach.nudge{animation:tutNudge .4s ease}
+@keyframes tutNudge{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+body.tutorial-active #checkBtn,body.tutorial-active #detailSolutionBtn,body.tutorial-active #resetBtn,body.tutorial-active #helpBtn,
+body.tutorial-active #modeSelectBtn,body.tutorial-active #tutorialBtn,body.tutorial-active #soundBtn{pointer-events:none;opacity:.35}
+body.tutorial-active .target-hero .target-hearts{visibility:hidden}
+body.tutorial-active.tut-show-hearts .target-hero .target-hearts{visibility:visible}
+.cell.tut-target{box-shadow:0 0 0 3px #fff,0 0 0 6px #ffb300 !important;animation:tutPulse 1.1s ease-in-out infinite;z-index:40;position:relative}
+.cell.tut-source{box-shadow:0 0 0 3px #172033 !important;z-index:39;position:relative}
+.color-choice.tut-glow{animation:tutPulse 1.1s ease-in-out infinite;box-shadow:0 0 0 3px #ffb300 !important}
+/* Mode toggle: highlight stays INSIDE the pill (no outer ring, no scaling). */
+.mode.tut-glow{animation:tutModeGlow 1.1s ease-in-out infinite;box-shadow:inset 0 0 0 2px #ffb300 !important;transform:none !important}
+@keyframes tutModeGlow{0%,100%{background-color:rgba(255,179,0,.14)}50%{background-color:rgba(255,179,0,.46)}}
+@keyframes tutPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.submode-label[data-tier="CHUYÊN GIA"]{color:#5b1a8f}
+.nonogram-line-clue.block-chip{border-radius:5px}
 </style>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -2535,6 +2609,8 @@ body.solution-detail-active .target-controls-top{
         <button class="icon-btn target-sound" id="soundBtn" aria-label="Âm thanh">⌁</button>
       </div>
       <div class="top-actions">
+        <button class="target-pill" id="tutorialBtn" hidden aria-label="Tutorial"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><span>Tutorial</span></button>
+        <button class="target-pill target-modesel" id="modeSelectBtn" aria-label="Chọn chế độ"><span class="pill-k">CHỌN CHẾ ĐỘ</span><span class="pill-v" id="modeSelectValue">Ngẫu nhiên</span></button>
         <button class="icon-btn target-gear" id="helpBtn" aria-label="Hướng dẫn">⚙</button>
       </div>
     </header>
@@ -2546,8 +2622,8 @@ body.solution-detail-active .target-controls-top{
 
     <div class="target-controls target-controls-top">
       <div class="toolbar">
-        <button class="mode active" id="markMode">✕ Đánh dấu</button>
-        <button class="mode" id="paintMode">🎨 Tô màu</button>
+        <button class="mode active" id="paintMode">Tô màu</button>
+        <button class="mode" id="markMode">Đánh dấu</button>
       </div>
     </div>
 
@@ -2586,6 +2662,21 @@ body.solution-detail-active .target-controls-top{
     <div class="new-game-loading-title">Đang khởi tạo màn chơi</div>
     <div class="new-game-loading-text">Vui lòng đợi...</div>
   </div>
+</div>
+<div class="overlay" id="modeOverlay">
+  <div class="modal mode-modal">
+    <h2>Chọn chế độ</h2>
+    <p class="help-sub">Màn mới và nút chơi lại sẽ tạo màn theo chế độ này.</p>
+    <div class="mode-list" id="modeList"></div>
+    <button class="close" id="closeMode">Đóng</button>
+  </div>
+</div>
+<div class="tut-coach" id="tutCoach" hidden role="dialog" aria-live="polite">
+  <div class="tut-stage" id="tutStage"></div>
+  <div class="tut-title" id="tutTitle"></div>
+  <div class="tut-text" id="tutText"></div>
+  <div class="tut-act" id="tutAct"></div>
+  <button class="tut-next" id="tutNext" hidden>Tiếp</button>
 </div>
 <div class="overlay" id="overlay">
   <div class="modal help-modal">
@@ -2888,6 +2979,48 @@ function comboPlacements(i,n,clue,canBe,canNot){
     if(ok)out.push([st,en]);
   }
   return {cells,placements:out};
+}
+
+// ---------------------------------------------------------------
+// Quy tắc Khối {color:C,count:K} beside a row/column: the line contains
+// exactly K blocks of C (a block = maximal run of consecutive C cells).
+// Given, per cell, whether it can be C / can be not-C, returns which cells
+// are C in every valid pattern (mustC) and in none (never), or null.
+// ---------------------------------------------------------------
+const BLOCK_PATTERNS={};
+function blockPatterns(n){
+  if(BLOCK_PATTERNS[n])return BLOCK_PATTERNS[n];
+  const byRuns=[];
+  for(let m=0;m<(1<<n);m++){
+    let runs=0;
+    for(let t=0;t<n;t++)if((m>>t)&1 && !(t>0 && (m>>(t-1))&1))runs++;
+    (byRuns[runs]=byRuns[runs]||[]).push(m);
+  }
+  return BLOCK_PATTERNS[n]=byRuns;
+}
+function blockLineOptions(canC,canNot,K){
+  const n=canC.length, list=blockPatterns(n)[K]||[];
+  let any=false, orC=0, andC=(1<<n)-1;
+  for(const m of list){
+    let ok=true;
+    for(let t=0;t<n&&ok;t++){
+      if((m>>t)&1){ if(!canC[t])ok=false; }
+      else if(!canNot[t])ok=false;
+    }
+    if(!ok)continue;
+    any=true;orC|=m;andC&=m;
+  }
+  if(!any)return null;
+  const mustC=[],never=[];
+  for(let t=0;t<n;t++){ if((andC>>t)&1)mustC.push(t); if(!((orC>>t)&1))never.push(t); }
+  return {mustC,never};
+}
+
+// A Knight clue always means "exactly 1 cell of my color among my knight
+// moves" (it shows only ♞, never a number), so it may only be placed where
+// that count really is 1.
+function knightOneCount(sol,i,n){
+  return knightCells(i,n).reduce((a,j)=>a+(sol[j]===sol[i]?1:0),0);
 }
 
 // TỚ: every color that appears has the same count, with at least 2 colors
@@ -3292,6 +3425,21 @@ function clueCells(i,n,clue){
         }
       }
 
+      // Quy tắc Khối lines.
+      for(const [arr,axis] of [[data.blockRows,'row'],[data.blockCols,'col']]){
+        if(!Array.isArray(arr))continue;
+        for(let k=0;k<n;k++){
+          const e=arr[k];
+          if(!e)continue;
+          const bit=1<<e.color;
+          const cells=[];for(let t=0;t<n;t++)cells.push(axis==='row'?k*n+t:t*n+k);
+          const opt=blockLineOptions(cells.map(j=>!!(domains[j]&bit)),cells.map(j=>(domains[j]&~bit)!==0),e.count);
+          if(!opt)return {domains,contradiction:true,steps:[],reduced:0};
+          for(const t of opt.mustC){const j=cells[t];if(domains[j]!==bit){domains[j]&=bit;if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
+          for(const t of opt.never){const j=cells[t];if(domains[j]&bit){domains[j]&=~bit;if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
+        }
+      }
+
       for(const line of ruleLineSets(data,n)){
         const def=Array(palette).fill(0),pos=Array(palette).fill(0);
         for(const j of line.indices){
@@ -3684,6 +3832,7 @@ function clueCells(i,n,clue){
     };
     add(data.nonogramRows,'row','nonogram');add(data.nonogramCols,'col','nonogram');
     add(data.ruleRows,'row','rule');add(data.ruleCols,'col','rule');
+    add(data.blockRows,'row','block');add(data.blockCols,'col','block');
     const paints=[],xs=[];
     for(const L of lines){
       const def=Array(palette).fill(0),pos=Array(palette).fill(0);
@@ -3696,6 +3845,17 @@ function clueCells(i,n,clue){
         color:L.kind==='nonogram'?L.entry.color:undefined,count:L.entry.count};
       const force=(c,why)=>{const o=open(c);if(o.length)paints.push({index:o[0],color:c,line:{...line,focus:c,why}});};
       const cross=(c,why)=>{const o=open(c);if(o.length)xs.push({line:{...line,focus:c,why},actions:o.map(cell=>({cell,color:c,source:-1,rule:'line'}))});};
+      if(L.kind==='block'){
+        const c=L.entry.color,bit=1<<c;
+        const opt=blockLineOptions(L.cells.map(j=>!!(shown[j]&bit)),L.cells.map(j=>(shown[j]&~bit)!==0),L.entry.count);
+        if(!opt)continue;
+        const fl={...line,type:'block',color:c,count:L.entry.count};
+        const forceCells=opt.mustC.map(t=>L.cells[t]).filter(j=>shown[j]!==bit);
+        if(forceCells.length)paints.push({index:forceCells[0],color:c,line:{...fl,focus:c,why:'fill'}});
+        const crossCells=opt.never.map(t=>L.cells[t]).filter(j=>shown[j]&bit && shown[j]!==bit);
+        if(crossCells.length)xs.push({line:{...fl,focus:c,why:'none'},actions:crossCells.map(cell=>({cell,color:c,source:-1,rule:'line'}))});
+        continue;
+      }
       if(L.kind==='nonogram'){
         const c=L.entry.color,N=L.entry.count;
         if(def[c]<N&&pos[c]===N)force(c,'fill');
@@ -6096,14 +6256,16 @@ function createSolvablePuzzleRaw(d){
         globalClue:generated.globalClue
           ? {color:generated.globalClue.color,count:generated.globalClue.count}
           : null,
-        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,neutralClues:generated.neutralClues||null,
+        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,neutralClues:generated.neutralClues||null,
         nonogramCols:generated.nonogramCols||null,
         val,marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
         initialFilled:new Set(filled),
         revealSchedule:[]
       },new Set(opening),{forGeneratorValidation:true});
     };
-    const score=r=>(r.ok?100000:0)+(r.trace||[]).filter(t=>t.kind==='paint').length;
+    // Progress = cells resolved (painted, pre-colored, or clue revealed), so
+    // pre-coloring a stuck cell is scored as the progress it really is.
+    const score=r=>(r.ok?100000:0)+(r.fixed||[]).filter((v,i)=>v!==-1||(clue[i]&&r.revealed?.has(i))).length;
 
     let current=run();
     const addedItems=[];
@@ -6187,7 +6349,7 @@ function createSolvablePuzzleRaw(d){
       globalClue:generated.globalClue
         ? {color:generated.globalClue.color,count:generated.globalClue.count}
         : null,
-      nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,neutralClues:generated.neutralClues||null,
+      nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,neutralClues:generated.neutralClues||null,
       nonogramCols:generated.nonogramCols||null,
       val:Array(total).fill(-1),
       marks:new Map(),
@@ -7563,7 +7725,7 @@ function createComboPuzzle(d){
       try{
         return runHumanInferenceEngine({
           d:{n,palette:COLOR_COUNT},n,palette:COLOR_COUNT,sol:data.sol,clue:data.clue.map(c=>c?{...c}:null),globalClue:null,
-          nonogramRows:null,nonogramCols:null,ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,
+          nonogramRows:null,nonogramCols:null,ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,blockRows:data.blockRows||null,blockCols:data.blockCols||null,
           neutralClues:data.neutralClues||null,
           val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
           initialFilled:new Set(),revealSchedule:[]
@@ -7665,10 +7827,10 @@ function createComboPuzzle(d){
         let k=0;
         for(const i of plainCells()){
           if(k>=3)break;
-          const o={color:sol[i],count:0,knight:true};
-          o.count=knightCells(i,n).reduce((s2,j)=>s2+(sol[j]===sol[i]?1:0),0);
-          clue[i]=o;k++;
+          if(knightOneCount(sol,i,n)!==1)continue;
+          clue[i]={color:sol[i],count:1,knight:true};k++;
         }
+        if(k<2)continue;
       }
 
       // Combo clues.
@@ -7735,12 +7897,12 @@ function createComboPuzzle(d){
       }
       const data={sol,clue,ruleRows,ruleCols,neutralClues};
       const pool=shuffle(Array.from({length:total},(_,i)=>i).filter(i=>!neutralClues?.has(i)&&clue[i]));
-      const opening=new Set(pool.slice(0,{5:3,6:5,7:6,8:8}[n]));
+      const opening=new Set(pool.slice(0,{5:3,6:5,7:6,8:8}[n]+(COLOR_COUNT>3?4:0)));
       let sim=run(data,opening);
       if(!sim?.ok){
         const tmp={d:{n},sol,clue,globalClue:null,ruleRows,ruleCols,neutralClues,
           initialRevealed:new Set(opening),initialFilled:new Set()};
-        if(!augmentOpeningForNoGuess(tmp,n>=7?20:12))continue;
+        if(!augmentOpeningForNoGuess(tmp,(n>=7?20:12)+(COLOR_COUNT>3?10:0)))continue;
         opening.clear();tmp.initialRevealed.forEach(i=>opening.add(i));
         sim=run(data,opening);
         if(!sim?.ok)continue;
@@ -7781,6 +7943,194 @@ function createComboPuzzle(d){
       };
     }
     throw new Error(`Không thể tạo màn Combo ${n}×${n} trong thời gian cho phép`);
+  }
+
+function createBlockPuzzle(d){
+    // QUY TẮC KHỐI boards:
+    //  6×6 / 7×7 ('knight'): Cơ bản + Khối + Quân mã + Clue trung tính
+    //  8×8       ('dir')   : Cơ bản + Khối + Chỉ hướng
+    //  9×9       ('deceit'): Cơ bản + Khối + Đối xứng + Quân mã + Lừa đảo
+    const n=[6,7,8,9].includes(d.n)?d.n:6, total=n*n, pal=COLOR_COUNT;
+    const variant=n===9?'deceit':n===8?'dir':'knight';
+    const at=(r,c)=>r*n+c;
+    const useKnight=variant!=='dir', useNeutral=variant==='knight', useSym=variant==='deceit', useDir=variant==='dir';
+    const run=(data,opening)=>{
+      try{
+        return runHumanInferenceEngine({
+          d:{n,palette:pal},n,palette:pal,sol:data.sol,clue:data.clue.map(c=>c?{...c}:null),globalClue:null,
+          nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,
+          blockRows:data.blockRows,blockCols:data.blockCols,neutralClues:data.neutralClues||null,
+          val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
+          initialFilled:new Set(),revealSchedule:[]
+        },new Set(opening),{forGeneratorValidation:true});
+      }catch(_){return null;}
+    };
+    const lineCells=(axis,k)=>Array.from({length:n},(_,t)=>axis==='row'?at(k,t):at(t,k));
+    const runsOf=(sol,cells,c)=>{let r=0;cells.forEach((j,t)=>{if(sol[j]===c&&!(t>0&&sol[cells[t-1]]===c))r++;});return r;};
+
+    for(let attempt=0;attempt<80;attempt++){
+      assertGenerationTime();
+      const sol=Array.from({length:total},()=>Math.floor(Math.random()*pal));
+
+      // Symmetry pairs (9×9), arrows included in the mirror.
+      const endpoints=new Set(),pairs=[];
+      if(useSym){
+        const usedLines=new Set(),locked=new Set();
+        const lineId=(r,c,dir)=>dir==='e'?'r'+r:dir==='s'?'c'+c:dir==='se'?'d'+(r-c):'a'+(r+c);
+        for(let g=0;g<600&&pairs.length<4;g++){
+          const r=Math.floor(Math.random()*n),c=Math.floor(Math.random()*n);
+          const dir=['e','s','se','sw'][Math.floor(Math.random()*4)];
+          const dist=3+Math.floor(Math.random()*5);
+          const [dr,dc]=SYM_DIRS[dir];const r2=r+dr*dist,c2=c+dc*dist;
+          if(r2<0||c2<0||r2>=n||c2>=n)continue;
+          const a=at(r,c),b=at(r2,c2);
+          if(usedLines.has(lineId(r,c,dir))||endpoints.has(a)||endpoints.has(b)||locked.has(a)||locked.has(b))continue;
+          const full=[];for(let t=0;t<=dist;t++)full.push(at(r+dr*t,c+dc*t));
+          if(full.slice(1,-1).some(x=>endpoints.has(x)))continue;
+          const next=sol.slice();let ok=true;
+          for(let t=0;t<Math.floor(full.length/2);t++){
+            const x=full[t],y=full[full.length-1-t];
+            if(locked.has(x)&&locked.has(y)){if(next[x]!==next[y]){ok=false;break;}}
+            else if(locked.has(y))next[x]=next[y];else next[y]=next[x];
+          }
+          if(!ok||new Set(full.map(x=>next[x])).size<2)continue;
+          for(let k=0;k<total;k++)sol[k]=next[k];
+          full.forEach(x=>locked.add(x));endpoints.add(a);endpoints.add(b);usedLines.add(lineId(r,c,dir));
+          pairs.push({a,b,dir});
+        }
+        if(pairs.length<3)continue;
+      }
+
+      const clue=Array.from({length:total},(_,i)=>{
+        const o={color:sol[i],count:0};
+        o.count=clueCells(i,n,o).reduce((s2,j)=>s2+(sol[j]===sol[i]?1:0),0);
+        return o;
+      });
+      for(const {a,b,dir} of pairs){
+        clue[a]={color:sol[a],symmetry:dir,partner:b};
+        clue[b]={color:sol[b],symmetry:SYM_OPPOSITE[dir],partner:a};
+      }
+      const plainCells=()=>shuffle(Array.from({length:total},(_,i)=>i)
+        .filter(i=>clue[i]&&typeof clue[i].count==='number'&&!clue[i].knight&&!clue[i].direction&&!clue[i].self));
+
+      if(useKnight){
+        let k=0;const want={6:4,7:5,9:7}[n];
+        for(const i of plainCells()){
+          if(k>=want)break;
+          if(knightOneCount(sol,i,n)!==1)continue;
+          clue[i]={color:sol[i],count:1,knight:true};k++;
+        }
+        if(k<Math.min(3,want))continue;
+      }
+      if(useDir){
+        let k=0;const want=10+Math.floor(Math.random()*4);
+        for(const i of plainCells()){
+          if(k>=want)break;
+          const opts=[];
+          for(const dir of shuffle(['up','down','left','right'])){
+            const cells=directionalCells(i,n,dir);
+            if(cells.length<2)continue;
+            const o={color:sol[i],count:0,direction:dir};
+            o.count=cells.reduce((s2,j)=>s2+(sol[j]===sol[i]?1:0),0);
+            opts.push({o,rank:(o.count===0||o.count===cells.length?0:1)+Math.random()});
+          }
+          if(!opts.length)continue;
+          opts.sort((x,y)=>x.rank-y.rank);
+          clue[i]=opts[0].o;k++;
+        }
+        if(!openingDirectionalIsClean(clue,n,new Set(),new Set()))continue;
+      }
+
+      // Quy tắc Khối: a few lines, varied colors and counts.
+      const blockRows=Array(n).fill(null),blockCols=Array(n).fill(null);
+      {
+        const cand=[];
+        for(const axis of ['row','col'])for(let k=0;k<n;k++){
+          const cells=lineCells(axis,k);
+          for(let c=0;c<pal;c++)cand.push({axis,k,color:c,count:runsOf(sol,cells,c),t:Math.random()});
+        }
+        const want={6:2,7:3,8:3,9:4}[n]+Math.floor(Math.random()*2);
+        const usedLine=new Set(),usedCount=new Map(),usedColor=new Map();
+        while(usedLine.size<want){
+          let best=null,bs=Infinity;
+          for(const x of cand){
+            if(usedLine.has(x.axis+x.k))continue;
+            const sc=x.t+(usedCount.get(x.count)||0)*1.5+(usedColor.get(x.color)||0)*0.8+(x.count===0?0.9:0);
+            if(sc<bs){bs=sc;best=x;}
+          }
+          if(!best)break;
+          usedLine.add(best.axis+best.k);
+          usedCount.set(best.count,(usedCount.get(best.count)||0)+1);
+          usedColor.set(best.color,(usedColor.get(best.color)||0)+1);
+          (best.axis==='row'?blockRows:blockCols)[best.k]={color:best.color,count:best.count};
+        }
+      }
+
+      let neutralClues=null;
+      if(useNeutral){
+        neutralClues=new Set();const use=new Map();
+        const want={6:4,7:5}[n]+Math.floor(Math.random()*2);
+        const cand=plainCells();
+        cand.sort((a,b)=>(clue[a].count===0)-(clue[b].count===0));
+        for(const i of cand){
+          if(neutralClues.size>=want)break;
+          const v=clue[i].count,u=use.get(v)||0;
+          if(v===0?u>=1:u>=2)continue;
+          if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
+          neutralClues.add(i);use.set(v,u+1);
+        }
+      }
+
+      const data={sol,clue,blockRows,blockCols,neutralClues};
+      const pool=shuffle(Array.from({length:total},(_,i)=>i).filter(i=>!neutralClues?.has(i)&&clue[i]));
+      const opening=new Set(pool.slice(0,{6:5,7:6,8:8,9:10}[n]+(pal>3?4:0)));
+      let sim=run(data,opening);
+      if(!sim?.ok){
+        const tmp={d:{n},sol,clue,globalClue:null,blockRows,blockCols,neutralClues,
+          initialRevealed:new Set(opening),initialFilled:new Set()};
+        if(!augmentOpeningForNoGuess(tmp,n>=8?24:14))continue;
+        opening.clear();tmp.initialRevealed.forEach(i=>opening.add(i));
+        sim=run(data,opening);
+        if(!sim?.ok)continue;
+      }
+      for(const i of shuffle([...opening])){
+        if(opening.size<=2)break;
+        opening.delete(i);
+        if(useDir&&!openingDirectionalIsClean(clue,n,opening,new Set())){opening.add(i);continue;}
+        const r=run(data,opening);
+        if(r?.ok)sim=r;else opening.add(i);
+      }
+      if(neutralClues){
+        for(const i of [...neutralClues])if(opening.has(i))neutralClues.delete(i);
+        if(neutralClues.size<2)continue;
+      }
+      // The featured rules must carry real weight.
+      if(attempt<60){
+        const without=(strip)=>run(strip,opening)?.ok;
+        if(useKnight && without({...data,clue:clue.map(c=>c&&c.knight?{color:c.color}:c)}))continue;
+        if(useNeutral && without({...data,neutralClues:null}))continue;
+        if(useSym && without({...data,clue:clue.map(c=>c&&c.symmetry?{color:c.color}:c)}))continue;
+        if(useDir && without({...data,clue:clue.map(c=>c&&c.direction?{color:c.color}:c)}))continue;
+        if(without({...data,blockRows:null,blockCols:null}))continue;
+      }
+      sim=run(data,opening);
+      if(!sim?.ok)continue;
+
+      return {
+        d:{name:`${n}×${n}`,n,palette:pal},
+        colors:shuffle([...COLORS]).slice(0,pal),
+        sol,clue,globalClue:null,
+        initialRevealed:new Set(opening),initialFilled:new Set(),
+        revealSchedule:(sim.schedule||[]).slice(),starterClue:[...opening][0]??-1,
+        blockMode:true,
+        mixedMode:useNeutral,
+        symmetryMode:useSym,
+        deceitMode:variant==='deceit',
+        neutralClues,blockRows,blockCols,
+        generationQuality:330+(sim.trace?.length||0)*6
+      };
+    }
+    throw new Error(`Không thể tạo màn Khối ${n}×${n} trong thời gian cho phép`);
   }
 
 function createEasyNumberOnlyPuzzle(d){
@@ -7910,6 +8260,7 @@ function createSolvablePuzzle(d){
     if(d.modeType==='symmetry')return createSymmetryPuzzle(d);
     if(d.modeType==='rule')return createRulePuzzle(d);
     if(d.modeType==='combo')return createComboPuzzle(d);
+    if(d.modeType==='block')return createBlockPuzzle(d);
     if(d.modeType==='mixed')return createMixedPuzzle(d);
     if(d.modeType==='nonogram')return createNonogramPuzzle(d);
     const MAX_ATTEMPTS=d.n===6 ? 80 : 60;
@@ -7963,7 +8314,7 @@ function createSolvablePuzzle(d){
   function lineRoleStats(g){
     const n=g.d.n,total=n*n;
     const base=()=>({d:{n,palette:COLOR_COUNT},n,palette:COLOR_COUNT,sol:g.sol,clue:g.clue.map(c=>c?{...c}:null),globalClue:null,
-      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,
+      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,
       neutralClues:g.neutralClues||null,val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
       initialFilled:new Set(g.initialFilled||[]),revealSchedule:[]});
     let r;
@@ -8169,7 +8520,7 @@ function createSolvablePuzzle(d){
   function comboSymStats(g){
     const n=g.d.n,total=n*n;
     const mk=clue=>({d:{n,palette:COLOR_COUNT},n,palette:COLOR_COUNT,sol:g.sol,clue:clue.map(c=>c?{...c}:null),globalClue:null,
-      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,
+      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,
       neutralClues:g.neutralClues||null,val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
       initialFilled:new Set(g.initialFilled||[]),revealSchedule:[]});
     const d0=mk(g.clue);(g.initialFilled||new Set()).forEach(i=>{d0.val[i]=g.sol[i];});
@@ -8231,10 +8582,110 @@ function createSolvablePuzzle(d){
     return g;
   }
 
+  // ---------------------------------------------------------------
+  // Quy tắc Khối boards: tune how much each rule carries the solve.
+  // Share of paint steps that cannot be made without a rule. Knight and
+  // neutral clues should matter (>= 20% on 6×6/7×7); block lines ~10%.
+  // ---------------------------------------------------------------
+  function ruleShareStats(g,strips){
+    const n=g.d.n,total=n*n,pal=g.d.palette||3;
+    const mk=over=>({d:{n,palette:pal},n,palette:pal,sol:g.sol,clue:g.clue.map(c=>c?{...c}:null),globalClue:null,
+      blockRows:g.blockRows||null,blockCols:g.blockCols||null,neutralClues:g.neutralClues||null,
+      val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
+      initialFilled:new Set(g.initialFilled||[]),revealSchedule:[],...over});
+    let r;try{const d0=mk({});(g.initialFilled||new Set()).forEach(i=>{d0.val[i]=g.sol[i];});r=runHumanInferenceEngine(d0,new Set(g.initialRevealed),{});}catch(_){return null;}
+    if(!r?.ok)return null;
+    const val=Array(total).fill(-1);(g.initialFilled||new Set()).forEach(i=>{val[i]=g.sol[i];});
+    const rev=new Set(g.initialRevealed),wc=new Map(),cnt={};let p=0;
+    const so=Object.entries(strips).map(([k,f])=>[k,f()]);
+    for(const st of r.trace){
+      if(st.kind==='mark'){st.actions.forEach(a=>{if(!wc.has(a.cell))wc.set(a.cell,new Set());wc.get(a.cell).add(a.color);});continue;}
+      if(st.kind!=='paint')continue;
+      p++;
+      for(const [k,o] of so){
+        const w=propagateClueDomains({...mk(o),val:val.slice(),wrongColors:wc},rev);
+        const d=w.domains[st.index];
+        if(!w.contradiction&&(d&(d-1))!==0)cnt[k]=(cnt[k]||0)+1;
+      }
+      val[st.index]=st.color;if(g.clue[st.index])rev.add(st.index);wc.delete(st.index);
+    }
+    const out={};for(const [k] of so)out[k]=p?(cnt[k]||0)/p:0;
+    return out;
+  }
+
+  function boostBlockRoles(g){
+    if(!g || g._blockBoosted || !g.blockMode)return g;
+    g._blockBoosted=true;
+    const n=g.d.n, pal=g.d.palette||3, t0=performance.now(), budget=n>=8?3000:2000;
+    const wantKnight=g.clue.some(c=>c?.knight) && n<=7, wantNeutral=!!g.neutralClues;
+    const strips={
+      block:()=>({blockRows:null,blockCols:null}),
+      knight:()=>({clue:g.clue.map(c=>c&&c.knight?{color:c.color}:c)}),
+      neutral:()=>({neutralClues:null})
+    };
+    let st=ruleShareStats(g,strips);
+    if(!st)return g;
+    const basic=()=>shuffle(g.clue.map((c,i)=>i).filter(i=>{
+      const c=g.clue[i];
+      return c&&typeof c.count==='number'&&!c.knight&&!c.direction&&!c.self&&!c.combo&&!c.symmetry&&
+        !g.neutralClues?.has(i)&&!g.initialRevealed.has(i);
+    }));
+    const lineCells=(axis,k)=>Array.from({length:n},(_,t)=>axis==='row'?k*n+t:t*n+k);
+    const runsOf=(cells,c)=>{let r=0;cells.forEach((j,t)=>{if(g.sol[j]===c&&!(t>0&&g.sol[cells[t-1]]===c))r++;});return r;};
+    const tryChange=(apply,focus,dir=1,repair=false)=>{
+      const open0=new Set(g.initialRevealed);
+      const undo=apply(); if(!undo)return false;
+      let next=ruleShareStats(g,strips);
+      if(!next && repair && augmentOpeningForNoGuess(g,3))next=ruleShareStats(g,strips);
+      if(!next||!(dir>0 ? next[focus]>st[focus]+0.005 : next[focus]<st[focus]))g.initialRevealed=open0;
+      const ok=next && (dir>0 ? next[focus]>st[focus]+0.005 : next[focus]<st[focus]);
+      if(!ok){undo();return false;}
+      st=next;return true;
+    };
+    const toKnight=()=>{const i=basic().find(j=>knightOneCount(g.sol,j,n)===1);if(i===undefined)return null;const saved=g.clue[i];
+      g.clue[i]={color:g.sol[i],count:1,knight:true};return ()=>{g.clue[i]=saved;};};
+    const toNeutral=()=>{const i=basic().find(j=>!neigh(j,n).some(k=>g.neutralClues.has(k)));if(i===undefined)return null;
+      g.neutralClues.add(i);return ()=>{g.neutralClues.delete(i);};};
+    const dropBasic=()=>{const i=basic()[0];if(i===undefined)return null;const saved=g.clue[i];g.clue[i]=null;return ()=>{g.clue[i]=saved;};};
+    const addBlock=()=>{const free=[];
+      for(const axis of ['row','col'])for(let k=0;k<n;k++){const arr=axis==='row'?g.blockRows:g.blockCols;if(!arr[k])free.push({arr,k,cells:lineCells(axis,k)});}
+      if(!free.length)return null;const f=free[Math.floor(Math.random()*free.length)];const c=Math.floor(Math.random()*pal);
+      f.arr[f.k]={color:c,count:runsOf(f.cells,c)};return ()=>{f.arr[f.k]=null;};};
+    const removeBlock=()=>{const used=[];for(const arr of [g.blockRows,g.blockCols])arr.forEach((e,k)=>{if(e)used.push({arr,k,e});});
+      if(used.length<=1)return null;const u=used[Math.floor(Math.random()*used.length)];u.arr[u.k]=null;return ()=>{u.arr[u.k]=u.e;};};
+    for(let guard=0;guard<150&&performance.now()-t0<budget;guard++){
+      const todo=[];
+      if(wantKnight && st.knight<0.15)todo.push('knight');
+      if(wantNeutral && st.neutral<0.12)todo.push('neutral');
+      if(st.block<0.08)todo.push('block');
+      if(st.block>0.14)todo.push('block-');
+      if(!todo.length)break;
+      const f=todo[guard%todo.length];
+      if(f==='knight'){ if(!tryChange(toKnight,'knight'))tryChange(dropBasic,'knight',1,true); }
+      else if(f==='neutral'){ if(!tryChange(toNeutral,'neutral'))tryChange(dropBasic,'neutral',1,true); }
+      else if(f==='block'){ if(!tryChange(addBlock,'block'))tryChange(dropBasic,'block',1,true); }
+      else tryChange(removeBlock,'block',-1);
+    }
+    validateNoGuessPath(g);
+    g.ruleShares=st;
+    return g;
+  }
+
   function makeGame(d){
     let generated=d.generatedOverride || createSolvablePuzzle(d);
+    // Safety net: a ♞ clue shows no number and always means 1.
+    let knightFixed=false;
+    generated.clue?.forEach((c,i)=>{
+      if(c?.knight && (c.count!==1 || knightOneCount(generated.sol,i,generated.d.n)!==1)){
+        const o={color:generated.sol[i],count:0};
+        o.count=clueCells(i,generated.d.n,o).reduce((a,j)=>a+(generated.sol[j]===generated.sol[i]?1:0),0);
+        generated.clue[i]=o;knightFixed=true;
+      }
+    });
+    if(knightFixed && !validateNoGuessPath(generated))augmentOpeningForNoGuess(generated,8);
     boostLineRole(generated);
     boostComboSymRole(generated);
+    boostBlockRoles(generated);
     ensurePlainCells(generated);
     // Safety net: no board may carry an invisible constraint.
     if(generated.globalClue){
@@ -8334,10 +8785,11 @@ function createSolvablePuzzle(d){
       let tier;
       if(game.easyMode || n<=4)tier='DỄ';
       else if(n===5)tier='THƯỜNG';
+      else if(n>=9)tier='RẤT KHÓ';
       else if(n>=8 || n===7 || (game.ruleMode && game.symmetryMode))tier='KHÓ';
       else tier='TRUNG BÌNH';
       if(game.noMark || (game.d.palette||3)>=4){
-        const up={'DỄ':'THƯỜNG','THƯỜNG':'TRUNG BÌNH','TRUNG BÌNH':'KHÓ','KHÓ':'RẤT KHÓ'};
+        const up={'DỄ':'THƯỜNG','THƯỜNG':'TRUNG BÌNH','TRUNG BÌNH':'KHÓ','KHÓ':'RẤT KHÓ','RẤT KHÓ':'CHUYÊN GIA'};
         tier=up[tier]||tier;
       }
       boardSubmodeLabel.innerHTML=tier+(game.noMark?'<span class="no-mark-rule">QUY TẮC CẤM ĐÁNH DẤU</span>':'');
@@ -8364,6 +8816,7 @@ function createSolvablePuzzle(d){
       btn.setAttribute('aria-label',`Chọn màu ${color.name}`);
 
       btn.addEventListener('click',()=>{
+        if(tutorial && !tutorialColorTap(colorIndex))return;
         selectedColor=colorIndex;
         syncPalette();
       });
@@ -8374,6 +8827,7 @@ function createSolvablePuzzle(d){
     if(selectedColor<0 || selectedColor>=game.colors.length){
       selectedColor=0;
     }
+    if(tutorial)requestAnimationFrame(applyTutorialHighlight);
 
     document.querySelectorAll('.color-choice').forEach(btn=>{
       btn.classList.toggle(
@@ -8515,7 +8969,7 @@ function createSolvablePuzzle(d){
     boardShell.classList.remove('nonogram-shell');
 
     let overlay=boardShell.querySelector('.nonogram-overlay');
-    const hasRuleLines=!!(game.ruleRows?.some(Boolean)||game.ruleCols?.some(Boolean));
+    const hasRuleLines=!!(game.ruleRows?.some(Boolean)||game.ruleCols?.some(Boolean)||game.blockRows?.some(Boolean)||game.blockCols?.some(Boolean));
     if(!(game.nonogramMode||hasRuleLines) || game.solvedClean){
       if(overlay)overlay.remove();
       return;
@@ -8538,6 +8992,19 @@ function createSolvablePuzzle(d){
       const chip=document.createElement('span');
       chip.className='nonogram-line-clue';
       if(!entry){chip.classList.add('is-empty');chip.textContent='0';return chip;}
+      if(entry.block){
+        const color=getGameColor(entry.color);
+        chip.classList.add('block-chip');
+        chip.style.background=color.hex;
+        chip.style.color=getContrastText(color.hex);
+        chip.textContent=String(shownNumber(entry.count));
+        chip.classList.toggle('deceit-num',isDeceitNumber(entry.count));
+        chip.dataset.axis=axis;chip.dataset.index=String(index);
+        chip.setAttribute('role','button');
+        chip.setAttribute('aria-label',`Quy tắc Khối: ${shownNumber(entry.count)} khối màu ${color.name} trong ${axis==='col'?'cột':'hàng'} này`);
+        chip.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleNonogramFocus(axis,index,chip);});
+        return chip;
+      }
       if(entry.rule){
         const isMaster=entry.rule==='master';
         const col=isMaster ? '#ffffff' : '#1b1f2a';
@@ -8577,8 +9044,9 @@ function createSolvablePuzzle(d){
     };
     const lineCols=game.nonogramCols||[],lineRows=game.nonogramRows||[];
     const rCols=game.ruleCols||[],rRows=game.ruleRows||[];
-    for(let c=0;c<game.d.n;c++)cols.appendChild(makeChip(lineCols[c]||rCols[c],'col',c));
-    for(let r=0;r<game.d.n;r++)rows.appendChild(makeChip(lineRows[r]||rRows[r],'row',r));
+    const bCols=(game.blockCols||[]).map(e=>e&&{...e,block:true}),bRows=(game.blockRows||[]).map(e=>e&&{...e,block:true});
+    for(let c=0;c<game.d.n;c++)cols.appendChild(makeChip(lineCols[c]||rCols[c]||bCols[c],'col',c));
+    for(let r=0;r<game.d.n;r++)rows.appendChild(makeChip(lineRows[r]||rRows[r]||bRows[r],'row',r));
 
     positionNonogramOverlay();
     requestAnimationFrame(positionNonogramOverlay);
@@ -8634,6 +9102,7 @@ function createSolvablePuzzle(d){
 
 function render(){
     const {n,palette}=game.d;
+    if(tutorial)requestAnimationFrame(applyTutorialHighlight);
     boardShell?.classList.toggle('deceit-board',!!game.deceitMode);
     fitBoardToScreen();
     renderNonogramGuides();
@@ -8742,7 +9211,9 @@ function render(){
         if(clue.pattern){
           b.classList.add('pattern-clue',clue.patternRole==='source'?'pattern-source':'pattern-copy');
         }
-        if(game.justRevealed===i){
+        if(game.justRevealed===i && game.justPainted===i && !game.showingSolution){
+          b.classList.add('clue-fill');       // ink rises first, then the number fades in
+        }else if(game.justRevealed===i){
           b.classList.add('clue-reveal-pop');
         }
 
@@ -8884,24 +9355,34 @@ function render(){
         const paintColor=getGameColor(v);
 
         b.classList.add('filled',paintColor.cls);
-        if(game.justPainted===i){
-          b.classList.add('paint-pop');
-        }
+        const fillAnim=game.justPainted===i && !game.showingSolution;
+        if(fillAnim)b.classList.add('paint-fill');
 
         // Hidden clue cells are normal playable cells until revealed.
         // Once painted, they must display the actual selected color.
-        b.style.background=paintColor.hex;
+        // While the ink is still rising the tile stays empty underneath.
+        if(!fillAnim)b.style.background=paintColor.hex;
         b.style.setProperty('--tile-fill',paintColor.hex);
 
         const liquid=document.createElement('span');
         liquid.className='liquid';
         liquid.style.setProperty('--tile-fill',paintColor.hex);
+        if(fillAnim){
+          liquid.addEventListener('animationend',e=>{
+            if(e.animationName!=='liquidRise')return;
+            b.classList.remove('paint-fill');
+            b.style.background=paintColor.hex;
+          });
+        }
 
         const s=document.createElement('span');
         s.className='symbol';
         s.textContent=paintColor.symbol;
 
-        b.append(liquid,s);
+        const clip=document.createElement('span');
+        clip.className='liquid-clip';
+        clip.append(liquid);
+        b.append(clip,s);
 
         renderMarks(b,i);
         b.setAttribute('aria-label',paintColor.name);
@@ -8954,6 +9435,20 @@ function render(){
         }
       }
 
+      if(b.classList.contains('clue-fill')){
+        const hex=getGameColor(clue.color).hex;
+        const ink=document.createElement('span');
+        ink.className='liquid';
+        ink.style.setProperty('--tile-fill',hex);
+        b.style.setProperty('--tile-fill',hex);
+        ink.addEventListener('animationend',e=>{
+          if(e.animationName==='liquidRise')b.classList.remove('clue-fill');
+        });
+        const clip=document.createElement('span');
+  clip.className='liquid-clip';
+  clip.append(ink);
+  b.prepend(clip);
+      }
       board.append(b);
     }
 
@@ -9041,7 +9536,8 @@ function render(){
     if(!game || game.won)return;
 
     const clue=game.clue[i];
-    if(!clue || (!game.revealedClues.has(i) && !clue.symmetry))return;
+    if(!clue || (!game.revealedClues.has(i) && !clue.symmetry && !clue.pattern))return;
+    if(tutorial)tutorialHold(i);
 
     board.querySelectorAll('.clue-focus-target,.clue-focus-origin').forEach(el=>{
       el.classList.remove('clue-focus-target','clue-focus-origin');
@@ -9052,7 +9548,14 @@ function render(){
 
     const targetCells=[origin];
 
-    for(const j of clueCells(i,game.d.n,clue)){
+    // Σ: light up both 3×3 areas of the pair.
+    let focusCells=clueCells(i,game.d.n,clue);
+    if(clue.pattern){
+      const other=game.clue.findIndex((q,k2)=>q?.pattern && q.patternPair===clue.patternPair && k2!==i);
+      const region=c0=>[c0,...neigh(c0,game.d.n)];
+      focusCells=[...new Set([...region(i),...(other>=0?region(other):[])])].filter(j=>j!==i);
+    }
+    for(const j of focusCells){
       const cell=board.querySelector(`.cell[data-i="${j}"]`);
       if(cell)targetCells.push(cell);
     }
@@ -9086,12 +9589,22 @@ function render(){
     const colorChip=
       `<span class="clue-explain-color-chip" style="--clue-explain-chip:${color.hex}" aria-label="Màu ${color.name}" role="img"></span>`;
 
-    if(clue.combo){
+    if(clue.pattern){
+      const other=game.clue.findIndex((q,k)=>q?.pattern && q.patternPair===clue.patternPair && k!==i);
+      const isSource=clue.patternRole==='source';
+      const known=k=>k>=0 && game.revealedClues.has(k);
+      const chipFor=(k,who)=>known(k)?`màu <span class="clue-explain-color-chip" style="--clue-explain-chip:${getGameColor(game.clue[k].color).hex}" role="img"></span>`:`màu của Σ ${who}`;
+      const src=isSource?i:other, cp=isSource?other:i;
+      clueExplainTitle.innerHTML=known(i)?`<b>QUY TẮC HÌNH MẪU Σ</b> · ${colorChip}`:`<b>QUY TẮC HÌNH MẪU Σ</b>`;
+      clueExplainText.innerHTML=
+        `Ô này là <b>Σ ${isSource?'gốc':'bắt chước'}</b>. Hai vùng 3×3 quanh cặp Σ có cùng hình dạng: `+
+        `vị trí mang ${chipFor(src,'gốc')} quanh Σ gốc trùng với vị trí mang ${chipFor(cp,'bắt chước')} quanh Σ bắt chước.`;
+    }else if(clue.combo){
       clueExplainTitle.innerHTML=`<b>QUY TẮC COMBO</b> · ${colorChip}`;
       clueExplainText.innerHTML=
         `Ô này nằm trong khối đúng <b>${shownLabel(clue.run)} ô</b> màu ${colorChip} liên tiếp theo chiều <b>${clue.combo==='v'?'dọc':'ngang'}</b>.`;
     }else if(clue.symmetry){
-      clueExplainTitle.innerHTML=`<b>QUY TẮC ĐỐI XỨNG</b>`;
+      clueExplainTitle.innerHTML=game.revealedClues.has(i) ? `<b>QUY TẮC ĐỐI XỨNG</b> · ${colorChip}` : `<b>QUY TẮC ĐỐI XỨNG</b>`;
       clueExplainText.innerHTML=
         `Dãy ô từ mũi tên này đến mũi tên đối diện, tính cả hai đầu, đối xứng về màu.`;
     }else if(clue.knight){
@@ -9111,7 +9624,7 @@ function render(){
       clueExplainTitle.innerHTML=
         `<b>QUY TẮC CHỈ HƯỚNG</b> · ${colorChip}`;
       clueExplainText.innerHTML=
-        `Có đúng <b>${shownLabel(clue.count)} ô</b> màu ${colorChip} theo hướng <b>${dir?.symbol||''} ${dirName}</b>, đến hết mép bàn.`;
+        `Có đúng <b>${shownLabel(clue.count)} ô</b> màu ${colorChip} theo hướng mũi tên.`;
     }else{
       clueExplainTitle.innerHTML=
         `<b>QUY TẮC CƠ BẢN</b> · ${colorChip}`;
@@ -9143,8 +9656,10 @@ function render(){
     }
     clearNonogramFocus();
 
+    const blockEntry=(axis==='col' ? game.blockCols : game.blockRows)?.[index];
     const entry=(axis==='col' ? game.nonogramCols : game.nonogramRows)?.[index]
-      || (axis==='col' ? game.ruleCols : game.ruleRows)?.[index];
+      || (axis==='col' ? game.ruleCols : game.ruleRows)?.[index]
+      || (blockEntry && {...blockEntry,block:true});
     if(!entry)return;
     const n=game.d.n;
 
@@ -9169,19 +9684,21 @@ function render(){
     const colorChip=
       `<span class="clue-explain-color-chip" style="--clue-explain-chip:${color.hex}" aria-label="Màu ${color.name}" role="img"></span>`;
 
-    if(entry.rule==='master'){
+    if(entry.block){
+      clueExplainTitle.innerHTML=`<b>QUY TẮC KHỐI</b> · ${colorChip}`;
+    }else if(entry.rule==='master'){
       clueExplainTitle.innerHTML=`<b>QUY TẮC CHỦ-TỚ</b>`;
     }else if(entry.rule==='servant'){
       clueExplainTitle.innerHTML=`<b>QUY TẮC CHỦ-TỚ</b>`;
     }else
     clueExplainTitle.innerHTML=`<b>QUY TẮC NONOGRAM</b> · ${colorChip}`;
     const lineWord=axis==='col'?'cột':'hàng';
-    clueExplainText.innerHTML=entry.rule==='master'
-      ? `<i class="fa-solid fa-crown"></i> CHỦ: có một màu nhiều ô hơn mỗi màu còn lại trong ${lineWord} này.`
+    clueExplainText.innerHTML=entry.block
+      ? `Có đúng <b>${shownLabel(entry.count)} khối</b> màu ${colorChip} trong ${lineWord} này. Một khối là các ô ${colorChip} nằm liền nhau.`
+      : entry.rule==='master'
+      ? `<i class="fa-solid fa-crown"></i> CHỦ: Có một màu chiếm đa số trong ${lineWord} này.`
       : entry.rule==='servant'
-        ? (game.d.n%3===0
-            ? `<i class="fa-solid fa-flag"></i> TỚ: các màu có mặt cân bằng trong ${lineWord} này (<b>${game.d.n/3}-${game.d.n/3}-${game.d.n/3}</b> hoặc <b>${game.d.n/2}-${game.d.n/2}</b>).`
-            : `<i class="fa-solid fa-flag"></i> TỚ: hai màu cân bằng trong ${lineWord} này (<b>${game.d.n/2}-${game.d.n/2}</b>), không có màu thứ ba.`)
+        ? `<i class="fa-solid fa-flag"></i> TỚ: Số màu có tỉ lệ cân bằng trong ${lineWord} này.`
         : `Có đúng <b>${shownLabel(entry.count)} ô</b> màu ${colorChip} trong ${lineWord} này.`;
     clueExplain.classList.remove('solution-detail-panel');
     clueExplain.classList.add('show');
@@ -9212,7 +9729,7 @@ function render(){
     const i=Number(cell.dataset.i);
     if(!Number.isInteger(i))return;
     if(!game || !game.clue[i])return;
-    const hiddenSymmetry=!!game.clue[i].symmetry && !game.revealedClues.has(i);
+    const hiddenSymmetry=(!!game.clue[i].symmetry || !!game.clue[i].pattern) && !game.revealedClues.has(i);
     if(!game.revealedClues.has(i) && !hiddenSymmetry)return;
 
     // Same as the Nonogram numbers: the guide appears as soon as the clue is
@@ -9249,7 +9766,9 @@ function render(){
 
     const i=Number(cell.dataset.i);
     if(!Number.isInteger(i))return;
-    if(!game.clue[i] || !game.revealedClues.has(i))return;
+    // Revealed clues, plus arrows / Σ markers that are visible before their
+    // color is known, can be held to show their rule.
+    if(!game.clue[i] || (!game.revealedClues.has(i) && !game.clue[i].symmetry && !game.clue[i].pattern))return;
 
     // Start exactly one tracked press.
     if(clueFocusPointerId!==null) return;
@@ -9300,6 +9819,8 @@ board.addEventListener('click',e=>{
     const raw=cell.dataset.i;
     const i=Number(raw);
     if(!Number.isInteger(i) || raw==='' || i<0 || i>=game.d.n*game.d.n)return;
+
+    if(tutorial){tutorialCellTap(i);return;}
 
     const now=performance.now();
 
@@ -9525,7 +10046,7 @@ board.addEventListener('click',e=>{
       palette:game.d.palette,
       clue:game.clue,
       globalClue:game.globalClue,
-      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
       nonogramCols:game.nonogramCols||null,
       revealSchedule:game.revealSchedule||[]
     };
@@ -9719,6 +10240,7 @@ board.addEventListener('click',e=>{
   }
 
   function tap(i){
+    if(tutorial && !tutorialActing)return;
     if(!canInteractWithCell(i))return;
 
     startClock();
@@ -9805,7 +10327,7 @@ board.addEventListener('click',e=>{
   }
 
     function markAroundColorCell(i){
-      if(game?.noMark)return;
+      if(game?.noMark || (tutorial && !tutorialActing))return;
     if(!game || game.won)return;
 
     const clue=game.clue[i];
@@ -9843,6 +10365,7 @@ board.addEventListener('click',e=>{
 
   function mark(i){
     if(game?.noMark)return;
+    if(tutorial && !tutorialActing)return;
     if(!canInteractWithCell(i))return;
 
     const rejected=game.wrongColors.get(i);
@@ -9955,6 +10478,8 @@ board.addEventListener('click',e=>{
       board.classList.remove('win-celebrate');
       board.querySelectorAll('.cell').forEach(cell=>cell.style.removeProperty('--win-delay'));
     },760);
+
+    if(game.tutorial){tutorialBoardDone();return;}
 
     message.classList.remove('game-over');
     message.classList.add('show');
@@ -10467,9 +10992,9 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map(),
@@ -10767,8 +11292,11 @@ board.addEventListener('click',e=>{
       clueExplainText.innerHTML=
         `Màn chơi được giải trọn qua <b>${steps.length}</b> bước suy luận.`;
       const hint=solutionDetailHintElement();
-      if(hint)hint.textContent='Ấn Ván mới để tiếp tục';
+      if(hint)hint.textContent='';
     }
+    // The explanation panel covers the end-of-game dialog: put VÁN MỚI here.
+    message.classList.remove('show','solution-detail-complete');
+    detailControls('done');
 
     solutionDetailSteps=[];
     solutionDetailPointer=-1;
@@ -10847,7 +11375,7 @@ board.addEventListener('click',e=>{
     const scheduleFirst=()=>{
       if(run!==solutionDetailRun||!solutionDetailAuto||!game||!game.solutionDetailActive)return;
 
-      solutionDetailTimer=window.setTimeout(()=>{
+      solutionDetailTimer=detailSchedule(()=>{
         if(run!==solutionDetailRun||!solutionDetailAuto||!game)return;
 
         const actions=firstStep.markActions||[];
@@ -10886,7 +11414,7 @@ board.addEventListener('click',e=>{
             }
 
             game.justMarked=-1;
-            solutionDetailTimer=window.setTimeout(nextMark,MARK_MS);
+            solutionDetailTimer=detailSchedule(nextMark,MARK_MS);
             return;
           }
 
@@ -10916,7 +11444,7 @@ board.addEventListener('click',e=>{
           game.justPainted=-1;
           game.justRevealed=-1;
 
-          solutionDetailTimer=window.setTimeout(()=>{
+          solutionDetailTimer=detailSchedule(()=>{
             if(run!==solutionDetailRun||!solutionDetailAuto||!game)return;
             startDetailedAuto();
           },PAINT_MS);
@@ -11445,7 +11973,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map(),
@@ -11657,7 +12185,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:assumedFixed,
         marks:new Map(
@@ -11699,7 +12227,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:detailVisibleMarksToMap(visibleX),
@@ -11851,7 +12379,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:clueCopy,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map([...marks.entries()].map(([i,set])=>[i,new Set(set)])),
@@ -11965,7 +12493,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:new Map([...marks.entries()].map(([i,set])=>[i,new Set(set)])),
@@ -12066,7 +12594,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:cloneStateMap(marks),
@@ -12158,7 +12686,7 @@ board.addEventListener('click',e=>{
           sol:game.sol,
           clue:game.clue,
           globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
           val:Object.assign([],fixed,{[i]:alt}),
           marks:cloneStateMap(marks),
@@ -12246,7 +12774,7 @@ function buildDetailedSolutionSteps(){
       palette:game.d.palette,
       clue:game.clue.map(c=>c ? {...c} : null),
       globalClue:game.globalClue ? {...game.globalClue} : null,
-      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,neutralClues:game.neutralClues||null,
+      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,neutralClues:game.neutralClues||null,
       nonogramCols:game.nonogramCols||null,
       initialFilled:new Set(game.initialFilled||[]),
       revealSchedule:[...(game.revealSchedule||[])],
@@ -12294,6 +12822,11 @@ function buildDetailedSolutionSteps(){
         return line.why==='fill'
           ? {title:'📏 Số Nonogram',text:`Số Nonogram ở <b>${where}</b> cần <b>${line.count} ô</b> ${ch}. Số ô còn có thể là ${ch} vừa bằng số ô còn thiếu, nên các ô đó đều là ${ch}.`}
           : {title:'📏 Số Nonogram',text:`Số Nonogram ở <b>${where}</b> cần <b>${line.count} ô</b> ${ch} và đã đủ (đánh số trên bàn). Các ô còn lại không thể là ${ch}.`};
+      }
+      if(line.type==='block'){
+        return line.why==='fill'
+          ? {title:'🧱 Quy tắc Khối',text:`<b>${where}</b> cần đúng <b>${numLabel(line.count)} khối</b> ${ch}. Mọi cách xếp đủ số khối đều phải tô ${ch} ở ô này.`}
+          : {title:'🧱 Quy tắc Khối',text:`<b>${where}</b> cần đúng <b>${numLabel(line.count)} khối</b> ${ch}. Không cách xếp nào có ${ch} ở các ô này, nên chúng không thể là ${ch}.`};
       }
       if(line.type==='servant'){
         return {title:'🚩 Quy tắc Chủ-Tớ (TỚ)',text:
@@ -12414,6 +12947,20 @@ function buildDetailedSolutionSteps(){
           };
         }
 
+        // The cell's other colors are all crossed out: nothing more to explain.
+        if(step.reasonData?.fromMarks){
+          const gone=[...Array(game.d.palette).keys()].filter(c=>c!==step.color);
+          const tgt=solutionDetailCoordinate(step.index);
+          detailPainted.add(step.index);
+          return {
+            kind:'paint',index:step.index,color:step.color,hiddenClue:!!step.hiddenClue,
+            markActions:[],relatedCells:new Set([step.index]),
+            relatedSource:-1,relatedSources:[],liveExplain:false,
+            reasonTitle:'✅ Chỉ còn một màu',
+            reasonText:`<b>${tgt}</b> đã bị gạch X màu ${gone.map(detailColorName).join(' và ')}, nên chắc chắn là ${detailColorName(step.color)}.`,
+            reasonBadge:'Suy luận'
+          };
+        }
         if(step.line){
           const lt=lineText(step.line);
           detailPainted.add(step.index);
@@ -12458,12 +13005,9 @@ function buildDetailedSolutionSteps(){
           reasonTitle='⚪ Clue trung tính xác định màu';
           reasonText=
             `<b>${target}</b> là Clue trung tính số <b>${numLabel(game.clue[step.index].count)}</b>: `+
-            `màu của clue chính là màu của ô này. Thử từng màu: chỉ với ${chip} `+
-            `thì số ô xung quanh cùng màu mới có thể đúng bằng `+
-            `${game.clue[step.index].count}; các màu còn lại làm số lượng bị thừa `+
-            `hoặc thiếu nên bị loại`+
+            `chỉ khi ô này là ${chip} thì xung quanh mới có đúng ${game.clue[step.index].count} ô cùng màu`+
             (others.length
-              ? ` (kết hợp với ${others.map(i=>`${detailSourceLabel(i)} tại ${solutionDetailCoordinate(i)}`).join(', ')})`
+              ? ` (theo ${others.map(i=>`${detailSourceLabel(i)} tại ${solutionDetailCoordinate(i)}`).join(', ')})`
               : '')+
             `. Vì vậy <b>${target}</b> là ${chip}.`;
         }else if(step.rule==='directional-single'){
@@ -12864,14 +13408,23 @@ function showDetailedStep(step,pointer,phase='reason'){
       // If the board WITHOUT its line data (Nonogram numbers, Chủ-Tớ) would
       // not refute this color, the line data is the decisive link: name it first.
       let linesFirst=false;
-      if(game.nonogramRows||game.nonogramCols||game.ruleRows||game.ruleCols){
+      if(game.nonogramRows||game.nonogramCols||game.ruleRows||game.ruleCols||game.blockRows||game.blockCols){
         try{
           const r2=propagateClueDomains({...game,val:hypVal,wrongColors:wrong,
-            nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null},game.revealedClues);
+            nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,blockRows:null,blockCols:null},game.revealedClues);
           linesFirst=!r2?.contradiction;
         }catch(_){}
       }
       const lineChecks=()=>{
+        for(const [name,arr] of [['hàng',game.blockRows],['cột',game.blockCols]]){
+          for(let k=0;k<n;k++){
+            const e=arr?.[k];
+            if(!e)continue;
+            const cells=lineCells(name,k),bit=1<<e.color;
+            if(!blockLineOptions(cells.map(j=>!!(D[j]&bit)),cells.map(j=>(D[j]&~bit)!==0),e.count))
+              return hyp+`${name} ${k+1} (Quy tắc Khối) không còn đúng ${numLabel(e.count)} khối ${chipOf(e.color)}`;
+          }
+        }
       for(const [name,arr] of [['hàng',game.nonogramRows],['cột',game.nonogramCols]]){
         for(let k=0;k<n;k++){
           const entry=arr?.[k];
@@ -12983,6 +13536,7 @@ function showDetailedStep(step,pointer,phase='reason'){
       return hyp+'các clue đang hiển thị mâu thuẫn với nhau';
     };
 
+    const whys=[];
     for(let c=0;c<pal;c++){
       if(c===step.color)continue;
       let why=null;
@@ -12995,12 +13549,27 @@ function showDetailedStep(step,pointer,phase='reason'){
         if(!why)why=contradictionReason(c);
       }
       lines.push(`${chipOf(c)} — ${why || 'các clue đang hiển thị không cho phép màu này ở ô này'}`);
+      whys.push({c,why:why||''});
     }
 
-    const text=
-      `<b>${coord(idx)}</b> không thể là:<br>`+
-      lines.map(l=>`• ${l}`).join('<br>')+
-      `<br>Chỉ còn ${chipOf(step.color)}, vì vậy <b>${coord(idx)}</b> là ${chipOf(step.color)}.`;
+    const target=`<b>${coord(idx)}</b>`, chosen=chipOf(step.color);
+    let text;
+    const same=whys.length>1 && whys.every(w=>w.why===whys[0].why);
+    const hypo=w=>w.why.startsWith(`nếu ô này là ${chipOf(w.c)}, `) ? w.why.slice(`nếu ô này là ${chipOf(w.c)}, `.length) : null;
+    const sameHypo=whys.length>1 && whys.every(w=>hypo(w)!==null && hypo(w)===hypo(whys[0]));
+    if(same && /nên ô này phải là/.test(whys[0].why)){
+      // One rule forces the color directly: say it once.
+      text=`${target}: ${whys[0].why}.`;
+    }else if(same){
+      text=`${target} không thể là ${whys.map(w=>chipOf(w.c)).join(' hay ')}: ${whys[0].why}. Vì vậy ${target} là ${chosen}.`;
+    }else if(sameHypo){
+      text=`Nếu ${target} là ${whys.map(w=>chipOf(w.c)).join(' hay ')}, ${hypo(whys[0])}. Vì vậy ${target} là ${chosen}.`;
+    }else{
+      text=
+        `${target} không thể là:<br>`+
+        lines.map(l=>`• ${l}`).join('<br>')+
+        `<br>Chỉ còn ${chosen}, vì vậy ${target} là ${chosen}.`;
+    }
     return {text,used:[...new Set(used)],onlyMarks,usedInferred};
   }
 
@@ -13176,8 +13745,11 @@ function showDetailedStep(step,pointer,phase='reason'){
       clueExplainTitle.textContent='✅ Hoàn tất';
       clueExplainText.textContent='Đã trình bày đầy đủ quá trình giải.';
       const hint=solutionDetailHintElement();
-      if(hint)hint.textContent='Ấn Ván mới để tiếp tục';
+      if(hint)hint.textContent='';
     }
+    // The explanation panel covers the end-of-game dialog: put VÁN MỚI here.
+    message.classList.remove('show','solution-detail-complete');
+    detailControls('done');
 
     solutionDetailSteps=[];
     solutionDetailPointer=-1;
@@ -13207,7 +13779,7 @@ function showDetailedStep(step,pointer,phase='reason'){
     const MARK_MS=470;
     const PAINT_MS=900;
 
-    solutionDetailTimer=window.setTimeout(()=>{
+    solutionDetailTimer=detailSchedule(()=>{
       if(run!==solutionDetailRun||!game||!solutionDetailAuto)return;
 
       if(step.kind==='reveal'){
@@ -13229,7 +13801,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
         game.justRevealed=-1;
 
-        solutionDetailTimer=window.setTimeout(()=>{
+        solutionDetailTimer=detailSchedule(()=>{
           if(run!==solutionDetailRun||!game)return;
           performDetailedAutoStep(run,pointer+1);
         },900);
@@ -13253,7 +13825,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
         game.justRevealed=-1;
 
-        solutionDetailTimer=window.setTimeout(()=>{
+        solutionDetailTimer=detailSchedule(()=>{
           if(run!==solutionDetailRun||!game)return;
           performDetailedAutoStep(run,pointer+1);
         },1100);
@@ -13301,7 +13873,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
             // Keep the newly inserted X in its animated state for the full
             // animation duration. The next X is not inserted until afterwards.
-            solutionDetailTimer=window.setTimeout(()=>{
+            solutionDetailTimer=detailSchedule(()=>{
               if(run!==solutionDetailRun||!game||!solutionDetailAuto)return;
               game.justMarked=-1;
               nextMark();
@@ -13311,7 +13883,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
           // The exclusion phase is now complete. Only then move to the next
           // logical deduction.
-          solutionDetailTimer=window.setTimeout(()=>{
+          solutionDetailTimer=detailSchedule(()=>{
             if(run!==solutionDetailRun||!game)return;
             performDetailedAutoStep(run,pointer+1);
           },520);
@@ -13335,11 +13907,57 @@ function showDetailedStep(step,pointer,phase='reason'){
       game.justPainted=-1;
       game.justRevealed=-1;
 
-      solutionDetailTimer=window.setTimeout(()=>{
+      solutionDetailTimer=detailSchedule(()=>{
         if(run!==solutionDetailRun||!game)return;
         performDetailedAutoStep(run,pointer+1);
       },PAINT_MS);
     },REASON_MS);
+  }
+
+  // Pause / resume for the Detailed Solution playback, and the "Ván mới"
+  // button shown in the explanation panel when it is finished.
+  let detailPaused=false, detailPending=null;
+  function detailSchedule(fn,ms){
+    return window.setTimeout(()=>{
+      if(detailPaused){detailPending=fn;return;}
+      fn();
+    },ms);
+  }
+  function setDetailPaused(p){
+    detailPaused=p;
+    const b=document.getElementById('sdPauseBtn');
+    if(b){
+      b.innerHTML=p ? '<i class="fa-solid fa-play"></i> Tiếp tục' : '<i class="fa-solid fa-pause"></i> Tạm dừng';
+      b.classList.toggle('is-paused',p);
+    }
+    if(!p && detailPending){
+      const f=detailPending;detailPending=null;
+      solutionDetailTimer=detailSchedule(f,120);
+    }
+  }
+  function detailControls(mode){
+    if(!clueExplain)return;
+    let box=document.getElementById('sdControls');
+    if(!box){
+      box=document.createElement('div');
+      box.id='sdControls';
+      box.className='sd-controls';
+      box.innerHTML='<button type="button" id="sdPauseBtn" class="sd-ctl"></button>'+
+        '<button type="button" id="sdNewGameBtn" class="sd-ctl sd-ctl-primary"><i class="fa-solid fa-rotate-right"></i> VÁN MỚI</button>';
+      clueExplain.append(box);
+      box.querySelector('#sdPauseBtn').addEventListener('click',()=>setDetailPaused(!detailPaused));
+      box.querySelector('#sdNewGameBtn').addEventListener('click',()=>{
+        box.hidden=true;
+        clueExplain.classList.remove('show','solution-detail-panel');
+        nextBtn.click();
+      });
+    }
+    box.hidden=mode==='off';
+    const pb=box.querySelector('#sdPauseBtn'), nb=box.querySelector('#sdNewGameBtn');
+    if(pb)pb.hidden=mode!=='running';
+    if(nb)nb.hidden=mode!=='done';
+    detailPaused=false;detailPending=null;
+    if(mode==='running')setDetailPaused(false);
   }
 
   function startDetailedAuto(){
@@ -13356,6 +13974,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
   function cancelDetailedSolution(){
     solutionDetailRun++;
+    detailControls('off');
     solutionDetailAuto=false;
 
     if(solutionDetailTimer){
@@ -13417,6 +14036,7 @@ function showDetailedStep(step,pointer,phase='reason'){
     solutionDetailPointer=0;
     solutionDetailAuto=true;
     solutionDetailStateBase=captureSolutionDetailBaseState();
+    detailControls('running');
 
     ++solutionDetailRun;
     game.solutionDetailActive=true;
@@ -13542,11 +14162,51 @@ function cancelNewGameIntro(){
     {n:8,easy:false,combo:true},
     // LỪA ĐẢO
     {n:5,easy:false,deceit:true},
-    {n:6,easy:false,deceit:true}
+    {n:6,easy:false,deceit:true},
+    // QUY TẮC KHỐI
+    {n:6,easy:false,block:true},
+    {n:7,easy:false,block:true},
+    {n:8,easy:false,block:true},
+    {n:9,easy:false,block:true}
   ];
 
+  // ---------------------------------------------------------------
+  // Chọn chế độ: Ngẫu nhiên / Dễ / Thường / Trung bình / Khó / Rất khó.
+  // A tier is reached by a board type's base tier, or one tier lower plus a
+  // bump (Cấm đánh dấu or 4 màu) — the same rule the on-screen label uses.
+  // ---------------------------------------------------------------
+  const csStore={
+    get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(_){return d;}},
+    set(k,v){try{localStorage.setItem(k,v);}catch(_){}}
+  };
+  const TIER_ORDER=['DỄ','THƯỜNG','TRUNG BÌNH','KHÓ','RẤT KHÓ','CHUYÊN GIA'];
+  const TIER_LABEL={random:'Ngẫu nhiên','DỄ':'Dễ','THƯỜNG':'Thường','TRUNG BÌNH':'Trung bình','KHÓ':'Khó','RẤT KHÓ':'Rất khó','CHUYÊN GIA':'Chuyên gia'};
+  let selectedTier=csStore.get('cs.tier','random');
+  if(!(selectedTier in TIER_LABEL))selectedTier='random';
+  let forcedPlan=null;
+
+  function baseTierOf(spec){
+    if(spec.easy||spec.n<=4)return 'DỄ';
+    if(spec.n===5)return 'THƯỜNG';
+    if(spec.n>=9)return 'RẤT KHÓ';
+    if(spec.n>=7||spec.rule==='symself')return 'KHÓ';
+    return 'TRUNG BÌNH';
+  }
+  function planForTier(tier){
+    const opts=[];
+    for(const spec of BOARD_SPECS){
+      const b=baseTierOf(spec), up=TIER_ORDER[TIER_ORDER.indexOf(b)+1];
+      if(b===tier)opts.push({spec:{...spec},colors:3,noMark:false});
+      if(up===tier){
+        opts.push({spec:{...spec},colors:3,noMark:true});
+        if(fourColorEligible(spec))opts.push({spec:{...spec},colors:4,noMark:false});
+      }
+    }
+    return opts.length ? opts[Math.floor(Math.random()*opts.length)] : null;
+  }
+
   function boardSpecKey(x){
-    return `${x.n}:${x.deceit?'deceit':x.combo?'combo':x.rule?'rule-'+x.rule:x.symmetry?'symmetry':(x.mixed?'mixed':(x.easy?'easy':'standard'))}`;
+    return `${x.n}:${x.block?'block':x.deceit?'deceit':x.combo?'combo':x.rule?'rule-'+x.rule:x.symmetry?'symmetry':(x.mixed?'mixed':(x.easy?'easy':'standard'))}`;
   }
 
   // On-demand puzzle generation. No future-board cache is kept in memory.
@@ -13574,12 +14234,16 @@ function cancelNewGameIntro(){
 
   // 4-color boards: from 6×6 up, never with Chủ-Tớ (rule specs, 8×8 combo).
   function fourColorEligible(x){
-    if(x.n<6 || x.rule || x.easy)return false;
+    if(x.n<6 || x.n>=9 || x.rule || x.easy)return false;
     if(x.combo && x.n>=8)return false;
     return true;
   }
 
   function randomBoardSpec(excludeKey=''){
+    if(forcedPlan && selectedTier!=='random'){
+      const p=planForTier(selectedTier);
+      if(p){forcedPlan=p;return {...p.spec};}
+    }
     const pool=BOARD_SPECS.filter(x=>boardSpecKey(x)!==excludeKey);
     const source=pool.length?pool:BOARD_SPECS;
     return {...source[Math.floor(Math.random()*source.length)]};
@@ -13609,7 +14273,7 @@ function cancelNewGameIntro(){
         globalClue:generated.globalClue
           ? {color:generated.globalClue.color,count:generated.globalClue.count}
           : null,
-        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,neutralClues:generated.neutralClues||null,
+        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,neutralClues:generated.neutralClues||null,
         nonogramCols:generated.nonogramCols||null,
         val:Array(total).fill(-1),
         marks:new Map(),
@@ -13719,13 +14383,26 @@ function cancelNewGameIntro(){
 
         try{
           // 30% of eligible boards use 4 colors.
-          COLOR_COUNT=(fourColorEligible(boardSpec)&&Math.random()<0.3)?4:3;
+          COLOR_COUNT=forcedPlan
+            ? (fourColorEligible(boardSpec)?forcedPlan.colors:3)
+            : ((fourColorEligible(boardSpec)&&Math.random()<0.3)?4:3);
           const n=boardSpec.n;
           const easyMode=!!boardSpec.easy;
           const history=(n===4?layoutHistory4:(n===5?layoutHistory5:layoutHistory6));
 
           let result=null;
-          if(boardSpec.deceit){
+          if(boardSpec.block){
+            const make=()=>boostBlockRoles(createBlockPuzzle({name:`${boardSpec.n}×${boardSpec.n}`,n:boardSpec.n,palette:COLOR_COUNT,modeType:'block'}));
+            result=make();
+            // Knight / neutral should matter on 6×6–7×7: one more try if weak.
+            const sh=result.ruleShares;
+            if(boardSpec.n<=7 && sh && (sh.knight<0.1 || sh.neutral<0.08)){
+              try{
+                const second=make(), s2=second.ruleShares;
+                if(s2 && Math.min(s2.knight,s2.neutral)>Math.min(sh.knight,sh.neutral))result=second;
+              }catch(_){}
+            }
+          }else if(boardSpec.deceit){
             // 5×5: Cơ bản + Quân mã + Combo;  6×6: Cơ bản + Chỉ hướng + Trung tính + Nonogram.
             result=boardSpec.n===5
               ? createComboPuzzle({name:'5×5',n:5,palette:COLOR_COUNT,modeType:'combo'})
@@ -13826,6 +14503,321 @@ function cancelNewGameIntro(){
       initializeNewGame(options);
     },40);
   }
+
+  // =================================================================
+  // HƯỚNG DẪN BẮT BUỘC (3 màn, chỉ quy tắc cơ bản) + CHỌN CHẾ ĐỘ
+  // Each tutorial board was checked with the solver; the forced steps are
+  // exactly the Detailed Solution steps, so every action has a reason.
+  // =================================================================
+  const TUTORIAL_BOARDS=[
+    {n:3,sol:[0,0,1,0,0,1,1,1,2],opening:[0,8],
+     clue:[{color:0,count:3},null,{color:1,count:1},null,{color:0,count:3},{color:1,count:2},{color:1,count:1},{color:1,count:2},{color:2,count:0}],
+     intro:[
+       {title:'Chào mừng đến với Color Sweeper!',text:'Mục tiêu: tô màu cho <b>mọi ô</b> sao cho tất cả <b>clue</b> đều đúng. Mọi màu đều suy ra được từ clue — không bao giờ phải đoán.'},
+       {title:'Clue là gì?',text:'Ô có số là <b>clue</b>. Con số cho biết trong các ô <b>xung quanh</b> clue có đúng bấy nhiêu ô <b>cùng màu</b> với clue.'},
+       {title:'8 ô xung quanh',center:4,cells:[0,1,2,3,5,6,7,8],text:'“Xung quanh” là các ô chạm vào clue: 4 ô chung cạnh (trên, dưới, trái, phải) và 4 ô chung góc — <b>tối đa 8 ô</b>. Ô ở mép bàn có ít hơn; ô ở góc chỉ có <b>3 ô</b>.'},
+       {type:'hold',cell:0,title:'Xem phạm vi của clue',text:'Clue số 3 ở góc trên bên trái chỉ có 3 ô xung quanh. <b>Ấn giữ</b> clue để thấy phạm vi của nó được làm sáng.'},
+       {title:'Nếu tô sai thì sao?',text:'Tô sai màu: ô <b>không nhận màu</b>, màu đó được ghi thành dấu <b>X</b> trên ô để bạn không thử lại, và bạn <b>mất 1 ❤</b>. Mỗi màn có 3 ❤ — hết ❤ mà vẫn tô sai thì ván kết thúc. Hãy chỉ tô khi đã chắc chắn.'}
+     ],
+     wrongDemo:true},
+    {n:3,sol:[0,2,2,0,1,2,0,0,0],opening:[4,2],
+     clue:[{color:0,count:1},null,{color:2,count:2},{color:0,count:3},{color:1,count:0},{color:2,count:2},{color:0,count:2},{color:0,count:3},{color:0,count:1}],
+     intro:[
+       {title:'Màn 2: kết hợp nhiều clue',text:'Một ô có thể nằm trong phạm vi của nhiều clue. Dấu <b>X</b> ghi lại màu <b>không thể</b> xuất hiện ở ô. Khi một ô bị gạch hết, chỉ còn <b>một màu</b>, ô đó chắc chắn mang màu ấy.'}
+     ],
+     massMark:4},
+    {n:4,sol:[2,2,0,0,2,1,0,1,1,1,0,1,1,1,1,2],opening:[11,8,4],
+     clue:[{color:2,count:2},{color:2,count:2},{color:0,count:2},{color:0,count:2},{color:2,count:2},{color:1,count:2},{color:0,count:3},{color:1,count:1},{color:1,count:4},{color:1,count:5},{color:0,count:1},{color:1,count:2},{color:1,count:3},{color:1,count:4},{color:1,count:3},null],
+     intro:[
+       {title:'Màn 3: bàn 4×4',text:'Bàn lớn hơn và chuỗi suy luận dài hơn. Mỗi ô tô xong có thể mở ra clue mới — hãy dùng nó để suy luận tiếp.'}
+     ]}
+  ];
+  let tutorial=null, tutorialActing=false, tutorialHoldAt=0;
+  const tutEl=id=>document.getElementById(id);
+
+  function tutorialGenerated(b){
+    const pick=name=>COLORS.find(c=>c.name===name)||COLORS[0];
+    return {
+      d:{name:`${b.n}×${b.n}`,n:b.n,palette:3},
+      colors:[pick('Đỏ'),pick('Xanh dương'),pick('Vàng')],
+      sol:b.sol.slice(),clue:b.clue.map(c=>c?{...c}:null),globalClue:null,
+      initialRevealed:new Set(b.opening),initialFilled:new Set(),revealSchedule:[],
+      starterClue:b.opening[0],_lineBoosted:true,_comboSymBoosted:true,_plainChecked:true
+    };
+  }
+
+  function buildTutorialQueue(b){
+    const q=[];
+    (b.intro||[]).forEach(it=>q.push(it.type==='hold'
+      ? {type:'hold',cell:it.cell,title:it.title,text:it.text,sources:[it.cell]}
+      : {type:'info',title:it.title,text:it.text,center:it.center,cells:it.cells}));
+    let res=null;
+    try{res=buildDetailedSolutionSteps();}catch(_){res=null;}
+    if(!res?.complete)return q;
+    let m='paint',col=0,massDone=false;
+    if(b.wrongDemo){
+      const firstPaint=res.steps.find(st=>st.kind==='paint');
+      if(firstPaint){
+        const marked=new Set();
+        res.steps.forEach(st=>st.kind==='mark'&&st.markActions.forEach(a=>marked.add(a.cell+':'+a.color)));
+        const X=firstPaint.index;
+        const w=[0,1,2].find(c=>c!==firstPaint.color && !marked.has(X+':'+c));
+        if(w!==undefined){
+          q.push({type:'color',color:w,title:'Thử tô sai',text:'Cùng thử tô sai một lần để xem điều gì xảy ra.'});
+          col=w;
+          q.push({type:'wrong',cell:X,color:w,title:'Thử tô sai',
+            text:'Ô đang nhấp nháy thật ra <b>không</b> mang màu này. Hãy chạm vào để thử tô sai.'});
+          q.push({type:'info',wrongAfter:true,title:'Bạn vừa tô sai',
+            text:'Ô <b>không nhận màu</b> và rung lên. Màu sai được ghi thành dấu <b>X</b> trên ô, nên bạn không thể tô lại màu đó. Bạn <b>mất 1 ❤</b>: <span style="color:#e53935;font-size:1.15em;letter-spacing:2px">❤❤<span style="opacity:.25">❤</span></span> (còn 2/3). Trong hướng dẫn, ❤ được hoàn lại khi bấm <b>Tiếp</b>.'});
+        }
+      }
+    }
+    for(const st of res.steps){
+      const head={title:st.reasonTitle,text:st.reasonText,sources:(st.relatedSources||[]).filter(i=>i>=0),
+        // Generic paint steps get the concrete per-color reason, computed from
+        // the board exactly as it is when this step starts (shared by the
+        // mode / color / cell cards of the step).
+        liveRef:(st.kind==='paint'&&st.liveExplain)?{cell:st.index,color:st.color,text:null,title:null}:null};
+      // Teach mass marking (double tap) + erasing a mark on this clue's X step.
+      if(!massDone && st.kind==='mark' && b.massMark!==undefined &&
+         st.markActions.length>1 && st.markActions.every(a=>a.source===b.massMark)){
+        massDone=true;
+        const color=game.clue[b.massMark].color;
+        const sample=st.markActions[0].cell;
+        q.push({type:'dbl',cell:b.massMark,sources:[b.massMark],title:'Đánh dấu hàng loạt',
+          text:'Clue ở giữa có số <b>0</b>: không ô nào xung quanh mang màu của nó. Thay vì gạch từng ô, hãy <b>chạm đúp</b> vào clue — mọi ô trong phạm vi của nó được gạch X màu này cùng lúc.'});
+        if(m!=='mark'){q.push({type:'mode',mode:'mark',title:'Xoá dấu X',text:'Muốn xoá một dấu X, trước hết chọn chế độ <b>Đánh dấu</b>.'});m='mark';}
+        if(col!==color){q.push({type:'color',color,title:'Xoá dấu X',text:'Chọn đúng màu của dấu X cần xoá.'});col=color;}
+        q.push({type:'unmark',cell:sample,color,mode:'mark',title:'Xoá dấu X',
+          text:'Ở chế độ Đánh dấu, chạm lại vào ô có dấu X của màu đang chọn để <b>xoá</b> dấu đó.'});
+        q.push({type:'cell',cell:sample,color,mode:'mark',title:'Đặt lại dấu X',
+          text:'Dấu vừa xoá là đúng (clue số 0), hãy đặt lại. Chạm lần nữa sẽ thêm dấu X trở lại.'});
+        continue;
+      }
+      const acts=st.kind==='mark' ? st.markActions.map(a=>({cell:a.cell,color:a.color,mode:'mark'}))
+        : st.kind==='paint' ? [{cell:st.index,color:st.color,mode:'paint'}] : [];
+      acts.forEach(a=>{
+        if(m!==a.mode){q.push({type:'mode',mode:a.mode,...head});m=a.mode;}
+        if(col!==a.color){q.push({type:'color',color:a.color,...head});col=a.color;}
+        q.push({type:'cell',cell:a.cell,mode:a.mode,color:a.color,...head});
+      });
+    }
+    return q;
+  }
+
+  function tutorialItem(){return tutorial ? tutorial.q[tutorial.k] : null;}
+
+  function showTutorialItem(){
+    const it=tutorialItem();
+    const coach=tutEl('tutCoach');
+    if(!tutorial||!it){return;}
+    coach.hidden=false;
+    tutEl('tutStage').textContent=`HƯỚNG DẪN ${tutorial.board+1}/${TUTORIAL_BOARDS.length} · ${Math.min(tutorial.k+1,tutorial.q.length)}/${tutorial.q.length}`;
+    tutEl('tutTitle').innerHTML=it.title||'';
+    if(it.liveRef && it.liveRef.text===null){
+      try{
+        const L=explainSingletonLive({kind:'paint',index:it.liveRef.cell,color:it.liveRef.color,relatedSources:it.sources||[]});
+        it.liveRef.text=L?.text||'';
+      }catch(_){it.liveRef.text='';}
+    }
+    tutEl('tutText').innerHTML=(it.liveRef&&it.liveRef.text)||it.text||'';
+    // Never let the coach card cover the Tô màu / Đánh dấu toggle: if the
+    // text is long, it scrolls inside the card instead.
+    requestAnimationFrame(()=>{
+      const txt=tutEl('tutText'), coach=tutEl('tutCoach');
+      const tgl=document.querySelector('.target-controls-top');
+      if(!txt||!coach||!tgl)return;
+      txt.style.maxHeight='';txt.style.overflowY='';
+      const over=coach.getBoundingClientRect().bottom-(tgl.getBoundingClientRect().top-6);
+      if(over>0){
+        txt.style.maxHeight=Math.max(44,txt.offsetHeight-over)+'px';
+        txt.style.overflowY='auto';
+      }
+    });
+    const chip=c=>`<span class="clue-explain-color-chip" style="--clue-explain-chip:${game.colors[c].hex}"></span> ${game.colors[c].name}`;
+    let act='';
+    if(it.type==='hold')act='👉 Ấn giữ vào clue đang sáng.';
+    else if(it.type==='dbl')act='👉 <b>Chạm đúp</b> vào clue đang sáng.';
+    else if(it.type==='wrong')act=`👉 Chạm vào ô đang nhấp nháy để thử tô màu ${chip(it.color)}.`;
+    else if(it.type==='unmark')act=`👉 Chạm vào ô đang nhấp nháy để <b>xoá</b> dấu X màu ${chip(it.color)}.`;
+    else if(it.type==='mode')act=`👉 Chọn <b>${it.mode==='mark'?'Đánh dấu':'Tô màu'}</b> ở thanh phía trên bàn.`;
+    else if(it.type==='color')act=`👉 Chọn màu ${chip(it.color)} ở bảng màu bên dưới.`;
+    else if(it.type==='cell')act=it.mode==='mark'
+      ? `👉 Chạm vào ô đang nhấp nháy để gạch <b>X</b> màu ${chip(it.color)}.`
+      : `👉 Chạm vào ô đang nhấp nháy để tô màu ${chip(it.color)}.`;
+    tutEl('tutAct').innerHTML=act;
+    document.body.classList.toggle('tut-show-hearts',it.type==='wrong'||!!it.wrongAfter);
+    tutEl('tutNext').hidden=it.type!=='info';
+    tutEl('tutNext').textContent=it.done ? (it.last?'Bắt đầu chơi':'Màn tiếp theo') : 'Tiếp';
+    applyTutorialHighlight();
+  }
+
+  function applyTutorialHighlight(){
+    document.querySelectorAll('.tut-target,.tut-source,.tut-glow').forEach(e=>e.classList.remove('tut-target','tut-source','tut-glow'));
+    const it=tutorialItem();
+    if(!it)return;
+    if(it.type==='cell'||it.type==='hold'||it.type==='dbl'||it.type==='unmark'||it.type==='wrong')board.querySelector(`.cell[data-i="${it.cell}"]`)?.classList.add('tut-target');
+    if(it.center!==undefined)board.querySelector(`.cell[data-i="${it.center}"]`)?.classList.add('tut-target');
+    (it.cells||[]).forEach(i=>board.querySelector(`.cell[data-i="${i}"]`)?.classList.add('tut-source'));
+    (it.sources||[]).forEach(i=>{
+      if(it.type==='hold')return;
+      board.querySelector(`.cell[data-i="${i}"]`)?.classList.add('tut-source');
+    });
+    if(it.type==='color')document.querySelector(`.color-choice[data-color="${it.color}"]`)?.classList.add('tut-glow');
+    if(it.type==='mode')(it.mode==='mark'?markMode:paintMode).classList.add('tut-glow');
+  }
+
+  function nudgeTutorial(){
+    const c=tutEl('tutCoach');
+    c.classList.remove('nudge');void c.offsetWidth;c.classList.add('nudge');
+  }
+
+  function tutorialAdvance(delay=0){
+    const run=tutorial, seq=tutorial?.seq, from=tutorialItem();
+    setTimeout(()=>{
+      if(!tutorial||tutorial!==run||tutorial.seq!==seq)return;
+      // Only move on if we are still on the item that scheduled this advance
+      // (a finished board replaces the queue with its "completed" card).
+      if(tutorialItem()!==from || tutorialItem()?.done)return;
+      tutorial.k++;
+      showTutorialItem();
+    },delay);
+  }
+
+  function tutorialCellTap(i){
+    const it=tutorialItem();
+    if(performance.now()-tutorialHoldAt<600)return;
+    if(it?.type==='dbl' && it.cell===i){
+      const now=performance.now();
+      if(it._tap && now-it._tap<=500){
+        it._tap=0;
+        tutorialActing=true;
+        try{markAroundColorCell(i);}finally{tutorialActing=false;}
+        tutorialAdvance(150);
+      }else it._tap=now;
+      return;
+    }
+    if(it?.type==='wrong' && it.cell===i){
+      tutorialActing=true;
+      try{tap(i);}finally{tutorialActing=false;}
+      if(game.wrongColors.get(i)?.has(it.color))tutorialAdvance(700);
+      return;
+    }
+    if(it?.type==='unmark' && it.cell===i){
+      tutorialActing=true;
+      try{tap(i);}finally{tutorialActing=false;}
+      if(!game.marks.get(i)?.has(it.color))tutorialAdvance(150);
+      return;
+    }
+    if(!it||it.type!=='cell'||it.cell!==i){nudgeTutorial();return;}
+    tutorialActing=true;
+    try{tap(i);}finally{tutorialActing=false;}
+    if(tutorialItem()!==it)return;     // the board was completed by this tap
+    const done=it.mode==='mark' ? !!game.marks.get(i)?.has(it.color) : game.val[i]===it.color;
+    if(done)tutorialAdvance(it.mode==='paint'?420:120);
+  }
+  function tutorialColorTap(c){
+    const it=tutorialItem();
+    if(it?.type==='color'&&it.color===c){tutorialAdvance(80);return true;}
+    if(c===selectedColor)return true;
+    nudgeTutorial();return false;
+  }
+  function tutorialModeTap(m){
+    const it=tutorialItem();
+    if(it?.type==='mode'&&it.mode===m){tutorialAdvance(80);return true;}
+    if(m===mode)return true;
+    nudgeTutorial();return false;
+  }
+  function tutorialHold(i){
+    const it=tutorialItem();
+    if(it?.type==='hold'&&it.cell===i){tutorialHoldAt=performance.now();tutorialAdvance(1500);}
+  }
+
+  function tutorialBoardDone(){
+    if(!tutorial)return;
+    const last=tutorial.board>=TUTORIAL_BOARDS.length-1;
+    tutorial.seq=(tutorial.seq||0)+1;   // drop advances still pending from the last move
+    tutorial.q=[{type:'info',done:true,last,
+      title:last?'🎉 Hoàn thành hướng dẫn!':`✅ Hoàn thành màn ${tutorial.board+1}/${TUTORIAL_BOARDS.length}`,
+      text:last
+        ? 'Bạn đã nắm quy tắc cơ bản: đếm ô cùng màu quanh clue, gạch <b>X</b> màu bị loại, và tô khi một ô chỉ còn một màu. Nút <b>Tutorial</b> ở góc trên luôn sẵn sàng nếu bạn muốn xem lại.'
+        : 'Tuyệt vời! Sang màn tiếp theo.'}];
+    tutorial.k=0;
+    showTutorialItem();
+  }
+
+  function loadTutorialBoard(idx){
+    tutorial.board=idx;
+    const b=TUTORIAL_BOARDS[idx];
+    newGameRequestBusy=false;newGameTransitionBusy=false;
+    initializeNewGame({override:tutorialGenerated(b),tutorial:true});
+    tutorial.q=buildTutorialQueue(b);
+    tutorial.k=0;
+    tutorial.seq=(tutorial.seq||0)+1;
+    showTutorialItem();
+  }
+
+  function startTutorial(){
+    if(game?.solutionDetailActive)return;
+    tutorial={board:0,q:[],k:0,seq:0};
+    document.body.classList.add('tutorial-active');
+    loadTutorialBoard(0);
+  }
+
+  function finishTutorial(){
+    csStore.set('cs.tutorialDone','1');
+    tutorial=null;
+    document.body.classList.remove('tutorial-active');
+    tutEl('tutCoach').hidden=true;
+    document.querySelectorAll('.tut-target,.tut-source,.tut-glow').forEach(e=>e.classList.remove('tut-target','tut-source','tut-glow'));
+    updateOnboardingButtons();
+    newGameRequestBusy=false;newGameTransitionBusy=false;
+    newGame({initialLoad:true});
+  }
+
+  tutEl('tutNext').addEventListener('click',()=>{
+    const it=tutorialItem();
+    if(!it||it.type!=='info')return;
+    if(it.wrongAfter && game){game.lives=Math.min(3,game.lives+1);render();}
+    if(it.done){
+      if(it.last)finishTutorial();
+      else loadTutorialBoard(tutorial.board+1);
+      return;
+    }
+    tutorialAdvance(0);
+  });
+
+  function updateOnboardingButtons(){
+    tutEl('tutorialBtn').hidden=csStore.get('cs.tutorialDone','')!=='1';
+    tutEl('modeSelectValue').textContent=TIER_LABEL[selectedTier]||'Ngẫu nhiên';
+  }
+
+  // ---- Chọn chế độ ----
+  function openModeSelect(){
+    const list=tutEl('modeList');
+    const hints={random:'Mọi loại màn','DỄ':'4×4, màn DỄ','THƯỜNG':'5×5','TRUNG BÌNH':'6×6','KHÓ':'7×7, 8×8 và màn có thêm quy tắc','RẤT KHÓ':'Màn khó + cấm đánh dấu hoặc 4 màu'};
+    list.innerHTML=['random',...TIER_ORDER].map(t=>
+      `<button class="mode-opt${t===selectedTier?' active':''}" data-tier="${t}"><span>${TIER_LABEL[t]}</span><small>${hints[t]}</small></button>`
+    ).join('');
+    tutEl('modeOverlay').classList.add('show');
+  }
+  tutEl('modeList').addEventListener('click',e=>{
+    const b=e.target.closest('.mode-opt');
+    if(!b)return;
+    selectedTier=b.dataset.tier;
+    csStore.set('cs.tier',selectedTier);
+    updateOnboardingButtons();
+    tutEl('modeOverlay').classList.remove('show');
+    newGame();
+  });
+  tutEl('modeSelectBtn').addEventListener('click',openModeSelect);
+  tutEl('closeMode').addEventListener('click',()=>tutEl('modeOverlay').classList.remove('show'));
+  tutEl('modeOverlay').addEventListener('click',e=>{if(e.target.id==='modeOverlay')e.currentTarget.classList.remove('show');});
+  tutEl('tutorialBtn').addEventListener('click',()=>{
+    if(newGameRequestBusy||newGameTransitionBusy)return;
+    startTutorial();
+  });
+
   function newGame(options={}){
     const isInitialLoad=!!options.initialLoad;
 
@@ -13922,10 +14914,22 @@ function cancelNewGameIntro(){
 
     // The board is generated only when this initialization runs. There is no
     // 15-board future cache and no hidden pre-generation pipeline.
-    const boardSpec=isInitialLoad ? {n:4,easy:false} : nextBoardSpec();
+    let plan=null, boardSpec;
+    if(options.override){
+      boardSpec={n:options.override.d.n,easy:false};
+    }else if(selectedTier!=='random'){
+      plan=planForTier(selectedTier);
+      boardSpec=plan ? plan.spec : (isInitialLoad ? {n:4,easy:false} : nextBoardSpec());
+    }else{
+      boardSpec=isInitialLoad ? {n:4,easy:false} : nextBoardSpec();
+    }
     const n=boardSpec.n;
     const easyMode=!!boardSpec.easy;
-    let generated=generateRequestedPuzzle(boardSpec);
+    forcedPlan=plan;
+    if(options.override)COLOR_COUNT=3;
+    let generated=options.override || generateRequestedPuzzle(boardSpec);
+    const usedPlan=forcedPlan;
+    forcedPlan=null;
     const generatedOverride=generated;
     const preparedPattern=!!generated.patternMode;
     const preparedNonogram=!!generated.nonogramMode;
@@ -13944,6 +14948,7 @@ function cancelNewGameIntro(){
       generatedOverride
     });
     game.showingSolution=false;
+    game.tutorial=!!options.tutorial;
     if(game.clueExitTimers){
       for(const timer of game.clueExitTimers.values())clearTimeout(timer);
       game.clueExitTimers.clear();
@@ -13977,7 +14982,9 @@ function cancelNewGameIntro(){
     // already has 36 cells, so extra pre-revealed clue numbers would make the
     // puzzle feel crowded before the first move.
     game.previewClues=new Set();
-    if(game.mixedMode){
+    if(game.tutorial){
+      // Tutorial boards show only their scripted clues.
+    }else if(game.mixedMode){
       // Clue trung tính: exactly the generator's neutral set is shown as a
       // number without color. These are real constraints in the engine.
       game.previewClues=new Set(
@@ -14063,19 +15070,16 @@ function cancelNewGameIntro(){
     selectedColor=0;
     game.animatePrefilled=true;
     // QUY TẮC CẤM ĐÁNH DẤU: 20% of boards disable the X (mark) tool.
-    game.noMark=(game.d.palette||3)<4 && Math.random()<0.2;
+    game.noMark=game.tutorial ? false
+      : usedPlan ? (usedPlan.noMark && (game.d.palette||3)<4)
+      : ((game.d.palette||3)<4 && Math.random()<0.2);
     markMode.classList.toggle('no-mark',game.noMark);
     markMode.disabled=game.noMark;
     markMode.setAttribute('aria-disabled',String(game.noMark));
-    if(game.noMark){
-      mode='paint';
-      paintMode.classList.add('active');
-      markMode.classList.remove('active');
-    }else{
-      mode='mark';
-      markMode.classList.add('active');
-      paintMode.classList.remove('active');
-    }
+    // Tô màu is the default tool (first button of the toggle).
+    mode='paint';
+    paintMode.classList.add('active');
+    markMode.classList.remove('active');
     syncPalette();
     render();
     requestAnimationFrame(()=>{
@@ -14109,6 +15113,7 @@ function cancelNewGameIntro(){
 
   markMode.addEventListener('click',()=>{
     if(game?.noMark)return;
+    if(tutorial && !tutorialModeTap('mark'))return;
     mode='mark';
     markMode.classList.add('active');
     paintMode.classList.remove('active');
@@ -14116,6 +15121,7 @@ function cancelNewGameIntro(){
   });
 
   paintMode.addEventListener('click',()=>{
+    if(tutorial && !tutorialModeTap('paint'))return;
     mode='paint';
     paintMode.classList.add('active');
     markMode.classList.remove('active');
@@ -14178,7 +15184,11 @@ function cancelNewGameIntro(){
     GRID_SIZES,
     COLORS,
   };
-  requestAnimationFrame(()=>newGame({initialLoad:true}));syncBackgroundMusic();})();
+  requestAnimationFrame(()=>{
+    updateOnboardingButtons();
+    if(csStore.get('cs.tutorialDone','')!=='1')startTutorial();
+    else newGame({initialLoad:true});
+  });syncBackgroundMusic();})();
 </script><script>
 (() => {
   'use strict';
@@ -14397,6 +15407,21 @@ function cancelNewGameIntro(){
       }
     },
     {
+      id: 'block', icon: '<b style="border:2px solid #fff;border-radius:3px;padding:0 3px">3</b>', tint: '#ef8f00', title: 'Quy tắc Khối',
+      short: 'Số khối cùng màu trong hàng/cột',
+      desc: 'Dữ kiện bên lề hàng/cột. Số vuông có màu cho biết hàng/cột đó có đúng bấy nhiêu <b>khối</b> màu đó. Một khối là các ô cùng màu nằm liền nhau, không bị ngắt quãng.',
+      demo: {
+        cols: 1, rows: 5, size: 36,
+        chips: {col: {0: {c: 'Y', n: 3, square: true}}},
+        cells: {0: {c: 'Y'}, 2: {c: 'Y'}},
+        steps: [
+          {t: 2300, cap: 'Số 3 vàng: cột này có đúng 3 khối {Y}.', ops: [['hl', [0, 1, 2, 3, 4]]]},
+          {t: 2300, cap: 'Hai khối {Y} đã có; ô ngăn giữa chúng không thể là {Y}.', ops: [['x', 1, 'Y']]},
+          {t: 2800, cap: 'Khối thứ 3 phải ở cuối, cách khối trước một ô.', ops: [['x', 3, 'Y'], ['paint', 4, 'Y']]}
+        ]
+      }
+    },
+    {
       id: 'master-servant', icon: '<i class="fa-solid fa-crown"></i>', tint: '#1b1f2a', title: 'Quy tắc Chủ-Tớ',
       short: 'Màu áp đảo hoặc cân bằng trong hàng/cột',
       desc: 'Dữ kiện bên lề hàng/cột. <b><i class="fa-solid fa-crown"></i> CHỦ</b>: có một màu nhiều ô hơn mỗi màu còn lại. <b><i class="fa-solid fa-flag"></i> TỚ</b>: các màu có mặt cân bằng (6×6: 2-2-2 hoặc 3-3; 8×8: 4-4).',
@@ -14516,7 +15541,7 @@ function cancelNewGameIntro(){
         const e = demo.chips.col[k];
         c += !e ? '<span class="hd-chip empty"></span>'
           : e.icon ? `<span class="hd-chip" style="background:${e.light ? '#fff' : e.c ? COL[e.c].hex : '#1b1f2a'};color:${e.light ? '#1b1f2a' : '#fff'}${e.light ? ';box-shadow:0 0 0 1.5px #1b1f2a' : ''}"><i class="fa-solid fa-${e.icon}" style="font-size:10px"></i></span>`
-          : `<span class="hd-chip" style="background:${COL[e.c].hex}">${e.n}</span>`;
+          : `<span class="hd-chip" style="background:${COL[e.c].hex}${e.square?';border-radius:4px':''}">${e.n}</span>`;
       }
       chips += `<div class="hd-chips-col" style="grid-template-columns:repeat(${demo.cols},${size}px)">${c}</div>`;
     }
