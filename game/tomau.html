@@ -2569,6 +2569,26 @@ body.clue-focus-mode .nonogram-line-clue:not(.is-active){visibility:hidden!impor
 .nonogram-line-clue.code-chip{background:transparent!important;box-shadow:none!important;color:#172033}
 .nonogram-line-clue.code-chip .code-ico,.hd-chip .code-ico{width:20px;height:20px;display:block}
 .cell.clue.clue-spent-bubble .code-mark{animation:clueGlyphDissolve .7s ease-out forwards}
+.cell .edge-spike{position:absolute;z-index:3;pointer-events:none;display:flex;align-items:center;justify-content:center}
+.cell .edge-spike .edge-ico{width:100%;height:100%;display:block}
+.cell .edge-spike{left:50%;top:50%;width:56%;height:13%}
+.cell .edge-t{transform:translate(-50%,-50%) rotate(0deg)   translateY(-290%)}
+.cell .edge-r{transform:translate(-50%,-50%) rotate(90deg)  translateY(-290%)}
+.cell .edge-b{transform:translate(-50%,-50%) rotate(180deg) translateY(-290%)}
+.cell .edge-l{transform:translate(-50%,-50%) rotate(270deg) translateY(-290%)}
+.nonogram-line-clue.sum-chip{background:transparent!important;box-shadow:none!important;color:#172033;font-weight:900;display:flex;align-items:center;gap:2px;width:auto}
+.nonogram-line-clue.sum-chip .sum-dots{display:flex;flex-direction:column;gap:1.5px}
+.nonogram-line-clue.sum-chip .sum-dots i{display:block;width:6px;height:6px;border-radius:50%;box-shadow:0 0 0 1px rgba(0,0,0,.18)}
+.color-choice{position:relative}
+.color-choice .color-total{position:absolute;right:-6px;top:-7px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;
+  background:#172033;color:#fff;font:900 11px/18px Inter,system-ui,sans-serif;text-align:center;box-shadow:0 0 0 2px #fff;pointer-events:none}
+.rs-actions{position:sticky;bottom:0;z-index:3;display:flex;gap:8px;align-items:stretch;background:#fff;
+  box-shadow:0 -10px 14px #fff;padding-top:2px;margin-bottom:6px}
+.rs-actions .rs-start{position:static!important;box-shadow:0 4px 12px rgba(74,46,120,.25);margin:0;flex:1}
+.rs-dice{flex:none;width:52px;border-radius:14px;border:2px solid #172033;background:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;padding:0}
+.rs-dice:active{transform:scale(.94)}
+.rs-dice.rolling svg{animation:diceRoll .45s cubic-bezier(.3,.7,.4,1)}
+@keyframes diceRoll{0%{transform:rotate(0) scale(1)}50%{transform:rotate(200deg) scale(.82)}100%{transform:rotate(360deg) scale(1)}}
 </style>
 <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -2845,7 +2865,10 @@ body.clue-focus-mode .nonogram-line-clue:not(.is-active){visibility:hidden!impor
       <label class="rs-x"><input type="checkbox" id="rsChaos"><canvas class="rs-ico" data-ico="chaos"></canvas><span>Rối loạn</span></label>
     </div>
     <div class="rs-note" id="rsNote"></div>
-    <button class="rs-start" id="rsStart"><i class="fa-solid fa-flask"></i> Tạo màn</button>
+    <div class="rs-actions">
+      <button type="button" class="rs-dice" id="rsDice" aria-label="Chọn ngẫu nhiên" title="Chọn ngẫu nhiên"><svg viewBox="0 0 24 24" width="26" height="26" aria-hidden="true"><rect x="2.5" y="2.5" width="19" height="19" rx="5" fill="#fff" stroke="#172033" stroke-width="2"/><circle cx="8" cy="8" r="1.7" fill="#172033"/><circle cx="16" cy="8" r="1.7" fill="#172033"/><circle cx="12" cy="12" r="1.7" fill="#e53950"/><circle cx="8" cy="16" r="1.7" fill="#172033"/><circle cx="16" cy="16" r="1.7" fill="#172033"/></svg></button>
+      <button class="rs-start" id="rsStart"><i class="fa-solid fa-flask"></i> Tạo màn</button>
+    </div>
     <button class="close" id="closeResearch">Đóng</button>
   </div>
 </div>
@@ -3411,7 +3434,7 @@ function nmDeduce(a,b,ca,cb,domains,n){
 // column: top→bottom); {has:false} = it does not. Reversed order is not it.
 // codeLineDP: line DP with a string-matching automaton over the line.
 // ---------------------------------------------------------------
-function codeLineDP(doms,pal,P,has){
+function codeLineDP(doms,pal,P,has,excl){
   const n=doms.length;
   // next state after reading color c when k code colors are matched
   const nxt=[0,1,2].map(k=>Array.from({length:pal},(_,c)=>{
@@ -3428,7 +3451,7 @@ function codeLineDP(doms,pal,P,has){
     const nx=new Map();
     for(const [k,f] of cur.values())for(let c=0;c<pal;c++){
       if(!(doms[t]&(1<<c)))continue;
-      let m=nxt[k][c],f2=f;
+      let m=excl&&excl[t]?0:nxt[k][c],f2=f;
       if(m===3){if(!has)continue;f2=1;m=nxt[2][c]===3?0:0;
         // after a full match keep matching for overlaps
         const str=P.concat([]);let mm=0;
@@ -3451,7 +3474,7 @@ function codeLineDP(doms,pal,P,has){
       const [k,f]=pv;
       for(let c=0;c<pal;c++){
         if(!(doms[t]&(1<<c)))continue;
-        let m=nxt[k][c],f2=f;
+        let m=excl&&excl[t]?0:nxt[k][c],f2=f;
         if(m===3){if(!has)continue;f2=1;
           let mm=0;for(let q=2;q>0;q--){let ok=true;for(let u=0;u<q;u++)if(P[3-q+u]!==P[u]){ok=false;break;}if(ok){mm=q;break;}}
           m=mm;}
@@ -3484,7 +3507,7 @@ function codeDeduce(data,doms,n,pal,onlyLine){
   for(let c=0;c<pal;c++){if(!(doms[cc[2]]&(1<<c)))continue;
     const P=[a,b,c],d=doms.slice();d[cc[0]]=1<<a;d[cc[1]]=1<<b;d[cc[2]]=1<<c;
     const res=[];let ok=true;
-    for(const L of lines){const al=codeLineDP(L.cells.map(j=>d[j]),pal,P,L.has);if(!al){ok=false;break;}res.push([L,al]);}
+    for(const L of lines){const al=codeLineDP(L.cells.map(j=>d[j]),pal,P,L.has,L.cells.map(j=>cc.includes(j)));if(!al){ok=false;break;}res.push([L,al]);}
     if(!ok)continue;any=true;
     cc.forEach((j,t)=>out.set(j,(out.get(j)||0)|(1<<P[t])));
     for(const [L,al] of res)L.cells.forEach((j,t)=>{if(!cc.includes(j))out.set(j,(out.get(j)??0)|al[t]);});
@@ -3496,6 +3519,53 @@ function codeDeduce(data,doms,n,pal,onlyLine){
 const CODE_HAS_SVG='<svg viewBox="0 0 24 24" class="code-ico"><rect x="2.5" y="2.5" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="14.5" height="14.5" rx="3" fill="currentColor"/><circle cx="14.25" cy="14.25" r="4" fill="none" stroke="#fff" stroke-width="2"/></svg>';
 const CODE_NOT_SVG='<svg viewBox="0 0 24 24" class="code-ico"><rect x="2.5" y="2.5" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="14.5" height="14.5" rx="3" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M11 11l6.5 6.5M17.5 11L11 17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>';
 const CODE_NUM=['','I','II','III'];
+
+// QUY TẮC CẠNH: clue.sides ⊂ ['t','r','b','l'] (1–3 sides). The clue counts
+// the cells of its 3×3 ring that lie on those sides (corners are shared).
+function edgeCells(i,n,sides){
+  const r=Math.floor(i/n),c=i%n,out=new Set();
+  const add=(rr,cc)=>{if(rr>=0&&cc>=0&&rr<n&&cc<n)out.add(rr*n+cc);};
+  for(const sd of sides){
+    for(let d=-1;d<=1;d++){
+      if(sd==='t')add(r-1,c+d);if(sd==='b')add(r+1,c+d);
+      if(sd==='l')add(r+d,c-1);if(sd==='r')add(r+d,c+1);
+    }
+  }
+  return [...out];
+}
+// QUY TẮC TỔNG MÀU (side data {colors:[...], count}): the line has exactly
+// count cells whose color is one of colors.
+function sumLineSets(data,n){
+  const out=[];
+  for(const [arr,axis] of [[data.sumRows,'row'],[data.sumCols,'col']]){
+    if(!Array.isArray(arr))continue;
+    for(let k=0;k<n;k++){const e=arr[k];if(!e)continue;
+      const cells=[];for(let t=0;t<n;t++)cells.push(axis==='row'?k*n+t:t*n+k);
+      out.push({axis,k,cells,mask:e.colors.reduce((m,c)=>m|(1<<c),0),count:e.count,entry:e});}
+  }
+  return out;
+}
+// Picks the sides of an edge clue so that it is informative but not trivial:
+// 2–3 sides, at least 5 counted cells, and a count that is neither 0 nor the
+// full number of counted cells (those would be decided at once).
+function pickEdgeSides(sol,i,n){
+  const r=Math.floor(i/n),c=i%n;
+  const ok=['t','r','b','l'].filter(sd=>sd==='t'?r>0:sd==='b'?r<n-1:sd==='l'?c>0:c<n-1);
+  const combos=[];
+  for(let a=0;a<ok.length;a++)for(let b=a+1;b<ok.length;b++){
+    combos.push([ok[a],ok[b]]);
+    for(let d=b+1;d<ok.length;d++)combos.push([ok[a],ok[b],ok[d]]);
+  }
+  const cand=combos.filter(sd=>{
+    const cells=edgeCells(i,n,sd);
+    if(cells.length<5)return false;
+    const k=cells.filter(j=>sol[j]===sol[i]).length;
+    return k>0&&k<cells.length;
+  });
+  if(!cand.length)return null;
+  return cand[Math.floor(Math.random()*cand.length)];
+}
+const EDGE_SVG='<svg viewBox="0 0 24 12" preserveAspectRatio="none" class="edge-ico"><polyline points="1,10 5,2 9,10 13,2 17,10 21,2 23,6" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg>';
 
 // TỚ: every color that appears has the same count, with at least 2 colors
 // (6×6: 2-2-2 or 3-3;  8×8: 4-4). Given per-color definite/possible counts,
@@ -3543,6 +3613,7 @@ function clueCells(i,n,clue){
       return clue.partner>=0 ? [...seg,clue.partner] : seg;
     }
     if(clue && clue.knight)return knightCells(i,n);
+    if(clue && Array.isArray(clue.sides))return edgeCells(i,n,clue.sides);
     const cells=clue && clue.direction
       ? directionalCells(i,n,clue.direction)
       : neigh(i,n);
@@ -3950,6 +4021,33 @@ function clueCells(i,n,clue){
           if(!opt)return {domains,contradiction:true,steps:[],reduced:0};
           for(const t of opt.mustC){const j=cells[t];if(domains[j]!==bit){domains[j]&=bit;if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
           for(const t of opt.never){const j=cells[t];if(domains[j]&bit){domains[j]&=~bit;if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
+        }
+      }
+
+      // QUY TẮC TỔNG MÀU: data.colorTotals[c] = number of cells of color c on
+      // the whole board.
+      if(Array.isArray(data.colorTotals)){
+        for(let c=0;c<data.colorTotals.length;c++){
+          const K=data.colorTotals[c],bit=1<<c;let def=0,pos=0;
+          for(let j=0;j<n*n;j++){if(domains[j]===bit)def++;if(domains[j]&bit)pos++;}
+          if(def>K||pos<K)return {domains,contradiction:true,steps:[],reduced:0};
+          for(let j=0;j<n*n;j++){
+            const d=domains[j];if(d===bit||!(d&bit))continue;
+            if(def===K){domains[j]=d&~bit;changed=true;}
+            else if(pos===K){domains[j]=bit;changed=true;}
+          }
+        }
+      }
+
+      // Quy tắc tổng màu (old per-line form, no longer generated).
+      for(const L of sumLineSets(data,n)){
+        let def=0,pos=0;
+        for(const j of L.cells){const d=domains[j];if(!(d&~L.mask))def++;if(d&L.mask)pos++;}
+        if(def>L.count||pos<L.count)return {domains,contradiction:true,steps:[],reduced:0};
+        for(const j of L.cells){
+          const d=domains[j];
+          if(def===L.count && (d&L.mask) && (d&~L.mask)){domains[j]=d&~L.mask;changed=true;}
+          else if(pos===L.count && (d&L.mask) && (d&~L.mask)){domains[j]=d&L.mask;changed=true;}
         }
       }
 
@@ -4370,6 +4468,11 @@ function clueCells(i,n,clue){
     add(data.blockRows,'row','block');add(data.blockCols,'col','block');
     add(data.duoRows,'row','duo');add(data.duoCols,'col','duo');
     add(data.codeRows,'row','code');add(data.codeCols,'col','code');
+    add(data.sumRows,'row','sum');add(data.sumCols,'col','sum');
+    if(Array.isArray(data.colorTotals)){
+      const all=[];for(let j=0;j<n*n;j++)all.push(j);
+      data.colorTotals.forEach((K,c)=>lines.push({axis:'all',k:c,kind:'totals',entry:{color:c,count:K},cells:all}));
+    }
     add(data.longRows,'row','long');add(data.longCols,'col','long');
     const paints=[],xs=[];
     for(const L of lines){
@@ -4383,6 +4486,33 @@ function clueCells(i,n,clue){
         color:L.kind==='nonogram'?L.entry.color:undefined,count:L.entry.count};
       const force=(c,why)=>{const o=open(c);if(o.length)paints.push({index:o[0],color:c,line:{...line,focus:c,why}});};
       const cross=(c,why)=>{const o=open(c);if(o.length)xs.push({line:{...line,focus:c,why},actions:o.map(cell=>({cell,color:c,source:-1,rule:'line'}))});};
+      if(L.kind==='totals'){
+        const c=L.entry.color,K=L.entry.count,bit=1<<c;
+        let def=0,pos=0;for(const j of L.cells){if(shown[j]===bit)def++;if(shown[j]&bit)pos++;}
+        const open=L.cells.filter(j=>fixed[j]===-1&&(shown[j]&bit)&&shown[j]!==bit);
+        if(!open.length)continue;
+        const fl={axis:'all',index:c,type:'totals',count:K,focus:c};
+        if(def===K)xs.push({line:{...fl,why:'none'},actions:open.map(cell=>({cell,color:c,source:-1,rule:'line'}))});
+        else if(pos===K)paints.push({index:open[0],color:c,line:{...fl,why:'fill'}});
+        continue;
+      }
+      if(L.kind==='sum'){
+        const mask=L.entry.colors.reduce((m,c)=>m|(1<<c),0),K=L.entry.count;
+        let def=0,pos=0;for(const j of L.cells){const d=shown[j];if(!(d&~mask))def++;if(d&mask)pos++;}
+        const open=L.cells.filter(j=>fixed[j]===-1&&(shown[j]&mask)&&(shown[j]&~mask));
+        if(!open.length)continue;
+        const fl={...line,type:'sum',count:K,colors:L.entry.colors};
+        if(pos===K){
+          const j=open.find(x=>{const d=shown[x]&mask;return d&&(d&(d-1))===0;});
+          if(j!==undefined){const col=Math.log2(shown[j]&mask);paints.push({index:j,color:col,line:{...fl,focus:col,why:'fill'}});}
+          else{for(let c=0;c<palette;c++){if(mask&(1<<c))continue;const acts=open.filter(x=>shown[x]&(1<<c));
+            if(acts.length){xs.push({line:{...fl,focus:c,why:'only'},actions:acts.map(cell=>({cell,color:c,source:-1,rule:'line'}))});break;}}}
+        }else if(def===K){
+          for(const c of L.entry.colors){const acts=open.filter(x=>shown[x]&(1<<c));
+            if(acts.length){xs.push({line:{...fl,focus:c,why:'none'},actions:acts.map(cell=>({cell,color:c,source:-1,rule:'line'}))});break;}}
+        }
+        continue;
+      }
       if(L.kind==='code'){
         const r=codeDeduce(data,shown,n,palette,{axis:L.axis||(line&&line.axis),k:L.k??line?.index,cells:L.cells});
         if(!r||!r.allowed)continue;
@@ -6981,7 +7111,7 @@ function createSolvablePuzzleRaw(d){
         globalClue:generated.globalClue
           ? {color:generated.globalClue.color,count:generated.globalClue.count}
           : null,
-        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
+        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,sumRows:generated.sumRows||null,sumCols:generated.sumCols||null,colorTotals:generated.colorTotals||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
         nonogramCols:generated.nonogramCols||null,
         val,marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
         initialFilled:new Set(filled),
@@ -7074,7 +7204,7 @@ function createSolvablePuzzleRaw(d){
       globalClue:generated.globalClue
         ? {color:generated.globalClue.color,count:generated.globalClue.count}
         : null,
-      nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
+      nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,sumRows:generated.sumRows||null,sumCols:generated.sumCols||null,colorTotals:generated.colorTotals||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
       nonogramCols:generated.nonogramCols||null,
       val:Array(total).fill(-1),
       marks:new Map(),
@@ -8450,7 +8580,7 @@ function createComboPuzzle(d){
       try{
         return runHumanInferenceEngine({
           d:{n,palette:COLOR_COUNT},n,palette:COLOR_COUNT,sol:data.sol,clue:data.clue.map(c=>c?{...c}:null),globalClue:null,
-          nonogramRows:null,nonogramCols:null,ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,allowTrial:!!data.allowTrial,
+          nonogramRows:null,nonogramCols:null,ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,allowTrial:!!data.allowTrial,
           neutralClues:data.neutralClues||null,
           val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
           initialFilled:new Set(),revealSchedule:[]
@@ -8869,7 +8999,7 @@ function createPolyPuzzle(d){
         return runHumanInferenceEngine({
           d:{n,palette:pal},n,palette:pal,sol:data.sol,clue:data.clue.map(c=>c?{...c}:null),globalClue:null,
           nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,
-          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,allowTrial:!!data.allowTrial,neutralClues:data.neutralClues||null,
+          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,allowTrial:!!data.allowTrial,neutralClues:data.neutralClues||null,
           val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
           initialFilled:new Set(),revealSchedule:[]
         },new Set(opening),{forGeneratorValidation:true});
@@ -9047,7 +9177,7 @@ function createPolyPuzzle(d){
       try{
         return runHumanInferenceEngine({d:{n,palette:pal},n,palette:pal,sol,clue:clue.map(c=>c?{...c}:null),globalClue:null,
           nonogramRows:data.nonogramRows||null,nonogramCols:data.nonogramCols||null,ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,
-          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,neutralClues:neutralClues||null,allowTrial:true,
+          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,neutralClues:neutralClues||null,allowTrial:true,
           val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),initialFilled:new Set(),revealSchedule:[]},
           new Set(vis),{forGeneratorValidation:true});
       }catch(_){return null;}
@@ -9055,7 +9185,7 @@ function createPolyPuzzle(d){
     const isBasic=c=>c&&typeof c.count==='number'&&!c.knight&&!c.direction&&!c.self&&!c.combo&&!c.poly&&!c.pattern&&!c.symmetry;
     // Kind of a clue; special clues may become plain cells too (the player
     // never "uncovers" a clue in hóc búa, so a clue that is not shown is gone).
-    const kindOf=c=>!c?null:c.code?'code':(c.sun||c.moon)?'sunmoon':c.knight?'knight':c.direction?'direction':c.self?'self':c.combo?'combo':c.poly?'poly':c.pattern?'pattern':c.symmetry?'symmetry':'basic';
+    const kindOf=c=>!c?null:c.code?'code':Array.isArray(c.sides)?'edge':(c.sun||c.moon)?'sunmoon':c.knight?'knight':c.direction?'direction':c.self?'self':c.combo?'combo':c.poly?'poly':c.pattern?'pattern':c.symmetry?'symmetry':'basic';
     const baseCount={};clueIn.forEach((c,i)=>{const k=kindOf(c);if(k&&!(neutralClues?.has(i)))baseCount[k]=(baseCount[k]||0)+1;});
     const specialKinds=Object.keys(baseCount).filter(k=>k!=='basic').length+(neutralClues?.size?1:0)+
       ([data.nonogramRows,data.ruleRows,data.blockRows,data.duoRows,data.longRows].some(a=>Array.isArray(a)&&a.some(Boolean))?1:0);
@@ -9145,7 +9275,7 @@ function createPolyPuzzle(d){
           d:{n,palette:pal},n,palette:pal,sol:data.sol,clue:data.clue.map(c=>c?{...c}:null),globalClue:null,
           nonogramRows:data.nonogramRows||null,nonogramCols:data.nonogramCols||null,
           ruleRows:data.ruleRows||null,ruleCols:data.ruleCols||null,
-          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,allowTrial:!!data.allowTrial,neutralClues:data.neutralClues||null,
+          blockRows:data.blockRows||null,blockCols:data.blockCols||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,duoRows:data.duoRows||null,duoCols:data.duoCols||null,longRows:data.longRows||null,longCols:data.longCols||null,codeRows:data.codeRows||null,codeCols:data.codeCols||null,codeCells:data.codeCells||null,sumRows:data.sumRows||null,sumCols:data.sumCols||null,colorTotals:data.colorTotals||null,allowTrial:!!data.allowTrial,neutralClues:data.neutralClues||null,
           val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
           initialFilled:new Set(),revealSchedule:[]
         },new Set(opening),{forGeneratorValidation:true});
@@ -9222,6 +9352,34 @@ function createPolyPuzzle(d){
       }
       const patternPair=patternPairs[0]||null;
 
+      // Mật mã: choose the code cells now and plant copies of the code (that
+      // never use the code cells) so that "O" lines are real information.
+      let codePick=null;
+      if(has('code')){
+        for(let g=0;g<200&&!codePick;g++){
+          const dir=Math.random()<0.5?'h':'v';
+          const r=Math.floor(Math.random()*n),c=Math.floor(Math.random()*n);
+          if(dir==='h'&&c+2>=n||dir==='v'&&r+2>=n)continue;
+          const cells=dir==='h'?[0,1,2].map(t=>at(r,c+t)):[0,1,2].map(t=>at(r+t,c));
+          if(cells.some(x=>locked.has(x)||endpoints.has(x)))continue;
+          codePick={cells,dir};
+        }
+        if(!codePick)continue;
+        const P=codePick.cells.map(j=>sol[j]);
+        const ownRow=Math.floor(codePick.cells[0]/n),ownCol=codePick.cells[0]%n;
+        const copies=n<=5?1:n<=7?2:3;let planted=0;
+        for(let g=0;g<300&&planted<copies;g++){
+          const dir=Math.random()<0.5?'h':'v';
+          const r=Math.floor(Math.random()*n),c=Math.floor(Math.random()*n);
+          if(dir==='h'&&(c+2>=n||(codePick.dir==='h'&&r===ownRow)))continue;
+          if(dir==='v'&&(r+2>=n||(codePick.dir==='v'&&c===ownCol)))continue;
+          const cells=dir==='h'?[0,1,2].map(t=>at(r,c+t)):[0,1,2].map(t=>at(r+t,c));
+          if(cells.some(x=>codePick.cells.includes(x)||locked.has(x)||endpoints.has(x)))continue;
+          cells.forEach((x,t)=>{sol[x]=P[t];locked.add(x);});planted++;
+        }
+        codePick.cells.forEach(x=>locked.add(x));
+      }
+
       const clue=Array.from({length:total},(_,i)=>{
         const o={color:sol[i],count:0};
         o.count=clueCells(i,n,o).reduce((s2,j)=>s2+(sol[j]===sol[i]?1:0),0);
@@ -9237,7 +9395,7 @@ function createPolyPuzzle(d){
         clue[pp.tgt]={color:sol[pp.tgt],pattern:true,patternPair:id,patternRole:'copy',patternSource:pp.src,patternMask:pp.mask.slice(),patternGlyph:pp.glyph};
       }
       const plainCells=()=>shuffle(Array.from({length:total},(_,i)=>i)
-        .filter(i=>clue[i]&&typeof clue[i].count==='number'&&!clue[i].knight&&!clue[i].direction&&!clue[i].self&&!clue[i].combo&&!clue[i].poly&&!clue[i].pattern));
+        .filter(i=>clue[i]&&typeof clue[i].count==='number'&&!clue[i].knight&&!clue[i].direction&&!clue[i].self&&!clue[i].combo&&!clue[i].poly&&!clue[i].pattern&&!clue[i].sides));
       const scale=k=>Math.max(1,Math.round(k*n/6));
 
       // Nhật Nguyệt: adjacent pair, different colors, blocks of equal size.
@@ -9274,6 +9432,19 @@ function createPolyPuzzle(d){
         }
         if(!k)continue;
       }
+      if(has('edge')){
+        // Quy tắc cạnh: count only on 1–3 marked sides of the 3×3 ring.
+        let k=0;
+        for(const i of plainCells()){
+          if(k>=scale(6))break;
+          const sides=pickEdgeSides(sol,i,n);
+          if(!sides)continue;
+          const o={color:sol[i],count:0,sides};
+          o.count=edgeCells(i,n,sides).filter(j=>sol[j]===sol[i]).length;
+          clue[i]=o;k++;
+        }
+        if(!k)continue;
+      }
       if(has('knight')){let k=0;for(const i of plainCells()){if(k>=scale(4))break;if(knightOneCount(sol,i,n)!==1)continue;clue[i]={color:sol[i],count:1,knight:true};k++;}if(!k)continue;}
       if(has('self')){let k=0;for(const i of plainCells()){if(k>=scale(4))break;if(neigh(i,n).some(j=>clue[j]?.self))continue;const o={color:sol[i],count:0,self:true};o.count=clueCells(i,n,o).reduce((a,j)=>a+(sol[j]===sol[i]?1:0),0);clue[i]=o;k++;}}
       if(has('combo')){let k=0;for(const i of plainCells()){if(k>=scale(4))break;const ax=shuffle(['h','v']).map(a=>({a,L:runLen(sol,i,a)})).find(x=>x.L>=2);if(!ax)continue;clue[i]={color:sol[i],combo:ax.a,run:ax.L};k++;}if(!k)continue;}
@@ -9303,7 +9474,9 @@ function createPolyPuzzle(d){
 
       // Side rule (at most one).
       let nonogramRows=null,nonogramCols=null,ruleRows=null,ruleCols=null,blockRows=null,blockCols=null,duoRows=null,duoCols=null,longRows=null,longCols=null;
-      let codeRows=null,codeCols=null,codeCells=null;
+      let codeRows=null,codeCols=null,codeCells=null,sumRows=null,sumCols=null;
+      // QUY TẮC TỔNG MÀU: totals of every color on the whole board.
+      const colorTotals=has('sum')?Array.from({length:pal},(_,c)=>sol.filter(x=>x===c).length):null;
       const sideLines=shuffle([...Array(n).keys()].flatMap(k=>[['row',k],['col',k]]));
       const lineTarget=has('rule')
         ? 2+Math.floor(Math.random()*Math.max(1,Math.round(n/3)))
@@ -9329,35 +9502,36 @@ function createPolyPuzzle(d){
           (axis==='row'?ruleRows:ruleCols)[idx]=rule;k++;
         }
         if(!k)continue;
-      }else if(has('code')){
-        // Three consecutive ordinary clue cells become code cells I, II, III.
-        const free=i=>clue[i]&&typeof clue[i].count==='number'&&!locked.has(i)&&!endpoints.has(i)&&!neutralClues?.has(i);
-        let cc=null,dir='h';
-        for(let g=0;g<200&&!cc;g++){
-          dir=Math.random()<0.5?'h':'v';
-          const r=Math.floor(Math.random()*n),c=Math.floor(Math.random()*n);
-          const cells=dir==='h'?[0,1,2].map(t=>at(r,c+t)):[0,1,2].map(t=>at(r+t,c));
-          if(dir==='h'&&c+2>=n||dir==='v'&&r+2>=n)continue;
-          if(cells.every(free))cc=cells;
+      }else if(false){
+        sumRows=Array(n).fill(null);sumCols=Array(n).fill(null);
+        let k=0;const want=2+Math.floor(Math.random()*Math.max(2,Math.round(n/2)));
+        for(const [axis,idx] of sideLines){
+          if(k>=want)break;
+          const size=2+Math.floor(Math.random()*(pal-2));          // 2..pal-1 colors
+          const colors=shuffle([...Array(pal).keys()]).slice(0,size).sort((x,y)=>x-y);
+          const count=lineCellsOf(axis,idx).filter(j=>colors.includes(sol[j])).length;
+          (axis==='row'?sumRows:sumCols)[idx]={colors,count};k++;
         }
-        if(!cc)continue;
+      }else if(has('code')){
+        // Code cells I, II, III (chosen above). Side data never goes on the
+        // line that holds the code; "O" = a copy that does not use code cells.
+        const cc=codePick.cells,dir=codePick.dir;
         cc.forEach((j,t)=>{clue[j]={color:sol[j],code:t+1,codeDir:dir};});
         codeCells=cc;
         const P=cc.map(j=>sol[j]);
-        const has=cells=>{for(let t=0;t+2<cells.length;t++)if(sol[cells[t]]===P[0]&&sol[cells[t+1]]===P[1]&&sol[cells[t+2]]===P[2])return true;return false;};
+        const has=cells=>{for(let t=0;t+2<cells.length;t++){
+          if(cc.includes(cells[t])||cc.includes(cells[t+1])||cc.includes(cells[t+2]))continue;
+          if(sol[cells[t]]===P[0]&&sol[cells[t+1]]===P[1]&&sol[cells[t+2]]===P[2])return true;}return false;};
         codeRows=Array(n).fill(null);codeCols=Array(n).fill(null);
         const own=dir==='h'?'row'+Math.floor(cc[0]/n):'col'+(cc[0]%n);
-        const want=2+Math.floor(Math.random()*Math.max(2,Math.round(n/2)));
-        let k=0,yes=0,no=0;
-        for(const [axis,idx] of sideLines){
-          if(k>=want)break;
-          if(axis+idx===own)continue;
-          const h=has(lineCellsOf(axis,idx));
-          if(h?yes>no+1:no>yes+1)continue;           // keep O and X mixed
-          (axis==='row'?codeRows:codeCols)[idx]={has:h};k++;h?yes++:no++;
-        }
-        if(k<2)continue;
-      }else if(has('duo')||has('long')){
+        const lines=sideLines.filter(([axis,idx])=>axis+idx!==own).map(([axis,idx])=>({axis,idx,h:has(lineCellsOf(axis,idx))}));
+        const yes=lines.filter(x=>x.h),no=shuffle(lines.filter(x=>!x.h));
+        if(!yes.length)continue;
+        const want=Math.max(2,Math.round(n*0.6));
+        const pickYes=yes.slice(0,Math.min(yes.length,Math.ceil(want/2)));
+        const pickNo=no.slice(0,Math.max(1,want-pickYes.length));
+        for(const x of [...pickYes,...pickNo])(x.axis==='row'?codeRows:codeCols)[x.idx]={has:x.h};
+            }else if(has('duo')||has('long')){
         const mode=has('duo')?'duo':'long';
         const R=Array(n).fill(null),C=Array(n).fill(null);
         let k=0;const want=2+Math.floor(Math.random()*Math.max(2,Math.round(n/2)));
@@ -9378,7 +9552,7 @@ function createPolyPuzzle(d){
         }
       }
 
-      const data={sol,clue,neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,codeRows,codeCols,codeCells};
+      const data={sol,clue,neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,sumRows,sumCols,colorTotals,codeRows,codeCols,codeCells};
 
       // QUY TẮC HÓC BÚA: every clue visible from the start, the rest plain;
       // no clue can be used on its own at the start, the solve needs
@@ -9399,14 +9573,14 @@ function createPolyPuzzle(d){
           mixedMode:has('neutral'),symmetryMode:has('symmetry'),deceitMode:has('deceit'),
           patternMode:has('pattern'),nonogramMode:has('nonogram'),ruleMode:has('rule'),polyMode:has('poly'),
           patternPair:patternPair?{sourceIndex:patternPair.src,targetIndex:patternPair.tgt}:null,
-          neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,
+          neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,sumRows,sumCols,colorTotals,
           generationQuality:400
         };
       }
       const opening=new Set(shuffle(Array.from({length:total},(_,i)=>i).filter(i=>clue[i]&&!neutralClues?.has(i))).slice(0,Math.max(2,Math.round(n*n/8))+(pal>3?n:0)));
       let sim=run(data,opening);
       if(!sim?.ok){
-        const tmp={d:{n,palette:pal},sol,clue,globalClue:null,neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,codeRows,codeCols,codeCells,
+        const tmp={d:{n,palette:pal},sol,clue,globalClue:null,neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,sumRows,sumCols,colorTotals,codeRows,codeCols,codeCells,
           initialRevealed:new Set(opening),initialFilled:new Set()};
         if(!augmentOpeningForNoGuess(tmp,(n>=7?24:14)+(pal>3?16:0)))continue;
         opening.clear();tmp.initialRevealed.forEach(i=>opening.add(i));
@@ -9451,7 +9625,9 @@ function createPolyPuzzle(d){
           (has('block')&&without({...data,blockRows:null,blockCols:null}))||
           (has('duo')&&without({...data,duoRows:null,duoCols:null}))||
           (has('long')&&without({...data,longRows:null,longCols:null}))||
-          (has('code')&&without({...data,codeRows:null,codeCols:null}));
+          (has('code')&&without({...data,codeRows:null,codeCols:null}))||
+
+          (has('edge')&&without(strip(c=>Array.isArray(c.sides))));
         if(weak)continue;
       }
       sim=run(data,opening);
@@ -9467,7 +9643,7 @@ function createPolyPuzzle(d){
         patternMode:has('pattern'),nonogramMode:has('nonogram'),ruleMode:has('rule'),
         polyMode:has('poly'),
         patternPair:patternPair?{sourceIndex:patternPair.src,targetIndex:patternPair.tgt}:null,
-        neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,
+        neutralClues,nonogramRows,nonogramCols,ruleRows,ruleCols,blockRows,blockCols,duoRows,duoCols,longRows,longCols,codeRows,codeCols,codeCells,sumRows,sumCols,colorTotals,
         generationQuality:330+(sim.trace?.length||0)*6
       };
     }
@@ -9657,7 +9833,7 @@ function createSolvablePuzzle(d){
   function lineRoleStats(g){
     const n=g.d.n,total=n*n;
     const base=()=>({d:{n,palette:(arguments[0]?.d?.palette)||COLOR_COUNT},n,palette:(arguments[0]?.d?.palette)||COLOR_COUNT,sol:g.sol,clue:g.clue.map(c=>c?{...c}:null),globalClue:null,
-      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,allowTrial:!!g.allowTrial,
+      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,allowTrial:!!g.allowTrial,
       neutralClues:g.neutralClues||null,val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
       initialFilled:new Set(g.initialFilled||[]),revealSchedule:[]});
     let r;
@@ -9667,7 +9843,7 @@ function createSolvablePuzzle(d){
     const rev=new Set(g.initialRevealed),wc=new Map();
     let paints=0,need=0;
     const onLine=new Set();
-    for(const [arr,axis] of [[g.nonogramRows,'row'],[g.nonogramCols,'col'],[g.ruleRows,'row'],[g.ruleCols,'col'],[g.duoRows,'row'],[g.duoCols,'col'],[g.longRows,'row'],[g.longCols,'col'],[g.codeRows,'row'],[g.codeCols,'col']]){
+    for(const [arr,axis] of [[g.nonogramRows,'row'],[g.nonogramCols,'col'],[g.ruleRows,'row'],[g.ruleCols,'col'],[g.duoRows,'row'],[g.duoCols,'col'],[g.longRows,'row'],[g.longCols,'col'],[g.codeRows,'row'],[g.codeCols,'col'],[g.sumRows,'row'],[g.sumCols,'col']]){
       if(!Array.isArray(arr))continue;
       arr.forEach((e,k)=>{if(e)for(let t=0;t<n;t++)onLine.add(axis==='row'?k*n+t:t*n+k);});
     }
@@ -9678,7 +9854,7 @@ function createSolvablePuzzle(d){
       if(st.line)need++;
       else if(onLine.has(st.index)){
         const w=propagateClueDomains({...base(),val:val.slice(),wrongColors:wc,
-          nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,duoRows:null,duoCols:null,longRows:null,longCols:null,codeRows:null,codeCols:null},rev);
+          nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,duoRows:null,duoCols:null,longRows:null,longCols:null,codeRows:null,codeCols:null,sumRows:null,sumCols:null},rev);
         const d=w.domains[st.index];
         if(!w.contradiction&&(d&(d-1))!==0)need++;
       }
@@ -9689,8 +9865,8 @@ function createSolvablePuzzle(d){
 
   function boostLineRole(g){
     if(!g || g._lineBoosted)return g;
-    const hasLines=[g.nonogramRows,g.nonogramCols,g.ruleRows,g.ruleCols,g.duoRows,g.duoCols,g.longRows,g.longCols,g.codeRows,g.codeCols].some(a=>Array.isArray(a)&&a.some(Boolean));
-    const duoLong=[g.duoRows,g.duoCols,g.longRows,g.longCols].some(a=>Array.isArray(a)&&a.some(Boolean));
+    const hasLines=[g.nonogramRows,g.nonogramCols,g.ruleRows,g.ruleCols,g.duoRows,g.duoCols,g.longRows,g.longCols,g.codeRows,g.codeCols,g.sumRows,g.sumCols].some(a=>Array.isArray(a)&&a.some(Boolean));
+    const duoLong=[g.duoRows,g.duoCols,g.longRows,g.longCols,g.sumRows,g.sumCols].some(a=>Array.isArray(a)&&a.some(Boolean));
     const codeLines=[g.codeRows,g.codeCols].some(a=>Array.isArray(a)&&a.some(Boolean));
     if(!hasLines)return g;
     g._lineBoosted=true;
@@ -9709,10 +9885,23 @@ function createSolvablePuzzle(d){
         if(nono?.[k]||rule?.[k]||duo?.[k]||lng?.[k])continue;
         const cdl=axis==='row'?g.codeRows:g.codeCols;
         if(cdl?.[k])continue;
+        const sml=axis==='row'?g.sumRows:g.sumCols;
+        if(sml?.[k])continue;
+        if(sml){
+          if([...(g.sumRows||[]),...(g.sumCols||[])].filter(Boolean).length>=Math.ceil(n*1.25))continue;
+          const pal=g.d.palette||3,size=2+Math.floor(Math.random()*(pal-2));
+          const colors=shuffle([...Array(pal).keys()]).slice(0,size).sort((x,y)=>x-y);
+          slots.push({axis,k,arr:sml,val:{colors,count:lineCells(axis,k).filter(j=>colors.includes(g.sol[j])).length}});
+          continue;
+        }
         if(cdl&&g.codeCells){
           if([...(g.codeRows||[]),...(g.codeCols||[])].filter(Boolean).length>=Math.ceil(n*1.25))continue;   // never every line
-          const P=g.codeCells.map(j=>g.sol[j]),cells=lineCells(axis,k);
-          let h=false;for(let t=0;t+2<cells.length;t++)if(g.sol[cells[t]]===P[0]&&g.sol[cells[t+1]]===P[1]&&g.sol[cells[t+2]]===P[2])h=true;
+          const cc=g.codeCells,cells=lineCells(axis,k);
+          if(cc.every(j=>cells.includes(j)))continue;                 // the code's own line: no data
+          const P=cc.map(j=>g.sol[j]);
+          let h=false;for(let t=0;t+2<cells.length;t++){
+            if(cc.includes(cells[t])||cc.includes(cells[t+1])||cc.includes(cells[t+2]))continue;
+            if(g.sol[cells[t]]===P[0]&&g.sol[cells[t+1]]===P[1]&&g.sol[cells[t+2]]===P[2])h=true;}
           slots.push({axis,k,arr:cdl,val:{has:h}});
           continue;
         }
@@ -9887,7 +10076,7 @@ function createSolvablePuzzle(d){
   function comboSymStats(g){
     const n=g.d.n,total=n*n;
     const mk=clue=>({d:{n,palette:COLOR_COUNT},n,palette:COLOR_COUNT,sol:g.sol,clue:clue.map(c=>c?{...c}:null),globalClue:null,
-      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,allowTrial:!!g.allowTrial,
+      nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,allowTrial:!!g.allowTrial,
       neutralClues:g.neutralClues||null,val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
       initialFilled:new Set(g.initialFilled||[]),revealSchedule:[]});
     const d0=mk(g.clue);(g.initialFilled||new Set()).forEach(i=>{d0.val[i]=g.sol[i];});
@@ -9957,7 +10146,7 @@ function createSolvablePuzzle(d){
   function ruleShareStats(g,strips){
     const n=g.d.n,total=n*n,pal=g.d.palette||3;
     const mk=over=>({d:{n,palette:pal},n,palette:pal,sol:g.sol,clue:g.clue.map(c=>c?{...c}:null),globalClue:null,
-      blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,allowTrial:!!g.allowTrial,neutralClues:g.neutralClues||null,
+      blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,allowTrial:!!g.allowTrial,neutralClues:g.neutralClues||null,
       val:Array(total).fill(-1),marks:new Map(),wrongColors:new Map(),spentClues:new Set(),
       initialFilled:new Set(g.initialFilled||[]),revealSchedule:[],...over});
     let r;try{const d0=mk({});(g.initialFilled||new Set()).forEach(i=>{d0.val[i]=g.sol[i];});r=runHumanInferenceEngine(d0,new Set(g.initialRevealed),{});}catch(_){return null;}
@@ -9978,6 +10167,35 @@ function createSolvablePuzzle(d){
     }
     const out={};for(const [k] of so)out[k]=p?(cnt[k]||0)/p:0;
     return out;
+  }
+
+  // QUY TẮC CẠNH must carry a large share of the solve (≥ ~25–30%).
+  function boostEdgeRole(g){
+    if(!g||g._edgeBoosted||!g.clue.some(c=>Array.isArray(c?.sides)))return g;
+    g._edgeBoosted=true;
+    const n=g.d.n,t0=performance.now(),budget=n>=8?6000:4000;
+    const strips={edge:()=>({clue:g.clue.map(c=>c&&Array.isArray(c.sides)?{color:c.color}:c)})};
+    let st=ruleShareStats(g,strips);if(!st)return g;
+    const basic=()=>shuffle(g.clue.map((c,i)=>i).filter(i=>{const c=g.clue[i];
+      return c&&typeof c.count==='number'&&!c.knight&&!c.direction&&!c.self&&!c.sides&&!g.neutralClues?.has(i)&&!g.initialRevealed.has(i);}));
+    // Turning a clue into an edge clue may also use clues shown at the start.
+    const convertible=()=>shuffle(g.clue.map((c,i)=>i).filter(i=>{const c=g.clue[i];
+      return c&&typeof c.count==='number'&&!c.knight&&!c.direction&&!c.self&&!c.sides&&!g.neutralClues?.has(i);}));
+    const toEdge=()=>{const i=convertible()[0];if(i===undefined)return null;
+      const sides=pickEdgeSides(g.sol,i,n);if(!sides)return null;
+      const saved=g.clue[i];g.clue[i]={color:g.sol[i],count:edgeCells(i,n,sides).filter(j=>g.sol[j]===g.sol[i]).length,sides};
+      return ()=>{g.clue[i]=saved;};};
+    const dropBasic=()=>{const i=basic()[0];if(i===undefined)return null;const saved=g.clue[i];g.clue[i]=null;return ()=>{g.clue[i]=saved;};};
+    for(let guard=0;guard<120&&performance.now()-t0<budget&&st.edge<0.27;guard++){
+      const open0=new Set(g.initialRevealed);
+      const undo=(guard%2?dropBasic:toEdge)();if(!undo)continue;
+      let next=ruleShareStats(g,strips);
+      if(!next&&augmentOpeningForNoGuess(g,3))next=ruleShareStats(g,strips);
+      if(next&&next.edge>st.edge+0.005){st=next;}else{undo();g.initialRevealed=open0;}
+    }
+    validateNoGuessPath(g);
+    g.edgeShare=st.edge;
+    return g;
   }
 
   function boostBlockRoles(g){
@@ -10063,6 +10281,7 @@ function createSolvablePuzzle(d){
     });
     if(knightFixed && !validateNoGuessPath(generated))augmentOpeningForNoGuess(generated,8);
     boostLineRole(generated);
+    boostEdgeRole(generated);
     // Mật mã: hide code cells again if the balancing pass revealed any.
     if(Array.isArray(generated.codeCells)){
       for(const j of generated.codeCells){
@@ -10104,7 +10323,7 @@ function createSolvablePuzzle(d){
     try{
       r=runHumanInferenceEngine({d:{n,palette:pal},n,palette:pal,sol:g.sol,clue:g.clue.map(c=>c?{...c}:null),globalClue:null,
         nonogramRows:g.nonogramRows||null,nonogramCols:g.nonogramCols||null,ruleRows:g.ruleRows||null,ruleCols:g.ruleCols||null,
-        blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,allowTrial:!!g.allowTrial,neutralClues:g.neutralClues||null,
+        blockRows:g.blockRows||null,blockCols:g.blockCols||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,duoRows:g.duoRows||null,duoCols:g.duoCols||null,longRows:g.longRows||null,longCols:g.longCols||null,codeRows:g.codeRows||null,codeCols:g.codeCols||null,codeCells:g.codeCells||null,sumRows:g.sumRows||null,sumCols:g.sumCols||null,colorTotals:g.colorTotals||null,allowTrial:!!g.allowTrial,neutralClues:g.neutralClues||null,
         val,marks:new Map(),wrongColors:new Map(),spentClues:new Set(),initialFilled:new Set(g.initialFilled||[]),revealSchedule:[]},
         new Set(g.initialRevealed),{});
     }catch(_){r=null;}
@@ -10258,7 +10477,9 @@ function createSolvablePuzzle(d){
       btn.type='button';
       btn.className='color-choice';
       btn.dataset.color=String(colorIndex);
-      btn.innerHTML=`<i style="background:${color.hex}"></i><span>${color.name}</span>`;
+      const tot=game.colorTotals?.[colorIndex];
+      btn.innerHTML=`<i style="background:${color.hex}"></i><span>${color.name}</span>`+
+        (typeof tot==='number'?`<b class="color-total" aria-label="Tổng ${tot} ô">${tot}</b>`:'');
       btn.setAttribute('aria-label',`Chọn màu ${color.name}`);
 
       btn.addEventListener('click',()=>{
@@ -10472,7 +10693,7 @@ function createSolvablePuzzle(d){
     let overlay=boardShell.querySelector('.nonogram-overlay');
     const hasRuleLines=!!(game.ruleRows?.some(Boolean)||game.ruleCols?.some(Boolean)||game.blockRows?.some(Boolean)||game.blockCols?.some(Boolean)||
       game.duoRows?.some(Boolean)||game.duoCols?.some(Boolean)||game.longRows?.some(Boolean)||game.longCols?.some(Boolean)||
-      game.codeRows?.some(Boolean)||game.codeCols?.some(Boolean));
+      game.codeRows?.some(Boolean)||game.codeCols?.some(Boolean)||game.sumRows?.some(Boolean)||game.sumCols?.some(Boolean));
     if(!(game.nonogramMode||hasRuleLines) || game.solvedClean){
       if(overlay)overlay.remove();
       return;
@@ -10495,6 +10716,15 @@ function createSolvablePuzzle(d){
       const chip=document.createElement('span');
       chip.className='nonogram-line-clue';
       if(!entry){chip.classList.add('is-empty');chip.textContent='0';return chip;}
+      if(entry.sumLine){
+        chip.classList.add('sum-chip');
+        chip.innerHTML=`<span class="dl-num${isDeceitNumber(entry.count)?' deceit-num':''}">${shownNumber(entry.count)}</span><span class="sum-dots">${entry.colors.map(c=>`<i style="background:${getGameColor(c).hex}"></i>`).join('')}</span>`;
+        chip.dataset.axis=axis;chip.dataset.index=String(index);
+        chip.setAttribute('role','button');
+        chip.setAttribute('aria-label',`Quy tắc tổng màu: ${shownNumber(entry.count)} ô`);
+        chip.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();toggleNonogramFocus(axis,index,chip);});
+        return chip;
+      }
       if(entry.codeLine){
         chip.classList.add('code-chip');
         chip.innerHTML=entry.has?CODE_HAS_SVG:CODE_NOT_SVG;
@@ -10573,8 +10803,9 @@ function createSolvablePuzzle(d){
     const dCols=(game.duoCols||[]).map(e=>e&&{...e,duo:true}),dRows=(game.duoRows||[]).map(e=>e&&{...e,duo:true});
     const lCols=(game.longCols||[]).map(e=>e&&{...e,long:true}),lRows=(game.longRows||[]).map(e=>e&&{...e,long:true});
     const cCols=(game.codeCols||[]).map(e=>e&&{...e,codeLine:true}),cRows=(game.codeRows||[]).map(e=>e&&{...e,codeLine:true});
-    for(let c=0;c<game.d.n;c++)cols.appendChild(retireLineChip(makeChip(lineCols[c]||rCols[c]||bCols[c]||dCols[c]||lCols[c]||cCols[c],'col',c),'col',c));
-    for(let r=0;r<game.d.n;r++)rows.appendChild(retireLineChip(makeChip(lineRows[r]||rRows[r]||bRows[r]||dRows[r]||lRows[r]||cRows[r],'row',r),'row',r));
+    const sCols=(game.sumCols||[]).map(e=>e&&{...e,sumLine:true}),sRows=(game.sumRows||[]).map(e=>e&&{...e,sumLine:true});
+    for(let c=0;c<game.d.n;c++)cols.appendChild(retireLineChip(makeChip(lineCols[c]||rCols[c]||bCols[c]||dCols[c]||lCols[c]||cCols[c]||sCols[c],'col',c),'col',c));
+    for(let r=0;r<game.d.n;r++)rows.appendChild(retireLineChip(makeChip(lineRows[r]||rRows[r]||bRows[r]||dRows[r]||lRows[r]||cRows[r]||sRows[r],'row',r),'row',r));
 
     positionNonogramOverlay();
     requestAnimationFrame(positionNonogramOverlay);
@@ -10851,6 +11082,9 @@ function render(){
           }else{
             const num=document.createElement('span');
             num.className=clue.self ? 'num clue-self-num' : 'num';
+            if(Array.isArray(clue.sides))for(const sd of clue.sides){
+              const sp=document.createElement('span');sp.className=`edge-spike edge-${sd}`;sp.style.color=fg;sp.innerHTML=EDGE_SVG;b.append(sp);
+            }
             num.textContent=shownNumber(clue.combo ? clue.run : clue.count);
             num.classList.toggle('deceit-num',isDeceitNumber(clue.combo ? clue.run : clue.count));
             num.style.color=fg;
@@ -11152,7 +11386,8 @@ function render(){
     const targetCells=[origin];
 
     // Σ: light up both 3×3 areas of the pair.
-    let focusCells=clueCells(i,game.d.n,clue);
+    // Nhật nguyệt and mật mã reach the whole board: highlight nothing.
+    let focusCells=(clue.sun||clue.moon||clue.code)?[]:clueCells(i,game.d.n,clue);
     if(clue.pattern){
       const other=game.clue.findIndex((q,k2)=>q?.pattern && q.patternPair===clue.patternPair && k2!==i);
       const region=c0=>[c0,...neigh(c0,game.d.n)];
@@ -11194,7 +11429,11 @@ function render(){
     const colorChip=
       `<span class="clue-explain-color-chip" style="--clue-explain-chip:${color.hex}" aria-label="Màu ${color.name}" role="img"></span>`;
 
-    if(clue.code){
+    if(Array.isArray(clue.sides)){
+      const nm={t:'trên',r:'phải',b:'dưới',l:'trái'};
+      clueExplainTitle.innerHTML=`<b>QUY TẮC CẠNH</b> · ${colorChip}`;
+      clueExplainText.innerHTML=`Có đúng <b>${shownLabel(clue.count)} ô</b> màu ${colorChip} trên ${clue.sides.length===1?'cạnh':'các cạnh'} <b>${clue.sides.map(x=>nm[x]).join(', ')}</b> (có hình gai) quanh ô này.`;
+    }else if(clue.code){
       clueExplainTitle.innerHTML=`<b>QUY TẮC MẬT MÃ</b>`;
       clueExplainText.innerHTML=`Ô số <b>${CODE_NUM[clue.code]}</b> của mã. Mã gồm 3 ô liền nhau, đọc ${clue.codeDir==='h'?'từ trái sang phải':'từ trên xuống dưới'}; màu của ô I → II → III là mã.`;
     }else if(clue.sun||clue.moon){
@@ -11278,7 +11517,8 @@ function render(){
       || (blockEntry && {...blockEntry,block:true})
       || ((axis==='col'?game.duoCols:game.duoRows)?.[index] && {...(axis==='col'?game.duoCols:game.duoRows)[index],duo:true})
       || ((axis==='col'?game.longCols:game.longRows)?.[index] && {...(axis==='col'?game.longCols:game.longRows)[index],long:true})
-      || ((axis==='col'?game.codeCols:game.codeRows)?.[index] && {...(axis==='col'?game.codeCols:game.codeRows)[index],codeLine:true});
+      || ((axis==='col'?game.codeCols:game.codeRows)?.[index] && {...(axis==='col'?game.codeCols:game.codeRows)[index],codeLine:true})
+      || ((axis==='col'?game.sumCols:game.sumRows)?.[index] && {...(axis==='col'?game.sumCols:game.sumRows)[index],sumLine:true});
     if(!entry)return;
     const n=game.d.n;
 
@@ -11305,7 +11545,9 @@ function render(){
     const colorChip=
       `<span class="clue-explain-color-chip" style="--clue-explain-chip:${color.hex}" aria-label="Màu ${color.name}" role="img"></span>`;
 
-    if(entry.codeLine){
+    if(entry.sumLine){
+      clueExplainTitle.innerHTML=`<b>QUY TẮC TỔNG MÀU</b>`;
+    }else if(entry.codeLine){
       clueExplainTitle.innerHTML=`<b>QUY TẮC MẬT MÃ</b>`;
     }else if(entry.duo){
       clueExplainTitle.innerHTML=`<b>QUY TẮC DUO</b>`;
@@ -11320,9 +11562,11 @@ function render(){
     }else
     clueExplainTitle.innerHTML=`<b>QUY TẮC NONOGRAM</b> · ${colorChip}`;
     const lineWord=axis==='col'?'cột':'hàng';
-    clueExplainText.innerHTML=entry.codeLine
+    clueExplainText.innerHTML=entry.sumLine
+      ? `Tổng số ô mang màu ${entry.colors.map(c=>`<span class="clue-explain-color-chip" style="--clue-explain-chip:${getGameColor(c).hex}" role="img"></span>`).join(' hoặc ')} trong ${lineWord} này là <b>${shownLabel(entry.count)}</b>.`
+      : entry.codeLine
       ? (entry.has
-          ? `Mã (màu của ô I → II → III) <b>xuất hiện liền nhau đúng thứ tự</b> trong ${lineWord} này.`
+          ? `Có một <b>bản sao</b> của mã (màu ô I → II → III, không tính chính các ô mã) xuất hiện liền nhau đúng thứ tự trong ${lineWord} này.`
           : `Mã (màu của ô I → II → III) <b>không xuất hiện</b> liền nhau đúng thứ tự trong ${lineWord} này. Thứ tự ngược không được tính.`)
       : entry.duo
       ? `Có đúng <b>${shownLabel(entry.count)} khối dài 2 ô</b> trong ${lineWord} này. Một khối là các ô cùng màu nằm liền nhau; màu nào cũng được tính.`
@@ -11682,7 +11926,7 @@ board.addEventListener('click',e=>{
       palette:game.d.palette,
       clue:game.clue,
       globalClue:game.globalClue,
-      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
       nonogramCols:game.nonogramCols||null,
       revealSchedule:game.revealSchedule||[]
     };
@@ -12244,6 +12488,7 @@ board.addEventListener('click',e=>{
     if(clue?.combo)return 'Clue combo';
     if(clue?.symmetry)return 'Clue đối xứng';
     if(clue?.pattern)return 'Clue hình mẫu';
+    if(Array.isArray(clue?.sides))return 'Clue cạnh';
     if(clue?.knight)return 'Clue quân mã';
     if(clue?.self)return 'Clue chính nó';
     if(clue?.direction)return 'Clue chỉ hướng';
@@ -12662,9 +12907,9 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map(),
@@ -13643,7 +13888,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map(),
@@ -13855,7 +14100,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:game.clue,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:assumedFixed,
         marks:new Map(
@@ -13897,7 +14142,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:detailVisibleMarksToMap(visibleX),
@@ -14049,7 +14294,7 @@ board.addEventListener('click',e=>{
         sol:game.sol,
         clue:clueCopy,
         globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
         val:fixed,
         marks:new Map([...marks.entries()].map(([i,set])=>[i,new Set(set)])),
@@ -14163,7 +14408,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:new Map([...marks.entries()].map(([i,set])=>[i,new Set(set)])),
@@ -14264,7 +14509,7 @@ board.addEventListener('click',e=>{
       sol:game.sol,
       clue:game.clue,
       globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
       val:fixed,
       marks:cloneStateMap(marks),
@@ -14356,7 +14601,7 @@ board.addEventListener('click',e=>{
           sol:game.sol,
           clue:game.clue,
           globalClue:game.globalClue,
-        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+        nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
         nonogramCols:game.nonogramCols||null,
           val:Object.assign([],fixed,{[i]:alt}),
           marks:cloneStateMap(marks),
@@ -14444,7 +14689,7 @@ function buildDetailedSolutionSteps(){
       palette:game.d.palette,
       clue:game.clue.map(c=>c ? {...c} : null),
       globalClue:game.globalClue ? {...game.globalClue} : null,
-      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
+      nonogramRows:game.nonogramRows||null,ruleRows:game.ruleRows||null,ruleCols:game.ruleCols||null,blockRows:game.blockRows||null,blockCols:game.blockCols||null,duoRows:game.duoRows||null,duoCols:game.duoCols||null,longRows:game.longRows||null,longCols:game.longCols||null,codeRows:game.codeRows||null,codeCols:game.codeCols||null,codeCells:game.codeCells||null,sumRows:game.sumRows||null,sumCols:game.sumCols||null,colorTotals:game.colorTotals||null,allowTrial:!!game.allowTrial,neutralClues:game.neutralClues||null,
       nonogramCols:game.nonogramCols||null,
       initialFilled:new Set(game.initialFilled||[]),
       revealSchedule:[...(game.revealSchedule||[])],
@@ -14492,6 +14737,19 @@ function buildDetailedSolutionSteps(){
         return line.why==='fill'
           ? {title:'📏 Số Nonogram',text:`<b>${where}</b> cần <b>${line.count} ô</b> ${ch}, và chỉ còn vừa đủ chỗ → các ô đó đều là ${ch}.`}
           : {title:'📏 Số Nonogram',text:`<b>${where}</b> cần <b>${line.count} ô</b> ${ch} và đã đủ → các ô còn lại không là ${ch}.`};
+      }
+      if(line.type==='totals'){
+        return line.why==='fill'
+          ? {title:'Quy tắc tổng màu',text:`Cả bàn có đúng <b>${numLabel(line.count)} ô</b> ${ch}, và chỉ còn vừa đủ chỗ → các ô còn trống có thể là ${ch} đều là ${ch}.`}
+          : {title:'Quy tắc tổng màu',text:`Cả bàn có đúng <b>${numLabel(line.count)} ô</b> ${ch} và đã đủ → các ô còn lại không là ${ch}.`};
+      }
+      if(line.type==='sum'){
+        const set=line.colors.map(c=>detailColorName(c)).join(' + ');
+        return line.why==='fill'
+          ? {title:'Quy tắc tổng màu',text:`<b>${where}</b> có đúng <b>${numLabel(line.count)} ô</b> ${set}, và chỉ còn vừa đủ chỗ → ô này là ${ch}.`}
+          : line.why==='only'
+          ? {title:'Quy tắc tổng màu',text:`<b>${where}</b> cần <b>${numLabel(line.count)} ô</b> ${set} và chỉ còn vừa đủ chỗ → các ô đó không thể là ${ch}.`}
+          : {title:'Quy tắc tổng màu',text:`<b>${where}</b> đã đủ <b>${numLabel(line.count)} ô</b> ${set} → các ô còn lại không là ${ch}.`};
       }
       if(line.type==='code'){
         const what=line.has?'có mã I→II→III liền nhau':'không có mã I→II→III liền nhau';
@@ -15158,10 +15416,10 @@ function showDetailedStep(step,pointer,phase='reason'){
       // If the board WITHOUT its line data (Nonogram numbers, Chủ-Tớ) would
       // not refute this color, the line data is the decisive link: name it first.
       let linesFirst=false;
-      if(game.nonogramRows||game.nonogramCols||game.ruleRows||game.ruleCols||game.blockRows||game.blockCols||game.duoRows||game.duoCols||game.longRows||game.longCols||game.codeRows||game.codeCols){
+      if(game.nonogramRows||game.nonogramCols||game.ruleRows||game.ruleCols||game.blockRows||game.blockCols||game.duoRows||game.duoCols||game.longRows||game.longCols||game.codeRows||game.codeCols||game.sumRows||game.sumCols){
         try{
           const r2=propagateClueDomains({...game,val:hypVal,wrongColors:wrong,
-            nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,blockRows:null,blockCols:null,duoRows:null,duoCols:null,longRows:null,longCols:null,codeRows:null,codeCols:null},game.revealedClues);
+            nonogramRows:null,nonogramCols:null,ruleRows:null,ruleCols:null,blockRows:null,blockCols:null,duoRows:null,duoCols:null,longRows:null,longCols:null,codeRows:null,codeCols:null,sumRows:null,sumCols:null},game.revealedClues);
           linesFirst=!r2?.contradiction;
         }catch(_){}
       }
@@ -15971,6 +16229,10 @@ function cancelNewGameIntro(){
     {n:5,easy:false,two:true},
     {n:6,easy:false,two:true},
     {n:7,easy:false,two:true},
+    // QUY TẮC CẠNH / TỔNG MÀU
+    {n:6,easy:false,edge:true},
+    {n:7,easy:false,edge:true},
+    {n:6,easy:false,sum:true},
     // QUY TẮC MẬT MÃ
     {n:6,easy:false,code:true},
     {n:7,easy:false,code:true},
@@ -16027,7 +16289,7 @@ function cancelNewGameIntro(){
   }
 
   function boardSpecKey(x){
-    return `${x.n}:${x.code?'code':x.sunmoon?'sunmoon':x.two?'two':x.duo?'duo':x.long?'long':x.tough?'tough':x.poly?'poly':x.block?'block':x.deceit?'deceit':x.combo?'combo':x.rule?'rule-'+x.rule:x.symmetry?'symmetry':(x.mixed?'mixed':(x.easy?'easy':'standard'))}`;
+    return `${x.n}:${x.edge?'edge':x.sum?'sum':x.code?'code':x.sunmoon?'sunmoon':x.two?'two':x.duo?'duo':x.long?'long':x.tough?'tough':x.poly?'poly':x.block?'block':x.deceit?'deceit':x.combo?'combo':x.rule?'rule-'+x.rule:x.symmetry?'symmetry':(x.mixed?'mixed':(x.easy?'easy':'standard'))}`;
   }
 
   // On-demand puzzle generation. No future-board cache is kept in memory.
@@ -16055,7 +16317,7 @@ function cancelNewGameIntro(){
 
   // 4-color boards: from 6×6 up, never with Chủ-Tớ (rule specs, 8×8 combo).
   function fourColorEligible(x){
-    if(x.custom || x.tough || x.code || x.sunmoon || x.two || x.duo || x.long || x.n<6 || x.n>=9 || x.rule || x.easy)return false;
+    if(x.custom || x.tough || x.edge || x.sum || x.code || x.sunmoon || x.two || x.duo || x.long || x.n<6 || x.n>=9 || x.rule || x.easy)return false;
     if(x.combo && x.n>=8)return false;
     return true;
   }
@@ -16094,7 +16356,7 @@ function cancelNewGameIntro(){
         globalClue:generated.globalClue
           ? {color:generated.globalClue.color,count:generated.globalClue.count}
           : null,
-        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
+        nonogramRows:generated.nonogramRows||null,ruleRows:generated.ruleRows||null,ruleCols:generated.ruleCols||null,blockRows:generated.blockRows||null,blockCols:generated.blockCols||null,duoRows:generated.duoRows||null,duoCols:generated.duoCols||null,longRows:generated.longRows||null,longCols:generated.longCols||null,codeRows:generated.codeRows||null,codeCols:generated.codeCols||null,codeCells:generated.codeCells||null,sumRows:generated.sumRows||null,sumCols:generated.sumCols||null,colorTotals:generated.colorTotals||null,allowTrial:!!generated.allowTrial,neutralClues:generated.neutralClues||null,
         nonogramCols:generated.nonogramCols||null,
         val:Array(total).fill(-1),
         marks:new Map(),
@@ -16212,7 +16474,17 @@ function cancelNewGameIntro(){
           const history=(n===4?layoutHistory4:(n===5?layoutHistory5:layoutHistory6));
 
           let result=null;
-          if(boardSpec.code){
+          if(boardSpec.edge||boardSpec.sum){
+            const extra=['knight','direction','neutral','self','combo','poly'][Math.floor(Math.random()*6)];
+            result=createCustomPuzzle({name:`${boardSpec.n}×${boardSpec.n}`,n:boardSpec.n,palette:COLOR_COUNT,modeType:'custom',rules:[boardSpec.edge?'edge':'sum',extra]});
+            if(boardSpec.edge){
+              prepareGenerated(result);
+              if((result.edgeShare??1)<0.22){
+                try{const again=prepareGenerated(createCustomPuzzle({name:`${boardSpec.n}×${boardSpec.n}`,n:boardSpec.n,palette:COLOR_COUNT,modeType:'custom',rules:['edge',extra]}));
+                  if((again.edgeShare??0)>(result.edgeShare??0))result=again;}catch(_){}
+              }
+            }
+          }else if(boardSpec.code){
             const extra=['knight','direction','neutral','self','combo','poly'][Math.floor(Math.random()*6)];
             result=createCustomPuzzle({name:`${boardSpec.n}×${boardSpec.n}`,n:boardSpec.n,palette:COLOR_COUNT,modeType:'custom',rules:['code',extra]});
           }else if(boardSpec.sunmoon){
@@ -16688,7 +16960,7 @@ function cancelNewGameIntro(){
   const RS_CLUE=[
     ['knight','Quy tắc quân mã','♞'],['direction','Quy tắc chỉ hướng','→'],['self','Quy tắc chính nó','◯'],
     ['neutral','Quy tắc trung tính','⚪'],['pattern','Quy tắc hình mẫu',patternGlyphSVG(1,'#fff','rs-glyph')],['symmetry','Quy tắc đối xứng','◁'],
-    ['combo','Quy tắc combo','▭'],['poly','Quy tắc Polyomino','▞'],['sunmoon','Quy tắc nhật nguyệt','<i class="fa-regular fa-sun"></i>'],['deceit','Quy tắc lừa đảo','<i>4</i>']
+    ['combo','Quy tắc combo','▭'],['poly','Quy tắc Polyomino','▞'],['edge','Quy tắc cạnh',EDGE_SVG],['sum','Quy tắc tổng màu','⊕'],['sunmoon','Quy tắc nhật nguyệt','<i class="fa-regular fa-sun"></i>'],['deceit','Quy tắc lừa đảo','<i>4</i>']
   ];
   const RS_SIDE=[['nonogram','Quy tắc Nonogram','#'],['rule','Quy tắc chủ-tớ','<i class="fa-solid fa-crown"></i>'],['block','Quy tắc khối','▣'],['duo','Quy tắc Duo','2:'],['long','Quy tắc độ dài khối','↔'],['code','Quy tắc mật mã',CODE_HAS_SVG]];
   let rsDraft={n:6,colors:3,rules:[],noMark:false};
@@ -16790,6 +17062,29 @@ function cancelNewGameIntro(){
     rsDraft.n=Number(b.dataset.n);
     rsSanitize();
     rsRender();
+  });
+  // Chọn ngẫu nhiên: a random valid combination (size, colors, rules, extras).
+  function rsRandomize(){
+    const pick=a=>a[Math.floor(Math.random()*a.length)];
+    rsDraft.n=pick([4,5,6,7,8,9]);
+    rsDraft.colors=pick([2,3,4].filter(c=>!rsColorUnavailable(c)));
+    const [lo,hi]=RS_LIMITS[rsDraft.n];
+    const k=lo+Math.floor(Math.random()*(hi-lo+1));
+    const clueIds=shuffle(RS_CLUE.map(x=>x[0]).filter(id=>!rsUnavailable(id)));
+    const sideIds=RS_SIDE.map(x=>x[0]).filter(id=>!rsUnavailable(id));
+    const rules=[];
+    if(k>0&&sideIds.length&&Math.random()<0.4)rules.push(pick(sideIds));
+    for(const id of clueIds){if(rules.length>=k)break;rules.push(id);}
+    rsDraft.rules=rules;
+    rsDraft.noMark=Math.random()<0.25;
+    rsDraft.tough=rsDraft.n<=6&&Math.random()<0.25;
+    rsDraft.chaos=Math.random()<0.2;
+    rsDraft.droppedList=[];
+    rsRender();
+  }
+  document.getElementById('rsDice').addEventListener('click',e=>{
+    const b=e.currentTarget;b.classList.remove('rolling');void b.offsetWidth;b.classList.add('rolling');
+    rsRandomize();
   });
   document.getElementById('rsColors').addEventListener('click',e=>{
     const b=e.target.closest('.rs-size');if(!b||b.disabled)return;
@@ -17636,15 +17931,43 @@ function cancelNewGameIntro(){
     {
       id: 'code', icon: '<b style="font-family:Georgia,serif">III</b>', tint: '#7b1fa2', title: 'Quy tắc mật mã',
       short: 'Mã 3 màu và dữ kiện O / X',
-      desc: 'Ba ô liền nhau mang số <b>I, II, III</b>: màu của chúng theo thứ tự là <b>mã</b> (ngang đọc trái → phải, dọc đọc trên → dưới). Dữ kiện bên lề: <b>O</b> = mã xuất hiện liền nhau đúng thứ tự trong hàng/cột đó, <b>X</b> = không xuất hiện. Thứ tự ngược không được tính.',
+      desc: 'Ba ô liền nhau mang số <b>I, II, III</b>: màu của chúng theo thứ tự là <b>mã</b> (ngang đọc trái → phải, dọc đọc trên → dưới). Dữ kiện bên lề: <b>O</b> = hàng/cột đó có một <b>bản sao</b> của mã (3 ô liền nhau, đúng thứ tự màu, không dùng chính các ô I, II, III), <b>X</b> = không có. Hàng/cột chứa chính mã không có dữ kiện. Thứ tự ngược không được tính.',
       demo: {
         cols: 4, rows: 4, size: 40,
         chips: {row: {2: {kind: 'codeHas'}, 3: {kind: 'codeNot'}}},
         cells: {0: {c: 'Y', code: 1}, 1: {c: 'B', code: 2}, 2: {c: 'Y', code: 3}, 8: {c: 'R'}, 9: {c: 'Y'}, 10: {c: 'B'}, 12: {c: 'Y'}, 13: {c: 'R'}, 14: {c: 'Y'}, 15: {c: 'Y'}},
         steps: [
           {t: 2400, cap: 'Mã đọc từ trái sang phải: {Y} → {B} → {Y}.', ops: [['focus', [0, 1, 2]], ['hl', [0, 1, 2]]]},
-          {t: 2600, cap: 'Dữ kiện O: hàng này có {Y}{B}{Y} liền nhau → ô cuối là {Y}.', ops: [['focus', []], ['hl', [9, 10, 11]], ['paint', 11, 'Y']]},
-          {t: 2800, cap: 'Dữ kiện X: hàng cuối không có mã liền nhau đúng thứ tự.', ops: [['hl', [12, 13, 14, 15]]]}
+          {t: 2600, cap: 'Dữ kiện O: hàng này có bản sao {Y}{B}{Y} → ô cuối là {Y}.', ops: [['focus', []], ['hl', [9, 10, 11]], ['paint', 11, 'Y']]},
+          {t: 2800, cap: 'Dữ kiện X: hàng cuối không có bản sao nào của mã.', ops: [['hl', [12, 13, 14, 15]]]}
+        ]
+      }
+    },
+    {
+      id: 'edge', icon: '<svg viewBox="0 0 24 12" width="22" height="12"><polyline points="1,10 5,2 9,10 13,2 17,10 21,2 23,6" fill="none" stroke="#fff" stroke-width="2.6" stroke-linejoin="round" stroke-linecap="round"/></svg>', tint: '#00897b', title: 'Quy tắc cạnh',
+      short: 'Chỉ đếm trên các cạnh có gai',
+      desc: 'Vùng 3×3 quanh clue có 4 cạnh, mỗi cạnh 3 ô (góc dùng chung). Clue cạnh chỉ đếm ô cùng màu trên <b>các cạnh có hình gai</b> (1–3 cạnh).',
+      demo: {
+        cols: 3, rows: 3, size: 52,
+        cells: {4: {c: 'R', n: '1', sides: ['t']}, 0: {c: 'B'}, 2: {c: 'B'}},
+        steps: [
+          {t: 2400, cap: 'Gai ở cạnh trên: chỉ đếm 3 ô phía trên.', ops: [['focus', [4]], ['hl', [0, 1, 2]]]},
+          {t: 2400, cap: 'Cần đúng 1 ô {R}; hai ô góc đã là {B} → ô giữa là {R}.', ops: [['paint', 1, 'R']]},
+          {t: 2800, cap: 'Các ô ở cạnh khác không ảnh hưởng tới clue này.', ops: [['hl', [3, 5, 6, 7, 8]]]}
+        ]
+      }
+    },
+    {
+      id: 'sum', icon: '<b>+</b>', tint: '#3949ab', title: 'Quy tắc tổng màu',
+      short: 'Biết trước tổng số ô mỗi màu',
+      desc: 'Bảng màu cho biết sẵn <b>tổng số ô của từng màu trên cả bàn</b> (con số nhỏ trên mỗi màu). Khi một màu đã đủ, mọi ô còn lại không thể mang màu đó; khi chỉ còn vừa đủ chỗ, các ô đó đều mang màu đó.',
+      demo: {
+        cols: 3, rows: 2, size: 48,
+        cells: {0: {c: 'R'}, 1: {c: 'R'}, 3: {c: 'B'}},
+        steps: [
+          {t: 2600, cap: 'Bảng màu cho biết: cả bàn có đúng 2 ô {R}, 2 ô {B}, 2 ô {Y}.', ops: [['hl', [0, 1, 3]]]},
+          {t: 2600, cap: '{R} đã đủ 2 ô → không ô nào còn lại là {R}.', ops: [['hl', [2, 4, 5]], ['x', 2, 'R'], ['x', 4, 'R'], ['x', 5, 'R']]},
+          {t: 2800, cap: '{B} còn thiếu 1 ô và {Y} cần 2 ô trong 3 ô trống — mỗi màu đều phải xuất hiện.', ops: [['hl', [2, 4, 5]]]}
         ]
       }
     },
@@ -17764,6 +18087,7 @@ function cancelNewGameIntro(){
     let chips = '';
     const chipHtml = e => {
       if (!e) return '<span class="hd-chip empty"></span>';
+      if (e.kind === 'sum') return `<span class="hd-chip" style="background:transparent;box-shadow:none;color:#172033;font-weight:900;display:inline-flex;align-items:center;gap:2px;width:auto">${e.n}<span style="display:flex;flex-direction:column;gap:1.5px">${e.colors.map(c=>`<i style="display:block;width:5px;height:5px;border-radius:50%;background:${COL[c].hex}"></i>`).join('')}</span></span>`;
       if (e.kind === 'codeHas') return `<span class="hd-chip" style="background:transparent;box-shadow:none;color:#172033"><svg viewBox="0 0 24 24" class="code-ico"><rect x="2.5" y="2.5" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="14.5" height="14.5" rx="3" fill="currentColor"/><circle cx="14.25" cy="14.25" r="4" fill="none" stroke="#fff" stroke-width="2"/></svg></span>`;
       if (e.kind === 'codeNot') return `<span class="hd-chip" style="background:transparent;box-shadow:none;color:#172033"><svg viewBox="0 0 24 24" class="code-ico"><rect x="2.5" y="2.5" width="12" height="12" rx="2.5" fill="none" stroke="currentColor" stroke-width="2"/><rect x="7" y="7" width="14.5" height="14.5" rx="3" fill="#fff" stroke="currentColor" stroke-width="2"/><path d="M11 11l6.5 6.5M17.5 11L11 17.5" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span>`;
       if (e.kind === 'duo') return `<span class="hd-chip hd-duo"><span class="dl-num">${e.n}</span><span class="duo-dots"><i></i><i></i></span></span>`;
@@ -17809,6 +18133,10 @@ function cancelNewGameIntro(){
       if (cell.pglyph !== undefined) { const P = [[1,2,3,5,8],[3,2,1,5,7,8,9],[7,5,3,2,1,9],[2,6,5,4,8],[4,2,7,6,8],[4,3,8,1,6]][cell.pglyph];
         const xy = d => [((d-1)%3)+0.5, Math.floor((d-1)/3)+0.5];
         inner += `<svg viewBox="0.36 0.36 2.28 2.28" style="width:78%;height:78%"><polyline points="${P.map(d=>xy(d).join(',')).join(' ')}" fill="none" stroke="#fff" stroke-width="0.24" stroke-linecap="round" stroke-linejoin="round"/></svg>`; }
+      if (cell.sides) inner += cell.sides.map(sd => {
+        const deg = {t:0, r:90, b:180, l:270}[sd];
+        return `<span style="position:absolute;left:50%;top:50%;width:56%;height:13%;transform:translate(-50%,-50%) rotate(${deg}deg) translateY(-290%)"><span style="display:block;width:100%;height:100%"><svg viewBox="0 0 24 12" preserveAspectRatio="none" style="width:100%;height:100%;display:block"><polyline points="1,10 5,2 9,10 13,2 17,10 21,2 23,6" fill="none" stroke="#fff" stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/></svg></span></span>`;
+      }).join('');
       if (cell.code) inner = `<span style="display:flex;align-items:center;gap:2px;color:#fff;font-weight:900;font-family:Georgia,serif;font-size:${Math.round(size*0.32)}px">${cell.code>1?'›':''}<span style="border:2px solid #fff;border-radius:4px;padding:0 3px;line-height:1.1">${['','I','II','III'][cell.code]}</span>${cell.code<3?'›':''}</span>`;
       if (cell.sun) inner = '<i class="fa-regular fa-sun" style="color:#fff;font-size:1.25em"></i>';
       if (cell.moon) inner = '<i class="fa-regular fa-moon" style="color:#fff;font-size:1.25em"></i>';
