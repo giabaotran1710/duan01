@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Đua Xúc Xắc Bãi Biển</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="style.css?v=20261009">
 </head>
 <body>
 
@@ -127,11 +127,11 @@
   </div>
 </div>
 
-<script src="item.js"></script>
-<script src="game-const.js"></script>
-<script src="game-layout.js"></script>
-<script src="game-draw.js"></script>
-<script src="game-cards.js"></script>
+<script src="item.js?v=20261009"></script>
+<script src="game-const.js?v=20261009"></script>
+<script src="game-layout.js?v=20261009"></script>
+<script src="game-draw.js?v=20261009"></script>
+<script src="game-cards.js?v=20261009"></script>
 
 <script>
 /* =====================================================
@@ -339,18 +339,18 @@ async function checkTrapLanding(who){
   const token=tokens[who];
   const trap=getTrapAtPos(token.pos);
 
-  if(!trap){
+  if(token.pos<=1 || token.pos>=100 || !trap){
     return false;
   }
 
   itemRuntime[who].trapJailTurns=Math.max(
     itemRuntime[who].trapJailTurns || 0,
-    2
+    TRAP_JAIL_TURNS
   );
 
   updateStatus(
     "Dính bẫy!",
-    `${tokens[who].name} dừng đúng ô ${token.pos} có bẫy và bị giam 2 lượt.`
+    `${tokens[who].name} dừng đúng ô ${token.pos} có bẫy và bị giam ${TRAP_JAIL_TURNS} lượt.`
   );
 
   await sleep(1000);
@@ -382,6 +382,21 @@ function checkStopFlag(who){
 /* =====================================================
    ITEM EFFECT ENGINE - FIXED
 ===================================================== */
+function canMoveSelfByItem(who,steps){
+  const need=100-tokens[who].pos;
+
+  if(steps>need){
+    updateStatus(
+      "Dư bước",
+      `${tokens[who].name} chỉ cần ${need} bước để về đích, dùng thẻ ${steps} bước sẽ bị dư. Thẻ được giữ lại.`
+    );
+
+    return false;
+  }
+
+  return true;
+}
+
 async function moveSelfByItem(who,steps,itemName="Thẻ di chuyển"){
   await moveTokenByItem(who,steps,itemName);
 
@@ -412,18 +427,30 @@ async function applyItemEffect(who,item){
 
   switch(effect.type){
     case "move_self_steps":{
+      if(!canMoveSelfByItem(who,effect.steps)){
+        return false;
+      }
+
       await moveSelfByItem(who,effect.steps,item.name);
       return true;
     }
 
     case "move_self_and_skip_next_turn":{
+      if(!canMoveSelfByItem(who,effect.steps)){
+        return false;
+      }
+
       await moveSelfByItem(who,effect.steps,item.name);
+
+      if(state.gameOver){
+        return true;
+      }
 
       itemRuntime[who].skipRollTurns+=(effect.skipTurns || 1);
 
       updateStatus(
         "Bứt tốc!",
-        `${tokens[who].name} đã tiến ${effect.steps} bước. Lượt sau sẽ không thể tung xúc xắc.`
+        `${tokens[who].name} đã bứt tốc. Lần tung xúc xắc kế tiếp sẽ bị mất.`
       );
 
       return true;
@@ -498,6 +525,15 @@ async function applyItemEffect(who,item){
     }
 
     case "remove_status":{
+      if(effect.status==="invisible" && itemRuntime[opponentKey].invisibleTurns<=0){
+        updateStatus(
+          "Chưa cần dùng",
+          `${tokens[opponentKey].name} không tàng hình nên thẻ ${item.name} được giữ lại.`
+        );
+
+        return false;
+      }
+
       if(!canApplyHarmfulEffect(who,opponentKey,item)){
         return true;
       }
@@ -522,12 +558,13 @@ async function applyItemEffect(who,item){
       }
 
       const steps=Math.abs(effect.steps || 0);
-      await moveTokenBackward(opponentKey,steps);
 
       updateStatus(
         "Đẩy lùi!",
         `${tokens[opponentKey].name} bị lùi ${steps} bước.`
       );
+
+      await moveTokenBackward(opponentKey,steps);
 
       return true;
     }
@@ -695,9 +732,21 @@ function scoreAIItem(item){
         break;
       }
 
+      if(aiPos+steps===100 && itemRuntime.ai.blockFinishTurns>0){
+        score=-999;
+        reason="vạch đích đang bị khóa, dùng lúc này sẽ phí thẻ";
+        break;
+      }
+
       if(aiPos+steps===100){
         score=1200;
         reason="dùng thẻ để về đích ngay";
+        break;
+      }
+
+      if(isTrapPosition(aiPos+steps)){
+        score=-999;
+        reason=`tiến ${steps} bước sẽ rơi vào bẫy`;
         break;
       }
 
@@ -731,7 +780,7 @@ function scoreAIItem(item){
         break;
       }
 
-      if(aiPos+steps===100){
+      if(aiPos+steps===100 && itemRuntime.ai.blockFinishTurns<=0){
         score=1300;
         reason="dùng Bứt Tốc để về đích ngay, bỏ qua nhược điểm mất lượt";
       }else{
@@ -1017,7 +1066,7 @@ function aiChooseBestItem(){
         score:result.score
       };
     })
-    .filter(entry=>entry.score>=75)
+    .filter(entry=>entry.score>=AI_ITEM_USE_THRESHOLD)
     .sort((a,b)=>b.score-a.score);
 
   if(!ranked.length){
@@ -1304,11 +1353,10 @@ async function moveTokenBackward(who,steps){
 
     const target=getTokenTarget(who,token.pos);
     await animateHop(token,target.x,target.y);
-      if(checkTrap(who)){
-  await sleep(1000);
-  break;
-}
   }
+
+  /* Chỉ dính bẫy khi dừng lại ở ô có bẫy, giống như khi tung xúc xắc */
+  await checkTrapLanding(who);
 }
 
 function animateHop(token,tx,ty){
@@ -1413,15 +1461,10 @@ async function moveTokenByItem(who,steps,itemName="Thẻ di chuyển"){
     await animateWalk(token,target.x,target.y);
     await sleep(90);
 
-    if(checkTrap(who)){
-  await sleep(1000);
-  break;
-}
-
-if(checkStopFlag(who)){
-  await sleep(850);
-  break;
-}
+    if(checkStopFlag(who)){
+      await sleep(850);
+      break;
+    }
 
     if(token.pos>=100){
       break;
@@ -1457,7 +1500,9 @@ function endGame(who){
   spawnConfetti();
 
   setTimeout(()=>{
-    endModal.classList.remove("hidden");
+    if(state.gameOver){
+      endModal.classList.remove("hidden");
+    }
   },450);
 }
   
@@ -1496,36 +1541,6 @@ function initBoardTraps(){
 
 function isTrapPosition(pos){
   return boardTraps.some(trap=>trap.pos===pos);
-}
-
-function getTrapAt(pos){
-  return boardTraps.find(trap=>trap.pos===pos) || null;
-}
-
-function checkTrap(who){
-  const token=tokens[who];
-
-  if(token.pos<=1 || token.pos>=100){
-    return false;
-  }
-
-  const trap=getTrapAt(token.pos);
-
-  if(!trap){
-    return false;
-  }
-
-  itemRuntime[who].trapJailTurns=Math.max(
-    itemRuntime[who].trapJailTurns || 0,
-    TRAP_JAIL_TURNS
-  );
-
-  updateStatus(
-    "Dính bẫy!",
-    `${token.name} giẫm vào bẫy tại ô ${trap.pos} và bị giam ${TRAP_JAIL_TURNS} lượt!`
-  );
-
-  return true;
 }
 
 function getTrapStepsAhead(who,maxStep=6){

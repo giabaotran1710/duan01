@@ -185,11 +185,7 @@ function updateStats(){
 function openInventory(who){
   openedInventoryOwner=who;
 
-  const ownerName=who==="player" ? "" : "AI";
-  const inventory=itemState[who].inventory;
-
-  inventoryTitle.textContent=`Kho thẻ ${ownerName}`;
-  inventorySub.textContent=`Đang có ${inventory.length} thẻ`;
+  inventoryTitle.textContent=who==="player" ? "Kho thẻ của bạn" : "Kho thẻ của AI";
 
   renderInventoryList(who);
 
@@ -203,6 +199,7 @@ function closeInventory(){
 
 function renderInventoryList(who){
   const inventory=itemState[who].inventory;
+  inventorySub.textContent=`Đang có ${inventory.length} thẻ`;
   inventoryList.innerHTML="";
 
   if(inventory.length===0){
@@ -236,7 +233,7 @@ function renderInventoryList(who){
 
         <div class="inventoryMeta">
           <span class="inventoryBadge ${groupClass}">${groupText}</span>
-          <span class="inventoryBadge">${item.rarity || "common"}</span>
+          <span class="inventoryBadge">${getItemRarityText(item.rarity)}</span>
         </div>
       </div>
 
@@ -274,7 +271,7 @@ function showCardConsumeEffect(who,item){
 
     const groupText=item.group==="advantage" ? "Lợi thế" : "Bất lợi";
     const groupClass=item.group==="disadvantage" ? "bad" : "";
-    const rarityText=(item.rarity || "common").toUpperCase();
+    const rarityText=getItemRarityText(item.rarity).toUpperCase();
 
     const ownerText=who==="player" ? "⚡ TIÊU THẺ" : "🤖 AI KÍCH HOẠT";
     const ownerName=who==="player" ? "BẠN DÙNG THẺ" : "AI DÙNG THẺ";
