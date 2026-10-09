@@ -344,13 +344,14 @@
     </div>
 
     <div class="controls hidden" id="controls">
+      <button id="confirmWallBtn" class="secondary" hidden>Xác nhận đặt tường</button>
       <button id="resetBtn" class="primary">Chơi lại</button>
     </div>
 
     <div class="footer">
       <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
-      <div class="help">💡 Chạm vào khe tường (giữa hai ô) để đặt tường. Tường không được chặn toàn bộ đường đi của bên nào.</div>
-      <div class="small"> Version:D20260803-H12M00T0100    »»»   developed by Tran Gia Bao</div>
+      <div class="help">💡 Chạm vào khe tường (giữa hai ô) để xem trước, rồi bấm "Xác nhận đặt tường". Tường không được chặn toàn bộ đường đi của bên nào.</div>
+      <div class="small"> Version:D20261009-H14M30T0100    »»»   developed by Tran Gia Bao</div>
     </div>
   </div>
 
@@ -369,6 +370,7 @@
       const msgEl = document.getElementById('message');
       const controlsEl = document.getElementById('controls');
       const resetBtn = document.getElementById('resetBtn');
+      const confirmWallBtn = document.getElementById('confirmWallBtn');
 
       const modeOverlay = document.getElementById('modeOverlay');
       const aiModeBtn = document.getElementById('aiModeBtn');
@@ -391,6 +393,7 @@
         redV: new Set(),
         layout: null,
         selected: null,
+        pendingWall: null,
         moveCount: 0,
         redHistory: [],
         animating: false,
@@ -411,11 +414,15 @@
       }
 
       function updateResetButton() {
-        if (state.moveCount > 0) {
-          controlsEl.classList.remove('hidden');
-        } else {
-          controlsEl.classList.add('hidden');
-        }
+        resetBtn.hidden = state.moveCount === 0;
+        confirmWallBtn.hidden = !state.pendingWall;
+        controlsEl.classList.toggle('hidden', state.moveCount === 0 && !state.pendingWall);
+      }
+
+      function clearPendingWall() {
+        if (!state.pendingWall) return;
+        state.pendingWall = null;
+        updateResetButton();
       }
 
       function resetGame(keepMode = true) {
@@ -431,6 +438,7 @@
         state.redH = new Set();
         state.redV = new Set();
         state.selected = null;
+        state.pendingWall = null;
         state.moveCount = 0;
         state.redHistory = [];
         state.animating = false;
@@ -668,6 +676,22 @@
         return false;
       }
 
+      function wallIsLegal(orientation, x, y) {
+        const p = state.current === 0 ? state.blue : state.red;
+        if (p.walls <= 0 || state.gameOver) return false;
+        if (!canPlaceWall(orientation, x, y)) return false;
+        const hWalls = new Set(state.hWalls);
+        const vWalls = new Set(state.vWalls);
+        if (orientation === 'H') {
+          hWalls.add(`${x},${y}`);
+          hWalls.add(`${x + 1},${y}`);
+        } else {
+          vWalls.add(`${x},${y}`);
+          vWalls.add(`${x},${y + 1}`);
+        }
+        return pathExistsForBoth(hWalls, vWalls);
+      }
+
       function placeWall(orientation, x, y) {
         const p = state.current === 0 ? state.blue : state.red;
         if (p.walls <= 0 || state.gameOver) return false;
@@ -778,6 +802,7 @@
       function switchTurn() {
         state.current = 1 - state.current;
         state.selected = null;
+        clearPendingWall();
         updateUI();
         render();
 
@@ -1244,6 +1269,8 @@
         const rMePad = { x: rMe.x - pad, y: rMe.y - pad, w: rMe.w + pad * 2, h: rMe.h + pad * 2 };
         const clickedOnMe = pointInRect(mx, my, rMePad);
 
+        if (clickedOnMe || state.selected) clearPendingWall();
+
         if (clickedOnMe) {
           const isSelected = state.selected && state.selected.player === state.current &&
             state.selected.x === me.x && state.selected.y === me.y;
@@ -1288,18 +1315,27 @@
 
         const slot = wallSlotUnderPointer(mx, my);
         if (slot) {
-          const ok = placeWall(slot.orientation, slot.x, slot.y);
-          if (ok) {
-            setMessage('Đặt tường thành công.');
-            updateUI();
-            render();
-            state.moveCount++;
+          const pw = state.pendingWall;
+          if (pw && pw.orientation === slot.orientation && pw.x === slot.x && pw.y === slot.y) {
+            clearPendingWall();
+            setMessage('Đã huỷ tường xem trước.');
+          } else if (wallIsLegal(slot.orientation, slot.x, slot.y)) {
+            state.pendingWall = slot;
+            state.selected = null;
             updateResetButton();
-            if (!state.gameOver) switchTurn();
+            setMessage('Bấm "Xác nhận đặt tường" để đặt, hoặc chạm khe khác để đổi vị trí.');
           } else {
-            setMessage('Không thể đặt tường ở đây.');
-            render();
+            clearPendingWall();
+            setMessage(me.walls <= 0 ? 'Bạn đã hết tường.' : 'Không thể đặt tường ở đây.');
           }
+          render();
+          return;
+        }
+
+        if (state.pendingWall) {
+          clearPendingWall();
+          setMessage('Đã huỷ tường xem trước.');
+          render();
           return;
         }
 
@@ -1311,6 +1347,25 @@
           setMessage('Chạm vào quân của bạn hoặc khe tường.');
         }
       }
+
+      confirmWallBtn.addEventListener('click', () => {
+        const pw = state.pendingWall;
+        if (!pw || state.gameOver || state.animating) return;
+        if (gameMode === 'ai' && state.current !== 0) return;
+        clearPendingWall();
+        const ok = placeWall(pw.orientation, pw.x, pw.y);
+        if (ok) {
+          setMessage('Đặt tường thành công.');
+          updateUI();
+          render();
+          state.moveCount++;
+          updateResetButton();
+          if (!state.gameOver) switchTurn();
+        } else {
+          setMessage('Không thể đặt tường ở đây.');
+          render();
+        }
+      });
 
       canvas.addEventListener('pointerdown', (evt) => {
         evt.preventDefault();
@@ -1461,6 +1516,21 @@
           const [x, y] = key.split(',').map(Number);
           const r = vWallRect(x, y);
           drawWallBar(r.x, r.y, r.w, r.h, '#ff5e67', '#d63d48');
+        }
+
+        if (state.pendingWall) {
+          const pw = state.pendingWall;
+          const r = pw.orientation === 'H' ? hWallRect(pw.x, pw.y) : vWallRect(pw.x, pw.y);
+          ctx.save();
+          ctx.fillStyle = 'rgba(255,209,102,.18)';
+          roundRect(ctx, r.x, r.y, r.w, r.h, 5);
+          ctx.fill();
+          ctx.setLineDash([6, 4]);
+          ctx.strokeStyle = '#ffd166';
+          ctx.lineWidth = 2;
+          roundRect(ctx, r.x + 1, r.y + 1, r.w - 2, r.h - 2, 5);
+          ctx.stroke();
+          ctx.restore();
         }
       }
 
