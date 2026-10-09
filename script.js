@@ -358,6 +358,8 @@ function closeChillBar() {
 
     skipIntroBtn.addEventListener('click', skipIntro);
     
+    let navigateTimer = null;
+
     window.navigateToGame = function(url, gameName) {
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingGameName = document.getElementById('loading-game-name');
@@ -368,13 +370,24 @@ function closeChillBar() {
         
         const randomDelay = Math.floor(Math.random() * 4501) + 1500;
         
-        setTimeout(() => {
+        clearTimeout(navigateTimer);
+        navigateTimer = setTimeout(() => {
             window.location.href = url;
         }, randomDelay);
     } else {
         window.location.href = url;
     }
 };
+
+    // Quay lại bằng nút Back: trình duyệt khôi phục trang từ bộ nhớ đệm (bfcache)
+    // nên lớp "Đang mở" vẫn còn hiện. Ẩn nó đi và huỷ lần chuyển trang đang chờ.
+    window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        clearTimeout(navigateTimer);
+        navigateTimer = null;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+    });
     
     // ============================================================
     // 8. HIỆU ỨNG THẺ GAME (NGHIÊNG 3D, ĐÈN THEO CON TRỎ, GỢN SÓNG)
