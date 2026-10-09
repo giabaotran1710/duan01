@@ -2080,6 +2080,61 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     }
   }
 
+  // Dự đoán ẩn: nếu để yên xe `target`, trong vài giây tới nó có đâm hoặc bị đâm không?
+  // Chạy mô phỏng nhanh trên bản sao các xe (giữ tốc độ hiện tại, rẽ theo đúng đường cua của game).
+  // Chỉ dùng cho thanh Cẩu thả, kết quả KHÔNG hiện cho người chơi.
+  const PREDICT_HORIZON = 6;   // giây nhìn trước
+  const PREDICT_STEP = 0.04;
+  function simBoxW(c){ return c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.w : c.h); }
+  function simBoxH(c){ return c.turning ? Math.max(c.w,c.h) : (c.axis==='h' ? c.h : c.w); }
+  function simSpeed(c, t){
+    let v = c.stopped ? c.speed : c.baseSpeed;
+    if(c.dasher && c.dsPhase!=='dash') v = t < c.dsDelay + 0.3 ? c.creepSpeed : c.dashSpeed;
+    return v * (state.rageTimer>0 ? RAGE_SPEED : 1);
+  }
+  function willCauseAccident(target){
+    const sims = [];
+    let ti = -1;
+    for(const c of cars){
+      if(c.dead) continue;
+      if(c===target) ti = sims.length;
+      sims.push(Object.assign({}, c));
+    }
+    if(ti<0) return false;
+    const margin = 1.08; // dư một chút để các tình huống sát nút vẫn tính là nguy hiểm
+    for(let t=0; t<PREDICT_HORIZON; t+=PREDICT_STEP){
+      for(const s of sims){
+        if(s.turning){
+          updateTurnPath(s, PREDICT_STEP);
+        }else{
+          const d = simSpeed(s,t) * PREDICT_STEP;
+          if(s.axis==='h') s.x += s.dir*d; else s.y += s.dir*d;
+          if(!s.entered && inIntersection(s)){
+            s.entered = true;
+            if(s.turn!=='straight') startTurn(s);
+          }
+        }
+      }
+      const a = sims[ti];
+      for(let j=0;j<sims.length;j++){
+        if(j===ti) continue;
+        const b = sims[j];
+        // Cùng trục: xe cùng chiều tự giãn cách nên bỏ qua. Xe ngược chiều chỉ đáng ngại khi có xe lạng lách
+        // (nó có thể sang làn đối diện nên nới độ lệch ngang).
+        const sameAxis = !a.turning && !b.turning && a.axis===b.axis;
+        const weaving = sameAxis && (a.weaver || b.weaver) && a.dir!==b.dir;
+        if(sameAxis && !weaving) continue;
+        const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
+        if(mx<0 || mx>W || my<0 || my>H) continue;
+        const extra = weaving ? roadGeom().lane*0.5 : 0;
+        const exX = a.axis==='v' ? extra : 0, exY = a.axis==='h' ? extra : 0;
+        if(Math.abs(a.x-b.x) < (simBoxW(a)+simBoxW(b))*0.5*margin + exX &&
+           Math.abs(a.y-b.y) < (simBoxH(a)+simBoxH(b))*0.5*margin + exY) return true;
+      }
+    }
+    return false;
+  }
+
   function removeCarByPlayer(c){
     if(!c || c.dead || !state.running) return;
 
@@ -2089,14 +2144,19 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       return;
     }
 
+    // Bỏ xe thật sự sắp gây tai nạn là chính đáng nên không tăng Cẩu thả; bỏ xe vô hại thì tăng.
+    // Phải tính trước khi xe bị xóa. Người chơi không được báo xe nào an toàn.
+    const risky = willCauseAccident(c);
     c.dead = true;
 
     // Mức phạt tính theo thanh Cẩu thả TRƯỚC lần bỏ này.
     const level = state.rageTimer>0 ? 3 : state.reckless>=RECKLESS_L2 ? 2 : state.reckless>=RECKLESS_L1 ? 1 : 0;
-    if(state.rageTimer<=0){
-      state.reckless = Math.min(RECKLESS_MAX, state.reckless + RECKLESS_PER_REMOVE + state.removeStreak*RECKLESS_STREAK_STEP);
+    if(!risky){
+      if(state.rageTimer<=0){
+        state.reckless = Math.min(RECKLESS_MAX, state.reckless + RECKLESS_PER_REMOVE + state.removeStreak*RECKLESS_STREAK_STEP);
+      }
+      state.removeStreak++;
     }
-    state.removeStreak++;
     if(level>=1) state.removeCooldown = level>=2 ? L2_COOLDOWN : L1_COOLDOWN;
     if(level>=2){
       // Xe không biến mất: quay đầu rồi quay lại đúng làn đó, kéo thêm 1 xe ngẫu nhiên.
