@@ -17,6 +17,9 @@
   const PENDING_KEY = 'scores_pending_v1';
   const LOCAL_MAX = 20;
   const TIMEOUT_MS = 4000;
+  // Địa chỉ server mặc định, điền sau khi triển khai (ví dụ 'https://duan01-scores.ten-ban.workers.dev').
+  // Để trống = dùng cùng địa chỉ với trang web.
+  const DEFAULT_API_BASE = '';
 
   function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function safeSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
@@ -25,7 +28,7 @@
   }
 
   function apiBase() {
-    const b = window.SCORE_API_BASE || safeGet('score_api_base') || '';
+    const b = window.SCORE_API_BASE || safeGet('score_api_base') || DEFAULT_API_BASE;
     return b.replace(/\/+$/, '');
   }
 
