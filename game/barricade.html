@@ -392,6 +392,7 @@
         layout: null,
         selected: null,
         moveCount: 0,
+        redHistory: [],
         animating: false,
         animData: null,
         endEffect: null,
@@ -431,6 +432,7 @@
         state.redV = new Set();
         state.selected = null;
         state.moveCount = 0;
+        state.redHistory = [];
         state.animating = false;
         state.animData = null;
         state.endEffect = null;
@@ -742,6 +744,7 @@
 
         const fromX = me.x;
         const fromY = me.y;
+        if (state.current === 1) state.redHistory.push({ x: fromX, y: fromY });
 
         state.animating = true;
         state.animData = {
@@ -827,247 +830,306 @@
 
 
 
-      const AI_SEARCH_DEPTH = 4; // total half-moves looked ahead (red, blue, red, blue)
-      const AI_WALL_BUDGET_SHALLOW = 7; // wall candidates kept per node near the root
-      const AI_WALL_BUDGET_DEEP = 5;    // wall candidates kept per node deeper in the tree
+      // ===== AI.GiaBao: tìm kiếm alpha-beta lặp sâu dần trên bàn cờ dạng mảng =====
+      // Ô (x,y) có chỉ số y*9+x. hBlk[i]=1: cạnh giữa (x,y) và (x,y+1) bị chặn.
+      // vBlk[i]=1: cạnh giữa (x,y) và (x+1,y) bị chặn. hOrig/vOrig: gốc tường (y*8+x).
+      const AI_TIME_LIMIT_MS = 900;
+      const AI_MAX_DEPTH = 10;
+      const AI_WALL_BUDGET_ROOT = 12;
+      const AI_WALL_BUDGET_NODE = 6;
+      const AI_WIN = 100000;
+      const AI_REPEAT_PENALTY = 30; // tránh đi tới đi lui giữa các ô vừa đứng
+      const AI_DECIDED = 50000;
+      const AI_WALL_VALUE = [0, 90, 160, 225, 285, 340, 390, 435, 475, 510, 540];
 
-      function cloneSet(s) {
-        return new Set(s);
-      }
+      function createAIEngine() {
+        const hBlk = new Uint8Array(81);
+        const vBlk = new Uint8Array(81);
+        const hOrig = new Uint8Array(64);
+        const vOrig = new Uint8Array(64);
+        const pos = [0, 0];        // 0 = Xanh (đích hàng 8), 1 = Đỏ (đích hàng 0)
+        const walls = [0, 0];
+        const GOAL = [8, 0];
+        const queue = new Int16Array(81);
+        const distPool = [];
+        let poolTop = 0;
+        let deadline = 0;
+        let nodes = 0;
+        let aborted = false;
 
-      function simCanPlaceWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
-        if (x < 0 || y < 0 || x > 7 || y > 7) return false;
-        if (o === 'H') {
-          if (vOrigin.has(`${x},${y}`)) return false;
-          if (hWalls.has(`${x},${y}`)) return false;
-          if (hWalls.has(`${x + 1},${y}`)) return false;
-          return true;
+        function takeDist() {
+          if (poolTop === distPool.length) distPool.push(new Int16Array(81));
+          return distPool[poolTop++];
         }
-        if (hOrigin.has(`${x},${y}`)) return false;
-        if (vWalls.has(`${x},${y}`)) return false;
-        if (vWalls.has(`${x},${y + 1}`)) return false;
-        return true;
-      }
 
-      function simAddWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
-        if (o === 'H') {
-          hWalls.add(`${x},${y}`);
-          hWalls.add(`${x + 1},${y}`);
-          hOrigin.add(`${x},${y}`);
-        } else {
-          vWalls.add(`${x},${y}`);
-          vWalls.add(`${x},${y + 1}`);
-          vOrigin.add(`${x},${y}`);
+        // BFS ngược từ hàng đích: khoảng cách của mọi ô tới đích (99 = không tới được)
+        function distMap(goalRow, out) {
+          out.fill(99);
+          let head = 0, tail = 0;
+          for (let x = 0; x < 9; x++) {
+            const i = goalRow * 9 + x;
+            out[i] = 0; queue[tail++] = i;
+          }
+          while (head < tail) {
+            const i = queue[head++];
+            const d = out[i] + 1;
+            const x = i % 9, y = (i - x) / 9;
+            if (y > 0 && !hBlk[i - 9] && out[i - 9] > d) { out[i - 9] = d; queue[tail++] = i - 9; }
+            if (y < 8 && !hBlk[i] && out[i + 9] > d) { out[i + 9] = d; queue[tail++] = i + 9; }
+            if (x > 0 && !vBlk[i - 1] && out[i - 1] > d) { out[i - 1] = d; queue[tail++] = i - 1; }
+            if (x < 8 && !vBlk[i] && out[i + 1] > d) { out[i + 1] = d; queue[tail++] = i + 1; }
+          }
+          return out;
         }
-      }
 
-      function simRemoveWall(o, x, y, hWalls, vWalls, hOrigin, vOrigin) {
-        if (o === 'H') {
-          hWalls.delete(`${x},${y}`);
-          hWalls.delete(`${x + 1},${y}`);
-          hOrigin.delete(`${x},${y}`);
-        } else {
-          vWalls.delete(`${x},${y}`);
-          vWalls.delete(`${x},${y + 1}`);
-          vOrigin.delete(`${x},${y}`);
+        function canStep(i, dir) {
+          const x = i % 9, y = (i - x) / 9;
+          if (dir === 0) return y > 0 && !hBlk[i - 9];
+          if (dir === 1) return x < 8 && !vBlk[i];
+          if (dir === 2) return y < 8 && !hBlk[i];
+          return x > 0 && !vBlk[i - 1];
         }
-      }
+        const STEP = [-9, 1, 9, -1];
 
-      function pathExistsForBothSim(redPos, bluePos, hWalls, vWalls) {
-        const rd = bfsShortestPath(redPos, 0, hWalls, vWalls);
-        const bd = bfsShortestPath(bluePos, 8, hWalls, vWalls);
-        return Number.isFinite(rd) && Number.isFinite(bd);
-      }
+        // Giống hệt legalMoves của game: đi 1 ô, hoặc nhảy thẳng qua đối thủ
+        function genMoves(side) {
+          const me = pos[side], opp = pos[1 - side];
+          const out = [];
+          for (let d = 0; d < 4; d++) {
+            if (!canStep(me, d)) continue;
+            const n = me + STEP[d];
+            if (n === opp) {
+              if (!canStep(n, d)) continue;
+              const n2 = n + STEP[d];
+              if (n2 === me) continue;
+              out.push(n2);
+            } else {
+              out.push(n);
+            }
+          }
+          return out;
+        }
 
-      function evaluateState(redPos, bluePos, hWalls, vWalls, redWallsLeft, blueWallsLeft) {
-        const redDist = bfsShortestPath(redPos, 0, hWalls, vWalls);
-        const blueDist = bfsShortestPath(bluePos, 8, hWalls, vWalls);
-        if (!Number.isFinite(redDist)) return -50000;
-        if (!Number.isFinite(blueDist)) return 50000;
-        // Positive is good for red: red wants a short path for itself and a
-        // long path for blue, plus values holding more walls in reserve.
-        return (blueDist - redDist) * 14 + (redWallsLeft - blueWallsLeft) * 0.6;
-      }
+        function wallFits(o, x, y) {
+          if (x < 0 || y < 0 || x > 7 || y > 7) return false;
+          const k = y * 8 + x, i = y * 9 + x;
+          if (o === 0) return !vOrig[k] && !hBlk[i] && !hBlk[i + 1];
+          return !hOrig[k] && !vBlk[i] && !vBlk[i + 9];
+        }
+        function setWall(o, x, y, v) {
+          const k = y * 8 + x, i = y * 9 + x;
+          if (o === 0) { hBlk[i] = v; hBlk[i + 1] = v; hOrig[k] = v; }
+          else { vBlk[i] = v; vBlk[i + 9] = v; vOrig[k] = v; }
+        }
 
-      function collectRawWallCandidates(targetPath, redPos, bluePos) {
-        const out = [];
-        const seen = new Set();
-        const push = (o, x, y) => {
-          if (x < 0 || x > 7 || y < 0 || y > 7) return;
-          const k = `${o}:${x},${y}`;
-          if (seen.has(k)) return;
-          seen.add(k);
-          out.push({ o, x, y });
-        };
+        // Điểm theo góc nhìn của Đỏ. toMove: bên sắp đi.
+        function evaluateRed(dR, dB, toMove) {
+          // Cuộc đua: bên đang tới lượt được lợi nửa nước
+          const m = dB - dR + (toMove === 1 ? 0.5 : -0.5);
+          // Đối thủ hết tường thì đường đi của mình không thể dài thêm
+          if (walls[0] === 0 && m > 0) return AI_DECIDED - dR * 10;
+          if (walls[1] === 0 && m < 0) return -AI_DECIDED + dB * 10;
+          return Math.round(m * 100) + AI_WALL_VALUE[walls[1]] - AI_WALL_VALUE[walls[0]];
+        }
 
-        if (targetPath && targetPath.length) {
-          for (const p of targetPath) {
-            for (let dy = -1; dy <= 1; dy++) {
-              for (let dx = -1; dx <= 1; dx++) {
-                push('H', p.x + dx, p.y + dy);
-                push('V', p.x + dx, p.y + dy);
+        // Các tường chặn ít nhất một cạnh trên một đường ngắn nhất của bên `victim`
+        function wallCandidates(victim, dVictim) {
+          const out = [];
+          const seen = new Uint8Array(128);
+          const add = (o, x, y) => {
+            if (x < 0 || y < 0 || x > 7 || y > 7) return;
+            const k = o * 64 + y * 8 + x;
+            if (seen[k]) return;
+            seen[k] = 1;
+            if (wallFits(o, x, y)) out.push(o, x, y);
+          };
+          const onDag = new Uint8Array(81);
+          let head = 0, tail = 0;
+          queue[tail++] = pos[victim]; onDag[pos[victim]] = 1;
+          while (head < tail) {
+            const i = queue[head++];
+            const d = dVictim[i];
+            if (d === 0) continue;
+            const x = i % 9, y = (i - x) / 9;
+            for (let dir = 0; dir < 4; dir++) {
+              if (!canStep(i, dir)) continue;
+              const n = i + STEP[dir];
+              if (dVictim[n] !== d - 1) continue;
+              if (dir === 0) { add(0, x, y - 1); add(0, x - 1, y - 1); }
+              else if (dir === 2) { add(0, x, y); add(0, x - 1, y); }
+              else if (dir === 1) { add(1, x, y); add(1, x, y - 1); }
+              else { add(1, x - 1, y); add(1, x - 1, y - 1); }
+              if (!onDag[n]) { onDag[n] = 1; queue[tail++] = n; }
+            }
+          }
+          return out;
+        }
+
+        // Danh sách nước đi đã sắp xếp cho bên `side`: tường tốt nhất trước, rồi nước đi
+        function genActions(side, dMine, dOpp, wallBudget) {
+          const actions = [];
+          const moves = genMoves(side);
+          for (const n of moves) actions.push({ t: 0, n, s: 1000 - dMine[n] * 10 });
+
+          if (walls[side] > 0) {
+            const opp = 1 - side;
+            const before = dOpp[pos[opp]];
+            const myBefore = dMine[pos[side]];
+            const raw = wallCandidates(opp, dOpp);
+            const scored = [];
+            const tmpA = takeDist(), tmpB = takeDist();
+            for (let j = 0; j < raw.length; j += 3) {
+              const o = raw[j], x = raw[j + 1], y = raw[j + 2];
+              setWall(o, x, y, 1);
+              const dO = distMap(GOAL[opp], tmpA)[pos[opp]];
+              const dM = dO < 99 ? distMap(GOAL[side], tmpB)[pos[side]] : 99;
+              setWall(o, x, y, 0);
+              if (dO >= 99 || dM >= 99) continue;
+              const gain = (dO - before) - (dM - myBefore);
+              if (gain <= 0) continue;
+              // Bằng nhau thì ưu tiên tường sát quân đối thủ
+              const ox = pos[opp] % 9, oy = (pos[opp] - ox) / 9;
+              const near = Math.abs(x + 0.5 - ox) + Math.abs(y + 0.5 - oy);
+              scored.push({ t: 1, o, x, y, s: 2000 + gain * 100 + (dO - before) * 10 - near });
+            }
+            poolTop -= 2;
+            scored.sort((a, b) => b.s - a.s);
+            for (let j = 0; j < scored.length && j < wallBudget; j++) actions.push(scored[j]);
+          }
+          actions.sort((a, b) => b.s - a.s);
+          return actions;
+        }
+
+        function apply(side, a) {
+          if (a.t === 0) { const old = pos[side]; pos[side] = a.n; return old; }
+          setWall(a.o, a.x, a.y, 1); walls[side]--; return -1;
+        }
+        function undo(side, a, old) {
+          if (a.t === 0) pos[side] = old;
+          else { setWall(a.o, a.x, a.y, 0); walls[side]++; }
+        }
+
+        // Negamax: trả điểm theo góc nhìn của `side`
+        function search(side, depth, ply, alpha, beta) {
+          if ((++nodes & 31) === 0 && performance.now() > deadline) aborted = true;
+          if (aborted) return 0;
+
+          const dR = distMap(0, takeDist());
+          const dB = distMap(8, takeDist());
+          const redD = dR[pos[1]], blueD = dB[pos[0]];
+          let result;
+
+          if (depth <= 0) {
+            const e = evaluateRed(redD, blueD, side);
+            result = side === 1 ? e : -e;
+          } else {
+            const dMine = side === 1 ? dR : dB;
+            const dOpp = side === 1 ? dB : dR;
+            const actions = genActions(side, dMine, dOpp, AI_WALL_BUDGET_NODE);
+            let best = -Infinity;
+            for (const a of actions) {
+              let v;
+              if (a.t === 0 && Math.floor(a.n / 9) === GOAL[side]) {
+                v = AI_WIN - ply;
+              } else {
+                const old = apply(side, a);
+                v = -search(1 - side, depth - 1, ply + 1, -beta, -alpha);
+                undo(side, a, old);
               }
+              if (aborted) break;
+              if (v > best) best = v;
+              if (v > alpha) alpha = v;
+              if (alpha >= beta) break;
             }
+            result = best;
           }
+          poolTop -= 2;
+          return result;
         }
 
-        for (let dy = -2; dy <= 2; dy++) {
-          for (let dx = -2; dx <= 2; dx++) {
-            push('H', redPos.x + dx, redPos.y + dy);
-            push('V', redPos.x + dx, redPos.y + dy);
-            push('H', bluePos.x + dx, bluePos.y + dy);
-            push('V', bluePos.x + dx, bluePos.y + dy);
-          }
+        function load(snap) {
+          hBlk.fill(0); vBlk.fill(0); hOrig.fill(0); vOrig.fill(0);
+          for (const k of snap.hWalls) { const [x, y] = k.split(',').map(Number); hBlk[y * 9 + x] = 1; }
+          for (const k of snap.vWalls) { const [x, y] = k.split(',').map(Number); vBlk[y * 9 + x] = 1; }
+          for (const k of snap.hOrigin) { const [x, y] = k.split(',').map(Number); hOrig[y * 8 + x] = 1; }
+          for (const k of snap.vOrigin) { const [x, y] = k.split(',').map(Number); vOrig[y * 8 + x] = 1; }
+          pos[0] = snap.blue.y * 9 + snap.blue.x;
+          pos[1] = snap.red.y * 9 + snap.red.x;
+          walls[0] = snap.blue.walls;
+          walls[1] = snap.red.walls;
         }
 
-        return out;
+        function toAction(a) {
+          if (a.t === 0) return { type: 'move', x: a.n % 9, y: Math.floor(a.n / 9) };
+          return { type: 'wall', o: a.o === 0 ? 'H' : 'V', x: a.x, y: a.y };
+        }
+
+        // Chọn nước cho Đỏ (side 1)
+        function choose(snap, timeLimit = AI_TIME_LIMIT_MS) {
+          load(snap);
+          const recent = new Set((snap.history || []).map(p => p.y * 9 + p.x));
+          poolTop = 0;
+          nodes = 0;
+          aborted = false;
+          deadline = performance.now() + timeLimit;
+          const side = 1;
+          const dR = distMap(0, takeDist());
+          const dB = distMap(8, takeDist());
+          let actions = genActions(side, dR, dB, AI_WALL_BUDGET_ROOT);
+          for (const a of actions) a.own = a.t === 0 ? dR[a.n] : dR[pos[side]];
+          poolTop = 0;
+          if (!actions.length) return null;
+
+          // Thắng ngay nếu có thể
+          for (const a of actions) if (a.t === 0 && Math.floor(a.n / 9) === GOAL[side]) return toAction(a);
+
+          let best = actions[0];
+          for (let depth = 1; depth <= AI_MAX_DEPTH; depth++) {
+            let alpha = -Infinity;
+            let iterBest = null;
+            for (const a of actions) {
+              const old = apply(side, a);
+              let v = -search(1 - side, depth - 1, 1, -Infinity, -alpha);
+              undo(side, a, old);
+              if (aborted) break;
+              if (a.t === 0 && recent.has(a.n) && Math.abs(v) < AI_DECIDED) v -= AI_REPEAT_PENALTY;
+              a.v = v;
+              if (v > alpha) { alpha = v; iterBest = a; }
+            }
+            if (aborted) {
+              // Độ sâu chưa xong: chỉ nhận nước tốt hơn nếu nó đã được xét trọn vẹn
+              if (iterBest && iterBest.v > best.v) best = iterBest;
+              break;
+            }
+            best = iterBest;
+            // Sắp xếp lại theo điểm vừa tính, nước đi trước tường khi bằng điểm
+            actions.sort((a, b) => (b.v - a.v) || (a.t - b.t) || (a.own - b.own));
+            if (Math.abs(best.v) >= AI_WIN - 100) break;
+          }
+          // Bằng điểm thì ưu tiên đi quân (giữ tường) và đi về gần đích
+          let pick = null;
+          for (const a of actions) {
+            if (a.t === 0 && a.v === best.v && (!pick || a.own < pick.own)) pick = a;
+          }
+          if (pick) best = pick;
+          return toAction(best);
+        }
+
+        return { choose };
       }
 
-      function generateSearchActions(isRedTurn, redPos, bluePos, redWallsLeft, blueWallsLeft, hWalls, vWalls, hOrigin, vOrigin, wallBudget) {
-        const myPos = isRedTurn ? redPos : bluePos;
-        const oppPos = isRedTurn ? bluePos : redPos;
-        const myWalls = isRedTurn ? redWallsLeft : blueWallsLeft;
-        const oppGoalRow = isRedTurn ? 0 : 8; // opponent-of-opponent, i.e. red's own goal when isRedTurn... see below
-        // NOTE: goal rows — red's goal is row 0, blue's goal is row 8.
-        const myGoalRow = isRedTurn ? 0 : 8;
-        const trueOppGoalRow = isRedTurn ? 8 : 0;
-
-        const moves = legalMoves(myPos.x, myPos.y, oppPos, hWalls, vWalls)
-          .map(m => ({ type: 'move', x: m.x, y: m.y }));
-
-        let wallActions = [];
-        if (myWalls > 0) {
-          const oppPath = bfsPath(oppPos, trueOppGoalRow, hWalls, vWalls);
-          const raw = collectRawWallCandidates(oppPath, redPos, bluePos);
-          const scored = [];
-
-          for (const c of raw) {
-            if (!simCanPlaceWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin)) continue;
-
-            simAddWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin);
-            const redAfter = bfsShortestPath(redPos, 0, hWalls, vWalls);
-            const blueAfter = bfsShortestPath(bluePos, 8, hWalls, vWalls);
-            simRemoveWall(c.o, c.x, c.y, hWalls, vWalls, hOrigin, vOrigin);
-
-            if (!Number.isFinite(redAfter) || !Number.isFinite(blueAfter)) continue;
-
-            const myAfter = isRedTurn ? redAfter : blueAfter;
-            const oppAfter = isRedTurn ? blueAfter : redAfter;
-            const score = (oppAfter - myAfter);
-
-            scored.push({ type: 'wall', o: c.o, x: c.x, y: c.y, score });
-          }
-
-          scored.sort((a, b) => b.score - a.score);
-          wallActions = scored.slice(0, wallBudget);
-        }
-
-        // Try the most disruptive wall placements first, then moves — helps
-        // alpha-beta cut more branches early.
-        return wallActions.concat(moves);
-      }
-
-      function minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth, isRedTurn, alpha, beta) {
-        if (bluePos.y === 8) return -100000 - depth; // blue reached goal: bad for red
-        if (redPos.y === 0) return 100000 + depth;    // red reached goal: good for red
-
-        if (depth <= 0) {
-          return evaluateState(redPos, bluePos, hWalls, vWalls, wallsLeft.red, wallsLeft.blue);
-        }
-
-        const wallBudget = depth >= 3 ? AI_WALL_BUDGET_DEEP : AI_WALL_BUDGET_SHALLOW;
-        const actions = generateSearchActions(isRedTurn, redPos, bluePos, wallsLeft.red, wallsLeft.blue, hWalls, vWalls, hOrigin, vOrigin, wallBudget);
-
-        if (actions.length === 0) {
-          return isRedTurn ? -100000 - depth : 100000 + depth;
-        }
-
-        if (isRedTurn) {
-          let best = -Infinity;
-          for (const act of actions) {
-            let val;
-            if (act.type === 'move') {
-              const oldX = redPos.x, oldY = redPos.y;
-              redPos.x = act.x; redPos.y = act.y;
-              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, false, alpha, beta);
-              redPos.x = oldX; redPos.y = oldY;
-            } else {
-              simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-              wallsLeft.red--;
-              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, false, alpha, beta);
-              wallsLeft.red++;
-              simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-            }
-            if (val > best) best = val;
-            if (best > alpha) alpha = best;
-            if (alpha >= beta) break;
-          }
-          return best;
-        } else {
-          let best = Infinity;
-          for (const act of actions) {
-            let val;
-            if (act.type === 'move') {
-              const oldX = bluePos.x, oldY = bluePos.y;
-              bluePos.x = act.x; bluePos.y = act.y;
-              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, true, alpha, beta);
-              bluePos.x = oldX; bluePos.y = oldY;
-            } else {
-              simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-              wallsLeft.blue--;
-              val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, depth - 1, true, alpha, beta);
-              wallsLeft.blue++;
-              simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-            }
-            if (val < best) best = val;
-            if (best < beta) beta = best;
-            if (alpha >= beta) break;
-          }
-          return best;
-        }
-      }
+      const aiEngine = createAIEngine();
 
       function chooseAIAction() {
-        const redPos = { x: state.red.x, y: state.red.y };
-        const bluePos = { x: state.blue.x, y: state.blue.y };
-        const wallsLeft = { red: state.red.walls, blue: state.blue.walls };
-        const hWalls = cloneSet(state.hWalls);
-        const vWalls = cloneSet(state.vWalls);
-        const hOrigin = new Set([...state.blueH, ...state.redH]);
-        const vOrigin = new Set([...state.blueV, ...state.redV]);
-
-        const rootActions = generateSearchActions(true, redPos, bluePos, wallsLeft.red, wallsLeft.blue, hWalls, vWalls, hOrigin, vOrigin, AI_WALL_BUDGET_SHALLOW);
-
-        if (rootActions.length === 0) return null;
-
-        let bestAction = rootActions[0];
-        let bestScore = -Infinity;
-        let alpha = -Infinity;
-        const beta = Infinity;
-
-        for (const act of rootActions) {
-          let val;
-          if (act.type === 'move') {
-            const oldX = redPos.x, oldY = redPos.y;
-            redPos.x = act.x; redPos.y = act.y;
-            val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, AI_SEARCH_DEPTH - 1, false, alpha, beta);
-            redPos.x = oldX; redPos.y = oldY;
-          } else {
-            simAddWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-            wallsLeft.red--;
-            val = minimaxSearch(redPos, bluePos, wallsLeft, hWalls, vWalls, hOrigin, vOrigin, AI_SEARCH_DEPTH - 1, false, alpha, beta);
-            wallsLeft.red++;
-            simRemoveWall(act.o, act.x, act.y, hWalls, vWalls, hOrigin, vOrigin);
-          }
-
-          if (val > bestScore) {
-            bestScore = val;
-            bestAction = act;
-          }
-          if (bestScore > alpha) alpha = bestScore;
-        }
-
-        return bestAction;
+        return aiEngine.choose({
+          red: state.red,
+          blue: state.blue,
+          hWalls: state.hWalls,
+          vWalls: state.vWalls,
+          hOrigin: [...state.blueH, ...state.redH],
+          vOrigin: [...state.blueV, ...state.redV],
+          history: state.redHistory.slice(-4),
+        });
       }
 
       function executeAIAction(action) {
