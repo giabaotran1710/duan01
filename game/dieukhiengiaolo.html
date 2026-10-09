@@ -23,10 +23,11 @@
   body{display:flex;align-items:center;justify-content:center}
   button{font:inherit;color:inherit}
 
+  /* Ghim khung game đúng bằng vùng nhìn thấy. Trước đây dùng 100vh: trên Chrome điện thoại 100vh
+     cao hơn màn hình thật (tính cả thanh địa chỉ) nên khung bị căn giữa và HUD phía trên bị cắt. */
   #gameWrap{
-    width:100vw;
-    height:100vh;
-    position:relative;
+    position:fixed;
+    inset:0;
     overflow:hidden;
     background:
       radial-gradient(circle at 50% 50%,rgba(45,70,120,.14),transparent 45%),
@@ -240,6 +241,33 @@
     transition:width .1s linear;
   }
 
+  /* Thanh "Cẩu thả": đầy dần khi bấm bỏ xe liên tục, hạ xuống khi cho xe đi qua an toàn. */
+  .reckless{margin-top:3px}
+  .reckless .label{font-size:8px;display:flex;justify-content:space-between;gap:4px}
+  #recklessTag{color:#ffd34d;font-weight:800;letter-spacing:0}
+  .recklessBar{
+    position:relative;
+    height:5px;
+    margin-top:2px;
+    border-radius:999px;
+    background:rgba(255,255,255,.14);
+    overflow:hidden;
+  }
+  .recklessBar::before,.recklessBar::after{
+    content:"";position:absolute;top:0;bottom:0;width:1px;background:rgba(255,255,255,.45);z-index:1;
+  }
+  .recklessBar::before{left:50%}
+  .recklessBar::after{left:75%}
+  #recklessFill{
+    height:100%;
+    width:0%;
+    border-radius:999px;
+    background:#3cff92;
+    transition:width .15s linear,background .15s;
+  }
+  .hud.rage{border-top-color:#ff5577;animation:ragePulse .6s ease-in-out infinite alternate}
+  @keyframes ragePulse{from{box-shadow:0 0 0 rgba(255,85,119,0)}to{box-shadow:0 0 18px rgba(255,85,119,.75)}}
+
     footer{
   position: fixed;
   bottom: 5px;
@@ -282,6 +310,10 @@
   <div class="hud" id="hudL">
     <div class="stat"><span class="label">Điểm</span><span class="value" id="score">0</span></div>
     <div class="stat"><span class="label">Ải</span><span class="value" id="wave">1</span></div>
+    <div class="reckless">
+      <div class="label"><span>Cẩu thả</span><span id="recklessTag"></span></div>
+      <div class="recklessBar"><div id="recklessFill"></div></div>
+    </div>
   </div>
   <div class="hud" id="hudR">
     <div class="stat" style="justify-content:flex-end"><span class="value" id="lives" aria-label="Mạng">❤️❤️❤️</span></div>
@@ -300,6 +332,10 @@
     ❤️ Mạng tự hồi phục theo thời gian, xem thanh tiến trình phía trên.<br>
     🚑🚓 <b>Xe ưu tiên</b> (đèn đỏ/xanh nháy): <b>đừng chạm</b>, chạm sẽ mất 1 mạng. Cho đi an toàn được thưởng.<br>
     🚛🚌 Xe tải/xe buýt dài và chậm, luôn đi thẳng.<br>
+    <br><b>Thanh Cẩu thả</b> (dưới ô Điểm): mỗi lần chạm bỏ xe thanh tăng, bỏ liên tiếp tăng càng nhanh. Mỗi xe đi qua an toàn thanh giảm.<br>
+    ⚠️ Mức 1 (½ thanh): bỏ xe bị trừ điểm và phải chờ giữa 2 lần bỏ.<br>
+    ↩️ Mức 2 (¾ thanh): xe bị bỏ quay đầu rồi quay lại, kéo thêm 1 xe.<br>
+    🔥 Mức 3 (đầy): 10 giây quái xế và xe ưu tiên xuất hiện nhiều, mọi xe nhanh hơn 30%. Sống sót thì thanh về 0.<br><br>
     🌧️ Mưa đổi theo ải, làm xe phanh chậm.<br>🕒 Sáng/trưa/chiều/tối trong game theo giờ thực của máy.<br>
     <br><b>Mẹo:</b> Quan sát toàn bộ giao lộ và xử lý xe thật nhanh.
   </div>
@@ -352,6 +388,8 @@ const bgMusic = new Audio('../audio/dieukhiengiaolo.mp3');
   const legend = document.getElementById('legend');
   const lifeRecoverEl = document.getElementById('lifeRecover');
   const lifeRecoverFillEl = document.getElementById('lifeRecoverFill');
+  const recklessFillEl = document.getElementById('recklessFill');
+  const recklessTagEl = document.getElementById('recklessTag');
 
 
   let W = innerWidth, H = innerHeight, dpr = Math.min(devicePixelRatio || 1, 2);
@@ -364,6 +402,22 @@ const bgMusic = new Audio('../audio/dieukhiengiaolo.mp3');
   const SPEED_RAMP_MAX = 0.25;      // tối đa tăng 25%
   const WAVE_INTERVAL = 25;         // mỗi 25 giây qua màn
 
+  // Chống gian lận "gặp xe nào bỏ xe đó": thanh Cẩu thả (0–100).
+  const RECKLESS_MAX = 100;
+  const RECKLESS_PER_REMOVE = 12;   // mỗi lần bỏ xe
+  const RECKLESS_STREAK_STEP = 6;   // bỏ liên tiếp (chưa có xe nào đi qua an toàn) cộng thêm mỗi lần
+  const RECKLESS_SAFE_PASS = 8;     // mỗi xe đi qua an toàn thì thanh giảm
+  const RECKLESS_L1 = 50;           // mức 1: trừ điểm + thời gian chờ
+  const RECKLESS_L2 = 75;           // mức 2: xe quay lại + kéo thêm 1 xe
+  const L1_REMOVE_PENALTY = 10;
+  const L1_COOLDOWN = 1.0;
+  const L2_COOLDOWN = 1.5;
+  const RETURN_DELAY = 1.2;         // giây trước khi xe bị bỏ quay lại
+  const RAGE_DURATION = 10;         // mức 3 kéo dài 10 giây
+  const RAGE_SPEED = 1.3;           // mọi xe nhanh hơn 30%
+  const RAGE_RACER_CHANCE = 0.22;
+  const RAGE_PRIORITY_CHANCE = 0.22;
+
   const state = {
     running: true, score: 0, lives: 3,
     best: Number(localStorage.getItem('crossroadBest') || 0),
@@ -372,8 +426,10 @@ const bgMusic = new Audio('../audio/dieukhiengiaolo.mp3');
 hitFlash: 0, shake: 0, messageTimer: 0,
     speedRampTimer: SPEED_RAMP_INTERVAL,
     speedBonus: 0,
-    lifeRecoverTimer: 0
+    lifeRecoverTimer: 0,
+    reckless: 0, removeStreak: 0, removeCooldown: 0, rageTimer: 0
   };
+  const pendingReturns = []; // xe bị bỏ ở mức 2 chờ quay lại giao lộ
 
   const MAX_CARS_ON_SCREEN = 8;
   const PRIORITY_CHANCE = 0.07;     // xe ưu tiên (từ ải 2)
@@ -616,6 +672,14 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     livesEl.textContent = '❤️'.repeat(state.lives) + '🖤'.repeat(MAX_LIVES-state.lives);
     bestEl.textContent = state.best;
 
+    const rPct = clamp(state.reckless / RECKLESS_MAX * 100, 0, 100);
+    recklessFillEl.style.width = rPct + '%';
+    recklessFillEl.style.background = state.rageTimer>0 || rPct>=RECKLESS_L2 ? '#ff5577' :
+                                      rPct>=RECKLESS_L1 ? '#ffd34d' : '#3cff92';
+    recklessTagEl.textContent = state.rageTimer>0 ? `🔥${Math.ceil(state.rageTimer)}s` :
+                                rPct>=RECKLESS_L2 ? 'M2' : rPct>=RECKLESS_L1 ? 'M1' : '';
+    hudL.classList.toggle('rage', state.rageTimer>0);
+
     if(state.lives < MAX_LIVES && state.running){
       lifeRecoverEl.classList.add('show');
       const pct = clamp((state.lifeRecoverTimer / LIFE_RECOVER_SECONDS) * 100, 0, 100);
@@ -644,7 +708,7 @@ hitFlash: 0, shake: 0, messageTimer: 0,
   }
 
 
-  function spawnCar(){
+  function spawnCar(forced){
     const dirs = [
       {axis:'h',dir:1,name:'Tây → Đông'},
       {axis:'h',dir:-1,name:'Đông → Tây'},
@@ -652,7 +716,7 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       {axis:'v',dir:-1,name:'Nam → Bắc'}
     ];
 
-    const choice = choose(dirs);
+    const choice = forced || choose(dirs);
     const axis = choice.axis;
     const dir = choice.dir;
     const g = roadGeom();
@@ -662,7 +726,8 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     // Thêm hạng "racer" (quái xế): hiếm gặp nhưng cực nhanh.
     const rSpeed = Math.random();
     let speedClass, speedMultiplier;
-    if(rSpeed < 0.06){
+    const raging = state.rageTimer > 0;
+    if(rSpeed < (raging ? RAGE_RACER_CHANCE : 0.06)){
       speedClass = 'racer';
       speedMultiplier = rand(1.55,1.85);
     }else if(rSpeed < 0.30){
@@ -678,14 +743,17 @@ hitFlash: 0, shake: 0, messageTimer: 0,
 
     // Loại xe: thường / ưu tiên (còi hú) / xe dài (tải, buýt).
     let kind = 'car';
-    const hasPriority = cars.some(o=>!o.dead && o.priority);
+    const priorityCount = cars.filter(o=>!o.dead && o.priority).length;
     const longCount = cars.filter(o=>!o.dead && (o.kind==='truck'||o.kind==='bus')).length;
     const rk = Math.random();
-    if(state.wave>=2 && !hasPriority && rk < PRIORITY_CHANCE){
+    // Mức 3 Cẩu thả: xe ưu tiên xuất hiện nhiều hơn (cả ở ải 1, tối đa 2 xe cùng lúc).
+    const priorityOk = raging ? priorityCount < 2 : (state.wave>=2 && priorityCount===0);
+    const priorityChance = raging ? RAGE_PRIORITY_CHANCE : PRIORITY_CHANCE;
+    if(priorityOk && rk < priorityChance){
       kind = Math.random()<0.5 ? 'ambulance' : 'police';
       speedClass = 'fast';
       speedMultiplier = rand(1.25,1.4);
-    }else if(longCount < MAX_LONG_VEHICLES && rk < PRIORITY_CHANCE + LONG_VEHICLE_CHANCE){
+    }else if(longCount < MAX_LONG_VEHICLES && rk < priorityChance + LONG_VEHICLE_CHANCE){
       kind = Math.random()<0.5 ? 'truck' : 'bus';
       speedClass = 'slow';
       speedMultiplier = rand(0.7,0.82);
@@ -797,12 +865,21 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       turnPrepStarted:false,
     };
 
+    // Xe quay lại (mức 2) xếp sau xe cuối cùng đang ở ngoài màn hình của làn đó để không đè lên nhau.
+    let back = 70;
+    if(forced){
+      for(const o of cars){
+        if(o.dead || o.turning || o.axis!==axis || o.dir!==dir) continue;
+        const entry = axis==='h' ? (dir===1 ? -o.x : o.x-W) : (dir===1 ? -o.y : o.y-H);
+        if(entry > -60) back = Math.max(back, entry + o.w/2 + kindW/2 + 50);
+      }
+    }
     if(axis==='h'){
       car.y = laneCenter('h',dir);
-      car.x = dir===1 ? -70 : W+70;
+      car.x = dir===1 ? -back : W+back;
     }else{
       car.x = laneCenter('v',dir);
-      car.y = dir===1 ? -70 : H+70;
+      car.y = dir===1 ? -back : H+back;
     }
 
     cars.push(car);
@@ -1184,6 +1261,7 @@ hitFlash: 0, shake: 0, messageTimer: 0,
           if(!c.scored){
             c.scored = true;
             state.score += 12 + state.wave * 2;
+            onSafePass();
           }
           c.dead = true;
         }
@@ -1245,6 +1323,7 @@ hitFlash: 0, shake: 0, messageTimer: 0,
         if(!c.scored){
           c.scored = true;
           state.score += 12 + state.wave * 2;
+          onSafePass();
           if(c.priority){
             state.score += PRIORITY_BONUS;
             setMessage(`🚑 Xe ưu tiên đi an toàn +${PRIORITY_BONUS}`,900);
@@ -1399,6 +1478,7 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     }
 
     updateLifeRecovery(dt);
+    updateReckless(dt);
 
     const baseSpawn = Math.max(0.62, 1.30 - state.wave*0.040);
     const pressure = Math.min(1.3, cars.length/12);
@@ -1418,7 +1498,8 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       state.spawnTimer = rand(interval*.9, interval*1.35);
     }
 
-    updateCars(dt);
+    // Mức 3 Cẩu thả: mọi xe chạy nhanh hơn 30%.
+    updateCars(state.rageTimer>0 ? dt*RAGE_SPEED : dt);
     updateParticles(dt);
 
     if(state.score>state.best){
@@ -1970,10 +2051,64 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     return best;
   }
 
+  function onSafePass(){
+    state.removeStreak = 0;
+    if(state.rageTimer>0) return; // đang chịu phạt mức 3 thì thanh giữ nguyên
+    state.reckless = Math.max(0, state.reckless - RECKLESS_SAFE_PASS);
+  }
+
+  function updateReckless(dt){
+    if(state.removeCooldown>0) state.removeCooldown = Math.max(0, state.removeCooldown - dt);
+
+    for(let i=pendingReturns.length-1;i>=0;i--){
+      const p = pendingReturns[i];
+      p.t -= dt;
+      if(p.t>0) continue;
+      pendingReturns.splice(i,1);
+      // Cho phép vượt giới hạn 8 xe một chút: đây là hình phạt.
+      if(cars.length < MAX_CARS_ON_SCREEN + 3) spawnCar(p.lane);
+    }
+
+    if(state.rageTimer>0){
+      state.rageTimer -= dt;
+      if(state.rageTimer<=0){
+        state.rageTimer = 0;
+        state.reckless = 0;
+        state.removeStreak = 0;
+        setMessage('✅ Đã vượt qua! Thanh Cẩu thả về 0', 1600);
+      }
+    }
+  }
+
   function removeCarByPlayer(c){
     if(!c || c.dead || !state.running) return;
 
+    // Mức 1 trở lên: phải chờ giữa 2 lần bỏ xe.
+    if(state.removeCooldown>0){
+      setMessage(`⏳ Cẩu thả quá! Chờ ${state.removeCooldown.toFixed(1)}s mới bỏ xe được`, 600);
+      return;
+    }
+
     c.dead = true;
+
+    // Mức phạt tính theo thanh Cẩu thả TRƯỚC lần bỏ này.
+    const level = state.rageTimer>0 ? 3 : state.reckless>=RECKLESS_L2 ? 2 : state.reckless>=RECKLESS_L1 ? 1 : 0;
+    if(state.rageTimer<=0){
+      state.reckless = Math.min(RECKLESS_MAX, state.reckless + RECKLESS_PER_REMOVE + state.removeStreak*RECKLESS_STREAK_STEP);
+    }
+    state.removeStreak++;
+    if(level>=1) state.removeCooldown = level>=2 ? L2_COOLDOWN : L1_COOLDOWN;
+    if(level>=2){
+      // Xe không biến mất: quay đầu rồi quay lại đúng làn đó, kéo thêm 1 xe ngẫu nhiên.
+      pendingReturns.push({t:RETURN_DELAY, lane:{axis:c.axis, dir:c.dir}});
+      pendingReturns.push({t:RETURN_DELAY+0.8, lane:null});
+    }
+    const enterRage = state.rageTimer<=0 && state.reckless>=RECKLESS_MAX;
+    if(enterRage){
+      state.rageTimer = RAGE_DURATION;
+      state.hitFlash = 1;
+      state.shake = 6;
+    }
 
     if(c.priority){
       state.lives--;
@@ -1987,10 +2122,22 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       return;
     }
 
-    state.score += 5;
+    if(level>=1){
+      state.score = Math.max(0, state.score - L1_REMOVE_PENALTY);
+    }else{
+      state.score += 5;
+    }
 
-    explode(c.x,c.y,'#7fd8ff');
-    setMessage('Đã loại bỏ xe khả nghi...',500);
+    explode(c.x,c.y, level>=2 ? '#ffd34d' : '#7fd8ff');
+    if(enterRage){
+      setMessage('🔥 QUÁ CẨU THẢ! 10 giây xe chạy nhanh hơn, quái xế và xe ưu tiên kéo đến', 2200);
+    }else if(level>=2){
+      setMessage(`↩️ Xe quay đầu rồi quay lại, kéo thêm 1 xe! -${L1_REMOVE_PENALTY}`, 1100);
+    }else if(level>=1){
+      setMessage(`⚠️ Bỏ xe bừa bãi -${L1_REMOVE_PENALTY} điểm`, 900);
+    }else{
+      setMessage('Đã loại bỏ xe khả nghi...',500);
+    }
   }
 
   canvas.addEventListener('pointerdown', e=>{
@@ -2032,6 +2179,11 @@ hitFlash: 0, shake: 0, messageTimer: 0,
     state.speedRampTimer = SPEED_RAMP_INTERVAL;
     state.speedBonus = 0;
     state.lifeRecoverTimer = 0;
+    state.reckless = 0;
+    state.removeStreak = 0;
+    state.removeCooldown = 0;
+    state.rageTimer = 0;
+    pendingReturns.length = 0;
 
     cars.length = 0;
     particles.length = 0;
