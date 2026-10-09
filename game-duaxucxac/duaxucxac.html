@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <title>Đua Xúc Xắc Bãi Biển</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<link rel="stylesheet" href="style.css?v=20261009">
+<link rel="stylesheet" href="style.css?v=20261010">
 </head>
 <body>
 
@@ -127,11 +127,11 @@
   </div>
 </div>
 
-<script src="item.js?v=20261009"></script>
-<script src="game-const.js?v=20261009"></script>
-<script src="game-layout.js?v=20261009"></script>
-<script src="game-draw.js?v=20261009"></script>
-<script src="game-cards.js?v=20261009"></script>
+<script src="item.js?v=20261010"></script>
+<script src="game-const.js?v=20261010"></script>
+<script src="game-layout.js?v=20261010"></script>
+<script src="game-draw.js?v=20261010"></script>
+<script src="game-cards.js?v=20261010"></script>
 
 <script>
 /* =====================================================
@@ -382,6 +382,37 @@ function checkStopFlag(who){
 /* =====================================================
    ITEM EFFECT ENGINE - FIXED
 ===================================================== */
+/* Số bước để leo thẳng lên ô nằm ngay phía trên (tầng kế tiếp) trên bàn cờ */
+function getTowerSteps(who){
+  const pos=tokens[who].pos;
+
+  if(pos<1){
+    return 0;
+  }
+
+  const n=pos-1;
+  const rowFromBottom=Math.floor(n/10);
+
+  if(rowFromBottom>=9){
+    return 0;
+  }
+
+  const colInRow=n%10;
+  const col=rowFromBottom%2===0 ? colInRow : 9-colInRow;
+  const nextRow=rowFromBottom+1;
+  const nextColInRow=nextRow%2===0 ? col : 9-col;
+
+  return nextRow*10+nextColInRow+1-pos;
+}
+
+/* Ô cắm cờ: nằm trên đường đi của đối thủ, cách 2 ô phía trước họ */
+function getFlagCellFor(who){
+  const opp=tokens[getOpponentKey(who)];
+  const pos=Math.min(99,Math.max(2,opp.pos+2));
+
+  return pos>opp.pos ? pos : 0;
+}
+
 function canMoveSelfByItem(who,steps){
   const need=100-tokens[who].pos;
 
@@ -467,7 +498,7 @@ async function applyItemEffect(who,item){
 
       updateStatus(
         "Đã khóa xúc xắc",
-        `${tokens[targetKey].name} sẽ chỉ tung ra số ${effect.parity==="even" ? "chẵn" : "lẻ"} ở lượt sau.`
+        `${tokens[targetKey].name} sẽ chỉ tung ra số ${effect.parity==="even" ? "chẵn" : "lẻ"} ở lần tung kế tiếp.`
       );
 
       return true;
@@ -478,7 +509,7 @@ async function applyItemEffect(who,item){
 
       updateStatus(
         "Giới hạn xúc xắc",
-        `${tokens[who].name} sẽ chỉ tung ra ${effect.values.join("/")} trong lượt này.`
+        `${tokens[who].name} sẽ chỉ tung ra ${effect.values.join("/")} ở lần tung kế tiếp.`
       );
 
       return true;
@@ -496,26 +527,38 @@ async function applyItemEffect(who,item){
     }
 
     case "tower_up":{
-      itemRuntime[who].towerFloors+=(effect.floors || 1);
+      const steps=getTowerSteps(who);
 
-      updateStatus(
-        "Leo tháp",
-        `${tokens[who].name} đã leo lên ${itemRuntime[who].towerFloors} tầng tháp.`
-      );
+      if(steps<=0){
+        updateStatus(
+          "Chưa leo được",
+          `${tokens[who].name} chưa ở trên đường đua hoặc đã ở hàng trên cùng nên thẻ ${item.name} được giữ lại.`
+        );
 
+        return false;
+      }
+
+      if(!canMoveSelfByItem(who,steps)){
+        return false;
+      }
+
+      await moveSelfByItem(who,steps,item.name);
       return true;
     }
 
     case "add_status":{
       if(effect.status==="invisible"){
+        const turns=effect.turns || 3;
+
+        /* +1 vì cuối lượt hiện tại (lượt dùng thẻ) cũng trừ 1 */
         itemRuntime[who].invisibleTurns=Math.max(
           itemRuntime[who].invisibleTurns,
-          effect.turns || 3
+          turns+1
         );
 
         updateStatus(
           "Tàng hình!",
-          `${tokens[who].name} tàng hình trong ${itemRuntime[who].invisibleTurns} lượt.`
+          `${tokens[who].name} tàng hình trong ${turns} lượt của đối thủ.`
         );
 
         return true;
@@ -553,11 +596,20 @@ async function applyItemEffect(who,item){
     }
 
     case "move_opponent_steps":{
+      const steps=Math.abs(effect.steps || 0);
+
+      if(tokens[opponentKey].pos<=0){
+        updateStatus(
+          "Chưa cần dùng",
+          `${tokens[opponentKey].name} chưa xuất phát nên không thể đẩy lùi. Thẻ được giữ lại.`
+        );
+
+        return false;
+      }
+
       if(!canApplyHarmfulEffect(who,opponentKey,item)){
         return true;
       }
-
-      const steps=Math.abs(effect.steps || 0);
 
       updateStatus(
         "Đẩy lùi!",
@@ -578,18 +630,27 @@ async function applyItemEffect(who,item){
 
       updateStatus(
         "Ép xúc xắc!",
-        `Lượt sau ${tokens[opponentKey].name} sẽ tung ra ${effect.value}.`
+        `Lần tung kế tiếp của ${tokens[opponentKey].name} sẽ ra ${effect.value}.`
       );
 
       return true;
     }
 
     case "place_stop_flag":{
+      const flagPos=getFlagCellFor(who);
+
+      if(flagPos<=0){
+        updateStatus(
+          "Chưa cắm cờ được",
+          `${tokens[opponentKey].name} đã sát vạch đích nên không còn ô để cắm cờ. Thẻ được giữ lại.`
+        );
+
+        return false;
+      }
+
       if(!canApplyHarmfulEffect(who,opponentKey,item)){
         return true;
       }
-
-      const flagPos=Math.max(1,tokens[who].pos || 1);
 
       boardFlags.push({
         pos:flagPos,
@@ -599,7 +660,7 @@ async function applyItemEffect(who,item){
 
       updateStatus(
         "Cắm cờ!",
-        `${tokens[who].name} đã cắm cờ tại ô ${flagPos}. ${tokens[opponentKey].name} đi tới đó sẽ bị dừng.`
+        `${tokens[who].name} đã cắm cờ tại ô ${flagPos} trên đường của ${tokens[opponentKey].name}. Đi tới đó sẽ bị dừng.`
       );
 
       return true;
@@ -639,6 +700,15 @@ async function applyItemEffect(who,item){
     }
 
     case "swap_positions":{
+      if(tokens[who].pos===tokens[opponentKey].pos){
+        updateStatus(
+          "Chưa cần dùng",
+          "Hai bên đang ở cùng vị trí nên đổi chỗ không có tác dụng. Thẻ được giữ lại."
+        );
+
+        return false;
+      }
+
       if(!canApplyHarmfulEffect(who,opponentKey,item)){
         return true;
       }
@@ -697,7 +767,12 @@ function getParityName(parity){
 }
 
 function scoreAIItem(item){
-  const effect=item.effect || {};
+  let effect=item.effect || {};
+
+  if(effect.type==="tower_up"){
+    effect={type:"move_self_steps",steps:getTowerSteps("ai")};
+  }
+
   const type=effect.type;
 
   const aiPos=tokens.ai.pos;
@@ -876,12 +951,6 @@ case "force_next_roll_parity":{
       break;
     }
 
-    case "tower_up":{
-      score=-999;
-      reason="thẻ tháp hiện chưa có tác dụng chiến thuật trực tiếp";
-      break;
-    }
-
     case "add_status":{
       if(effect.status==="invisible"){
         if(itemRuntime.ai.invisibleTurns>0){
@@ -970,17 +1039,17 @@ case "force_next_roll_parity":{
     }
 
     case "place_stop_flag":{
-      const dist=aiPos-playerPos;
+      const flagCell=getFlagCellFor("ai");
 
-      if(aiPos>0 && dist>0 && dist<=6){
-        score=240;
-        reason=`AI đang đứng trước người chơi ${dist} ô, cắm cờ tại ô ${aiPos} để chặn đường`;
-      }else if(playerNeed<=8 && aiPos>0){
-        score=120;
-        reason="người chơi gần đích, cắm cờ để tạo bẫy phòng thủ";
+      if(flagCell<=0){
+        score=-999;
+        reason="người chơi sát đích, không còn ô để cắm cờ";
+      }else if(gap<0 || playerNeed<=8){
+        score=playerNeed<=8 ? 200 : 180;
+        reason=`cắm cờ tại ô ${flagCell} trên đường của người chơi để chặn đường`;
       }else{
         score=-999;
-        reason="vị trí hiện tại chưa đẹp để cắm cờ";
+        reason="AI đang bị dẫn, giữ cờ để dùng khi cần chặn đường";
       }
 
       break;
@@ -1017,7 +1086,10 @@ case "force_next_roll_parity":{
     }
 
     case "swap_positions":{
-      if(gap>=8){
+      if(gap===0){
+        score=-999;
+        reason="hai bên cùng vị trí, đổi chỗ vô ích";
+      }else if(gap>=8){
         score=500+gap*6;
         reason=`người chơi đang dẫn ${gap} ô, đổi chỗ để đảo ngược thế trận`;
       }else if(playerNeed<=12 && playerPos>aiPos){

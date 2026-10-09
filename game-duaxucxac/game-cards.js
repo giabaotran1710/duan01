@@ -362,15 +362,22 @@ async function useInventoryItem(who,uid){
   state.busy=true;
   setDiceEnabled(false);
 
-  await showCardConsumeEffect(who,item);
+  try{
+    await showCardConsumeEffect(who,item);
 
-  const used=await applyItemEffect(who,item);
+    const used=await applyItemEffect(who,item);
 
-  if(used){
-    inventory.splice(index,1);
-    updateStats();
+    if(used){
+      const usedIndex=inventory.findIndex(i=>i.uid===uid);
 
-    console.log("Đã tiêu thẻ:",item);
+      if(usedIndex>=0){
+        inventory.splice(usedIndex,1);
+      }
+
+      updateStats();
+    }
+  }catch(err){
+    console.error("Lỗi khi dùng thẻ:",err);
   }
 
   if(!state.gameOver){
