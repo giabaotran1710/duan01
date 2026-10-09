@@ -337,32 +337,6 @@ function closeChillBar() {
     }
 
     // ============================================================  
-    // 6. CHỮ CÁI XOAY VÒNG (NÚT WORD GAME)  
-    // ============================================================  
-    const LETTERS = [
-        { ch: 'W' }, { ch: 'O' }, { ch: 'R' }, { ch: 'D' },
-        { ch: 'G' }, { ch: 'A' }, { ch: 'M' }, { ch: 'E' },
-    ];
-
-    function applyWordAnimation() {
-        document.querySelectorAll('#word-game .tile-letter').forEach(elLetter => {
-            if (elLetter.dataset.animationStarted) return;
-            elLetter.dataset.animationStarted = 'true';
-
-            let localIdx = 0;
-            setInterval(() => {
-                localIdx = (localIdx + 1) % LETTERS.length;
-                elLetter.classList.remove('pop');
-                void elLetter.offsetWidth;
-                elLetter.textContent = LETTERS[localIdx].ch;
-                elLetter.classList.add('pop');
-            }, 900);
-        });
-    }
-
-    applyWordAnimation();
-
-    // ============================================================  
     // 7. SKIP INTRO  
     // ============================================================  
     function skipIntro() {
