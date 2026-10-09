@@ -8,25 +8,10 @@
 let lastRedMove = null;
   const HUMAN_SIDE = 'blue';
   const AI_SIDE = 'red';
-  const AI_DEPTH = 4;
+  const AI_THINK_MS = 1000;
   let aiThinking = false;
   let aiTimer = null;
 
-  const PIECE_SCORE = {
-    rat: 100,
-    cat: 200,
-    owl: 200,
-    dog: 300,
-    wolf: 400,
-    leopard: 520,
-    tiger: 680,
-    lion: 820,
-    elephant: 1000,
-    crocodile: 680,
-    snake: 100,
-    bear: 820,
-    eagle: 820
-  };
   const turnValue = document.getElementById('turnValue');
   const statusEl = document.getElementById('status');
   const winnerPanel = document.getElementById('winnerPanel');
@@ -436,6 +421,8 @@ piece.y = move.y;
     initialPieces = buildInitialPieces();
     aiTimer = null;
     aiThinking = false;
+    positionHistory = [];
+    CothuAI.newGame();
     state = {
       pieces: buildPiecesForMode(),
       turn: 'blue',
@@ -514,6 +501,7 @@ lastRedMove = null;
         render();
         return;
       }
+      recordPosition();
       render();
       requestAnimationFrame(() => {
         createTideOverlays('rising');
@@ -525,6 +513,7 @@ lastRedMove = null;
       });
       return;
     }
+    recordPosition();
     clearSelection('Đến lượt bạn.');
   }
   
@@ -689,351 +678,36 @@ lastRedMove = null;
 
   function otherSide(side) { return side === HUMAN_SIDE ? AI_SIDE : HUMAN_SIDE; }
 
-  function withTempState(st, fn) {
-    const prev = state; state = st;
-    try { return fn(); } finally { state = prev; }
-  }
+  // Lịch sử thế cờ để AI tránh lặp lại vô ích (xem cothu-ai.js)
+  let positionHistory = [];
 
-  function cloneStateForAI(st) {
+  function toAIPosition(st) {
     return {
-      pieces: st.pieces.map(p => ({ ...p })),
+      pieces: st.pieces.map(p => ({
+        id: p.id, side: p.side, type: p.type, x: p.x, y: p.y,
+        stunned: p.stunned, asleep: p.asleep, hidden: upMode && !revealedIds.has(p.id)
+      })),
       turn: st.turn,
-      selectedId: null,
-      legal: [],
-      winner: st.winner,
       tideActive: st.tideActive,
-      tideAnimating: false,
-      tideCountdown: st.tideCountdown
+      tideCountdown: st.tideCountdown,
+      modes: { up: upMode, tide: tideMode, forest: forestMode, death: deathMatchMode }
     };
   }
 
-  function pieceAtIn(st, x, y) { return st.pieces.find(p => p.x === x && p.y === y) || null; }
-  function isTrapForIn(piece, x, y) {
-    const t = terrain(x, y);
-    return (piece.side === 'blue' && t === 'trapRed') || (piece.side === 'red' && t === 'trapBlue');
-  }
-  function isEnemyDenIn(piece, x, y) {
-    const t = terrain(x, y);
-    return (piece.side === 'blue' && t === 'denRed') || (piece.side === 'red' && t === 'denBlue');
-  }
-  function legalMovesIn(st, piece) {
-    if (!piece) return [];
-    if (upMode && !revealedIds.has(piece.id)) return [];
-    return withTempState(st, () => legalMoves(piece));
-  }
-  function allMovesIn(st, side) {
-    const moves = [];
-    for (const p of st.pieces) {
-      if (p.side !== side) continue;
-      for (const mv of legalMovesIn(st, p)) {
-        moves.push({...mv, pieceId: p.id, fromX: p.x, fromY: p.y, side: p.side, type: p.type});
-      }
-    }
-    return moves;
+  function recordPosition() {
+    if (!state || state.winner) return;
+    positionHistory.push(CothuAI.positionKey(toAIPosition(state)));
   }
 
-  function applySimMove(st, move) {
-    // Mô phỏng đúng vòng đời trạng thái choáng/ngủ: mỗi lượt đi (kể cả lượt do AI tưởng tượng
-    // trước trong quá trình tìm kiếm) đều phải làm giảm bộ đếm choáng/ngủ của MỌI quân đi 1,
-    // giống hệt decreaseStatuses() ở ván thật. Trước đây bước này bị bỏ sót trong cây tìm kiếm,
-    // khiến hiệu ứng choáng của Cú (vốn chỉ kéo dài 3 lượt) bị AI xem như VĨNH VIỄN trong suốt
-    // nhánh tìm kiếm, dẫn tới AI đánh giá quá cao các đòn chọc choáng thay vì phòng thủ hang.
-    for (const p of st.pieces) {
-      if (p.stunned > 0) p.stunned--;
-      if (p.asleep > 0) p.asleep--;
-    }
-    const piece = st.pieces.find(p => p.id === move.pieceId);
-    if (!piece) return;
-    const target = pieceAtIn(st, move.x, move.y);
-
-    // Rắn: hoán đổi vị trí thay vì ăn quân
-    if (move.swap && target) {
-      const oldX = piece.x, oldY = piece.y;
-      target.x = oldX; target.y = oldY;
-      piece.x = move.x; piece.y = move.y;
-      if (isEnemyDenIn(piece, piece.x, piece.y)) { st.winner = piece.side; return; }
-      if (!st.pieces.some(p => p.side !== piece.side)) { st.winner = piece.side; return; }
-      st.turn = otherSide(piece.side);
-      return;
-    }
-
-    // Mô phỏng đúng luật của Cú: chặn/choáng thay vì luôn ăn, và tự ngủ sau khi hành động
-    if (piece.type === 'owl' && move.capture && target) {
-      // Cú đánh cú: cả hai cùng biến mất
-      if (target.type === 'owl') {
-        st.pieces = st.pieces.filter(p => p.id !== target.id && p.id !== piece.id);
-        st.turn = otherSide(piece.side);
-        return;
-      }
-      const aRank = withTempState(st, () => effectiveRank(piece, piece.x, piece.y));
-      const dRank = withTempState(st, () => effectiveRank(target, move.x, move.y));
-      if (dRank > aRank) {
-        // Cú không thắng nổi: quân địch bị choáng, cú ngủ, cú KHÔNG di chuyển vào ô đó
-        target.stunned = 3;
-        piece.asleep = 3;
-        st.turn = otherSide(piece.side);
-        return;
-      }
-      // Cú thắng: ăn bình thường nhưng vẫn ngủ sau đó
-      st.pieces = st.pieces.filter(p => p.id !== target.id);
-      piece.x = move.x; piece.y = move.y;
-      piece.asleep = 3;
-      if (isEnemyDenIn(piece, move.x, move.y)) { st.winner = piece.side; return; }
-      if (!st.pieces.some(p => p.side !== piece.side)) { st.winner = piece.side; return; }
-      st.turn = otherSide(piece.side);
-      return;
-    }
-
-    if (target && target.side !== piece.side) {
-      // Mutual-kill trong chế độ Tử chiến khi hai quân cùng cấp
-      if (deathMatchMode) {
-        const aRank = withTempState(st, () => effectiveRank(piece, piece.x, piece.y));
-        const dRank = withTempState(st, () => effectiveRank(target, move.x, move.y));
-        if (aRank === dRank) {
-          st.pieces = st.pieces.filter(p => p.id !== target.id && p.id !== piece.id);
-          st.turn = otherSide(piece.side);
-          return;
-        }
-      }
-      st.pieces = st.pieces.filter(p => p.id !== target.id);
-    }
-    piece.x = move.x; piece.y = move.y;
-    // Cú bay 2 ô (không ăn) cũng ngủ sau đó
-    if (piece.type === 'owl' && (Math.abs(move.x - move.fromX) + Math.abs(move.y - move.fromY) === 2)) {
-      piece.asleep = 3;
-    }
-    if (isEnemyDenIn(piece, move.x, move.y)) { st.winner = piece.side; return; }
-    if (!st.pieces.some(p => p.side !== piece.side)) { st.winner = piece.side; return; }
-    st.turn = otherSide(piece.side);
-
-    // Mô phỏng Thủy triều: nếu lượt vừa xong khiến thủy triều tới hạn dâng, xử lý luôn cho AI tính toán
-    if (tideMode) {
-      if (st.tideActive) {
-        // Sau lượt của bên đang có triều dâng thì triều rút (đơn giản hoá theo đúng vòng đời trong game thật:
-        // triều rút sau khi AI đi xong 1 lượt trong khi triều đang dâng)
-        if (piece.side === AI_SIDE) {
-          st.tideActive = false;
-          st.tideCountdown = 3;
-        }
-      } else {
-        if (piece.side === AI_SIDE) {
-          st.tideCountdown = (st.tideCountdown ?? 3) - 1;
-          if (st.tideCountdown <= 0) {
-            st.tideActive = true;
-            const victims = st.pieces.filter(p => p.y === 4 && p.type !== 'rat');
-            if (victims.length) st.pieces = st.pieces.filter(p => !(p.y === 4 && p.type !== 'rat'));
-            if (!st.pieces.some(p => p.side === HUMAN_SIDE)) st.winner = AI_SIDE;
-            else if (!st.pieces.some(p => p.side === AI_SIDE)) st.winner = HUMAN_SIDE;
-          }
-        }
-      }
-    }
-  }
-
-  function escapePressureScore(st, piece) {
-    const moves = legalMovesIn(st, piece);
-    const n = moves.length;
-    if (n === 0) return 5000;
-    if (n === 1) return 1800;
-    if (n === 2) return 700;
-    if (n === 3) return 250;
-    return 0;
-  }
-
-  function evaluateBoard(st) {
-    function edgeTrapScore(piece) {
-      let score = 0;
-      if (piece.x === 0 || piece.x === 6) score += 120;
-      if (piece.y === 0 || piece.y === 8) score += 120;
-      if ((piece.x === 0 || piece.x === 6) && (piece.y === 0 || piece.y === 8)) score += 220;
-      return score;
-    }
-    if (st.winner === AI_SIDE) return 1000000;
-    if (st.winner === HUMAN_SIDE) return -1000000;
-    let score = 0;
-    const aiMoves = allMovesIn(st, AI_SIDE);
-    const humanMoves = allMovesIn(st, HUMAN_SIDE);
-    // Chỉ tính điểm thưởng "sắp thắng" cho bên THỰC SỰ đang được đi lượt này.
-    // Trước đây bonus này được cộng bất kể đến lượt ai, khiến AI đánh giá quá cao một quân
-    // đang áp sát hang địch dù đối thủ mới là người đi tiếp theo và có thể ăn mất quân đó
-    // trước (đặc biệt ở Rừng sâu, nơi cả 3 ô liền kề miệng hang đều là bẫy nên quân áp sát
-    // luôn ở thế bị bất kỳ quân nào của đối phương ăn tự do).
-    if (st.turn === HUMAN_SIDE) {
-      for (const m of humanMoves) {
-        const piece = st.pieces.find(p => p.id === m.pieceId);
-        if (piece && isEnemyDenIn(piece, m.x, m.y)) score -= 100000;
-      }
-    }
-    if (st.turn === AI_SIDE) {
-      for (const m of aiMoves) {
-        const piece = st.pieces.find(p => p.id === m.pieceId);
-        if (piece && isEnemyDenIn(piece, m.x, m.y)) score += 90000;
-      }
-    }
-    for (const p of st.pieces) {
-      const val = PIECE_SCORE[p.type] || 0;
-      const sign = p.side === AI_SIDE ? 1 : -1;
-      score += sign * val;
-      if (isTrapForIn(p, p.x, p.y)) score += sign * -140;
-      const target = p.side === AI_SIDE ? { x:3, y:0 } : { x:3, y:8 };
-      const dist = Math.abs(p.x - target.x) + Math.abs(p.y - target.y);
-      score += sign * (18 - dist) * 3;
-      if (p.side === HUMAN_SIDE) {
-        if (dist <= 1) score -= 2500;
-        else if (dist === 2) score -= 1200;
-        else if (dist === 3) score -= 500;
-      } else {
-        if (dist <= 1) score += 1800;
-        else if (dist === 2) score += 900;
-      }
-      const enemyMoves = p.side === AI_SIDE ? humanMoves : aiMoves;
-      if (enemyMoves.some(m => m.capture && m.x === p.x && m.y === p.y)) {
-        score += p.side === AI_SIDE ? -val * 0.55 : val * 0.35;
-      }
-      // Áp lực bị dồn ép (ít đường thoát) - quan trọng với quân giá trị cao
-      if (val >= 300) {
-        const pressure = escapePressureScore(st, p);
-        score += sign * -pressure * 0.12;
-      }
-      score += sign * edgeTrapScore(p) * 0.15;
-    }
-    score += aiMoves.length * 4;
-    score -= humanMoves.length * 4;
-    return score;
-  }
-
-  // Sắp xếp nước đi: ưu tiên xét ăn quân giá trị cao trước để alpha-beta cắt tỉa hiệu quả hơn
-  function orderMoves(st, moves) {
-    return moves.slice().sort((a, b) => {
-      const av = a.capture ? (PIECE_SCORE[(pieceAtIn(st, a.x, a.y) || {}).type] || 0) : -1;
-      const bv = b.capture ? (PIECE_SCORE[(pieceAtIn(st, b.x, b.y) || {}).type] || 0) : -1;
-      return bv - av;
-    });
-  }
-
-  // Một nước đi được coi là "bắt buộc phải xét thêm" trong quiescence search nếu nó ăn quân
-  // HOẶC đi thẳng vào hang đối phương để thắng ngay. Trước đây quiescence chỉ mở rộng thêm
-  // các nước ăn quân, nên nếu nước thắng nằm ngay sau đường chân trời tìm kiếm chính, AI sẽ
-  // dùng điểm heuristic gần đúng (dễ sai) thay vì phát hiện chính xác cơ hội thắng đó.
-  function isForcingMove(st, m) {
-    if (m.capture) return true;
-    const piece = st.pieces.find(p => p.id === m.pieceId);
-    if (!piece) return false;
-    return isEnemyDenIn(piece, m.x, m.y);
-  }
-
-  // Quiescence search: sau khi hết độ sâu, nếu còn nước ăn quân "nóng" thì tính thêm để tránh horizon effect
-  function quiescence(st, maximizing, alpha, beta, qDepth) {
-    const standPat = evaluateBoard(st);
-    if (qDepth <= 0 || st.winner) return standPat;
-    if (maximizing) {
-      if (standPat >= beta) return standPat;
-      alpha = Math.max(alpha, standPat);
-      const side = AI_SIDE;
-      const captures = orderMoves(st, allMovesIn(st, side).filter(m => isForcingMove(st, m)));
-      let best = standPat;
-      for (const move of captures) {
-        const next = cloneStateForAI(st);
-        applySimMove(next, move);
-        const value = quiescence(next, false, alpha, beta, qDepth - 1);
-        best = Math.max(best, value);
-        alpha = Math.max(alpha, best);
-        if (beta <= alpha) break;
-      }
-      return best;
-    } else {
-      if (standPat <= alpha) return standPat;
-      beta = Math.min(beta, standPat);
-      const side = HUMAN_SIDE;
-      const captures = orderMoves(st, allMovesIn(st, side).filter(m => isForcingMove(st, m)));
-      let best = standPat;
-      for (const move of captures) {
-        const next = cloneStateForAI(st);
-        applySimMove(next, move);
-        const value = quiescence(next, true, alpha, beta, qDepth - 1);
-        best = Math.min(best, value);
-        beta = Math.min(beta, best);
-        if (beta <= alpha) break;
-      }
-      return best;
-    }
-  }
-
-  function minimax(st, depth, maximizing, alpha, beta) {
-    if (st.winner) return evaluateBoard(st);
-    if (depth === 0) return quiescence(st, maximizing, alpha, beta, 3);
-    const side = maximizing ? AI_SIDE : HUMAN_SIDE;
-    const moves = orderMoves(st, allMovesIn(st, side));
-    if (!moves.length) return maximizing ? -900000 : 900000;
-    if (maximizing) {
-      let best = -Infinity;
-      for (const move of moves) {
-        const next = cloneStateForAI(st);
-        applySimMove(next, move);
-        const value = minimax(next, depth - 1, false, alpha, beta);
-        best = Math.max(best, value);
-        alpha = Math.max(alpha, best);
-        if (beta <= alpha) break;
-      }
-      return best;
-    } else {
-      let best = Infinity;
-      for (const move of moves) {
-        const next = cloneStateForAI(st);
-        applySimMove(next, move);
-        const value = minimax(next, depth - 1, true, alpha, beta);
-        best = Math.min(best, value);
-        beta = Math.min(beta, best);
-        if (beta <= alpha) break;
-      }
-      return best;
-    }
-  }
-
-  // Độ sâu tìm kiếm động: cuối ván (ít quân) tính sâu hơn vì không gian nước đi nhỏ lại
-  function computeSearchDepth(st) {
-    const totalPieces = st.pieces.length;
-    if (totalPieces <= 4) return AI_DEPTH + 4;
-    if (totalPieces <= 6) return AI_DEPTH + 3;
-    if (totalPieces <= 9) return AI_DEPTH + 2;
-    if (totalPieces <= 12) return AI_DEPTH + 1;
-    return AI_DEPTH;
-  }
-
-  function chooseAIMove(st, depthOverride) {
-    if (upMode) {
-      const aiDen = { x: 3, y: 8 };
-      const humanPieces = st.pieces.filter(p => p.side === HUMAN_SIDE && revealedIds.has(p.id));
-      let immediateThreat = false;
-      for (let p of humanPieces) {
-        const dist = Math.abs(p.x - aiDen.x) + Math.abs(p.y - aiDen.y);
-        if (dist <= 2) { immediateThreat = true; break; }
-      }
-      if (!immediateThreat) {
-        const hiddenAI = st.pieces.filter(p => p.side === AI_SIDE && !revealedIds.has(p.id));
-        if (hiddenAI.length) {
-          const randomIndex = Math.floor(Math.random() * hiddenAI.length);
-          return { kind: 'reveal', pieceId: hiddenAI[randomIndex].id };
-        }
-      }
-    }
-    const depth = depthOverride || computeSearchDepth(st);
-    const moves = orderMoves(st, allMovesIn(st, AI_SIDE));
-    if (!moves.length) return null;
-    for (const move of moves) {
-      const next = cloneStateForAI(st);
-      applySimMove(next, move);
-      if (next.winner === AI_SIDE) return move;
-    }
-    let bestMove = moves[0];
-    let bestScore = -Infinity;
-    for (const move of moves) {
-      const next = cloneStateForAI(st);
-      applySimMove(next, move);
-      const score = next.winner ? evaluateBoard(next) : minimax(next, depth - 1, false, -Infinity, Infinity);
-      if (score > bestScore) { bestScore = score; bestMove = move; }
-    }
-    return bestMove;
+  function chooseAIMove(st) {
+    const pos = toAIPosition(st);
+    pos.history = positionHistory;
+    const res = CothuAI.chooseMove(pos, { timeMs: AI_THINK_MS });
+    if (!res) return null;
+    if (res.kind === 'reveal') return { kind: 'reveal', pieceId: res.pieceId };
+    const piece = st.pieces.find(p => p.id === res.pieceId);
+    const move = piece && legalMoves(piece).find(m => m.x === res.x && m.y === res.y);
+    return move ? { ...move, pieceId: piece.id } : null;
   }
 
   function finishAITurn(piece) {
@@ -1082,6 +756,7 @@ lastRedMove = null;
       const piece = state.pieces.find(p => p.id === move.pieceId);
       if (piece) revealGrass(piece);
       aiThinking = false;
+      recordPosition();
       state.turn = HUMAN_SIDE;
       clearSelection('AI đã vạch cỏ.', false);
       syncTurnUI();
@@ -1103,6 +778,7 @@ lastRedMove = null;
     if (state.winner || state.turn !== AI_SIDE || aiThinking) return;
     clearTimeout(aiTimer);
     aiThinking = true;
+    recordPosition();
     setStatus('AI đang suy nghĩ...');
     aiTimer = setTimeout(() => {
       const move = chooseAIMove(state);
