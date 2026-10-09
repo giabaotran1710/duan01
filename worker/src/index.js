@@ -40,6 +40,20 @@ function cleanScore(score) {
   return Math.floor(s);
 }
 
+// Tạo bảng ở lần gọi đầu tiên, nên không cần chạy lệnh tạo bảng thủ công.
+let schemaReady = null;
+function ensureSchema(env) {
+  if (!schemaReady) {
+    schemaReady = env.DB.batch([
+      env.DB.prepare(
+        'CREATE TABLE IF NOT EXISTS scores (id INTEGER PRIMARY KEY AUTOINCREMENT, game TEXT NOT NULL, name TEXT NOT NULL, score INTEGER NOT NULL, at TEXT NOT NULL)'
+      ),
+      env.DB.prepare('CREATE INDEX IF NOT EXISTS idx_scores_game_score ON scores (game, score DESC)'),
+    ]).catch(e => { schemaReady = null; throw e; });
+  }
+  return schemaReady;
+}
+
 async function topScores(env, game, limit) {
   const { results } = await env.DB
     .prepare('SELECT name, score, at FROM scores WHERE game = ? ORDER BY score DESC, id ASC LIMIT ?')
@@ -55,6 +69,8 @@ async function handle(request, env) {
     return new Response(null, { status: 204, headers: cors(request, env) });
   }
   if (url.pathname === '/api/health') return json(request, env, 200, { ok: true });
+
+  await ensureSchema(env);
 
   const m = url.pathname.match(/^\/api\/scores\/([^/]+)\/?$/);
   if (!m) return json(request, env, 404, { error: 'not_found' });
