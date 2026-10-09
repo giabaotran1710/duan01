@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Bảng xếp hạng</title>
+<link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&family=Quicksand:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root { --bg:#0f1220; --panel:#1a1f35; --line:#2c3355; --text:#eef1ff; --muted:#9aa3c7; --accent:#4fd1c5; --gold:#f6c453; }
+  * { box-sizing:border-box; }
+  body { margin:0; min-height:100vh; background:var(--bg); color:var(--text); font-family:'Quicksand',sans-serif; }
+  .wrap { max-width:640px; margin:0 auto; padding:24px 16px 48px; }
+  a.back { color:var(--muted); text-decoration:none; font-size:14px; }
+  h1 { font-family:'Exo 2',sans-serif; font-size:30px; margin:12px 0 4px; letter-spacing:1px; }
+  .status { font-size:13px; color:var(--muted); margin-bottom:20px; }
+  .status b { color:var(--accent); }
+  .row { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:16px; }
+  .row label { font-size:13px; color:var(--muted); width:100%; }
+  input, select, button { font:inherit; padding:10px 12px; border-radius:10px; border:1px solid var(--line); background:var(--panel); color:var(--text); }
+  input, select { flex:1; min-width:0; }
+  button { cursor:pointer; background:var(--accent); color:#0f1220; border:none; font-weight:700; }
+  table { width:100%; border-collapse:collapse; background:var(--panel); border-radius:12px; overflow:hidden; }
+  th, td { padding:12px; text-align:left; border-bottom:1px solid var(--line); }
+  th { font-size:12px; color:var(--muted); text-transform:uppercase; font-weight:500; }
+  td.rank { width:48px; font-weight:700; }
+  tr:nth-child(1) td.rank { color:var(--gold); }
+  td.score { text-align:right; font-family:'Exo 2',sans-serif; font-weight:700; }
+  td.date { color:var(--muted); font-size:12px; white-space:nowrap; }
+  .empty { padding:24px; text-align:center; color:var(--muted); }
+  .me td { background:rgba(79,209,197,.08); }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <a class="back" href="index.html">← Về trang chủ</a>
+  <h1>BẢNG XẾP HẠNG</h1>
+  <div class="status" id="status">Đang tải…</div>
+
+  <div class="row">
+    <label for="name">Tên của bạn (hiện trên bảng xếp hạng)</label>
+    <input id="name" maxlength="20" placeholder="Người chơi">
+    <button id="saveName" type="button">Lưu tên</button>
+  </div>
+
+  <div class="row">
+    <label for="game">Chọn game</label>
+    <select id="game"></select>
+  </div>
+
+  <table>
+    <thead><tr><th>#</th><th>Tên</th><th>Ngày</th><th style="text-align:right">Điểm</th></tr></thead>
+    <tbody id="list"></tbody>
+  </table>
+</div>
+
+<script src="scores.js?v=20261009"></script>
+<script>
+  // Các game đã gửi điểm qua scores.js (id trùng với id trong index.html).
+  const GAMES = [
+    { id: 'nedan', name: 'Né đạn' },
+    { id: 'neonreflex', name: 'Neon Reflex' },
+    { id: 'dapquai', name: 'Đập quái rừng sâu' },
+    { id: 'comet', name: 'Trốn khỏi thiên thạch' },
+    { id: 'ganangdong', name: 'Gà năng động' },
+    { id: 'dieukhiengiaolo', name: 'Điều khiển giao lộ' },
+  ];
+
+  const sel = document.getElementById('game');
+  const list = document.getElementById('list');
+  const status = document.getElementById('status');
+  const nameInput = document.getElementById('name');
+
+  GAMES.forEach(g => sel.add(new Option(g.name, g.id)));
+  const fromUrl = new URLSearchParams(location.search).get('game');
+  if (GAMES.some(g => g.id === fromUrl)) sel.value = fromUrl;
+
+  nameInput.value = Scores.getName() === 'Người chơi' ? '' : Scores.getName();
+  document.getElementById('saveName').onclick = () => {
+    Scores.setName(nameInput.value);
+    nameInput.value = Scores.getName();
+    load();
+  };
+
+  function cell(tr, text, cls) {
+    const td = document.createElement('td');
+    td.textContent = text;
+    if (cls) td.className = cls;
+    tr.appendChild(td);
+  }
+
+  async function load() {
+    list.innerHTML = '<tr><td colspan="4" class="empty">Đang tải…</td></tr>';
+    const { online, scores } = await Scores.top(sel.value, 10);
+    status.innerHTML = online
+      ? 'Đang xem bảng xếp hạng <b>chung trên server</b>.'
+      : 'Không kết nối được server, đang xem <b>điểm lưu trên máy này</b>.';
+    list.innerHTML = '';
+    if (!scores.length) {
+      list.innerHTML = '<tr><td colspan="4" class="empty">Chưa có điểm nào. Hãy chơi để ghi tên lên bảng!</td></tr>';
+      return;
+    }
+    const me = Scores.getName();
+    scores.forEach((s, i) => {
+      const tr = document.createElement('tr');
+      if (s.name === me) tr.className = 'me';
+      cell(tr, i + 1, 'rank');
+      cell(tr, s.name);
+      cell(tr, s.at ? new Date(s.at).toLocaleDateString('vi-VN') : '', 'date');
+      cell(tr, Number(s.score).toLocaleString('vi-VN'), 'score');
+      list.appendChild(tr);
+    });
+  }
+
+  sel.onchange = load;
+  load();
+</script>
+</body>
+</html>
