@@ -58,9 +58,25 @@ button:focus-visible{outline:2px solid rgba(89,185,215,.65);outline-offset:2px}
 #commentary::before{content:'AI';display:inline-block;margin-right:7px;color:var(--dim);font-size:8px;font-weight:700;letter-spacing:.09em;vertical-align:1px}
 #commentary.shrink{opacity:.55;transform:translateX(2px)}
 
-#board-wrap{width:100%;padding:0;background:transparent;border:0;box-shadow:none}
-#board{display:grid;grid-template-columns:repeat(15,1fr);width:100%;max-width:500px;margin:0 auto;background:var(--board);border:1px solid rgba(255,255,255,.10);border-radius:4px;overflow:hidden;box-shadow:0 12px 28px rgba(0,0,0,.22)}
+/* Bàn 25x25 nằm trong khung nhìn 15x15: vuốt (điện thoại) hoặc kéo chuột để di chuyển */
+#board-wrap{position:relative;width:100%;max-width:500px;margin:0 auto;padding:0;background:transparent;border:0;box-shadow:none}
+#board-view{width:100%;aspect-ratio:1/1;overflow:auto;overscroll-behavior:contain;-webkit-overflow-scrolling:touch;scrollbar-width:none;background:var(--board);border:1px solid rgba(255,255,255,.10);border-radius:4px;box-shadow:0 12px 28px rgba(0,0,0,.22);cursor:grab}
+#board-view::-webkit-scrollbar{display:none}
+#board-view.dragging{cursor:grabbing}
+#board-view.dragging .cell{cursor:grabbing}
+#board{position:relative;display:grid;grid-template-columns:repeat(25,1fr);width:calc(100% * 25 / 15);background:var(--board)}
 #board.disabled{pointer-events:none;opacity:.72}
+
+/* Chỉ dẫn tới nước vừa đánh khi nó nằm ngoài vùng đang nhìn */
+#offscreen-hint{position:absolute;left:0;top:0;width:36px;height:36px;margin:-18px 0 0 -18px;padding:0;border:0;border-radius:50%;background:rgba(17,16,13,.9);box-shadow:0 0 0 1.5px currentColor,0 6px 16px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;cursor:pointer;z-index:4;animation:hintPulse 1.1s ease-in-out infinite}
+#offscreen-hint[hidden]{display:none}
+#offscreen-hint.hint-X{color:var(--x)}
+#offscreen-hint.hint-O{color:var(--o)}
+#offscreen-hint .hint-sym{font-size:15px;font-weight:800;line-height:1}
+#offscreen-hint .hint-dir{position:absolute;inset:0;pointer-events:none}
+#offscreen-hint .hint-dir::after{content:'';position:absolute;right:-9px;top:50%;margin-top:-6px;border-left:8px solid currentColor;border-top:6px solid transparent;border-bottom:6px solid transparent}
+#offscreen-hint:active{transform:scale(.94)}
+@keyframes hintPulse{0%,100%{box-shadow:0 0 0 1.5px currentColor,0 6px 16px rgba(0,0,0,.4)}50%{box-shadow:0 0 0 4px currentColor,0 6px 16px rgba(0,0,0,.4)}}
 .cell{width:100%;aspect-ratio:1/1;border:1px solid var(--grid-soft);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:clamp(12px,4.4vw,19px);font-weight:800;line-height:1;box-sizing:border-box;position:relative;transition:background .10s ease,transform .10s ease}
 .cell:active{transform:scale(.95)}
 .X{color:var(--x);text-shadow:0 0 3px rgba(89,185,215,.18);font-weight:800}
@@ -174,7 +190,13 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
   </section>
 
   <section id="board-wrap">
-    <div id="board"></div>
+    <div id="board-view">
+      <div id="board"></div>
+    </div>
+    <button id="offscreen-hint" hidden aria-label="Tới nước vừa đánh">
+      <span class="hint-dir" aria-hidden="true"></span>
+      <span class="hint-sym"></span>
+    </button>
   </section>
 
   <div id="scoreBar" aria-hidden="true">
@@ -228,7 +250,7 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
     </div>
 
     <div id="status">Tung xúc xắc để biết ai đi trước</div>
-    <div id="blub">Ấn biểu tượng thế cờ để xem đánh giá nước đi</div>
+    <div id="blub">Bàn cờ 25×25: vuốt hoặc kéo bàn cờ để xem vùng khác.<br>Ấn biểu tượng thế cờ để xem đánh giá nước đi</div>
     <button class="site-return-btn" id="btnSiteReturn" onclick="goToWebsite()">giabao1710.click</button>
   </div>
 </div>
@@ -246,1199 +268,673 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
 <canvas id="confettiCanvas"></canvas>
 <footer> Version:D20261809-H01M41T0050 »»» developed by Tran Gia Bao</footer>
 <script id="caro-ai-worker-source" type="text/plain">
-
-const SIZE = 15;
-const DIRS = [[1,0],[0,1],[1,1],[1,-1]];
-const CENTER = (SIZE - 1) / 2;
+// ============================================================
+// AI CỜ CARO — tự do (5 quân trở lên là thắng)
+// Bảng mẫu hình 9 ô + cập nhật tăng dần, VCF, alpha-beta có TT.
+// ============================================================
 const DEBUG_AI = false;
+const USE_VCT = true;
+const VCT_DEPTH = 10;
+const PAD = 5;
 
-let board = [];
-let human = "X";
-let ai = "O";
-let sideToMove = "O";
+// Hình dạng theo một hướng khi đặt quân vào ô
+const S_NONE = 0, S_F1 = 1, S_B2 = 2, S_F2 = 3, S_B3 = 4, S_F3 = 5, S_B4 = 6, S_F4 = 7, S_FIVE = 8;
+// Điểm tiềm năng cho mỗi hướng của mỗi ô trống
+const SV = [0, 1, 4, 14, 16, 60, 64, 300, 1200];
 
-// ============================================================
-// ZOBRIST
-// ============================================================
-function mul32(a, b) {
-  return Math.imul(a, b) >>> 0;
-}
+// Lớp kết hợp 4 hướng của một ô
+const C_NONE = 0, C_LOW1 = 1, C_LOW2 = 2, C_LOW3 = 3, C_F3 = 4, C_33 = 5, C_B4 = 6, C_43 = 7, C_F4 = 8, C_WIN = 9;
+const ATK = [0, 2, 8, 30, 120, 900, 260, 4000, 20000, 200000];
+const DEF = [0, 1, 6, 24, 100, 700, 200, 3000, 16000, 100000];
 
-let zrng = 0x9e3779b9;
-function rand32() {
-  zrng ^= zrng << 13;
-  zrng ^= zrng >>> 17;
-  zrng ^= zrng << 5;
-  zrng >>>= 0;
-  return zrng;
-}
+const WIN_SCORE = 10000000;
+const WIN_TH = WIN_SCORE - 1000;
+const INF = 1 << 30;
 
-const zobrist = Array.from({length: SIZE}, () =>
-  Array.from({length: SIZE}, () => ({ X: rand32(), O: rand32() }))
-);
-
-let boardHash = 0;
-
-// ============================================================
-// SEARCH STATE
-// ============================================================
-const FLAG_EXACT = 0;
-const FLAG_LOWER = 1;
-const FLAG_UPPER = 2;
-const FLAG_ABORTED = 3;
-
-const TT = new Map();
-const TT_MAX = 180000;
-let ttGeneration = 0;
-
-const MAX_PLY = 24;
-const killers = Array.from({length: MAX_PLY + 1}, () => [null, null]);
-const history = new Map();
-
-let nodes = 0;
-let startTime = 0;
-let softDeadline = 0;
-let hardDeadline = 0;
-let aborted = false;
-let currentRootDepth = 0;
-let bestCompletedDepth = 0;
-let rootBestMove = null;
-let rootBestScore = -Infinity;
-let rootPV = [];
-let lastReason = "SEARCH";
-
-let candidateLimit = 16;
-let tacticalCandidateLimit = 26;
-let maxDepth = 10;
-
-const INF = 1e15;
-const MATE = 1e12;
-
-// ============================================================
-// PATTERN / EVALUATION
-// ============================================================
-const SCORE = Object.freeze({
-  FIVE: 1_000_000_000,
-  OPEN_FOUR: 40_000_000,
-  FOUR: 8_000_000,
-  BROKEN_FOUR: 7_000_000,
-  OPEN_THREE: 700_000,
-  BROKEN_THREE: 320_000,
-  CLOSED_THREE: 55_000,
-  OPEN_TWO: 12_000,
-  CLOSED_TWO: 1_400,
-  ONE: 80
-});
-
-function inBounds(r, c) {
-  return r >= 0 && r < SIZE && c >= 0 && c < SIZE;
-}
-
-function opponent(p) {
-  return p === "X" ? "O" : "X";
-}
-
-function countDir(r, c, dr, dc, p) {
-  let n = 0;
-  for (let i = r + dr, j = c + dc; inBounds(i,j) && board[i][j] === p; i += dr, j += dc) n++;
-  return n;
-}
-
-function checkWin(r, c, p) {
-  return DIRS.some(([dr,dc]) =>
-    countDir(r,c,dr,dc,p) + countDir(r,c,-dr,-dc,p) >= 4
-  );
-}
-
-function occupiedCount() {
-  let n = 0;
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "") n++;
-    }
+// ---------------- bảng mẫu hình ----------------
+const SHAPE = (function buildShapeTable() {
+  const T = new Uint8Array(6561);
+  const memo = new Map();
+  const line = new Array(9).fill(0);
+  function runLen() {
+    let l = 4, r = 4;
+    while (l > 0 && line[l - 1] === 1) l--;
+    while (r < 8 && line[r + 1] === 1) r++;
+    return r - l + 1;
   }
-  return n;
-}
-
-function hasNeighbor(r, c, radius = 2) {
-  for (let dr = -radius; dr <= radius; dr++) {
-    for (let dc = -radius; dc <= radius; dc++) {
-      if (!dr && !dc) continue;
-      const nr = r + dr, nc = c + dc;
-      if (inBounds(nr,nc) && board[nr][nc] !== "") return true;
-    }
-  }
-  return false;
-}
-
-function centerBonus(r, c) {
-  const d = Math.abs(r - CENTER) + Math.abs(c - CENTER);
-  return Math.max(0, 90 - d * 9);
-}
-
-function lineString(r, c, dr, dc, p, radius = 5) {
-  let s = "";
-  for (let k = -radius; k <= radius; k++) {
-    const nr = r + dr * k, nc = c + dc * k;
-    if (!inBounds(nr,nc)) s += "#";
+  function shapeOf() {
+    const k = line.join("");
+    const m = memo.get(k);
+    if (m !== undefined) return m;
+    let res = S_NONE;
+    if (runLen() >= 5) res = S_FIVE;
     else {
-      const v = board[nr][nc];
-      s += v === "" ? "." : (v === p ? "P" : "Q");
+      let wins = 0;
+      for (let e = 0; e < 9; e++) {
+        if (line[e] !== 0) continue;
+        line[e] = 1;
+        if (runLen() >= 5) wins++;
+        line[e] = 0;
+      }
+      if (wins >= 2) res = S_F4;
+      else if (wins === 1) res = S_B4;
+      else {
+        for (let e = 0; e < 9; e++) {
+          if (line[e] !== 0) continue;
+          line[e] = 1;
+          const s = shapeOf();
+          line[e] = 0;
+          let pr = S_NONE;
+          if (s === S_F4) pr = S_F3;
+          else if (s === S_B4) pr = S_B3;
+          else if (s === S_F3) pr = S_F2;
+          else if (s === S_B3) pr = S_B2;
+          else if (s === S_F2) pr = S_F1;
+          if (pr > res) res = pr;
+        }
+      }
+    }
+    memo.set(k, res);
+    return res;
+  }
+  for (let key = 0; key < 6561; key++) {
+    let x = key;
+    for (let i = 0; i < 8; i++) {
+      const v = x % 3; x = (x - v) / 3;
+      line[i < 4 ? i : i + 1] = v;
+    }
+    line[4] = 1;
+    T[key] = shapeOf();
+  }
+  return T;
+})();
+
+// ---------------- trạng thái bàn cờ ----------------
+let N = 0, W = 0, CELLS = 0;
+let STEP = [1, 0, 0, 0];
+let bd, nearCnt, Z1, Z2;
+const shp = [null, null, null];
+const cls = [null, null, null];
+const cnt = [null, new Int32Array(10), new Int32Array(10)];
+const sum = [0, 0, 0];
+let h1 = 0, h2 = 0;
+let stones = 0;
+let rMin, rMax, cMin, cMax;
+const bbStack = [];
+
+let zseed = 0x9e3779b9;
+function rnd32() {
+  zseed ^= zseed << 13; zseed ^= zseed >>> 17; zseed ^= zseed << 5;
+  return zseed >>> 0;
+}
+
+function allocate(n) {
+  N = n; W = N + PAD * 2; CELLS = W * W;
+  STEP = [1, W, W + 1, W - 1];
+  bd = new Int8Array(CELLS);
+  nearCnt = new Int16Array(CELLS);
+  shp[1] = new Uint8Array(CELLS * 4); shp[2] = new Uint8Array(CELLS * 4);
+  cls[1] = new Uint8Array(CELLS); cls[2] = new Uint8Array(CELLS);
+  Z1 = new Uint32Array(CELLS * 3); Z2 = new Uint32Array(CELLS * 3);
+  zseed = 0x9e3779b9;
+  for (let i = 0; i < CELLS * 3; i++) { Z1[i] = rnd32(); Z2[i] = rnd32(); }
+}
+
+const idx = (r, c) => (r + PAD) * W + (c + PAD);
+const rowOf = x => ((x / W) | 0) - PAD;
+const colOf = x => (x % W) - PAD;
+
+function computeShape(c, d, p) {
+  const st = STEP[d];
+  let key = 0, mul = 1;
+  for (let k = -4; k <= 4; k++) {
+    if (k === 0) continue;
+    const v = bd[c + k * st];
+    if (v !== 0) key += (v === p ? 1 : 2) * mul;
+    mul *= 3;
+  }
+  return SHAPE[key];
+}
+
+function classify(a, base) {
+  let n5 = 0, f4 = 0, b4 = 0, f3 = 0, b3 = 0, f2 = 0, lo = 0;
+  for (let d = 0; d < 4; d++) {
+    switch (a[base + d]) {
+      case S_FIVE: n5++; break;
+      case S_F4: f4++; break;
+      case S_B4: b4++; break;
+      case S_F3: f3++; break;
+      case S_B3: b3++; break;
+      case S_F2: f2++; break;
+      case S_B2: case S_F1: lo++; break;
     }
   }
-  return s;
+  if (n5) return C_WIN;
+  if (f4 || b4 >= 2) return C_F4;
+  if (b4 && f3) return C_43;
+  if (b4) return C_B4;
+  if (f3 >= 2) return C_33;
+  if (f3) return C_F3;
+  if (b3 + f2 >= 2) return C_LOW3;
+  if (b3 || f2) return C_LOW2;
+  if (lo) return C_LOW1;
+  return C_NONE;
 }
 
-const PATTERN_TABLE = [
-  [/PPPPP/, SCORE.FIVE],
-  [/\.PPPP\./, SCORE.OPEN_FOUR],
-  [/PPPP\./, SCORE.FOUR],
-  [/\.PPPP/, SCORE.FOUR],
-  [/PPP\.P/, SCORE.BROKEN_FOUR],
-  [/P\.PPP/, SCORE.BROKEN_FOUR],
-  [/PP\.PP/, SCORE.BROKEN_FOUR],
-  [/\.PPP\./, SCORE.OPEN_THREE],
-  [/\.PP\.P\./, SCORE.BROKEN_THREE],
-  [/\.P\.PP\./, SCORE.BROKEN_THREE],
-  [/PPP\./, SCORE.CLOSED_THREE],
-  [/\.PPP#/, SCORE.CLOSED_THREE],
-  [/\.PP\./, SCORE.OPEN_TWO],
-  [/PP\./, SCORE.CLOSED_TWO],
-  [/\.PP#/, SCORE.CLOSED_TWO],
-  [/\.P\./, SCORE.ONE]
-];
-
-function linePatternScore(s) {
-  let best = 0;
-  for (const [re, score] of PATTERN_TABLE) {
-    if (re.test(s)) best = Math.max(best, score);
+function setShape(c, d) {
+  const i = c * 4 + d;
+  for (let p = 1; p <= 2; p++) {
+    const a = shp[p];
+    const old = a[i];
+    const nw = computeShape(c, d, p);
+    if (old !== nw) { a[i] = nw; sum[p] += SV[nw] - SV[old]; }
   }
-  return best;
 }
 
-function scorePlacedMove(r, c, p) {
-  let total = 0;
-  for (const [dr,dc] of DIRS) total += linePatternScore(lineString(r,c,dr,dc,p));
-  return total;
+function reclass(c) {
+  for (let p = 1; p <= 2; p++) {
+    const nw = bd[c] === 0 ? classify(shp[p], c * 4) : C_NONE;
+    const old = cls[p][c];
+    if (nw !== old) { cnt[p][old]--; cnt[p][nw]++; cls[p][c] = nw; }
+  }
 }
 
-function directionalPatternStats(r, c, p) {
-  const out = {
-    five: 0,
-    openFour: 0,
-    four: 0,
-    brokenFour: 0,
-    openThree: 0,
-    brokenThree: 0,
-    openTwo: 0,
-    completionPoints: new Set(),
-    score: 0
-  };
-
-  for (const [dr,dc] of DIRS) {
-    let s = lineString(r,c,dr,dc,p);
-    if (s.includes("PPPPP")) out.five++;
-    if (/\.PPPP\./.test(s)) out.openFour++;
-    if (/(?:PPPP\.|\.PPPP)/.test(s)) out.four++;
-    if (/(?:PP\.PP|P\.PPP|PPP\.P)/.test(s)) out.brokenFour++;
-    if (/\.PPP\./.test(s)) out.openThree++;
-    if (/(?:\.PP\.P\.|\.P\.PP\.)/.test(s)) out.brokenThree++;
-    if (/\.PP\./.test(s)) out.openTwo++;
-    out.score += linePatternScore(s);
-
-    // Exact completion points for this direction.
+function touchLines(c) {
+  for (let d = 0; d < 4; d++) {
+    const st = STEP[d];
     for (let k = -4; k <= 4; k++) {
-      if (!k) continue;
-      const rr = r + dr*k, cc = c + dc*k;
-      if (!inBounds(rr,cc) || board[rr][cc] !== "") continue;
-      board[rr][cc] = p;
-      if (checkWin(rr,cc,p)) out.completionPoints.add(rr + "," + cc);
-      board[rr][cc] = "";
+      if (k === 0) continue;
+      const x = c + k * st;
+      if (bd[x] !== 0) continue;
+      setShape(x, d);
+      reclass(x);
+    }
+  }
+}
+
+function makeMove(c, p) {
+  bbStack.push(rMin, rMax, cMin, cMax);
+  const r = rowOf(c), col = colOf(c);
+  if (r < rMin) rMin = r; if (r > rMax) rMax = r;
+  if (col < cMin) cMin = col; if (col > cMax) cMax = col;
+  bd[c] = p;
+  h1 = (h1 ^ Z1[c * 3 + p]) >>> 0; h2 = (h2 ^ Z2[c * 3 + p]) >>> 0;
+  stones++;
+  const a1 = shp[1], a2 = shp[2];
+  for (let d = 0; d < 4; d++) {
+    const i = c * 4 + d;
+    sum[1] -= SV[a1[i]]; a1[i] = 0;
+    sum[2] -= SV[a2[i]]; a2[i] = 0;
+  }
+  reclass(c);
+  for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) nearCnt[c + dr * W + dc]++;
+  touchLines(c);
+}
+
+function unmakeMove(c, p) {
+  bd[c] = 0;
+  h1 = (h1 ^ Z1[c * 3 + p]) >>> 0; h2 = (h2 ^ Z2[c * 3 + p]) >>> 0;
+  stones--;
+  for (let dr = -2; dr <= 2; dr++) for (let dc = -2; dc <= 2; dc++) nearCnt[c + dr * W + dc]--;
+  for (let d = 0; d < 4; d++) setShape(c, d);
+  reclass(c);
+  touchLines(c);
+  cMax = bbStack.pop(); cMin = bbStack.pop(); rMax = bbStack.pop(); rMin = bbStack.pop();
+}
+
+function setupBoard(grid) {
+  const n = grid.length;
+  if (n !== N) allocate(n);
+  bd.fill(3); nearCnt.fill(0);
+  shp[1].fill(0); shp[2].fill(0); cls[1].fill(0); cls[2].fill(0);
+  cnt[1].fill(0); cnt[2].fill(0);
+  sum[1] = 0; sum[2] = 0; h1 = 0; h2 = 0; stones = 0;
+  bbStack.length = 0;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) bd[idx(r, c)] = 0;
+  const mid = (N - 1) >> 1;
+  rMin = mid; rMax = mid; cMin = mid; cMax = mid;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const x = idx(r, c);
+    for (let d = 0; d < 4; d++) setShape(x, d);
+    cnt[1][0]++; cnt[2][0]++;
+    reclass(x);
+  }
+  let first = true;
+  for (let r = 0; r < N; r++) for (let c = 0; c < N; c++) {
+    const v = grid[r][c];
+    if (v !== "X" && v !== "O") continue;
+    if (first) { rMin = rMax = r; cMin = cMax = c; first = false; }
+    makeMove(idx(r, c), v === "X" ? 1 : 2);
+  }
+  bbStack.length = 0;
+}
+
+// Duyệt các ô trống gần quân đã đặt
+function collectCells(out) {
+  out.length = 0;
+  const ra = Math.max(0, rMin - 2), rb = Math.min(N - 1, rMax + 2);
+  const ca = Math.max(0, cMin - 2), cb = Math.min(N - 1, cMax + 2);
+  for (let r = ra; r <= rb; r++) {
+    let x = idx(r, ca);
+    for (let c = ca; c <= cb; c++, x++) {
+      if (bd[x] === 0 && nearCnt[x] > 0) out.push(x);
     }
   }
   return out;
 }
 
-function evaluateBoard(p) {
-  const q = opponent(p);
-  let score = 0;
-
-  // Evaluate each maximal line once. This avoids the old "first pattern match"
-  // behaviour and captures multiple independent threats on the same line.
-  const evalLine = cells => {
-    const sP = lineValue(cells, p);
-    const sQ = lineValue(cells, q);
-    return sP - sQ * 1.08;
-  };
-
-  for (let r = 0; r < SIZE; r++) {
-    const row = [];
-    for (let c = 0; c < SIZE; c++) row.push(board[r][c]);
-    score += evalLine(row);
+function findClass(p, k) {
+  const ra = Math.max(0, rMin - 4), rb = Math.min(N - 1, rMax + 4);
+  const ca = Math.max(0, cMin - 4), cb = Math.min(N - 1, cMax + 4);
+  const a = cls[p];
+  for (let r = ra; r <= rb; r++) {
+    let x = idx(r, ca);
+    for (let c = ca; c <= cb; c++, x++) if (bd[x] === 0 && a[x] === k) return x;
   }
-  for (let c = 0; c < SIZE; c++) {
-    const col = [];
-    for (let r = 0; r < SIZE; r++) col.push(board[r][c]);
-    score += evalLine(col);
-  }
-  for (let start = -SIZE + 1; start < SIZE; start++) {
-    const d1 = [];
-    for (let r = 0, c = start; r < SIZE && c < SIZE; r++, c++) {
-      if (c >= 0) d1.push(board[r][c]);
-    }
-    if (d1.length >= 2) score += evalLine(d1);
-
-    const d2 = [];
-    for (let r = 0, c = SIZE - 1 - start; r < SIZE && c >= 0; r++, c--) {
-      if (c < SIZE) d2.push(board[r][c]);
-    }
-    if (d2.length >= 2) score += evalLine(d2);
-  }
-
-  // Positional influence — deliberately small compared with tactical scores.
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] === p) score += centerBonus(r,c);
-      else if (board[r][c] === q) score -= centerBonus(r,c) * 0.92;
-    }
-  }
-
-  return score;
+  return -1;
 }
 
-function lineValue(cells, p) {
-  const q = opponent(p);
-  const n = cells.length;
-  let score = 0;
-  for (let i = 0; i < n; i++) {
-    if (cells[i] !== p) continue;
-    let j = i;
-    while (j < n && cells[j] === p) j++;
-    const len = j - i;
-    const leftOpen = i - 1 >= 0 && cells[i-1] === "";
-    const rightOpen = j < n && cells[j] === "";
-    const open = (leftOpen ? 1 : 0) + (rightOpen ? 1 : 0);
-    if (len >= 5) score += SCORE.FIVE;
-    else if (len === 4 && open === 2) score += SCORE.OPEN_FOUR;
-    else if (len === 4 && open === 1) score += SCORE.FOUR;
-    else if (len === 3 && open === 2) score += SCORE.OPEN_THREE;
-    else if (len === 3 && open === 1) score += SCORE.CLOSED_THREE;
-    else if (len === 2 && open === 2) score += SCORE.OPEN_TWO;
-    else if (len === 2 && open === 1) score += SCORE.CLOSED_TWO;
-    else if (len === 1 && open === 2) score += SCORE.ONE;
-    i = j - 1;
+function fourCount(p) { return cnt[p][C_B4] + cnt[p][C_43] + cnt[p][C_F4] + cnt[p][C_WIN]; }
+
+// ---------------- đánh giá tĩnh ----------------
+function evaluate(s) {
+  const o = 3 - s;
+  let e = sum[s] * 1.2 - sum[o];
+  // Ai đang tới lượt mà có thế 4-3 / 3-3 thì gần như thắng.
+  if (cnt[s][C_43]) e += fourCount(o) ? 3000 : 20000;
+  else if (cnt[s][C_33]) e += fourCount(o) ? 1500 : 8000;
+  if (cnt[o][C_43] >= 2 || cnt[o][C_33] >= 2 || cnt[o][C_43] + cnt[o][C_33] >= 2) e -= 2500;
+  return e;
+}
+
+// ---------------- sinh nước đi ----------------
+const cellBuf = [];
+const moveBufs = [];
+const scoreBufs = [];
+for (let i = 0; i < 64; i++) { moveBufs.push(new Int32Array(700)); scoreBufs.push(new Float64Array(700)); }
+
+function genMoves(s, ply, limit, ttMove) {
+  const o = 3 - s;
+  const ms = moveBufs[ply], sc = scoreBufs[ply];
+  let n = 0;
+  if (cnt[o][C_WIN]) {
+    // Đối thủ đang có 4: chỉ được chặn (ta không có 5 vì đã kiểm tra trước).
+    ms[0] = findClass(o, C_WIN); return 1;
   }
-
-  // Broken threats. Count only windows that contain exactly this player and empties,
-  // without a second opponent piece inside the tactical window.
-  const S = cells.map(v => v === p ? "P" : v === q ? "Q" : ".").join("");
-  if (/P\.PPP|PPP\.P|PP\.PP/.test(S)) score += SCORE.BROKEN_FOUR * 0.7;
-  if (/\.PP\.P\.|\.P\.PP\./.test(S)) score += SCORE.BROKEN_THREE * 0.55;
-  return score;
-}
-
-// ============================================================
-// HASH / BOARD MUTATION
-// ============================================================
-function xorPiece(r, c, p) {
-  boardHash = (boardHash ^ zobrist[r][c][p]) >>> 0;
-}
-
-function makeMove(r, c, p) {
-  board[r][c] = p;
-  xorPiece(r,c,p);
-}
-
-function unmakeMove(r, c, p) {
-  board[r][c] = "";
-  xorPiece(r,c,p);
-}
-
-function boardKey() {
-  // The player-to-move is derivable in legal play, but include it explicitly
-  // for safety when tactical helper branches create temporary states.
-  return (boardHash ^ (sideToMove === ai ? 0x13579bdf : 0x2468ace0)) >>> 0;
-}
-
-// ============================================================
-// EXACT TACTICAL QUERIES
-// ============================================================
-function allEmptyNearby(radius = 2) {
-  const list = [];
-  const seen = new Set();
-  let any = false;
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "") { any = true; continue; }
+  const restrict = cnt[o][C_F4] > 0;
+  collectCells(cellBuf);
+  const as = shp[s], ao = shp[o], cs = cls[s], co = cls[o];
+  const k1 = killers[ply * 2], k2 = killers[ply * 2 + 1];
+  for (let i = 0; i < cellBuf.length; i++) {
+    const x = cellBuf[i];
+    const a = cs[x], b = co[x];
+    if (restrict && a < C_B4 && b < C_B4) continue;
+    const j = x * 4;
+    let v = ATK[a] + DEF[b] +
+      SV[as[j]] + SV[as[j + 1]] + SV[as[j + 2]] + SV[as[j + 3]] +
+      0.8 * (SV[ao[j]] + SV[ao[j + 1]] + SV[ao[j + 2]] + SV[ao[j + 3]]);
+    if (x === ttMove) v += 1e9;
+    else if (x === k1) v += 5e5;
+    else if (x === k2) v += 4e5;
+    v += hist[x] * 0.001;
+    // chèn có thứ tự, chỉ giữ `limit` nước tốt nhất
+    if (n === limit) {
+      if (v <= sc[n - 1]) continue;
+      n--;
     }
+    let p = n++;
+    while (p > 0 && sc[p - 1] < v) { sc[p] = sc[p - 1]; ms[p] = ms[p - 1]; p--; }
+    sc[p] = v; ms[p] = x;
   }
-  if (!any) return [[Math.floor(SIZE/2), Math.floor(SIZE/2)]];
-
-  for (let r = 0; r < SIZE; r++) {
-    for (let c = 0; c < SIZE; c++) {
-      if (board[r][c] !== "" || !hasNeighbor(r,c,radius)) continue;
-      const key = r*SIZE+c;
-      if (!seen.has(key)) { seen.add(key); list.push([r,c]); }
-    }
-  }
-  return list;
+  return n;
 }
 
-function getWinningMoves(p, source = null) {
-  const cells = source || allEmptyNearby(2);
-  const wins = [];
-  for (const [r,c] of cells) {
-    if (board[r][c] !== "") continue;
-    makeMove(r,c,p);
-    const w = checkWin(r,c,p);
-    unmakeMove(r,c,p);
-    if (w) wins.push([r,c]);
-  }
-  return wins;
-}
+// ---------------- VCF (thắng bằng chuỗi nước 4 liên tục) ----------------
+let vcfNodes = 0, vcfLimit = 0;
+const vcfFail = new Map();
+const vcfBuf = [];
+for (let i = 0; i < 40; i++) vcfBuf.push(new Int32Array(200));
 
-function moveThreatInfo(r, c, p, exact = false) {
-  if (board[r][c] !== "") return null;
-  makeMove(r,c,p);
-  const stats = directionalPatternStats(r,c,p);
-  const immediate = exact ? getWinningMoves(p) : [];
-  const winningSet = immediate.map(([rr,cc]) => rr*SIZE+cc);
-  const info = {
-    move: [r,c],
-    winNow: checkWin(r,c,p),
-    completionPoints: winningSet,
-    completionCount: winningSet.length,
-    openFour: stats.openFour > 0,
-    four: stats.four > 0,
-    brokenFour: stats.brokenFour > 0,
-    openThree: stats.openThree > 0,
-    brokenThree: stats.brokenThree > 0,
-    tacticalScore: stats.score + stats.openFour*SCORE.OPEN_FOUR + stats.brokenFour*SCORE.BROKEN_FOUR,
-    center: centerBonus(r,c)
-  };
-  unmakeMove(r,c,p);
-  return info;
-}
+function vcf(s, depth, line) {
+  const o = 3 - s;
+  if (cnt[s][C_WIN]) { if (line) line.push(findClass(s, C_WIN)); return true; }
+  if (++vcfNodes > vcfLimit) return false;
+  const oW = cnt[o][C_WIN];
+  if (!oW && cnt[s][C_F4]) { if (line) line.push(findClass(s, C_F4)); return true; }
+  if (depth <= 0) return false;
+  const key = (h1 ^ (s === 1 ? 0x5bd1e995 : 0)) >>> 0;
+  const kf = vcfFail.get(key);
+  if (kf !== undefined && kf === h2 + depth) return false;
 
-
-// ============================================================
-// ATTACK CONTINUITY / COMPOUND THREAT ANALYSIS
-// ============================================================
-function analyzeAttackContinuity(player, move) {
-  const [r,c] = move;
-  if (!inBounds(r,c) || board[r][c] !== "") return null;
-  const enemy = opponent(player);
-  makeMove(r,c,player);
-
-  const stats = directionalPatternStats(r,c,player);
-  const immediateWins = getWinningMoves(player).length;
-  const enemyWins = getWinningMoves(enemy).length;
-  let nextForcingMoves = 0;
-  let nextDoubleThreats = 0;
-  let viableDirections = 0;
-  let openThree = stats.openThree;
-  let brokenThree = stats.brokenThree;
-  let openFour = stats.openFour;
-  let brokenFour = stats.brokenFour;
-
-  // Only inspect a compact tactical pool. This is deliberately shallow:
-  // it measures whether the move creates a continuation, not a full search.
-  const followups = allEmptyNearby(2);
-  const ranked = [];
-  for (const [fr,fc] of followups) {
-    if (board[fr][fc] !== "") continue;
-    makeMove(fr,fc,player);
-    const fs = directionalPatternStats(fr,fc,player);
-    const wins = fs.completionPoints.size;
-    const force = wins >= 1 || fs.openFour > 0 || fs.four > 0 || fs.brokenFour > 0 || fs.openThree >= 2;
-    if (force) {
-      nextForcingMoves++;
-      if (wins >= 2 || fs.openThree >= 2) nextDoubleThreats++;
-      ranked.push({wins, score:fs.score + fs.openFour*SCORE.OPEN_FOUR + fs.brokenFour*SCORE.BROKEN_FOUR});
-    }
-    unmakeMove(fr,fc,player);
-    if (ranked.length >= 12) break;
-  }
-
-  // Count genuinely independent directions from the seed move.
-  for (const [dr,dc] of DIRS) {
-    let open = 0, own = 1;
-    let rr=r+dr, cc=c+dc;
-    while (inBounds(rr,cc) && board[rr][cc]===player) { own++; rr+=dr; cc+=dc; }
-    if (inBounds(rr,cc) && board[rr][cc]==="") open++;
-    rr=r-dr; cc=c-dc;
-    while (inBounds(rr,cc) && board[rr][cc]===player) { own++; rr-=dr; cc-=dc; }
-    if (inBounds(rr,cc) && board[rr][cc]==="") open++;
-    if (open >= 2 || own >= 3) viableDirections++;
-  }
-
-  unmakeMove(r,c,player);
-
-  const continuationScore =
-    openFour * 1800000 +
-    brokenFour * 420000 +
-    immediateWins * 2500000 +
-    nextForcingMoves * 52000 +
-    nextDoubleThreats * 320000 +
-    openThree * 42000 +
-    brokenThree * 12000 +
-    viableDirections * 9000;
-
-  const compoundScore =
-    nextDoubleThreats * 600000 +
-    Math.max(0, nextForcingMoves - 1) * 70000 +
-    Math.max(0, viableDirections - 1) * 50000 +
-    (openThree >= 2 ? 350000 : 0) +
-    (openThree > 0 && brokenThree > 0 ? 110000 : 0);
-
-  return {
-    move:[r,c], openThree, brokenThree, openFour, brokenFour,
-    directions:viableDirections, immediateWins, enemyWins,
-    nextForcingMoves, nextDoubleThreats,
-    continuationScore, compoundScore,
-    initiativeScore: continuationScore + compoundScore - enemyWins * 900000
-  };
-}
-
-function findAttackContinuation(player, limit = 8) {
-  const base = allEmptyNearby(2);
-  const quick = [];
-  for (const [r,c] of base) {
-    if (board[r][c] !== "") continue;
-    const atk = scorePlacedMove(r,c,player);
-    if (atk < SCORE.OPEN_TWO) continue;
-    quick.push({move:[r,c], seed:atk});
-  }
-  quick.sort((a,b)=>b.seed-a.seed);
-  const out = [];
-  for (const item of quick.slice(0, Math.min(18, quick.length))) {
-    const info = analyzeAttackContinuity(player,item.move);
-    if (!info) continue;
-    if (info.nextForcingMoves > 0 || info.openThree > 0 || info.brokenThree > 0 || info.openFour > 0) {
-      out.push(info);
-    }
-  }
-  out.sort((a,b)=>(b.initiativeScore-a.initiativeScore) || (b.continuationScore-a.continuationScore));
-  return out.slice(0,limit);
-}
-
-function defensiveUrgency(player) {
-  const enemy = opponent(player);
-  const wins = getWinningMoves(enemy).length;
-  if (wins >= 2) return 1e16;
-  if (wins === 1) return 9e15;
-  const forces = forcingCandidates(enemy, Math.min(10, tacticalCandidateLimit));
-  let urgency = 0;
-  for (const x of forces) {
-    if (x.kind === "DOUBLE_THREAT") urgency = Math.max(urgency, 8e15);
-    else if (x.kind === "OPEN_FOUR") urgency = Math.max(urgency, 7e15);
-    else if (x.kind === "FOUR") urgency = Math.max(urgency, 6e15);
-    else if (x.kind === "DOUBLE_THREE") urgency = Math.max(urgency, 4e15);
-    else if (x.kind === "THREE") urgency = Math.max(urgency, 1.2e15);
-  }
-  return urgency;
-}
-
-function forcingCandidates(p, limit = tacticalCandidateLimit) {
-  const cells = allEmptyNearby(2);
-  const result = [];
-
-  for (const [r,c] of cells) {
-    if (aborted) break;
-    if (board[r][c] !== "") continue;
-    makeMove(r,c,p);
-    if (checkWin(r,c,p)) {
-      result.push({move:[r,c], kind:"WIN_NOW", rank:1e16, completionCount:99});
-      unmakeMove(r,c,p);
-      continue;
-    }
-    const stats = directionalPatternStats(r,c,p);
-    const completionCount = stats.completionPoints.size;
-    let kind = null;
-    let rank = 0;
-    if (completionCount >= 2) {
-      kind = "DOUBLE_THREAT";
-      rank = 8e15 + completionCount*1e9;
-    } else if (stats.openFour > 0) {
-      kind = "OPEN_FOUR";
-      rank = 7e15;
-    } else if (stats.four > 0 || stats.brokenFour > 0 || completionCount === 1) {
-      kind = "FOUR";
-      rank = 6e15 + stats.score;
-    } else if (stats.openThree >= 2) {
-      kind = "DOUBLE_THREE";
-      rank = 4e15 + stats.score;
-    } else if (stats.openThree > 0 || stats.brokenThree > 0) {
-      kind = "THREE";
-      rank = 2e15 + stats.score;
-    }
-    if (kind) result.push({move:[r,c], kind, rank, completionCount, tacticalScore:stats.score, center:centerBonus(r,c)});
-    unmakeMove(r,c,p);
-  }
-
-  result.sort((a,b) => b.rank - a.rank || b.center - a.center);
-  return result.slice(0,limit);
-}
-
-function mustBlockMoves(p) {
-  return getWinningMoves(p);
-}
-
-function findDoubleThreat(player) {
-  const fc = forcingCandidates(player, tacticalCandidateLimit);
-  for (const item of fc) {
-    if (item.completionCount >= 2) return item.move;
-  }
-  return null;
-}
-
-function findOpenFour(player) {
-  const fc = forcingCandidates(player, tacticalCandidateLimit);
-  for (const item of fc) {
-    if (item.kind === "OPEN_FOUR" || item.completionCount >= 2) return item.move;
-  }
-  return null;
-}
-
-// ============================================================
-// VCF / VCT THREAT SEARCH
-// ============================================================
-function tacticalBlocksFor(p) {
-  const wins = getWinningMoves(p);
-  return wins;
-}
-
-function forcingRepliesFor(p) {
-  const items = forcingCandidates(p, tacticalCandidateLimit);
-  return items.filter(x => x.kind !== "THREE" || x.completionCount > 0);
-}
-
-function vcfSearch(player, defender, depth, deadline) {
-  if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
-  if (depth <= 0) return {status:"UNKNOWN"};
-
-  const playerWins = getWinningMoves(player);
-  if (playerWins.length) return {status:"WIN", line:[playerWins[0]]};
-
-  const defenderWins = getWinningMoves(defender);
-  if (defenderWins.length) return {status:"LOSS"};
-
-  const forcing = forcingCandidates(player, Math.min(14, tacticalCandidateLimit));
-  if (!forcing.length) return {status:"LOSS"};
-
-  for (const item of forcing) {
-    if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
-    const [r,c] = item.move;
-    makeMove(r,c,player);
-
-    if (checkWin(r,c,player)) {
-      unmakeMove(r,c,player);
-      return {status:"WIN", line:[[r,c]], reason:"WIN_NOW"};
-    }
-
-    const wins = getWinningMoves(player);
-    const oppWins = getWinningMoves(defender);
-    if (oppWins.length) {
-      unmakeMove(r,c,player);
-      continue;
-    }
-
-    // A double threat is already decisive in free-style 5-in-a-row.
-    if (wins.length >= 2) {
-      unmakeMove(r,c,player);
-      return {status:"WIN", line:[[r,c]], reason:"DOUBLE_THREAT"};
-    }
-
-    // A single winning point forces that exact defense.
-    if (wins.length === 1) {
-      const [br,bc] = wins[0];
-      makeMove(br,bc,defender);
-      const rest = vcfSearch(player, defender, depth - 2, deadline);
-      unmakeMove(br,bc,defender);
-      unmakeMove(r,c,player);
-      if (rest.status === "WIN") return {status:"WIN", line:[[r,c],[br,bc], ...(rest.line || [])], reason:item.kind};
-      if (rest.status === "UNKNOWN") return rest;
-      continue;
-    }
-
-    unmakeMove(r,c,player);
-  }
-
-  return {status:"LOSS"};
-}
-
-function vctSearch(player, defender, depth, deadline) {
-  if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
-  if (depth <= 0) return {status:"UNKNOWN"};
-
-  const wins = getWinningMoves(player);
-  if (wins.length) return {status:"WIN", line:[wins[0]]};
-
-  const enemyWins = getWinningMoves(defender);
-  if (enemyWins.length) return {status:"LOSS"};
-
-  const candidates = forcingCandidates(player, Math.min(18, tacticalCandidateLimit));
-  if (!candidates.length) return {status:"LOSS"};
-
-  for (const item of candidates) {
-    if (Date.now() >= deadline) { aborted = true; return {status:"UNKNOWN"}; }
-    const [r,c] = item.move;
-    makeMove(r,c,player);
-    const enemyImmediate = getWinningMoves(defender);
-    if (enemyImmediate.length) {
-      unmakeMove(r,c,player);
-      continue;
-    }
-    if (checkWin(r,c,player)) {
-      unmakeMove(r,c,player);
-      return {status:"WIN", line:[[r,c]], reason:"WIN_NOW"};
-    }
-
-    const myWins = getWinningMoves(player);
-    if (myWins.length >= 2) {
-      unmakeMove(r,c,player);
-      return {status:"WIN", line:[[r,c]], reason:"DOUBLE_THREAT"};
-    }
-
-    if (myWins.length === 1) {
-      const [br,bc] = myWins[0];
-      makeMove(br,bc,defender);
-      const rest = vctSearch(player, defender, depth - 2, deadline);
-      unmakeMove(br,bc,defender);
-      unmakeMove(r,c,player);
-      if (rest.status === "WIN") return {status:"WIN", line:[[r,c],[br,bc], ...(rest.line||[])], reason:item.kind};
-      if (rest.status === "UNKNOWN") return rest;
-      continue;
-    }
-
-    // Expand only strong multi-threat moves in VCT.
-    const nextForce = forcingCandidates(player, Math.min(10, tacticalCandidateLimit));
-    unmakeMove(r,c,player);
-    if (nextForce.length && depth >= 3) {
-      const rest = vctSearch(player, defender, depth - 2, deadline);
-      if (rest.status === "WIN") return rest;
-      if (rest.status === "UNKNOWN") return rest;
-    }
-  }
-  return {status:"LOSS"};
-}
-
-// ============================================================
-// GENERAL CANDIDATE ORDERING
-// ============================================================
-function candidateList(limit, ply, root = false) {
-  const base = allEmptyNearby(2);
-  const tt = TT.get(boardKey());
-  const kd = killers[Math.min(ply, MAX_PLY)] || [null,null];
-  const tacticalSet = new Map();
-
-  // Exact wins/blocks are always injected.
-  for (const [r,c] of getWinningMoves(ai)) {
-    tacticalSet.set(r*SIZE+c, {move:[r,c], priority:1e16, reason:"WIN_NOW"});
-  }
-  for (const [r,c] of getWinningMoves(human)) {
-    const key = r*SIZE+c;
-    const old = tacticalSet.get(key);
-    const entry = {move:[r,c], priority:9e15, reason:"BLOCK_WIN"};
-    if (!old || entry.priority > old.priority) tacticalSet.set(key, entry);
-  }
-
-  // Root gets the full forcing scan. Deeper nodes only inspect a small
-  // high-tactical subset so Alpha-Beta spends most of its budget on search.
-  const scoredBase = [];
-  for (const [r,c] of base) {
-    if (board[r][c] !== "") continue;
-    const atk = scorePlacedMove(r,c,ai);
-    const def = scorePlacedMove(r,c,human);
-    let continuity = null;
-    if (root || atk >= SCORE.OPEN_TWO || def >= SCORE.OPEN_THREE) {
-      continuity = analyzeAttackContinuity(ai,[r,c]);
-    }
-    const attackCont = continuity ? continuity.continuationScore + continuity.compoundScore : 0;
-    const attackPriority = atk * 1.18 + attackCont;
-    const defensePriority = def * 1.08;
-    let priority = Math.max(attackPriority, defensePriority) + centerBonus(r,c) * 140;
-    if (continuity && continuity.enemyWins === 0 && continuity.nextForcingMoves >= 2) priority += 280000;
-    if (continuity && continuity.nextDoubleThreats > 0) priority += 750000;
-    if (tt && tt.bestMove && tt.bestMove[0] === r && tt.bestMove[1] === c) priority += 5e14;
-    if (kd[0] && kd[0][0] === r && kd[0][1] === c) priority += 2e9;
-    if (kd[1] && kd[1][0] === r && kd[1][1] === c) priority += 1e9;
-    priority += history.get(r*SIZE+c) || 0;
-    scoredBase.push({move:[r,c], priority, atk, def});
-  }
-  scoredBase.sort((a,b) => b.priority-a.priority);
-
-  if (root) {
-    const forceAI = forcingCandidates(ai, Math.min(tacticalCandidateLimit, 18));
-    const forceHuman = forcingCandidates(human, Math.min(tacticalCandidateLimit, 18));
-    for (const item of forceAI) {
-      const key = item.move[0]*SIZE+item.move[1];
-      const old = tacticalSet.get(key);
-      if (!old || item.rank > old.priority) {
-        tacticalSet.set(key,{move:item.move,priority:item.rank,reason:item.kind});
-      }
-    }
-    for (const item of forceHuman) {
-      const key = item.move[0]*SIZE+item.move[1];
-      // Ordinary THREE is not an automatic block. Only hard forcing threats
-      // retain a near-tactical priority; search can compare the rest.
-      const defensiveFactor = item.kind === "THREE" ? 0.48 : 0.96;
-      const priority = item.rank * defensiveFactor;
-      const old = tacticalSet.get(key);
-      if (!old || priority > old.priority) {
-        tacticalSet.set(key,{move:item.move,priority,reason:"DEFENSE_"+item.kind});
-      }
-    }
-
-    // Explicitly inject moves that build a multi-step attack. These moves may
-    // be quieter than a block but create multiple forcing continuations.
-    const continuations = findAttackContinuation(ai, 10);
-    for (const info of continuations) {
-      const key = info.move[0]*SIZE+info.move[1];
-      let priority = 3.2e15 + info.initiativeScore;
-      if (info.nextDoubleThreats > 0) priority = 7.6e15 + info.compoundScore;
-      else if (info.nextForcingMoves >= 2) priority = 5.4e15 + info.continuationScore;
-      const old = tacticalSet.get(key);
-      if (!old || priority > old.priority) {
-        tacticalSet.set(key,{move:info.move,priority,reason:info.nextDoubleThreats>0?"ATTACK_COMPOUND":"ATTACK_CONTINUATION",continuity:info});
-      }
-    }
+  let list = vcfBuf[depth], n = 0;
+  if (oW) {
+    if (oW >= 2) return false;
+    const b = findClass(o, C_WIN);
+    if (cls[s][b] < C_B4) return false;
+    list[n++] = b;
   } else {
-    // Look for forcing moves only among the most tactical candidates.
-    const tacticalPoolAI = scoredBase.filter(x => x.atk >= SCORE.BROKEN_THREE).slice(0, 8);
-    const tacticalPoolHuman = scoredBase.filter(x => x.def >= SCORE.BROKEN_THREE).slice(0, 8);
-    for (const pool of [tacticalPoolAI, tacticalPoolHuman]) {
-      const p = pool === tacticalPoolAI ? ai : human;
-      for (const seed of pool) {
-        const [r,c] = seed.move;
-        const info = moveThreatInfo(r,c,p,true);
-        if (!info) continue;
-        let rank = info.completionCount >= 2 ? 8e15 :
-                   info.openFour ? 7e15 :
-                   info.four || info.brokenFour || info.completionCount===1 ? 6e15 :
-                   info.openThree ? 2e15 : 0;
-        if (!rank) continue;
-        const key = r*SIZE+c;
-        const old = tacticalSet.get(key);
-        const reason = p===ai ? (info.completionCount>=2 ? "DOUBLE_THREAT" : "FORCING") : (info.completionCount>=2 ? "DEFENSE_DOUBLE" : "DEFENSE_FORCING");
-        const entry = {move:[r,c],priority:rank,reason};
-        if (!old || rank > old.priority) tacticalSet.set(key,entry);
-      }
+    collectCells(cellBuf);
+    const cs = cls[s];
+    // 4-3 trước, rồi tới 4 thường
+    for (let i = 0; i < cellBuf.length && n < 200; i++) { const x = cellBuf[i]; if (cs[x] === C_43) list[n++] = x; }
+    for (let i = 0; i < cellBuf.length && n < 200; i++) { const x = cellBuf[i]; if (cs[x] === C_B4) list[n++] = x; }
+  }
+  for (let i = 0; i < n; i++) {
+    const m = list[i];
+    makeMove(m, s);
+    if (cnt[s][C_WIN] >= 2 && !cnt[o][C_WIN]) {
+      unmakeMove(m, s);
+      if (line) line.push(m);
+      return true;
     }
+    const b = findClass(s, C_WIN);
+    if (b < 0) { unmakeMove(m, s); continue; }
+    makeMove(b, o);
+    const ok = vcf(s, depth - 1, line);
+    unmakeMove(b, o);
+    unmakeMove(m, s);
+    if (ok) { if (line) line.push(b, m); return true; }
+    if (vcfNodes > vcfLimit) return false;
   }
-
-  const out = Array.from(tacticalSet.values());
-  for (const item of scoredBase) {
-    const key = item.move[0]*SIZE+item.move[1];
-    if (!tacticalSet.has(key)) out.push({...item,reason:"POSITIONAL"});
-  }
-  out.sort((a,b)=>b.priority-a.priority);
-  return out.slice(0, Math.max(limit,tacticalSet.size));
-}
-
-// ============================================================
-// SEARCH
-// ============================================================
-function timeExpired() {
-  if (Date.now() >= hardDeadline) {
-    aborted = true;
-    return true;
-  }
+  vcfFail.set(key, h2 + depth);
   return false;
 }
 
-function storeTT(hash, entry) {
-  if (TT.size >= TT_MAX) {
-    // Cheap generation-aware trim. Delete a bounded prefix instead of a full scan.
-    let removed = 0;
-    for (const [k,v] of TT) {
-      if (v.generation !== ttGeneration || removed < 2000) {
-        TT.delete(k);
-        removed++;
-        if (removed >= 2000) break;
-      }
-    }
-  }
-  TT.set(hash, {...entry, generation:ttGeneration});
+function runVcf(s, depth, limit, wantLine) {
+  vcfNodes = 0; vcfLimit = limit;
+  const line = wantLine ? [] : null;
+  const ok = vcf(s, depth, line);
+  if (ok && line) line.reverse();
+  return ok ? (line || true) : null;
 }
 
-function quiescence(alpha, beta, maximizing, ply, qdepth) {
-  if (timeExpired()) return {score:0, complete:false};
-  nodes++;
+// ---------------- VCT (thắng bằng chuỗi nước 3 và 4) ----------------
+let vctNodes = 0, vctLimit = 0, vctDeadline = 0;
+const vctMemo = new Map();
+const vctBuf = [];
+for (let i = 0; i < 40; i++) vctBuf.push(new Int32Array(240));
 
-  const p = maximizing ? ai : human;
-  const q = opponent(p);
-  const pWins = getWinningMoves(p);
-  if (pWins.length) return {score:MATE - ply, complete:true};
-  const qWins = getWinningMoves(q);
-  if (qWins.length) return {score:-MATE + ply, complete:true};
+function vctAttack(s, depth) {
+  const o = 3 - s;
+  if (cnt[s][C_WIN]) return true;
+  const oW = cnt[o][C_WIN];
+  if (oW >= 2) return false;
+  if (!oW && cnt[s][C_F4]) return true;
+  if (depth <= 0) return false;
+  if (++vctNodes > vctLimit || ((vctNodes & 255) === 0 && Date.now() > vctDeadline)) { vctNodes = vctLimit + 1; return false; }
+  const key = (h1 ^ (s === 1 ? 0x1b873593 : 0x7fb5d329)) >>> 0;
+  const memo = vctMemo.get(key);
+  if (memo !== undefined && (memo & 0xff) >= depth && (memo >>> 8) === (h2 & 0xffffff)) return false;
 
-  const standPat = evaluateBoard(ai);
-  if (qdepth <= 0 || Date.now() >= softDeadline) {
-    return {score:standPat, complete:true};
-  }
-
-  if (maximizing) {
-    if (standPat >= beta) return {score:standPat, complete:true};
-    if (standPat > alpha) alpha = standPat;
+  const list = vctBuf[depth];
+  let n = 0;
+  if (oW) {
+    list[n++] = findClass(o, C_WIN);
   } else {
-    if (standPat <= alpha) return {score:standPat, complete:true};
-    if (standPat < beta) beta = standPat;
-  }
-
-  const tactical = forcingCandidates(p, Math.min(10, tacticalCandidateLimit));
-  if (!tactical.length) return {score:standPat, complete:true};
-
-  for (const item of tactical) {
-    const [r,c] = item.move;
-    makeMove(r,c,p);
-    const child = quiescence(alpha,beta,!maximizing,ply+1,qdepth-1);
-    unmakeMove(r,c,p);
-    if (!child.complete) return child;
-    if (maximizing) {
-      if (child.score >= beta) return {score:child.score,complete:true};
-      if (child.score > alpha) alpha = child.score;
-    } else {
-      if (child.score <= alpha) return {score:child.score,complete:true};
-      if (child.score < beta) beta = child.score;
+    collectCells(cellBuf);
+    const cs = cls[s];
+    for (const want of [C_43, C_33, C_B4, C_F3]) {
+      for (let i = 0; i < cellBuf.length && n < 240; i++) { const x = cellBuf[i]; if (cs[x] === want) list[n++] = x; }
     }
   }
-  return {score:maximizing ? alpha : beta, complete:true};
+  for (let i = 0; i < n; i++) {
+    const m = list[i];
+    makeMove(m, s);
+    const ok = vctDefend(s, depth - 1);
+    unmakeMove(m, s);
+    if (ok) return true;
+    if (vctNodes > vctLimit) return false;
+  }
+  if (vctNodes <= vctLimit) vctMemo.set(key, ((h2 & 0xffffff) << 8 | depth) >>> 0);
+  return false;
 }
 
-function minimax(depth, maximizing, alpha, beta, ply) {
-  if (timeExpired()) return {score:0, complete:false, move:null};
-  nodes++;
-
-  const current = maximizing ? ai : human;
-  const enemy = opponent(current);
-
-  // Immediate tactical proof before generic search.
-  const wins = getWinningMoves(current);
-  if (wins.length) return {score:maximizing ? MATE - ply : -MATE + ply, complete:true, move:wins[0]};
-  const enemyWins = getWinningMoves(enemy);
-  if (enemyWins.length) {
-    // If this side cannot block all, it is tactically lost.
-    if (wins.length === 0) return {score:maximizing ? -MATE + ply : MATE - ply, complete:true, move:enemyWins[0]};
+function vctDefend(s, depth) {
+  const o = 3 - s;
+  if (cnt[o][C_WIN]) return false;
+  const sW = cnt[s][C_WIN];
+  if (sW >= 2) return true;
+  let replies;
+  if (sW === 1) replies = [findClass(s, C_WIN)];
+  else if (cnt[s][C_F4]) {
+    if (cnt[o][C_F4]) return false; // đối thủ cũng có thế 4 mở
+    replies = [];
+    collectCells(cellBuf);
+    const cs = cls[s], co = cls[o];
+    for (let i = 0; i < cellBuf.length; i++) { const x = cellBuf[i]; if (cs[x] >= C_B4 || co[x] >= C_B4) replies.push(x); }
+  } else return false;
+  for (const r of replies) {
+    makeMove(r, o);
+    const ok = vctAttack(s, depth - 1);
+    unmakeMove(r, o);
+    if (!ok) return false;
   }
-
-  if (depth <= 0) return quiescence(alpha,beta,maximizing,ply,4);
-
-  const hash = boardKey();
-  const tt = TT.get(hash);
-  if (tt && tt.depth >= depth && tt.flag !== FLAG_ABORTED) {
-    if (tt.flag === FLAG_EXACT) return {score:tt.score,complete:true,move:tt.bestMove};
-    if (tt.flag === FLAG_LOWER) alpha = Math.max(alpha,tt.score);
-    else if (tt.flag === FLAG_UPPER) beta = Math.min(beta,tt.score);
-    if (alpha >= beta) return {score:tt.score,complete:true,move:tt.bestMove};
-  }
-
-  const stand = evaluateBoard(ai);
-  if (depth === 1) {
-    storeTT(hash,{depth,score:stand,flag:FLAG_EXACT,bestMove:null});
-    return {score:stand,complete:true,move:null};
-  }
-
-  const candidates = candidateList(candidateLimit,ply);
-  if (!candidates.length) return {score:stand,complete:true,move:null};
-
-  let bestScore = maximizing ? -INF : INF;
-  let bestMove = null;
-  let completedAll = true;
-  const origAlpha = alpha;
-  const origBeta = beta;
-
-  for (const item of candidates) {
-    if (timeExpired()) { completedAll = false; break; }
-    const [r,c] = item.move;
-    if (board[r][c] !== "") continue;
-    makeMove(r,c,current);
-    sideToMove = opponent(current);
-    const child = minimax(depth-1,!maximizing,alpha,beta,ply+1);
-    sideToMove = current;
-    unmakeMove(r,c,current);
-
-    if (!child.complete) { completedAll = false; break; }
-
-    if (maximizing) {
-      if (child.score > bestScore) { bestScore = child.score; bestMove = [r,c]; }
-      alpha = Math.max(alpha,child.score);
-      if (alpha >= beta) {
-        const key = r*SIZE+c;
-        const k = killers[ply] || [null,null];
-        if (!k[0] || k[0][0] !== r || k[0][1] !== c) { k[1]=k[0]; k[0]=[r,c]; }
-        history.set(key,(history.get(key)||0) + depth*depth*100);
-        break;
-      }
-    } else {
-      if (child.score < bestScore) { bestScore = child.score; bestMove = [r,c]; }
-      beta = Math.min(beta,child.score);
-      if (alpha >= beta) {
-        const key = r*SIZE+c;
-        const k = killers[ply] || [null,null];
-        if (!k[0] || k[0][0] !== r || k[0][1] !== c) { k[1]=k[0]; k[0]=[r,c]; }
-        history.set(key,(history.get(key)||0) + depth*depth*100);
-        break;
-      }
-    }
-  }
-
-  if (!completedAll || bestMove === null) {
-    return {score:bestScore === (maximizing ? -INF : INF) ? stand : bestScore, complete:false, move:bestMove};
-  }
-
-  let flag = FLAG_EXACT;
-  if (bestScore <= origAlpha) flag = FLAG_UPPER;
-  else if (bestScore >= origBeta) flag = FLAG_LOWER;
-  storeTT(hash,{depth,score:bestScore,flag,bestMove});
-  return {score:bestScore,complete:true,move:bestMove};
+  return true;
 }
 
-function setDynamicParams() {
-  const occ = occupiedCount();
-  const density = occ / (SIZE*SIZE);
-  if (occ <= 6) {
-    softDeadline = startTime + 600;
-    hardDeadline = startTime + 1000;
-    maxDepth = 8;
-    candidateLimit = 14;
-  } else if (occ <= 28) {
-    softDeadline = startTime + 950;
-    hardDeadline = startTime + 1500;
-    maxDepth = 10;
-    candidateLimit = 16;
-  } else if (occ <= 70) {
-    softDeadline = startTime + 1200;
-    hardDeadline = startTime + 1850;
-    maxDepth = 11;
-    candidateLimit = 18;
-  } else {
-    softDeadline = startTime + 1350;
-    hardDeadline = startTime + 2050;
-    maxDepth = 12;
-    candidateLimit = 18;
+function runVct(s, depth, limit, ms) {
+  vctNodes = 0; vctLimit = limit; vctDeadline = Date.now() + ms;
+  vctMemo.clear();
+  // Tìm nước đầu tiên dẫn tới thắng
+  const o = 3 - s;
+  if (cnt[o][C_WIN]) return -1;
+  collectCells(cellBuf);
+  const cs = cls[s];
+  const list = [];
+  for (const want of [C_43, C_33, C_B4, C_F3]) for (const x of cellBuf) if (cs[x] === want) list.push(x);
+  for (const m of list) {
+    makeMove(m, s);
+    const ok = vctDefend(s, depth - 1);
+    unmakeMove(m, s);
+    if (ok) return m;
+    if (vctNodes > vctLimit) return -1;
   }
-  if (density > 0.45) candidateLimit = 16;
+  return -1;
 }
 
-function iterativeDeepening() {
-  let completedBest = rootBestMove;
-  let completedScore = rootBestScore;
-  let completedPV = rootPV;
+// ---------------- alpha-beta ----------------
+const TT_BITS = 19, TT_SIZE = 1 << TT_BITS, TT_MASK = TT_SIZE - 1;
+const ttKey = new Uint32Array(TT_SIZE);
+const ttDepth = new Int8Array(TT_SIZE);
+const ttFlag = new Uint8Array(TT_SIZE);
+const ttScore = new Int32Array(TT_SIZE);
+const ttMoveA = new Int32Array(TT_SIZE);
+const EXACT = 1, LOWER = 2, UPPER = 3;
 
-  for (let depth = 1; depth <= maxDepth; depth++) {
-    if (Date.now() >= hardDeadline) break;
-    currentRootDepth = depth;
-    let localBest = null;
-    let localScore = -INF;
-    let allComplete = true;
-    let alpha = -INF;
-    const beta = INF;
+let killers = new Int32Array(128);
+let hist = new Float64Array(1);
+let nodes = 0, deadline = 0, aborted = false;
+const MAX_PLY = 40;
 
-    const candidates = candidateList(candidateLimit,0,true);
-    if (!candidates.length) break;
+function sideKey(s) { return s === 1 ? h1 : (h1 ^ 0xa5a5a5a5) >>> 0; }
 
-    // Root move ordering: use previous completed best first.
-    if (completedBest) {
-      const idx = candidates.findIndex(x => x.move[0]===completedBest[0] && x.move[1]===completedBest[1]);
-      if (idx > 0) candidates.unshift(...candidates.splice(idx,1));
+function search(s, depth, alpha, beta, ply) {
+  const o = 3 - s;
+  if (cnt[s][C_WIN]) return WIN_SCORE - ply;
+  const oW = cnt[o][C_WIN];
+  if (oW >= 2) return -(WIN_SCORE - ply - 1);
+  if (!oW && cnt[s][C_F4]) return WIN_SCORE - ply - 2;
+  if (ply >= MAX_PLY) return evaluate(s);
+  if ((++nodes & 1023) === 0 && Date.now() > deadline) aborted = true;
+  if (aborted) return 0;
+
+  if (depth <= 0 && !oW) return evaluate(s);
+
+  const hk = sideKey(s), slot = hk & TT_MASK;
+  let ttMove = -1;
+  if (ttKey[slot] === (h2 ^ hk) >>> 0 && ttFlag[slot]) {
+    ttMove = ttMoveA[slot];
+    if (ttDepth[slot] >= depth) {
+      let v = ttScore[slot];
+      if (v > WIN_TH) v -= ply; else if (v < -WIN_TH) v += ply;
+      const f = ttFlag[slot];
+      if (f === EXACT) return v;
+      if (f === LOWER && v >= beta) return v;
+      if (f === UPPER && v <= alpha) return v;
     }
-
-    for (const item of candidates) {
-      if (timeExpired()) { allComplete=false; break; }
-      const [r,c] = item.move;
-      if (board[r][c] !== "") continue;
-      makeMove(r,c,ai);
-      sideToMove = human;
-      const res = minimax(depth-1,false,alpha,beta,1);
-      sideToMove = ai;
-      unmakeMove(r,c,ai);
-      if (!res.complete) { allComplete=false; break; }
-      if (res.score > localScore) {
-        localScore = res.score;
-        localBest = [r,c];
-      }
-      alpha = Math.max(alpha,localScore);
-    }
-
-    if (!allComplete || !localBest) break;
-    completedBest = localBest;
-    completedScore = localScore;
-    completedPV = [localBest];
-    bestCompletedDepth = depth;
-
-    if (completedScore >= MATE - 1000) break;
   }
 
-  rootBestMove = completedBest;
-  rootBestScore = completedScore;
-  rootPV = completedPV;
-  return completedBest;
-}
-
-// ============================================================
-// ROOT / ENTRY
-// ============================================================
-function chooseOpeningMove() {
-  if (occupiedCount() === 0) return [Math.floor(SIZE/2), Math.floor(SIZE/2)];
-
-  // Strong, deterministic responses near the center when the position is quiet.
-  const candidates = allEmptyNearby(2);
-  let best = null;
-  let bestScore = -INF;
-  for (const [r,c] of candidates) {
-    let score = centerBonus(r,c) * 1000;
-    for (const [dr,dc] of DIRS) {
-      const nr=r+dr,nc=c+dc;
-      if (inBounds(nr,nc) && board[nr][nc]===human) score += 250;
+  const limit = ply <= 1 ? 18 : ply <= 3 ? 12 : 9;
+  const n = genMoves(s, ply, limit, ttMove);
+  if (n === 0) return evaluate(s);
+  const ms = moveBufs[ply];
+  const nd = oW ? depth : depth - 1; // nước chặn bắt buộc không tính độ sâu
+  let best = -INF, bestMove = ms[0];
+  const a0 = alpha;
+  for (let i = 0; i < n; i++) {
+    const m = ms[i];
+    makeMove(m, s);
+    let v;
+    if (i === 0) v = -search(o, nd, -beta, -alpha, ply + 1);
+    else {
+      v = -search(o, nd, -alpha - 1, -alpha, ply + 1);
+      if (v > alpha && v < beta && !aborted) v = -search(o, nd, -beta, -alpha, ply + 1);
     }
-    if (score > bestScore) { bestScore=score; best=[r,c]; }
+    unmakeMove(m, s);
+    if (aborted) return 0;
+    if (v > best) { best = v; bestMove = m; }
+    if (v > alpha) alpha = v;
+    if (alpha >= beta) {
+      if (killers[ply * 2] !== m) { killers[ply * 2 + 1] = killers[ply * 2]; killers[ply * 2] = m; }
+      hist[m] += depth * depth;
+      break;
+    }
   }
+  let stv = best;
+  if (stv > WIN_TH) stv += ply; else if (stv < -WIN_TH) stv -= ply;
+  ttKey[slot] = (h2 ^ hk) >>> 0;
+  ttDepth[slot] = depth;
+  ttFlag[slot] = best <= a0 ? UPPER : best >= beta ? LOWER : EXACT;
+  ttScore[slot] = stv;
+  ttMoveA[slot] = bestMove;
   return best;
 }
 
-function getBestMove() {
-  const occ = occupiedCount();
-  if (occ === 0) {
-    lastReason = "OPENING";
-    return [Math.floor(SIZE/2),Math.floor(SIZE/2)];
+// ---------------- gốc ----------------
+let lastInfo = {};
+
+function bestMove(s, timeMs) {
+  const o = 3 - s;
+  const t0 = Date.now();
+  lastInfo = { depth: 0, score: 0, reason: "SEARCH" };
+  if (stones === 0) { lastInfo.reason = "OPENING"; const m = (N - 1) >> 1; return idx(m, m); }
+  if (cnt[s][C_WIN]) { lastInfo.reason = "WIN_NOW"; return findClass(s, C_WIN); }
+  if (cnt[o][C_WIN]) { lastInfo.reason = "BLOCK_WIN"; return findClass(o, C_WIN); }
+  if (cnt[s][C_F4]) { lastInfo.reason = "OPEN_FOUR"; return findClass(s, C_F4); }
+
+  vcfFail.clear();
+  const myVcf = runVcf(s, 16, 60000, true);
+  if (myVcf && myVcf.length) { lastInfo.reason = "VCF"; return myVcf[0]; }
+
+  killers.fill(-1);
+  hist = new Float64Array(CELLS);
+  ttFlag.fill(0);
+
+  if (USE_VCT) {
+    const vm = runVct(s, VCT_DEPTH, 40000, timeMs * 0.2);
+    if (vm >= 0) { lastInfo.reason = "VCT"; return vm; }
   }
 
-  const aiWins = getWinningMoves(ai);
-  if (aiWins.length) { lastReason="WIN_NOW"; return aiWins[0]; }
-
-  const humanWins = getWinningMoves(human);
-  if (humanWins.length) {
-    // If multiple winning points exist, no single defense can stop them all.
-    // Still choose the most forcing counterattack if available; otherwise block the strongest point.
-    if (humanWins.length >= 2) {
-      const counter = forcingCandidates(ai,8).find(x => x.completionCount >= 1);
-      if (counter) { lastReason="COUNTER_THREAT"; return counter.move; }
+  // Ứng viên gốc + loại các nước để đối thủ có VCF / VCT
+  let n = genMoves(s, 0, 40, -1);
+  let roots = Array.from(moveBufs[0].subarray(0, n));
+  if (roots.length > 1) {
+    let safe = [];
+    for (const m of roots) {
+      makeMove(m, s);
+      const lose = runVcf(o, 12, 4000, false);
+      unmakeMove(m, s);
+      if (!lose) safe.push(m);
+      if (Date.now() - t0 > timeMs * 0.3) { // hết giờ kiểm tra: giữ phần chưa xét
+        for (const r of roots.slice(roots.indexOf(m) + 1)) safe.push(r);
+        break;
+      }
     }
-    lastReason="BLOCK_WIN";
-    return humanWins[0];
+    if (USE_VCT && safe.length > 1) {
+      const safe2 = [];
+      const budget = t0 + timeMs * 0.3;
+      for (let i = 0; i < safe.length; i++) {
+        const m = safe[i];
+        if (Date.now() > budget) { safe2.push(...safe.slice(i)); break; }
+        makeMove(m, s);
+        const lose = runVct(o, VCT_DEPTH - 2, 3000, Math.max(5, budget - Date.now())) >= 0;
+        unmakeMove(m, s);
+        if (!lose) safe2.push(m);
+      }
+      if (safe2.length) safe = safe2;
+    }
+    if (safe.length) roots = safe; else lastInfo.reason = "LOST";
   }
+  if (roots.length > 24) roots.length = 24;
+  if (roots.length === 1) return roots[0];
 
-  // Short, bounded VCF before general search.
-  const tacticalDeadline = Math.min(hardDeadline, Date.now() + 420);
-  const vcf = vcfSearch(ai,human,12,tacticalDeadline);
-  if (vcf.status === "WIN" && vcf.line && vcf.line.length) {
-    lastReason = vcf.reason || "VCF";
-    return vcf.line[0];
+  deadline = t0 + timeMs;
+  aborted = false; nodes = 0;
+  let best = roots[0], bestScore = -INF;
+  const scores = new Float64Array(roots.length);
+  for (let depth = 2; depth <= 20; depth += 1) {
+    const it0 = Date.now();
+    let alpha = -INF, iterBest = -1, iterScore = -INF;
+    for (let i = 0; i < roots.length; i++) {
+      const m = roots[i];
+      makeMove(m, s);
+      let v;
+      if (i === 0) v = -search(o, depth - 1, -INF, -alpha, 1);
+      else {
+        v = -search(o, depth - 1, -alpha - 1, -alpha, 1);
+        if (v > alpha && !aborted) v = -search(o, depth - 1, -INF, -alpha, 1);
+      }
+      unmakeMove(m, s);
+      if (aborted) break;
+      scores[i] = v;
+      if (v > iterScore) { iterScore = v; iterBest = i; }
+      if (v > alpha) alpha = v;
+    }
+    if (aborted) {
+      // Dùng kết quả dở dang nếu nước tốt nhất mới đã được xác nhận tốt hơn
+      if (iterBest > 0) best = roots[iterBest];
+      break;
+    }
+    best = roots[iterBest]; bestScore = iterScore;
+    lastInfo.depth = depth; lastInfo.score = bestScore;
+    // đưa nước tốt nhất lên đầu
+    roots.splice(iterBest, 1); roots.unshift(best);
+    if (bestScore > WIN_TH || bestScore < -WIN_TH) break;
+    // Không bắt đầu vòng mới nếu chắc chắn không kịp
+    const now = Date.now();
+    if (now + (now - it0) * 2 > deadline) break;
   }
-  if (aborted) aborted = false;
-
-  // VCT: slightly wider, still forcing-only.
-  const vctDeadline = Math.min(hardDeadline, Date.now() + 320);
-  const vct = vctSearch(ai,human,8,vctDeadline);
-  if (vct.status === "WIN" && vct.line && vct.line.length) {
-    lastReason = vct.reason || "VCT";
-    return vct.line[0];
-  }
-  if (aborted) aborted = false;
-
-  const doubleAI = findDoubleThreat(ai);
-  if (doubleAI) { lastReason="DOUBLE_THREAT"; return doubleAI; }
-
-  // Verified hard defensive threats remain mandatory. Ordinary Open Three is
-  // deliberately left to search so the AI can keep its initiative.
-  const openFourHuman = findOpenFour(human);
-  if (openFourHuman) {
-    const urgency = defensiveUrgency(ai);
-    if (urgency >= 6e15) { lastReason="BLOCK_OPEN_FOUR"; return openFourHuman; }
-  }
-
-  // A genuine opponent double threat is still a hard defensive priority.
-
-  // Before positional search, look for a quiet move that creates a compound
-  // attack. This is the key difference from the old defense-first behavior.
-  const attackContinuations = findAttackContinuation(ai, 6);
-  const bestAttack = attackContinuations[0];
-  if (bestAttack && bestAttack.enemyWins === 0 && (bestAttack.nextDoubleThreats > 0 || bestAttack.nextForcingMoves >= 2)) {
-    lastReason = bestAttack.nextDoubleThreats > 0 ? "ATTACK_COMPOUND" : "ATTACK_CONTINUATION";
-    return bestAttack.move;
-  }
-
-  const doubleHuman = findDoubleThreat(human);
-  if (doubleHuman) { lastReason="BLOCK_DOUBLE_THREAT"; return doubleHuman; }
-
-  const opening = occ <= 3 ? chooseOpeningMove() : null;
-  if (opening) {
-    // Let the general search override this when enough time remains.
-  }
-
-  rootBestMove = opening || candidateList(1,0,true)[0]?.move || [CENTER|0,CENTER|0];
-  rootBestScore = -INF;
-  rootPV = [rootBestMove];
-  bestCompletedDepth = 0;
-
-  const best = iterativeDeepening();
-  if (best) {
-    if (lastReason === "SEARCH") lastReason = "SEARCH";
-    return best;
-  }
-  lastReason = "FALLBACK";
-  return rootBestMove || [CENTER|0,CENTER|0];
+  lastInfo.nodes = nodes;
+  return best;
 }
 
-function initFromData(data) {
-  board = data.board.map(row => row.slice());
-  human = data.human || "X";
-  ai = data.ai || "O";
-  sideToMove = ai;
-  boardHash = 0;
-  for (let r=0;r<SIZE;r++) {
-    for (let c=0;c<SIZE;c++) {
-      const p=board[r][c];
-      if (p === "X" || p === "O") boardHash = (boardHash ^ zobrist[r][c][p]) >>> 0;
-    }
-  }
+function think(grid, aiSym, timeMs) {
+  setupBoard(grid);
+  const s = aiSym === "X" ? 1 : 2;
+  const m = bestMove(s, timeMs);
+  return [rowOf(m), colOf(m)];
 }
 
-self.onmessage = function(e) {
+self.onmessage = function (e) {
   const data = e.data;
   if (!data || data.type !== "think") return;
-
-  const requestId = data.requestId ?? null;
-  initFromData(data);
-  nodes = 0;
-  aborted = false;
-  rootBestMove = null;
-  rootBestScore = -INF;
-  rootPV = [];
-  bestCompletedDepth = 0;
-  lastReason = "SEARCH";
-  ttGeneration++;
-  TT.clear();
-  history.clear();
-  for (const k of killers) { k[0]=null; k[1]=null; }
-
-  startTime = Date.now();
-  setDynamicParams();
-
+  const t0 = Date.now();
   let move;
   try {
-    move = getBestMove();
+    move = think(data.board, data.ai || "O", data.timeMs || 900);
   } catch (err) {
-    move = rootBestMove || [Math.floor(SIZE/2),Math.floor(SIZE/2)];
-    lastReason = "FALLBACK_ERROR";
     if (DEBUG_AI) console.error(err);
+    const m = (data.board.length - 1) >> 1;
+    move = null;
+    for (let r = 0; r < data.board.length && !move; r++)
+      for (let c = 0; c < data.board.length; c++) if (data.board[r][c] === "") { move = [r, c]; break; }
+    if (data.board[m][m] === "") move = [m, m];
+    lastInfo = { reason: "FALLBACK_ERROR" };
   }
-
-  const elapsed = Date.now() - startTime;
-  if (DEBUG_AI) {
-    console.log({move,depth:bestCompletedDepth,score:rootBestScore,nodes,elapsed,reason:lastReason});
-  }
-
   self.postMessage({
-    type:"move",
-    move,
-    requestId,
-    depth:bestCompletedDepth,
-    score:rootBestScore,
-    elapsed,
-    nodes,
-    reason:lastReason
+    type: "move", move, requestId: data.requestId ?? null,
+    depth: lastInfo.depth || 0, score: lastInfo.score || 0,
+    elapsed: Date.now() - t0, nodes: lastInfo.nodes || 0, reason: lastInfo.reason
   });
 };
 
@@ -1446,7 +942,8 @@ self.onmessage = function(e) {
 
 <script>
 // ==================== THAM SỐ ====================
-const SIZE = 15;
+const SIZE = 25;
+const AI_TIME_MS = 1000; // thời gian suy nghĩ tối đa mỗi nước của AI
 const CANDIDATE_LIMIT = 30; // chỉ dùng cho bình luận / dự phòng, engine chính nằm trong Worker
 
 let board = [];
@@ -1472,6 +969,86 @@ const diceEl = document.getElementById("dice");
 const drawPopup = document.getElementById("draw-popup");
 const btnDrawAccept = document.getElementById("btn-draw-accept");
 const btnDrawReject = document.getElementById("btn-draw-reject");
+const boardView = document.getElementById("board-view");
+const offHint = document.getElementById("offscreen-hint");
+
+// ==================== KHUNG NHÌN 15x15 TRÊN BÀN 25x25 ====================
+// Điện thoại: vuốt để cuộn (cuộn gốc của trình duyệt). Máy tính: giữ chuột trái và kéo.
+let viewDrag = null;
+let suppressCellClick = false;
+
+function centerView() {
+  boardView.scrollLeft = (boardView.scrollWidth - boardView.clientWidth) / 2;
+  boardView.scrollTop = (boardView.scrollHeight - boardView.clientHeight) / 2;
+}
+
+function scrollToCell(cell, smooth = true) {
+  const left = cell.offsetLeft + cell.offsetWidth / 2 - boardView.clientWidth / 2;
+  const top = cell.offsetTop + cell.offsetHeight / 2 - boardView.clientHeight / 2;
+  boardView.scrollTo({ left, top, behavior: smooth ? "smooth" : "auto" });
+}
+
+boardView.addEventListener("pointerdown", e => {
+  suppressCellClick = false;
+  if (e.pointerType !== "mouse" || e.button !== 0) return;
+  viewDrag = { x: e.clientX, y: e.clientY, left: boardView.scrollLeft, top: boardView.scrollTop, moved: false };
+});
+window.addEventListener("pointermove", e => {
+  if (!viewDrag) return;
+  const dx = e.clientX - viewDrag.x, dy = e.clientY - viewDrag.y;
+  if (!viewDrag.moved && Math.hypot(dx, dy) > 6) {
+    viewDrag.moved = true;
+    boardView.classList.add("dragging");
+  }
+  if (viewDrag.moved) {
+    boardView.scrollLeft = viewDrag.left - dx;
+    boardView.scrollTop = viewDrag.top - dy;
+  }
+});
+window.addEventListener("pointerup", () => {
+  if (viewDrag && viewDrag.moved) {
+    // Kéo xong thì không tính là bấm vào ô
+    suppressCellClick = true;
+  }
+  viewDrag = null;
+  boardView.classList.remove("dragging");
+});
+boardView.addEventListener("click", e => {
+  if (suppressCellClick) { suppressCellClick = false; e.stopPropagation(); e.preventDefault(); }
+}, true);
+
+// Mũi tên ở mép khung chỉ tới nước vừa đánh nếu nó nằm ngoài vùng đang nhìn
+let hintFrame = 0;
+function updateOffscreenHint() {
+  hintFrame = 0;
+  const last = moveHistory[moveHistory.length - 1];
+  if (!last || !lastCell) { offHint.hidden = true; return; }
+  const vw = boardView.clientWidth, vh = boardView.clientHeight;
+  const size = lastCell.offsetWidth;
+  const cx = lastCell.offsetLeft + size / 2 - boardView.scrollLeft;
+  const cy = lastCell.offsetTop + size / 2 - boardView.scrollTop;
+  const margin = size * 0.35;
+  if (cx >= margin && cx <= vw - margin && cy >= margin && cy <= vh - margin) {
+    offHint.hidden = true;
+    return;
+  }
+  const ox = vw / 2, oy = vh / 2;
+  const dx = cx - ox, dy = cy - oy;
+  const inset = 26;
+  const t = Math.min((ox - inset) / Math.max(Math.abs(dx), 1e-6), (oy - inset) / Math.max(Math.abs(dy), 1e-6));
+  offHint.style.left = (boardView.offsetLeft + boardView.clientLeft + ox + dx * t) + "px";
+  offHint.style.top = (boardView.offsetTop + boardView.clientTop + oy + dy * t) + "px";
+  offHint.querySelector(".hint-dir").style.transform = `rotate(${Math.atan2(dy, dx) * 180 / Math.PI}deg)`;
+  offHint.querySelector(".hint-sym").textContent = last[2];
+  offHint.className = "hint-" + last[2];
+  offHint.hidden = false;
+}
+function scheduleHintUpdate() {
+  if (!hintFrame) hintFrame = requestAnimationFrame(updateOffscreenHint);
+}
+boardView.addEventListener("scroll", scheduleHintUpdate, { passive: true });
+window.addEventListener("resize", scheduleHintUpdate);
+offHint.addEventListener("click", () => { if (lastCell) scrollToCell(lastCell); });
 
 // ==================== ĐÁNH GIÁ (chỉ dùng để hiển thị thanh điểm + bình luận, KHÔNG dùng để quyết định nước đi) ====================
 const WEIGHTS = {
@@ -1736,7 +1313,7 @@ function aiMove() {
     }
   };
 
-  aiWorker.postMessage({ type: "think", board, human, ai, requestId: myRequestId });
+  aiWorker.postMessage({ type: "think", board, human, ai, requestId: myRequestId, timeMs: AI_TIME_MS });
 }
 
 function finishAiMove(r, c) {
@@ -1780,6 +1357,8 @@ function createBoard() {
     }
   }
   boardDiv.classList.remove("disabled");
+  offHint.hidden = true;
+  centerView();
 }
 
 function place(r, c, player) {
@@ -1793,6 +1372,7 @@ function place(r, c, player) {
   lastCell = cell;
   try { showComment(r, c, player); } catch (e) {}
   updateScore();
+  scheduleHintUpdate();
 }
 
 function highlightWin(r, c, player) {
@@ -1876,7 +1456,7 @@ function undoMove() {
     else lastCell = null;
     currentTurn = currentTurn === "X" ? "O" : "X";
     setStatus("pvp-" + currentTurn);
-    updateScore(); updateUndoButton();
+    updateScore(); updateUndoButton(); scheduleHintUpdate();
   } else {
     if (undoLeft <= 0) { document.getElementById("undolimit").textContent = "Người chơi đã sử dụng hết lượt"; updateUndoButton(); return; }
     if (moveHistory.length < 2) return;
@@ -1890,7 +1470,7 @@ function undoMove() {
     currentTurn = human; boardDiv.classList.remove("disabled");
     aiThinking = false;
     setStatus("your-turn"); commentaryDiv.textContent = "↩️ Người chơi vừa hoàn tác";
-    updateUndoUI(); updateScore(); updateUndoButton();
+    updateUndoUI(); updateScore(); updateUndoButton(); scheduleHintUpdate();
   }
 }
 
