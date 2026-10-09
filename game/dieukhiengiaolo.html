@@ -2119,11 +2119,17 @@ hitFlash: 0, shake: 0, messageTimer: 0,
       for(let j=0;j<sims.length;j++){
         if(j===ti) continue;
         const b = sims[j];
-        if(!a.turning && !b.turning && a.axis===b.axis) continue; // cùng trục: xe tự giãn cách
+        // Cùng trục: xe cùng chiều tự giãn cách nên bỏ qua. Xe ngược chiều chỉ đáng ngại khi có xe lạng lách
+        // (nó có thể sang làn đối diện nên nới độ lệch ngang).
+        const sameAxis = !a.turning && !b.turning && a.axis===b.axis;
+        const weaving = sameAxis && (a.weaver || b.weaver) && a.dir!==b.dir;
+        if(sameAxis && !weaving) continue;
         const mx=(a.x+b.x)/2, my=(a.y+b.y)/2;
         if(mx<0 || mx>W || my<0 || my>H) continue;
-        if(Math.abs(a.x-b.x) < (simBoxW(a)+simBoxW(b))*0.5*margin &&
-           Math.abs(a.y-b.y) < (simBoxH(a)+simBoxH(b))*0.5*margin) return true;
+        const extra = weaving ? roadGeom().lane*0.5 : 0;
+        const exX = a.axis==='v' ? extra : 0, exY = a.axis==='h' ? extra : 0;
+        if(Math.abs(a.x-b.x) < (simBoxW(a)+simBoxW(b))*0.5*margin + exX &&
+           Math.abs(a.y-b.y) < (simBoxH(a)+simBoxH(b))*0.5*margin + exY) return true;
       }
     }
     return false;
