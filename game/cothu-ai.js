@@ -282,7 +282,7 @@
 
   // Đánh giá tĩnh, trả về theo góc nhìn bên đang đi.
   function evaluate(b) {
-    let s = 0;
+    let s = 0, mat = 0, cnt = 0;
     const tideSoon = R.tide && !b[TA] && b[TC] === 1;
     for (let i = 0; i < NP; i++) {
       const p = b[POS + i];
@@ -301,7 +301,11 @@
       const od = Math.abs(p % W - 3) + Math.abs(((p / W) | 0) - (side === BLUE ? 0 : 8));
       if (od <= 2 && R.rank[t] >= 4) v += 14;
       s += side === RED ? v : -v;
+      mat += side === RED ? base : -base;
+      cnt++;
     }
+    // Hơn quân thì càng ít quân trên bàn càng dễ thắng: khuyến khích đổi quân khi đang hơn
+    s += (mat * 3) / (cnt + 6) | 0;
     return (b[TURN] === RED ? s : -s) + 12;
   }
 
