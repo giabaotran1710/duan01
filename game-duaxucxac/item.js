@@ -114,7 +114,7 @@
     rarity: ITEM_RARITY.RARE,
     timing: ITEM_TIMING.NEXT_ROLL,
     target: ITEM_TARGET.SELF,
-    desc: "Lần đổ xúc xắc sau của bạn chắc chắn ra số chẵn.",
+    desc: "Lần tung kế tiếp của bạn chắc chắn ra số chẵn.",
     effect: {
       type: "force_next_roll_parity",
       parity: "even",
@@ -132,7 +132,7 @@
     rarity: ITEM_RARITY.RARE,
     timing: ITEM_TIMING.NEXT_ROLL,
     target: ITEM_TARGET.SELF,
-    desc: "Lần đổ xúc xắc sau của bạn chắc chắn ra số lẻ.",
+    desc: "Lần tung kế tiếp của bạn chắc chắn ra số lẻ.",
     effect: {
       type: "force_next_roll_parity",
       parity: "odd",
@@ -168,7 +168,7 @@
     rarity: ITEM_RARITY.COMMON,
     timing: ITEM_TIMING.BEFORE_ROLL,
     target: ITEM_TARGET.SELF,
-    desc: "Lượt này bạn chỉ đổ ra 1, 2 hoặc 3 nút.",
+    desc: "Lần tung kế tiếp bạn chỉ đổ ra 1, 2 hoặc 3 nút.",
     effect: {
       type: "limit_roll_values_this_turn",
       values: [1, 2, 3],
@@ -186,7 +186,7 @@
     rarity: ITEM_RARITY.RARE,
     timing: ITEM_TIMING.BEFORE_ROLL,
     target: ITEM_TARGET.SELF,
-    desc: "Lượt này bạn chỉ đổ ra 4, 5 hoặc 6 nút.",
+    desc: "Lần tung kế tiếp bạn chỉ đổ ra 4, 5 hoặc 6 nút.",
     effect: {
       type: "limit_roll_values_this_turn",
       values: [4, 5, 6],
@@ -204,7 +204,7 @@
     rarity: ITEM_RARITY.EPIC,
     timing: ITEM_TIMING.BEFORE_ROLL,
     target: ITEM_TARGET.SELF,
-    desc: "Lượt này bạn được tung xúc xắc 2 lần.",
+    desc: "Lần tung kế tiếp bạn được tung xúc xắc 2 lần và cộng tổng.",
     effect: {
       type: "roll_twice_this_turn",
       rolls: 2,
@@ -222,7 +222,7 @@
     rarity: ITEM_RARITY.EPIC,
     timing: ITEM_TIMING.INSTANT,
     target: ITEM_TARGET.SELF,
-    desc: "Leo lên 1 tầng tháp.",
+    desc: "Leo thẳng lên ô nằm ngay phía trên trên bàn cờ (tầng kế tiếp).",
     effect: {
       type: "tower_up",
       floors: 1
@@ -367,7 +367,7 @@
     rarity: ITEM_RARITY.EPIC,
     timing: ITEM_TIMING.INSTANT,
     target: ITEM_TARGET.BOARD_CELL,
-    desc: "Chọn một ô để cắm cờ. Khi đối thủ đi đến ô đó, đối thủ phải dừng lại.",
+    desc: "Cắm cờ cách đối thủ 2 ô phía trước. Khi đối thủ đi đến ô đó, đối thủ phải dừng lại.",
     harmful: true,
     shieldable: true,
     effect: {
