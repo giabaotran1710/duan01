@@ -41,6 +41,9 @@ document.addEventListener('DOMContentLoaded', function () {
     chillPanel.style.maxHeight = 'calc(100vh - 140px)';
 }
 
+    // Người dùng bật "giảm chuyển động" trong hệ điều hành
+    const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+
     // Biến cho intro skip & timers
     let introSkipped = false;
     let introTimer1 = null;
@@ -82,8 +85,10 @@ document.addEventListener('DOMContentLoaded', function () {
         } else {
             line1.style.borderRight = 'none';
             line2.style.opacity = '1';
+            line2.classList.add('is-visible');
             introTimer2 = setTimeout(() => {
                 if (introSkipped) return;
+                overlay.classList.add('is-leaving');
                 overlay.style.opacity = '0';
                 introTimer3 = setTimeout(() => {
                     if (introSkipped) return;
@@ -97,7 +102,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // Khởi động intro
     introTimer1 = setTimeout(() => {
         if (introSkipped) return;
-        createPetals(35);
+        if (!reduceMotionQuery.matches) createPetals(35);
         introTimer2 = setTimeout(typeLine1, 1000);
     }, 2000);
 
@@ -110,7 +115,7 @@ document.addEventListener('DOMContentLoaded', function () {
         utilityBar.classList.remove('show');
         contentEl.classList.remove('hide');
         toggleBtn.classList.remove('active');
-        toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad"></i>';
+        toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad icon-swap"></i>';
         if (autoCloseTimer) {
             clearTimeout(autoCloseTimer);
             autoCloseTimer = null;
@@ -126,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function () {
         utilityBar.classList.add('show');
         contentEl.classList.add('hide');
         toggleBtn.classList.add('active');
-        toggleBtn.innerHTML = '<i class="fa-solid fa-xmark"></i>';
+        toggleBtn.innerHTML = '<i class="fa-solid fa-xmark icon-swap"></i>';
         if (autoCloseTimer) clearTimeout(autoCloseTimer);
         autoCloseTimer = setTimeout(closeUtilityBar, 30000);
     }
@@ -213,11 +218,19 @@ function closeChillBar() {
     if (canvas) {
         const ctx = canvas.getContext('2d');
         let W, H, t = 0;
+        let lastFrame = 0;
+        let rafId = null;
 
         function resize() {
-            W = canvas.width = window.innerWidth;
-            H = canvas.height = window.innerHeight;
+            // Vẽ theo mật độ điểm ảnh thật để nét trên màn hình Retina (tối đa 2x)
+            const dpr = Math.min(window.devicePixelRatio || 1, 2);
+            W = window.innerWidth;
+            H = window.innerHeight;
+            canvas.width = Math.round(W * dpr);
+            canvas.height = Math.round(H * dpr);
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
             initStars();
+            if (reduceMotionQuery.matches) draw(performance.now());
         }
         window.addEventListener('resize', resize);
 
@@ -243,7 +256,12 @@ function closeChillBar() {
             }
         }
 
-        function draw() {
+        function draw(now) {
+            // Tính thời gian theo mili-giây thực để tốc độ sóng giống nhau
+            // trên màn hình 60Hz, 120Hz hay khi trình duyệt bị giật khung
+            if (lastFrame) t += Math.min((now - lastFrame) / 1000, 0.05);
+            lastFrame = now;
+
             const sky = ctx.createLinearGradient(0, 0, 0, H);
             sky.addColorStop(0, '#050d1a');
             sky.addColorStop(0.4, '#0a1a30');
@@ -299,39 +317,24 @@ function closeChillBar() {
                 ctx.stroke();
             });
 
-            t += 0.016;
-            requestAnimationFrame(draw);
+            rafId = reduceMotionQuery.matches ? null : requestAnimationFrame(draw);
         }
 
         resize();
-        draw();
-    }
+        if (!reduceMotionQuery.matches) rafId = requestAnimationFrame(draw);
 
-    // ============================================================  
-    // 6. CHỮ CÁI XOAY VÒNG (NÚT WORD GAME)  
-    // ============================================================  
-    const LETTERS = [
-        { ch: 'W' }, { ch: 'O' }, { ch: 'R' }, { ch: 'D' },
-        { ch: 'G' }, { ch: 'A' }, { ch: 'M' }, { ch: 'E' },
-    ];
-
-    function applyWordAnimation() {
-        document.querySelectorAll('#word-game .tile-letter').forEach(elLetter => {
-            if (elLetter.dataset.animationStarted) return;
-            elLetter.dataset.animationStarted = 'true';
-
-            let localIdx = 0;
-            setInterval(() => {
-                localIdx = (localIdx + 1) % LETTERS.length;
-                elLetter.classList.remove('pop');
-                void elLetter.offsetWidth;
-                elLetter.textContent = LETTERS[localIdx].ch;
-                elLetter.classList.add('pop');
-            }, 900);
+        // Bật/tắt chuyển động nền khi người dùng đổi cài đặt
+        reduceMotionQuery.addEventListener('change', () => {
+            lastFrame = 0;
+            if (reduceMotionQuery.matches) {
+                if (rafId) cancelAnimationFrame(rafId);
+                rafId = null;
+                draw(performance.now());
+            } else if (!rafId) {
+                rafId = requestAnimationFrame(draw);
+            }
         });
     }
-
-    applyWordAnimation();
 
     // ============================================================  
     // 7. SKIP INTRO  
@@ -344,6 +347,7 @@ function closeChillBar() {
         clearTimeout(introTimer2);
         clearTimeout(introTimer3);
 
+        overlay.classList.add('is-leaving');
         overlay.style.opacity = '0';
 
         setTimeout(() => {
@@ -354,6 +358,8 @@ function closeChillBar() {
 
     skipIntroBtn.addEventListener('click', skipIntro);
     
+    let navigateTimer = null;
+
     window.navigateToGame = function(url, gameName) {
     const loadingOverlay = document.getElementById('loading-overlay');
     const loadingGameName = document.getElementById('loading-game-name');
@@ -364,14 +370,68 @@ function closeChillBar() {
         
         const randomDelay = Math.floor(Math.random() * 4501) + 1500;
         
-        setTimeout(() => {
+        clearTimeout(navigateTimer);
+        navigateTimer = setTimeout(() => {
             window.location.href = url;
         }, randomDelay);
     } else {
         window.location.href = url;
     }
 };
+
+    // Quay lại bằng nút Back: trình duyệt khôi phục trang từ bộ nhớ đệm (bfcache)
+    // nên lớp "Đang mở" vẫn còn hiện. Ẩn nó đi và huỷ lần chuyển trang đang chờ.
+    window.addEventListener('pageshow', (e) => {
+        if (!e.persisted) return;
+        clearTimeout(navigateTimer);
+        navigateTimer = null;
+        const loadingOverlay = document.getElementById('loading-overlay');
+        if (loadingOverlay) loadingOverlay.style.display = 'none';
+    });
     
+    // ============================================================
+    // 8. HIỆU ỨNG THẺ GAME (NGHIÊNG 3D, ĐÈN THEO CON TRỎ, GỢN SÓNG)
+    // ============================================================
+    const gamesGrid = document.querySelector('.games-grid');
+    if (gamesGrid) {
+        const MAX_TILT = 8; // độ
+
+        gamesGrid.addEventListener('pointermove', (e) => {
+            if (e.pointerType !== 'mouse') return;
+            const card = e.target.closest('.game-card');
+            if (!card) return;
+            const rect = card.getBoundingClientRect();
+            const px = (e.clientX - rect.left) / rect.width;
+            const py = (e.clientY - rect.top) / rect.height;
+            card.style.setProperty('--mx', (px * 100) + '%');
+            card.style.setProperty('--my', (py * 100) + '%');
+            if (!reduceMotionQuery.matches) {
+                card.style.setProperty('--ry', ((px - 0.5) * MAX_TILT) + 'deg');
+                card.style.setProperty('--rx', ((0.5 - py) * MAX_TILT) + 'deg');
+            }
+        });
+
+        gamesGrid.addEventListener('pointerout', (e) => {
+            const card = e.target.closest('.game-card');
+            if (!card || card.contains(e.relatedTarget)) return;
+            card.style.setProperty('--rx', '0deg');
+            card.style.setProperty('--ry', '0deg');
+        });
+
+        gamesGrid.addEventListener('pointerdown', (e) => {
+            if (reduceMotionQuery.matches) return;
+            const card = e.target.closest('.game-card');
+            if (!card) return;
+            const rect = card.getBoundingClientRect();
+            const ripple = document.createElement('span');
+            ripple.className = 'card-ripple';
+            ripple.style.left = (e.clientX - rect.left) + 'px';
+            ripple.style.top = (e.clientY - rect.top) + 'px';
+            card.appendChild(ripple);
+            ripple.addEventListener('animationend', () => ripple.remove());
+        });
+    }
+
     function checkDescOverflow() {
         document.querySelectorAll(".chill-game-desc-wrap").forEach(wrap => {
             const text = wrap.querySelector(".chill-game-desc");
