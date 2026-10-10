@@ -341,6 +341,50 @@ canvas{display:block}
   order:1;
 }
 
+/* ---------- Nút về menu (chỉ hiện khi thua) ---------- */
+#menuBtn{
+  display:none;
+  padding:9px 30px;
+  border:1px solid #fff;
+  border-radius:999px;
+  cursor:pointer;
+
+  font-family:inherit;
+  font-size:14px;
+  font-weight:900;
+  letter-spacing:1px;
+
+  color:#07324d;
+  background:rgba(255,255,255,.72);
+  -webkit-backdrop-filter:blur(6px);
+  backdrop-filter:blur(6px);
+  box-shadow:0 6px 16px rgba(0,60,110,.18),inset 0 1px 0 rgba(255,255,255,.9);
+
+  pointer-events:auto;
+  transition:transform .08s;
+}
+#menuBtn:active{transform:scale(.95)}
+#start.game-over-menu #menuBtn{
+  display:block;
+  order:2;
+  margin-top:12px;
+}
+#start.game-over-menu .mode-panel{order:3}
+
+/* ---------- Footer: cùng vị trí với các game khác ---------- */
+footer{
+  position:fixed;
+  bottom:calc(5px + env(safe-area-inset-bottom));
+  left:calc(10px + env(safe-area-inset-left));
+  z-index:12;
+  font:10px Tahoma,Verdana,sans-serif;
+  color:#fff;
+  opacity:.85;
+  text-shadow:0 1px 2px rgba(0,40,80,.6);
+  white-space:nowrap;
+  pointer-events:none;
+}
+
 /* ---------- Chặn thiết bị không hợp lệ ---------- */
 #deviceBlock{
   position:fixed;
@@ -404,12 +448,14 @@ canvas{display:block}
   </div>
 
   <button id="playBtn">BẮT ĐẦU</button>
+  <button id="menuBtn">VỀ MENU</button>
 </div>
 
 <div id="modeTag">THƯỜNG</div>
 <div id="phaseTag"></div>
 <div id="score">0m</div>
 <canvas id="game"></canvas>
+<footer>Version: D20261010-H16M11T3135 &raquo;&raquo;&raquo; developed by Tran Gia Bao</footer>
 
 <script>
 "use strict";
@@ -421,6 +467,7 @@ const modeTag = document.getElementById("modeTag");
 const phaseTag = document.getElementById("phaseTag");
 const start = document.getElementById("start");
 const playBtn = document.getElementById("playBtn");
+const menuBtn = document.getElementById("menuBtn");
 const deviceBlock = document.getElementById("deviceBlock");
 
 // Safari cũ chưa có roundRect
@@ -1952,7 +1999,8 @@ function menuLoop(){
   requestAnimationFrame(menuLoop);
 }
 
-function resetToMenu(){
+// Thua → "VỀ MENU": quay lại màn hình chờ như lần mở game đầu tiên
+function backToMenu(){
   gameRunning = false;
   introPlaying = false;
   introProgress = 0;
@@ -1962,20 +2010,26 @@ function resetToMenu(){
 
   distance = 0;
   cameraY = 0;
+  skyTime = 0;
   spawnTimer = 0;
+  edgeCampTimer = 0;
   obstacles = [];
   particles = [];
+  shootingStar = null;
 
   balloon.x = W / 2;
-  balloon.y = H + modeConfig[currentMode].balloonY;
+  balloon.y = H * 0.7;
   balloon.vx = 0;
+  lean = swing = swingV = 0;
+  initClouds();
 
+  scoreEl.classList.remove("game-over");
   scoreEl.textContent = "0m";
+  start.classList.remove("game-over-menu");
+  playBtn.textContent = "BẮT ĐẦU";
   modeTag.classList.remove("show");
   phaseTag.classList.remove("show");
   start.style.display = "flex";
-
-  drawStartScene();
 }
 
 function showGameOver(){
@@ -2086,6 +2140,8 @@ menuLoop();
 window.addEventListener("resize", checkDevice);
 window.addEventListener("orientationchange", checkDevice);
 checkDevice();
+
+menuBtn.onclick = backToMenu;
 
 playBtn.onclick = async ()=>{
   checkDevice();
