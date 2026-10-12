@@ -1139,40 +1139,63 @@ function XiangqiCore(){
     }
     // giá kỳ vọng của một quân còn úp: trung bình giá các loại còn úp của bên đó
     for(let sd=0;sd<2;sd++){ let sum=0; for(const t of bag[sd]) sum+=JQ_VAL[t]; HV[sd]=bag[sd].length?Math.round(sum/bag[sd].length):0; }
-    const total=new Map(), info=[]; let done=0, lastDepth=0, allNodes=0, rootList=null;
     const CLAMP=4000;
-    for(let k=0;k<samples;k++){
-      const types=new Int8Array(256);
-      for(let sd=0;sd<2;sd++){
-        const b=shuffleIn(bag[sd].slice());
-        unknown[sd].forEach((q,i)=>{ types[q]=b[i]; });
-        for(const q of JQ_SQUARES[sd]) if(known[q]>=1&&known[q]<=6) types[q]=known[q];
+    let allNodes=0, lastDepth=0, rootList=null, early=null, step=0;
+    const totalSteps=samples;
+    // Chạy n giả định trong khoảng thời gian budget; only = danh sách nước cần chấm (null = mọi nước).
+    function runSamples(n,budget,only){
+      const tStart=Date.now(), total=new Map(); let done=0;
+      for(let k=0;k<n;k++){
+        const types=new Int8Array(256);
+        for(let sd=0;sd<2;sd++){
+          const b=shuffleIn(bag[sd].slice());
+          unknown[sd].forEach((q,i)=>{ types[q]=b[i]; });
+          for(const q of JQ_SQUARES[sd]) if(known[q]>=1&&known[q]<=6) types[q]=known[q];
+        }
+        try { setJieqi(types); } catch(e){ early={error:'setup'}; return null; }
+        for(const mv of moves){ if(!isLegal(mv)){ early={error:'move'}; return null; } makeMove(mv); }
+        distance=0; nodes=0; age=(age+1)&255;
+        buildRoot();
+        if(!rootMv.length){ early={mv:0, score:-MATE, depth:0, nodes:0}; return null; }
+        if(rootMv.length===1){ early={mv:rootMv[0], score:0, depth:0, nodes:0, forced:true}; return null; }
+        if(!rootList) rootList=rootMv.slice();
+        if(only){
+          const keepMv=[], keepFx=[];
+          rootMv.forEach((mv,i)=>{ if(only.indexOf(mv)>=0){ keepMv.push(mv); keepFx.push(rootFixed[i]); } });
+          rootMv=keepMv; rootFixed=keepFx;
+        }
+        HIST.fill(0); for(const kl of KILLER) kl.fill(0);
+        const left=Math.max(60, budget-(Date.now()-tStart)), slice=Math.max(60, left/(n-k));
+        const r=scoreAll(slice,maxDepth);
+        allNodes+=nodes; step++;
+        if(!r) continue;
+        rootMv.forEach((mv,i)=>{ const v=Math.max(-CLAMP,Math.min(CLAMP,r.scores[i])); total.set(mv,(total.get(mv)||0)+v); });
+        done++; lastDepth=r.depth;
+        if(p.onInfo) p.onInfo({sample:Math.min(step,totalSteps), samples:totalSteps, depth:r.depth, nodes:allNodes, ms:Date.now()-t0});
+        if(Date.now()-tStart>budget*1.15) break;
       }
-      try { setJieqi(types); } catch(e){ return {error:'setup'}; }
-      for(const mv of moves){ if(!isLegal(mv)) return {error:'move'}; makeMove(mv); }
-      distance=0; nodes=0; age=(age+1)&255;
-      buildRoot();
-      if(!rootMv.length) return {mv:0, score:-MATE, depth:0, nodes:0};
-      if(rootMv.length===1) return {mv:rootMv[0], score:0, depth:0, nodes:0, forced:true};
-      if(!rootList) rootList=rootMv.slice();
-      HIST.fill(0); for(const kl of KILLER) kl.fill(0);
-      const left=Math.max(60, timeMs-(Date.now()-t0)), slice=Math.max(60, left/(samples-k));
-      const r=scoreAll(slice,maxDepth);
-      allNodes+=nodes;
-      if(!r) continue;
-      rootMv.forEach((mv,i)=>{ const v=Math.max(-CLAMP,Math.min(CLAMP,r.scores[i])); total.set(mv,(total.get(mv)||0)+v); });
-      done++; lastDepth=r.depth;
-      if(p.onInfo) p.onInfo({sample:k+1, samples, depth:r.depth, nodes:allNodes, ms:Date.now()-t0});
-      if(Date.now()-t0>timeMs*1.15) break;
+      return {total, done};
     }
-    if(!done) return {mv:rootList?rootList[0]:0, score:0, depth:0, nodes:allNodes};
-    let best=0, bestV=-1e9, bestAvg=0;
-    for(const mv of rootList){
-      const avg=(total.get(mv)||0)/done;
-      const v=avg+(p.noise&&Math.abs(avg)<WIN?Math.random()*p.noise:0);
-      if(v>bestV){ bestV=v; best=mv; bestAvg=avg; }
+    // Giai đoạn 1: chấm mọi nước. Nếu p.refine: giai đoạn 2 chấm lại vài nước dẫn đầu bằng giả định mới, tính sâu hơn.
+    const refine=!!p.refine && samples>=4;
+    const n1=refine?Math.ceil(samples/2):samples, b1=refine?timeMs*0.45:timeMs;
+    const r1=runSamples(n1,b1,null);
+    if(!r1) return early;
+    if(!r1.done) return {mv:rootList?rootList[0]:0, score:0, depth:0, nodes:allNodes};
+    const avg1=rootList.map(mv=>({mv, v:(r1.total.get(mv)||0)/r1.done})).sort((a,b)=>b.v-a.v);
+    let ranking=avg1, done=r1.done;
+    if(refine && avg1.length>1 && avg1[0].v-avg1[1].v<300 && Math.abs(avg1[0].v)<WIN){
+      const top=avg1.slice(0,Math.min(4,avg1.length)).map(x=>x.mv);
+      const r2=runSamples(samples-n1, Math.max(200,timeMs-(Date.now()-t0)), top);
+      if(!r2) return early;
+      if(r2.done){ ranking=top.map(mv=>({mv, v:(r2.total.get(mv)||0)/r2.done})).sort((a,b)=>b.v-a.v); done+=r2.done; }
     }
-    return {mv:best, score:Math.round(bestAvg), depth:lastDepth, nodes:allNodes, samples:done, ms:Date.now()-t0};
+    let best=ranking[0];
+    if(p.noise){
+      let bv=-1e9;
+      for(const x of ranking){ const v=x.v+(Math.abs(x.v)<WIN?Math.random()*p.noise:0); if(v>bv){ bv=v; best=x; } }
+    }
+    return {mv:best.mv, score:Math.round(best.v), depth:lastDepth, nodes:allNodes, samples:done, ms:Date.now()-t0};
   }
 
   // ================= Ghi biên bản (ký hiệu Việt Nam) =================
@@ -1247,7 +1270,7 @@ function XiangqiCore(){
                  desc:['Tính 4 nước','Tính 3 nước'] },
     caothu:    { name:'Cao thủ',    think:{ timeMs:1500, useBook:true },         jq:{ timeMs:1800, samples:8 },
                  desc:['Nghĩ 1,5 giây','Xét 8 khả năng của quân úp'] },
-    kyvuong:   { name:'Kỳ Vương',   think:{ timeMs:5000, useBook:true },         jq:{ timeMs:5000, samples:16 },
+    kyvuong:   { name:'Kỳ Vương',   think:{ timeMs:5000, useBook:true },         jq:{ timeMs:5000, samples:16, refine:true },
                  desc:['Mạnh nhất · nghĩ tới 5 giây','Mạnh nhất · xét 16 khả năng'] }
   };
   const HINT_THINK = { timeMs:1500, useBook:true }, HINT_JQ = { timeMs:1800, samples:8 };
