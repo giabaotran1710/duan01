@@ -177,6 +177,7 @@ const MIME = {
   '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.gif': 'image/gif',
   '.svg': 'image/svg+xml', '.ico': 'image/x-icon', '.webp': 'image/webp',
   '.mp3': 'audio/mpeg', '.m4a': 'audio/mp4', '.mp4': 'video/mp4', '.wav': 'audio/wav',
+  '.wasm': 'application/wasm', '.txt': 'text/plain; charset=utf-8',
 };
 
 function serveStatic(req, res, url) {
