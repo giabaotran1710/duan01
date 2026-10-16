@@ -144,6 +144,11 @@ button{font:inherit}
 .record-head{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
 .record h2{margin:0;font-size:14px;letter-spacing:.08em;text-transform:uppercase;color:var(--gold)}
 .record-head span{font-size:12px;color:var(--muted)}
+.opening{display:flex;align-items:flex-start;gap:8px;margin-top:8px;padding:7px 9px;border-radius:10px;background:rgba(92,200,255,.08);border:1px solid rgba(92,200,255,.2);font-size:12.5px;line-height:1.35}
+.opening[hidden]{display:none}
+.opening .eco{flex:none;margin-top:1px;padding:1px 6px;border-radius:6px;background:#17496f;color:#bfe6ff;font-weight:900;font-size:11px;letter-spacing:.04em;font-variant-numeric:tabular-nums}
+.opening b{min-width:0;color:#e8f3ff;overflow-wrap:anywhere}
+.opening.none b{color:var(--muted);font-weight:600}
 .nav{display:flex;gap:4px;margin-top:8px}
 .nav button{flex:1;min-height:34px;border-radius:9px;border:1px solid rgba(125,178,227,.25);background:#12171b;color:var(--gold-2);cursor:pointer;font-weight:900}
 .nav button:disabled{opacity:.35;cursor:not-allowed}
@@ -351,6 +356,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
       </div>
       <div class="card record">
         <div class="record-head"><h2>Biên bản</h2><span id="moveCount"></span></div>
+        <div class="opening" id="opening" hidden><span class="eco" id="openingEco"></span><b id="openingName"></b></div>
         <ol class="moves" id="moveList"></ol>
         <div class="viewing" id="viewing">Đang xem lại thế cờ cũ. Bấm "Hiện tại" để quay về ván đấu.</div>
         <div class="nav">
@@ -426,9 +432,10 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
       <li>Không được đi nước làm Vua mình bị chiếu. Bị chiếu mà không thoát được là <b>chiếu hết</b> (thua).</li>
       <li><b>Hòa</b> khi: hết nước đi mà Vua không bị chiếu (pat), thế cờ lặp lại 3 lần, 50 nước liền không ăn quân và không đi Tốt, hoặc không bên nào đủ quân để chiếu hết.</li>
       <li><b>Phân tích</b>: Stockfish 19 chấm từng nước của cả hai bên — <b>!!</b> thiên tài (hy sinh quân mà vẫn là nước tốt nhất), <b>!</b> tuyệt vời (gần như nước duy nhất giữ được thế cờ), ★ tốt nhất, rất tốt, tốt, khai cuộc (theo sách), <b>?!</b> thiếu chính xác, <b>?</b> sai lầm, <b>X</b> bỏ lỡ (không tận dụng sai lầm của đối thủ), <b>??</b> ngớ ngẩn — kèm độ chính xác của mỗi bên.</li>
+      <li><b>Khai cuộc</b>: tên khai cuộc và mã ECO của ván hiện ngay dưới tiêu đề Biên bản (cả bạn lẫn Stockfish đi). Nhận theo thế cờ nên cả khi đi đảo nước vẫn đúng; bấm vào một nước cũ để xem khai cuộc lúc đó. Có 3.864 tên.</li>
       <li>Biên bản ghi theo ký hiệu quốc tế rút gọn: <b>x</b> là ăn quân, <b>+</b> chiếu, <b>#</b> chiếu hết, <b>O-O</b> nhập thành gần, <b>O-O-O</b> nhập thành xa. Nút <b>VN/EN</b> đổi chữ cái quân giữa Việt (V H X T M) và quốc tế (K Q R B N).</li>
     </ul>
-    <p class="credits">Máy chơi bằng <b>Stockfish 19</b> (bản WebAssembly "lite" của <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>, dựa trên <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener">Stockfish</a>), giấy phép <a href="stockfish/Copying.txt" target="_blank" rel="noopener">GNU GPL v3</a>. Hình quân cờ: bộ "cburnett" của Colin M.L. Burnett (CC BY-SA 3.0 / GPL).</p>
+    <p class="credits">Máy chơi bằng <b>Stockfish 19</b> (bản WebAssembly "lite" của <a href="https://github.com/nmrugg/stockfish.js" target="_blank" rel="noopener">Stockfish.js</a>, dựa trên <a href="https://github.com/official-stockfish/Stockfish" target="_blank" rel="noopener">Stockfish</a>), giấy phép <a href="stockfish/Copying.txt" target="_blank" rel="noopener">GNU GPL v3</a>. Hình quân cờ: bộ "cburnett" của Colin M.L. Burnett (CC BY-SA 3.0 / GPL). Tên khai cuộc: <a href="https://github.com/lichess-org/chess-openings" target="_blank" rel="noopener">lichess-org/chess-openings</a> (CC0).</p>
     <div class="sheet-actions"><button class="btn primary" id="rulesClose" type="button">Đã hiểu</button></div>
   </div>
 </div>
@@ -1194,7 +1201,42 @@ function ReviewCore(){
     $('btnAnalyze').classList.toggle('on', ana.open);
     renderNav();
   }
+  // ================= Tên khai cuộc (ECO) =================
+  // Dữ liệu lichess-org/chess-openings (CC0), khoá theo thế cờ (bàn cờ + lượt đi + nhập thành) nên đi đảo nước vẫn nhận ra.
+  // Tải một lần; không tải được thì bỏ qua, không ảnh hưởng ván cờ.
+  const OPENINGS_URL = 'openings/covua-openings.json';
+  const openBoard = ChessCore();
+  let OPEN = null, openFail = false, openCache = { sig:null, hits:[] };
+  const cyrb53 = str => { let h1 = 0xdeadbeef, h2 = 0x41c6ce57; for(let i=0,ch;i<str.length;i++){ ch = str.charCodeAt(i); h1 = Math.imul(h1^ch, 2654435761); h2 = Math.imul(h2^ch, 1597334677); }
+    h1 = Math.imul(h1^(h1>>>16), 2246822507) ^ Math.imul(h2^(h2>>>13), 3266489909); h2 = Math.imul(h2^(h2>>>16), 2246822507) ^ Math.imul(h1^(h1>>>13), 3266489909); return 4294967296*(2097151&h2) + (h1>>>0); };
+  const openKey = fen => cyrb53(fen.split(' ').slice(0,3).join(' ')).toString(36);
+  fetch(OPENINGS_URL).then(r => r.ok ? r.json() : Promise.reject(new Error('http'))).then(d => {
+    OPEN = { max:d.max, map:new Map(d.e.map(([k,eco,name]) => [k, { eco, name }])) };
+    openCache = { sig:null, hits:[] }; renderOpening();
+  }).catch(() => { openFail = true; renderOpening(); });
+  // Khai cuộc sâu nhất khớp trong `ply` nước đầu của ván hiện tại
+  function openingAt(ply){
+    if(!OPEN || !ply) return null;
+    const n = Math.min(game.moves.length, OPEN.max), sig = game.moves.slice(0, n).join(' ');
+    if(openCache.sig !== sig){
+      openBoard.reset(); const hits = [null];
+      for(let i=0;i<n;i++){ if(!openBoard.play(game.moves[i])) break; hits.push(OPEN.map.get(openKey(openBoard.fen())) || null); }
+      openCache = { sig, hits };
+    }
+    for(let i=Math.min(ply, openCache.hits.length-1); i>=1; i--) if(openCache.hits[i]) return openCache.hits[i];
+    return null;
+  }
+  function renderOpening(){
+    const el = $('opening'), ply = game.view < 0 ? game.moves.length : game.view;
+    if(!ply || openFail){ el.hidden = true; return; }
+    const o = openingAt(ply);
+    el.hidden = false; el.classList.toggle('none', !o);
+    $('openingEco').textContent = o ? o.eco : '—';
+    $('openingName').textContent = o ? o.name : (OPEN ? 'Chưa có trong sách khai cuộc' : 'Đang tải tên khai cuộc…');
+    el.title = o ? `Khai cuộc ${o.eco}: ${o.name}` : '';
+  }
   function renderMoves(){
+    renderOpening();
     const list = $('moveList'); let html = '';
     const cur = game.view < 0 ? game.moves.length : game.view;
     const icon = j => { const r = anaResult(j); return r ? `<i class="cl k-${r.kind}" title="${CLS[r.kind].name}">${CLS[r.kind].sym}</i>` : ''; };
