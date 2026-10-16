@@ -263,6 +263,16 @@ button{font:inherit}
 .elo input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:26px;height:26px;margin-top:-9px;border-radius:50%;background:#eaf6ff;border:3px solid #5cc8ff;box-shadow:0 0 0 5px rgba(92,200,255,.16),0 0 14px rgba(92,200,255,.65)}
 .elo input[type=range]::-moz-range-thumb{width:20px;height:20px;border-radius:50%;background:#eaf6ff;border:3px solid #5cc8ff;box-shadow:0 0 14px rgba(92,200,255,.65)}
 .elo input[type=range]:focus-visible::-webkit-slider-thumb{box-shadow:0 0 0 6px rgba(92,200,255,.35),0 0 14px rgba(92,200,255,.65)}
+.sac{display:flex;align-items:center;gap:12px;margin-top:12px;padding:10px 12px;border-radius:14px;cursor:pointer;background:#0d141c;border:1px solid #223041;transition:opacity .2s}
+.sac input{position:absolute;opacity:0;pointer-events:none}
+.sac .sw{position:relative;flex:none;width:42px;height:24px;border-radius:99px;background:#223041;transition:background .2s;box-shadow:inset 0 1px 3px rgba(0,0,0,.6)}
+.sac .sw::after{content:"";position:absolute;left:3px;top:3px;width:18px;height:18px;border-radius:50%;background:#8a9bb0;transition:transform .2s,background .2s}
+.sac input:checked+.sw{background:#1f6fc4}
+.sac input:checked+.sw::after{transform:translateX(18px);background:#eaf6ff;box-shadow:0 0 10px rgba(92,200,255,.8)}
+.sac input:focus-visible+.sw{outline:2px solid #5cc8ff;outline-offset:2px}
+.sac b{display:block;font-size:13.5px;color:#fff}
+.sac small{display:block;margin-top:1px;font-size:11.5px;line-height:1.35;color:#8a9bb0}
+.sac.off{opacity:.5}
 .elo-scale{display:flex;justify-content:space-between;padding:0 2px;font-size:10.5px;font-weight:800;color:#6f8297;font-variant-numeric:tabular-nums}
 .sheet-actions{display:grid;gap:8px;margin-top:16px}
 .sheet .btn{color:var(--text)}
@@ -366,6 +376,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
       <input type="range" id="eloRange" min="800" max="3200" step="50" aria-label="Elo của Stockfish" aria-valuetext="">
       <div class="elo-scale"><span>800</span><span>1600</span><span>2400</span><span>Tối đa</span></div>
     </div>
+    <label class="sac" id="sacRow"><input type="checkbox" id="sacToggle"><span class="sw"></span><span><b>Ưa hy sinh quân</b><small id="sacHint">Stockfish chọn đòn hy sinh (nước thiên tài) khi nó gần ngang nước tốt nhất.</small></span></label>
     <div class="sheet-actions">
       <button class="btn primary" id="btnStart" type="button">Bắt đầu</button>
       <button class="btn" id="btnResume" type="button" style="display:none">Tiếp tục ván đang chơi</button>
@@ -778,6 +789,44 @@ function ReviewCore(){
     return !A.moves().some(x => x.to===mv.to);          // không ăn lại được
   }
 
+  // Các nước hy sinh có thể đi ở thế sau `moves` (cùng tiêu chí với isSacrifice)
+  function sacrificeMoves(moves){
+    const A = board(); A.reset();
+    for(const u of moves) if(!A.play(u)) return [];
+    const out = [];
+    for(const mv of A.moves()){
+      const v = VAL[(mv.promo||mv.piece)&7], c = mv.cap ? VAL[mv.cap&7] : 0;
+      if(v<3 || v>=100 || v-c<2) continue;
+      A.play(mv);
+      const caps = A.moves().filter(x => x.to===mv.to);
+      let sac = false;
+      if(caps.length){
+        caps.sort((x,y) => VAL[x.piece&7]-VAL[y.piece&7]);
+        if(VAL[caps[0].piece&7] < v) sac = true;
+        else { A.play(caps[0]); sac = !A.moves().some(x => x.to===mv.to); A.undo(); }
+      }
+      const forcing = !!mv.cap || A.inCheck();
+      A.undo();
+      if(sac) out.push({ uci:A.uci(mv), weight:v-c, forcing });
+    }
+    // Nước ăn quân hoặc chiếu thường là đòn hy sinh có cơ sở hơn nước tĩnh; trong mỗi nhóm, hy sinh nhỏ trước
+    return out.sort((x,y) => (y.forcing-x.forcing) || (x.weight-y.weight));
+  }
+  // Chọn nước hy sinh thay cho nước `chosen` của máy khi nó chỉ kém nước tốt nhất không đáng kể.
+  // lines: kết quả MultiPV (điểm theo bên đang đi) của chính `chosen` và các nước hy sinh trong sacSet.
+  // Giữ nguyên nếu: không có điểm của nước đã chọn, nước đã chọn vốn đã kém rõ (máy cố ý yếu), đã là nước hy sinh,
+  // thế cờ đã thắng chắc, hoặc nước hy sinh làm thế cờ xuống dưới cân bằng.
+  function pickSacrifice(chosen, lines, sacSet, tol){
+    const L = (lines||[]).filter(l => l && l.pv && l.pv.length).map(l => ({ uci:l.pv[0], w:winPct(cpOfLine(l)) }));
+    const base = L.find(l => l.uci===chosen);
+    if(!base || sacSet.has(chosen)) return chosen;
+    const top = Math.max(...L.map(l => l.w));
+    if(top-base.w > 3 || top >= 97) return chosen;
+    let best = null;
+    for(const l of L) if(sacSet.has(l.uci) && top-l.w <= (tol||1.5) && l.w >= 50 && (!best || l.w > best.w)) best = l;
+    return best ? best.uci : chosen;
+  }
+
   // Chấm nước thứ i (đi từ thế i sang thế i+1). P[i] là kết quả phân tích thế i.
   function classify(moves, meta, P, i){
     const a = P[i], b = P[i+1];
@@ -822,7 +871,7 @@ function ReviewCore(){
     const harm = xs.length / xs.reduce((s,x)=>s+1/Math.max(1,x),0);
     return (mean+harm)/2;
   }
-  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, classify, moveAccuracy, gameAccuracy };
+  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, classify, moveAccuracy, gameAccuracy };
 }
 </script>
 <script>
@@ -856,7 +905,7 @@ function ReviewCore(){
   const PIECE_CODE = ['', 'P','N','B','R','Q','K'];
   const pcClass = p => (p>>3 ? 'b' : 'w') + PIECE_CODE[p&7];
 
-  let settings = { sound:true, lang:'vi', theme:'blue', side:0, level:1700 };
+  let settings = { sound:true, lang:'vi', theme:'blue', side:0, level:1700, sac:true };
   try { Object.assign(settings, JSON.parse(localStorage.getItem(SET_KEY)||'{}')); } catch(e) {}
   settings.level = normElo(settings.level);
   const saveSettings = () => { try { localStorage.setItem(SET_KEY, JSON.stringify(settings)); } catch(e) {} };
@@ -1222,10 +1271,11 @@ function ReviewCore(){
   function aiMove(){
     if(!player.ok){ game.thinking = true; renderInfo(); return; }   // engine chưa sẵn sàng: startEngines sẽ gọi lại
     const token = ++searchToken, lv = LV(game.level), t0 = performance.now();
-    const opts = lv.limit ? [['Skill Level',20],['UCI_LimitStrength','true'],['UCI_Elo',lv.limit]]
-                          : [['UCI_LimitStrength','false'],['Skill Level', lv.skill!==undefined ? lv.skill : 20]];
+    const opts = [['MultiPV',1]].concat(lv.limit ? [['Skill Level',20],['UCI_LimitStrength','true'],['UCI_Elo',lv.limit]]
+                          : [['UCI_LimitStrength','false'],['Skill Level', lv.skill!==undefined ? lv.skill : 20]]);
     game.thinking = true; game.aiDepth = 0; renderInfo();
     player.search(game.moves.slice(), opts, lv.go, info => { if(token===searchToken && info.depth!==game.aiDepth){ game.aiDepth = info.depth; renderInfo(); } })
+      .then(res => sacrificeCheck(res, lv, token))
       .then(res => {
         if(token !== searchToken) return;
         const wait = Math.max(0, 350 - (performance.now()-t0));
@@ -1238,6 +1288,24 @@ function ReviewCore(){
         }, wait);
       })
       .catch(() => { if(token!==searchToken) return; game.thinking = false; game.engineError = true; renderInfo(); });
+  }
+  // Ưa hy sinh: sau khi Stockfish chọn xong, thử thêm vài nước hy sinh quân (Mã trở lên đi vào ô bị ăn). Chỉ đổi sang một nước
+  // hy sinh khi nó kém nước đã chọn không quá 1,5% tỉ lệ thắng và thế cờ không tệ hơn cân bằng, nên sức chơi hầu như không đổi.
+  // Từ 1350 Elo trở lên (thấp hơn máy nhìn quá nông để thấy đòn hy sinh); nước đã chọn vốn đã yếu (cố ý) thì giữ nguyên.
+  const SAC_MIN_ELO = 1350;
+  async function sacrificeCheck(res, lv, token){
+    if(!settings.sac || lv.val < SAC_MIN_ELO || !res.best || !player.ok || token !== searchToken) return res;
+    const cands = RV.sacrificeMoves(game.moves).slice(0, 6).map(c => c.uci);
+    if(!cands.length || cands.includes(res.best)) return res;
+    const list = [res.best].concat(cands);
+    let r2;
+    try {
+      r2 = await player.search(game.moves.slice(), [['MultiPV',list.length],['UCI_LimitStrength','false'],['Skill Level',20]],
+        'movetime 900 searchmoves ' + list.join(' '), info => { if(token===searchToken && info.depth!==game.aiDepth){ game.aiDepth = info.depth; renderInfo(); } });
+    } catch(e){ return res; }
+    if(token !== searchToken) return res;
+    const pick = RV.pickSacrifice(res.best, r2.lines, new Set(cands), 1.5);
+    return pick === res.best ? res : Object.assign({}, res, { best:pick, sacrifice:true });
   }
   // Thanh đánh giá: máy phân tích (hết sức) xem nhanh thế cờ hiện tại.
   // Điểm của Stockfish tính theo bên đang đi; đổi về góc nhìn Trắng để lưu.
@@ -1670,7 +1738,7 @@ function ReviewCore(){
   const odo = $('odo'), eloRange = $('eloRange');
   const WHEEL = '<span class="wheel"><span class="strip">' + ['',0,1,2,3,4,5,6,7,8,9].map(d => `<i>${d}</i>`).join('') + '</span></span>';
   odo.innerHTML = WHEEL.repeat(4) + '<span class="plus" id="odoPlus">+</span>';
-  let pickSide = settings.side, pickLevel = normElo(settings.level);
+  let pickSide = settings.side, pickLevel = normElo(settings.level), pickSac = settings.sac !== false;
   function syncElo(){
     const lv = LV(pickLevel), digits = String(lv.val).padStart(4,' ');
     // mỗi bánh số có 11 ô (trống, 0–9); cuộn tới ô của chữ số tương ứng
@@ -1680,6 +1748,9 @@ function ReviewCore(){
     $('eloUnit').textContent = lv.val >= ELO_MAX ? 'Stockfish 19 hết sức' : 'Elo ước lượng';
     eloRange.value = lv.val;
     eloRange.style.setProperty('--p', (lv.val-ELO_MIN)/(ELO_MAX-ELO_MIN)*100 + '%');
+    $('sacToggle').checked = pickSac;
+    $('sacRow').classList.toggle('off', lv.val < SAC_MIN_ELO);
+    $('sacHint').textContent = lv.val < SAC_MIN_ELO ? `Chỉ có tác dụng từ ${SAC_MIN_ELO} Elo trở lên.` : 'Stockfish chọn đòn hy sinh (nước thiên tài) khi nó gần ngang nước tốt nhất.';
     eloRange.setAttribute('aria-valuetext', lv.val >= ELO_MAX ? 'Tối đa' : `${lv.val} Elo, ${lv.name}`);
   }
   function syncStart(){
@@ -1687,10 +1758,11 @@ function ReviewCore(){
     syncElo();
   }
   document.querySelectorAll('#sideChoices .choice').forEach(b => b.onclick = () => { pickSide = b.dataset.side==='r' ? 'r' : Number(b.dataset.side); syncStart(); });
+  $('sacToggle').addEventListener('change', () => { pickSac = $('sacToggle').checked; });
   eloRange.addEventListener('input', () => { pickLevel = normElo(+eloRange.value); syncElo(); });
   $('btnStart').onclick = () => {
     audio();
-    settings.side = pickSide; settings.level = pickLevel; saveSettings();
+    settings.side = pickSide; settings.level = pickLevel; settings.sac = pickSac; saveSettings();
     const side = pickSide==='r' ? (Math.random()<.5?0:1) : pickSide;
     if(pickSide==='r') setTimeout(()=>toast(`Bốc thăm: bạn cầm quân ${SIDE_NAME[side]}${side===0?' (đi trước)':' (Stockfish đi trước)'}`), 250);
     startGame(side, pickLevel, null);
@@ -1712,7 +1784,7 @@ function ReviewCore(){
   game.sansEn = [];
   syncTools(); buildBoard(); renderAll(); showStart(); startEngines();
   window.addEventListener('resize', () => renderMarks());
-  window.__covua = { game, C, player, analyst, startGame, playMove, ana, openAnalysis };   // dùng cho kiểm thử tự động
+  window.__covua = { game, C, player, analyst, startGame, playMove, ana, openAnalysis, RV, sacrificeCheck, settings, token: () => searchToken };   // dùng cho kiểm thử tự động
 })();
 </script>
 </body>
