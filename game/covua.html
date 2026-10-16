@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <script src="../maintenance.js" data-game="covua"></script>
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#101315">
 <title>Cờ Vua</title>
 <style>
@@ -17,8 +17,8 @@
 body.theme-green{ --light:#eeeed2; --dark:#769656; --hl:rgba(255,255,51,.45); }
 body.theme-blue{ --light:#dee3e6; --dark:#8ca2ad; --hl:rgba(155,199,0,.45); }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-html,body{margin:0;height:100%;overflow:hidden}
-@supports (height:100dvh){ html,body{height:100dvh} }
+html,body{margin:0;height:100%;overflow:hidden;overscroll-behavior:none}
+body{position:fixed;inset:0;width:100%}   /* trang không bao giờ cuộn, kéo hay nảy: chỉ bảng điều khiển cuộn */
 html{background:var(--bg)}
 body{
   font-family:"Segoe UI",system-ui,-apple-system,Roboto,"Helvetica Neue",Arial,sans-serif;color:var(--text);
@@ -29,7 +29,7 @@ body{
   background-attachment:fixed; padding-bottom:26px;
 }
 button{font:inherit}
-.app{position:relative;max-width:1120px;height:100%;margin:0 auto;padding:10px 12px 0;display:flex;flex-direction:column}
+.app{position:relative;max-width:1120px;height:100%;touch-action:none;margin:0 auto;padding:10px 12px 0;display:flex;flex-direction:column}
 
 /* ---------- thanh trên ---------- */
 .topbar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
@@ -122,7 +122,7 @@ button{font:inherit}
 .loading div{padding:10px 16px;border-radius:12px;background:#12171b;border:1px solid var(--line);font-weight:800;font-size:14px;color:var(--gold-2)}
 
 /* ---------- bảng bên ---------- */
-.panel{flex:1;min-height:0;width:calc(var(--bw) + 8px);margin:0 -4px;padding:2px 4px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(125,178,227,.35) transparent}
+.panel{touch-action:pan-y;flex:1;min-height:0;width:calc(var(--bw) + 8px);margin:0 -4px;padding:2px 4px 14px;display:flex;flex-direction:column;gap:10px;overflow-y:auto;overscroll-behavior:contain;scrollbar-width:thin;scrollbar-color:rgba(125,178,227,.35) transparent}
 .panel>*{flex:none}
 .card{background:linear-gradient(180deg,rgba(26,33,38,.92),rgba(17,22,25,.92));border:1px solid rgba(125,178,227,.2);border-radius:16px;padding:12px}
 .evalrow{width:100%;display:flex;align-items:center;gap:8px;padding:0 2px}
@@ -223,6 +223,23 @@ button{font:inherit}
   .panel{width:338px;margin:0 -4px 0 0}
   .moves{min-height:150px}
   .actions{grid-template-columns:repeat(3,1fr)}
+}
+
+@media (orientation:landscape) and (max-height:560px){
+  :root{--bw:min(calc(100vh - 175px), 60vw)}
+  @supports (height:100dvh){ :root{--bw:min(calc(100dvh - 175px), 60vw)} }
+  .app{padding-top:6px}
+  .topbar{margin-bottom:6px}
+  .icon-btn,.seal{width:34px;height:34px}
+  .seal i{width:24px;height:24px}
+  .player{min-height:32px;padding:2px 8px}
+  .avatar{width:26px;height:26px}
+  .play{gap:5px}
+  .layout{flex-direction:row;align-items:stretch;justify-content:center;gap:14px}
+  .play{align-self:flex-start}
+  .panel{width:320px;margin:0 -4px 0 0}
+  .actions{grid-template-columns:repeat(4,1fr)}
+  .actions .btn.primary{grid-column:auto}
 }
 
 /* ---------- hộp thoại ---------- */
@@ -778,6 +795,44 @@ function ReviewCore(){
     return !A.moves().some(x => x.to===mv.to);          // không ăn lại được
   }
 
+  // Các nước hy sinh có thể đi ở thế sau `moves` (cùng tiêu chí với isSacrifice)
+  function sacrificeMoves(moves){
+    const A = board(); A.reset();
+    for(const u of moves) if(!A.play(u)) return [];
+    const out = [];
+    for(const mv of A.moves()){
+      const v = VAL[(mv.promo||mv.piece)&7], c = mv.cap ? VAL[mv.cap&7] : 0;
+      if(v<3 || v>=100 || v-c<2) continue;
+      A.play(mv);
+      const caps = A.moves().filter(x => x.to===mv.to);
+      let sac = false;
+      if(caps.length){
+        caps.sort((x,y) => VAL[x.piece&7]-VAL[y.piece&7]);
+        if(VAL[caps[0].piece&7] < v) sac = true;
+        else { A.play(caps[0]); sac = !A.moves().some(x => x.to===mv.to); A.undo(); }
+      }
+      const forcing = !!mv.cap || A.inCheck();
+      A.undo();
+      if(sac) out.push({ uci:A.uci(mv), weight:v-c, forcing });
+    }
+    // Nước ăn quân hoặc chiếu thường là đòn hy sinh có cơ sở hơn nước tĩnh; trong mỗi nhóm, hy sinh nhỏ trước
+    return out.sort((x,y) => (y.forcing-x.forcing) || (x.weight-y.weight));
+  }
+  // Chọn nước hy sinh thay cho nước `chosen` của máy khi nó chỉ kém nước tốt nhất không đáng kể.
+  // lines: kết quả MultiPV (điểm theo bên đang đi) của chính `chosen` và các nước hy sinh trong sacSet.
+  // Giữ nguyên nếu: không có điểm của nước đã chọn, nước đã chọn vốn đã kém rõ (máy cố ý yếu), đã là nước hy sinh,
+  // thế cờ đã thắng chắc, hoặc nước hy sinh làm thế cờ xuống dưới cân bằng.
+  function pickSacrifice(chosen, lines, sacSet, tol){
+    const L = (lines||[]).filter(l => l && l.pv && l.pv.length).map(l => ({ uci:l.pv[0], w:winPct(cpOfLine(l)) }));
+    const base = L.find(l => l.uci===chosen);
+    if(!base || sacSet.has(chosen)) return chosen;
+    const top = Math.max(...L.map(l => l.w));
+    if(top-base.w > 3 || top >= 97) return chosen;
+    let best = null;
+    for(const l of L) if(sacSet.has(l.uci) && top-l.w <= (tol||1.5) && l.w >= 50 && (!best || l.w > best.w)) best = l;
+    return best ? best.uci : chosen;
+  }
+
   // Chấm nước thứ i (đi từ thế i sang thế i+1). P[i] là kết quả phân tích thế i.
   function classify(moves, meta, P, i){
     const a = P[i], b = P[i+1];
@@ -822,7 +877,7 @@ function ReviewCore(){
     const harm = xs.length / xs.reduce((s,x)=>s+1/Math.max(1,x),0);
     return (mean+harm)/2;
   }
-  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, classify, moveAccuracy, gameAccuracy };
+  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, classify, moveAccuracy, gameAccuracy };
 }
 </script>
 <script>
@@ -1222,10 +1277,11 @@ function ReviewCore(){
   function aiMove(){
     if(!player.ok){ game.thinking = true; renderInfo(); return; }   // engine chưa sẵn sàng: startEngines sẽ gọi lại
     const token = ++searchToken, lv = LV(game.level), t0 = performance.now();
-    const opts = lv.limit ? [['Skill Level',20],['UCI_LimitStrength','true'],['UCI_Elo',lv.limit]]
-                          : [['UCI_LimitStrength','false'],['Skill Level', lv.skill!==undefined ? lv.skill : 20]];
+    const opts = [['MultiPV',1]].concat(lv.limit ? [['Skill Level',20],['UCI_LimitStrength','true'],['UCI_Elo',lv.limit]]
+                          : [['UCI_LimitStrength','false'],['Skill Level', lv.skill!==undefined ? lv.skill : 20]]);
     game.thinking = true; game.aiDepth = 0; renderInfo();
     player.search(game.moves.slice(), opts, lv.go, info => { if(token===searchToken && info.depth!==game.aiDepth){ game.aiDepth = info.depth; renderInfo(); } })
+      .then(res => sacrificeCheck(res, lv, token))
       .then(res => {
         if(token !== searchToken) return;
         const wait = Math.max(0, 350 - (performance.now()-t0));
@@ -1238,6 +1294,24 @@ function ReviewCore(){
         }, wait);
       })
       .catch(() => { if(token!==searchToken) return; game.thinking = false; game.engineError = true; renderInfo(); });
+  }
+  // Suy nghĩ ẩn của bot (không có tuỳ chọn): sau khi Stockfish chọn xong, thử thêm vài nước hy sinh quân (Mã trở lên đi vào ô bị ăn). Chỉ đổi sang một nước
+  // hy sinh khi nó kém nước đã chọn không quá 1,5% tỉ lệ thắng và thế cờ không tệ hơn cân bằng, nên sức chơi hầu như không đổi.
+  // Từ 1350 Elo trở lên (thấp hơn máy nhìn quá nông để thấy đòn hy sinh); nước đã chọn vốn đã yếu (cố ý) thì giữ nguyên.
+  const SAC_MIN_ELO = 1350;
+  async function sacrificeCheck(res, lv, token){
+    if(lv.val < SAC_MIN_ELO || !res.best || !player.ok || token !== searchToken) return res;
+    const cands = RV.sacrificeMoves(game.moves).slice(0, 6).map(c => c.uci);
+    if(!cands.length || cands.includes(res.best)) return res;
+    const list = [res.best].concat(cands);
+    let r2;
+    try {
+      r2 = await player.search(game.moves.slice(), [['MultiPV',list.length],['UCI_LimitStrength','false'],['Skill Level',20]],
+        'movetime 900 searchmoves ' + list.join(' '), info => { if(token===searchToken && info.depth!==game.aiDepth){ game.aiDepth = info.depth; renderInfo(); } });
+    } catch(e){ return res; }
+    if(token !== searchToken) return res;
+    const pick = RV.pickSacrifice(res.best, r2.lines, new Set(cands), 1.5);
+    return pick === res.best ? res : Object.assign({}, res, { best:pick, sacrifice:true });
   }
   // Thanh đánh giá: máy phân tích (hết sức) xem nhanh thế cờ hiện tại.
   // Điểm của Stockfish tính theo bên đang đi; đổi về góc nhìn Trắng để lưu.
@@ -1712,7 +1786,7 @@ function ReviewCore(){
   game.sansEn = [];
   syncTools(); buildBoard(); renderAll(); showStart(); startEngines();
   window.addEventListener('resize', () => renderMarks());
-  window.__covua = { game, C, player, analyst, startGame, playMove, ana, openAnalysis };   // dùng cho kiểm thử tự động
+  window.__covua = { game, C, player, analyst, startGame, playMove, ana, openAnalysis, RV, sacrificeCheck, token: () => searchToken };   // dùng cho kiểm thử tự động
 })();
 </script>
 </body>
