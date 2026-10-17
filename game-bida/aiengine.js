@@ -38,7 +38,7 @@ scanPerTick: 20,
   simFrameLimit: 760,
 
   // Giới hạn tốc độ giống file chính.
-  maxBallSpeed: 72,
+  maxBallSpeed: 100,
   directScanMaxMs: 6000,
 kickScanMaxMs: 6000,
   // Khi không tìm được cú ăn bi, AI sẽ tìm cú A băng an toàn để chạm đúng bi mục tiêu
@@ -1079,6 +1079,9 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
     y:b.y,
     vx:0,
     vy:0,
+    rx:0,
+    ry:0,
+    sz:0,
     active:b.active,
     potted:b.potted
   }));
@@ -1098,16 +1101,10 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
     };
   }
 
-  const force = 14 + power * 66;
-
-  simCue.vx = dir.x * force;
-  simCue.vy = dir.y * force;
-
-  const simSpin = {
+  strikeCueBall(simCue, dir, power, {
     x: AI_ENGINE.scanSpinX || 0,
-    y: AI_ENGINE.scanSpinY || 0,
-    life: 120
-  };
+    y: AI_ENGINE.scanSpinY || 0
+  });
 
   let firstHitNum = null;
   let cueScratch = false;
@@ -1128,10 +1125,10 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
       if(!b.active) continue;
 
       AI_limitSimBallSpeed(b);
-      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
+      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy), Math.hypot(b.rx, b.ry));
     }
 
-    if(maxSpeed < 0.16 && frames > 8){
+    if(frames > 0 && !simBalls.some(isBallMoving)){
       break;
     }
 
@@ -1145,38 +1142,8 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
       for(const b of simBalls){
         if(!b.active) continue;
 
-        const speed = Math.hypot(b.vx, b.vy);
-
-        if(b.num === 0 && simSpin.life > 0 && speed > 0.3){
-          const n = AI_norm(b.vx, b.vy);
-
-          b.vx += n.x * simSpin.y * 0.022;
-          b.vy += n.y * simSpin.y * 0.022;
-
-          const px = -n.y;
-          const py = n.x;
-
-          b.vx += px * simSpin.x * 0.018;
-          b.vy += py * simSpin.x * 0.018;
-
-          simSpin.life--;
-        }
-
+        clothStep(b, 1 / steps);
         AI_limitSimBallSpeed(b);
-
-        const stepDX = b.vx / steps;
-        const stepDY = b.vy / steps;
-
-        b.x += stepDX;
-        b.y += stepDY;
-
-        const friction = Math.pow(0.987, 1 / steps);
-
-        b.vx *= friction;
-        b.vy *= friction;
-
-        if(Math.abs(b.vx) < 0.015) b.vx = 0;
-        if(Math.abs(b.vy) < 0.015) b.vy = 0;
 
         const pocket = AI_simHandlePocketStrict(b);
 
@@ -1215,8 +1182,7 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
           if(firstHitNum === null){
             firstHitNum = hitNum;
           }
-        },
-        simSpin
+        }
       );
 
       for(const b of simBalls){
@@ -1309,8 +1275,7 @@ function AI_simHandlePocketStrict(b){
 
     b.active = false;
     b.potted = true;
-    b.vx = 0;
-    b.vy = 0;
+    stopBall(b);
 
     return p;
   }
@@ -1318,69 +1283,16 @@ function AI_simHandlePocketStrict(b){
   return null;
 }
 
-function AI_simHandleCollisionsLegal(simBalls, onCueFirstHit, simSpin){
-  for(let i = 0; i < simBalls.length; i++){
-    for(let j = i + 1; j < simBalls.length; j++){
-      const a = simBalls[i];
-      const b = simBalls[j];
-
-      if(!a.active || !b.active) continue;
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-      const minD = BALL_R * 2;
-
-      if(d > 0 && d < minD){
-        const nx = dx / d;
-        const ny = dy / d;
-        const overlap = minD - d;
-
-        a.x -= nx * overlap / 2;
-        a.y -= ny * overlap / 2;
-        b.x += nx * overlap / 2;
-        b.y += ny * overlap / 2;
-
-        const rvx = a.vx - b.vx;
-        const rvy = a.vy - b.vy;
-        const impact = rvx * nx + rvy * ny;
-
-        if(impact > 0){
-          if(a.num === 0 && b.num !== 0){
-            onCueFirstHit(b.num);
-          }
-
-          if(b.num === 0 && a.num !== 0){
-            onCueFirstHit(a.num);
-          }
-
-          const restitution = 0.94;
-          const impulse = impact * restitution;
-
-          a.vx -= impulse * nx;
-          a.vy -= impulse * ny;
-          b.vx += impulse * nx;
-          b.vy += impulse * ny;
-
-          const tx = -ny;
-          const ty = nx;
-
-          if(a.num === 0 || b.num === 0){
-            const cue = a.num === 0 ? a : b;
-            const sideSign = a.num === 0 ? 1 : -1;
-
-            cue.vx += tx * simSpin.x * 1.15 * sideSign;
-            cue.vy += ty * simSpin.x * 1.15 * sideSign;
-
-            cue.vx -= nx * simSpin.y * 0.7 * sideSign;
-            cue.vy -= ny * simSpin.y * 0.7 * sideSign;
-
-            simSpin.life = Math.max(simSpin.life, 40);
-          }
-        }
-      }
+function AI_simHandleCollisionsLegal(simBalls, onCueFirstHit){
+  resolveBallContacts(simBalls, (a, b) => {
+    if(a.num === 0 && b.num !== 0){
+      onCueFirstHit(b.num);
     }
-  }
+
+    if(b.num === 0 && a.num !== 0){
+      onCueFirstHit(a.num);
+    }
+  });
 }
 
 function AI_simHandleRailTrack(b){
@@ -1403,29 +1315,25 @@ function AI_simHandleRailTrack(b){
 
   if(b.x < left && !movingToLeftPocket){
     b.x = left;
-    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 1, 0);
     hit = true;
   }
 
   if(b.x > right && !movingToRightPocket){
     b.x = right;
-    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, -1, 0);
     hit = true;
   }
 
   if(b.y < top && !movingToTopPocket){
     b.y = top;
-    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, 1);
     hit = true;
   }
 
   if(b.y > bottom && !movingToBottomPocket){
     b.y = bottom;
-    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, -1);
     hit = true;
   }
 
@@ -1596,6 +1504,9 @@ function AI_simulateShot(dir, power, targetNum){
     y:b.y,
     vx:0,
     vy:0,
+    rx:0,
+    ry:0,
+    sz:0,
     active:b.active,
     potted:b.potted
   }));
@@ -1609,10 +1520,10 @@ function AI_simulateShot(dir, power, targetNum){
     };
   }
 
-  const force = 14 + power * 66;
-
-  simCue.vx = dir.x * force;
-  simCue.vy = dir.y * force;
+  strikeCueBall(simCue, dir, power, {
+    x: AI_ENGINE.scanSpinX || 0,
+    y: AI_ENGINE.scanSpinY || 0
+  });
 
   let firstHitNum = null;
   let cueScratch = false;
@@ -1628,11 +1539,11 @@ function AI_simulateShot(dir, power, targetNum){
 
       AI_limitSimBallSpeed(b);
 
-      const sp = Math.hypot(b.vx, b.vy);
+      const sp = Math.max(Math.hypot(b.vx, b.vy), Math.hypot(b.rx, b.ry));
       if(sp > maxSpeed) maxSpeed = sp;
     }
 
-    if(maxSpeed < 0.16 && frames > 8){
+    if(frames > 0 && !simBalls.some(isBallMoving)){
       break;
     }
 
@@ -1646,19 +1557,7 @@ function AI_simulateShot(dir, power, targetNum){
       for(const b of simBalls){
         if(!b.active) continue;
 
-        const stepDX = b.vx / steps;
-        const stepDY = b.vy / steps;
-
-        b.x += stepDX;
-        b.y += stepDY;
-
-        const friction = Math.pow(0.987, 1 / steps);
-
-        b.vx *= friction;
-        b.vy *= friction;
-
-        if(Math.abs(b.vx) < 0.015) b.vx = 0;
-        if(Math.abs(b.vy) < 0.015) b.vy = 0;
+        clothStep(b, 1 / steps);
 
         const pocket = AI_simHandlePocket(b);
 
@@ -1748,52 +1647,15 @@ function AI_limitSimBallSpeed(b){
 }
 
 function AI_simHandleCollisions(simBalls, onCueFirstHit){
-  for(let i = 0; i < simBalls.length; i++){
-    for(let j = i + 1; j < simBalls.length; j++){
-      const a = simBalls[i];
-      const b = simBalls[j];
-
-      if(!a.active || !b.active) continue;
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-      const minD = BALL_R * 2;
-
-      if(d > 0 && d < minD){
-        const nx = dx / d;
-        const ny = dy / d;
-        const overlap = minD - d;
-
-        a.x -= nx * overlap / 2;
-        a.y -= ny * overlap / 2;
-        b.x += nx * overlap / 2;
-        b.y += ny * overlap / 2;
-
-        const rvx = a.vx - b.vx;
-        const rvy = a.vy - b.vy;
-        const impact = rvx * nx + rvy * ny;
-
-        if(impact > 0){
-          if(a.num === 0 && b.num !== 0){
-            onCueFirstHit(b.num);
-          }
-
-          if(b.num === 0 && a.num !== 0){
-            onCueFirstHit(a.num);
-          }
-
-          const restitution = 0.94;
-          const impulse = impact * restitution;
-
-          a.vx -= impulse * nx;
-          a.vy -= impulse * ny;
-          b.vx += impulse * nx;
-          b.vy += impulse * ny;
-        }
-      }
+  resolveBallContacts(simBalls, (a, b) => {
+    if(a.num === 0 && b.num !== 0){
+      onCueFirstHit(b.num);
     }
-  }
+
+    if(b.num === 0 && a.num !== 0){
+      onCueFirstHit(a.num);
+    }
+  });
 }
 
 function AI_simHandlePocket(b){
@@ -1804,8 +1666,7 @@ function AI_simHandlePocket(b){
 
     b.active = false;
     b.potted = true;
-    b.vx = 0;
-    b.vy = 0;
+    stopBall(b);
 
     return p;
   }
@@ -1851,26 +1712,22 @@ function AI_simHandleRail(b){
 
   if(b.x < left && !movingToLeftPocket){
     b.x = left;
-    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 1, 0);
   }
 
   if(b.x > right && !movingToRightPocket){
     b.x = right;
-    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, -1, 0);
   }
 
   if(b.y < top && !movingToTopPocket){
     b.y = top;
-    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, 1);
   }
 
   if(b.y > bottom && !movingToBottomPocket){
     b.y = bottom;
-    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, -1);
   }
 
   const safeLeft = table.x - BALL_R * 2;
