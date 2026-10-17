@@ -2,6 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
+<script src="../maintenance.js" data-game="stickman"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
 <meta name="theme-color" content="#f3f0e8">
 <title>WHO WINS? — Stickman Duel Lab</title>
@@ -300,9 +301,20 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 footer{
   position:fixed;right:10px;bottom:7px;color:#9a948a;font-size:7px;z-index:10;letter-spacing:.04em
 }
+/* Màn hình hẹp hoặc thấp: trang cuộn dọc thay vì ép mọi thứ vào một màn hình (trước đây thẻ B bị ép còn một vạch, chữ kỹ năng bị đè) */
+@media (max-width:900px), (max-height:520px){
+  html,body{height:auto;min-height:100%;overflow-x:hidden;overflow-y:auto}
+  #app{height:auto;min-height:calc(100dvh - 24px)}
+  footer{position:static;display:block;text-align:center;padding:4px 8px 8px;font-size:8px;line-height:1.2}   /* không đè lên thẻ khi cuộn */
+}
+@media (max-width:680px){ .fBrand{display:none} }   /* điện thoại: chỉ giữ dòng phiên bản cho vừa một dòng */
 @media (max-width:900px){
-  #fighters{grid-template-columns:1fr 1fr;grid-template-rows:auto 1fr auto}
-  .card{padding:9px}
+  /* hai thẻ người chơi nằm trên, sân đấu bên dưới (trước đây xếp sai: thẻ A, sân, thẻ B tự rơi vào lưới 2 cột) */
+  #fighters{grid-template-columns:1fr 1fr;grid-template-rows:auto minmax(300px,1fr);align-items:stretch}
+  .card.a{grid-column:1;grid-row:1}
+  .card.b{grid-column:2;grid-row:1}
+  .battleArena{grid-column:1/-1;grid-row:2;min-height:300px}
+  .card{padding:9px;min-height:max-content}
   .stat{padding:7px}.stat strong{font-size:13px}.statCore strong{font-size:17px}
 }
 @media (max-width:680px){
@@ -316,13 +328,13 @@ footer{
   .stats{gap:3px}.statPill{padding:7px 8px}.statPill span{display:none}
   #fighters{grid-template-columns:1fr;grid-template-rows:auto minmax(320px,1fr) auto;gap:7px;overflow:visible}
   .card{min-height:max-content;transform:none;border-radius:17px;padding:7px}
-  .card.a{grid-column:1}.card.b{grid-column:1}
+  .card.a{grid-column:1;grid-row:1}.card.b{grid-column:1;grid-row:3}
   .fighterWatermark{font-size:110px;top:-20px;right:-4px}
   .card.b .fighterWatermark{left:-4px;top:50%;transform:translateY(-50%) rotate(-7deg)}
   .statgrid{grid-template-columns:repeat(4,1fr);gap:4px;padding-right:0}
   .statCore{grid-column:span 1}.statCore strong{font-size:14px}.stat span{font-size:6px}.stat strong{font-size:11px}
   .stat.skillStat{grid-column:1/-1;min-height:70px;padding:7px 8px}.skillStat strong{font-size:10px;line-height:1.18}.skillStat small{font-size:8px;line-height:1.35;display:block;margin-top:3px}
-  .battleArena{grid-column:1;min-height:320px;height:auto;align-self:start;margin-top:18px;border-radius:22px}
+  .battleArena{grid-column:1;grid-row:2;min-height:320px;height:auto;align-self:start;margin-top:18px;border-radius:22px}
   .floatingChoice{min-width:82px;height:34px;bottom:13%;font-size:9px}
   .choiceA{left:20%}.choiceB{right:20%}
   .stick{bottom:calc(11% + 5px);transform:translateX(-50%) scale(.86)}
@@ -336,7 +348,6 @@ footer{
   .statgrid{padding-right:0}.stat{padding:4px 5px}.statCore strong{font-size:12px}.stat strong{font-size:10px}
   .skillStat strong{font-size:10px;line-height:1.15}.skillStat small{font-size:8px;line-height:1.35;display:block;margin-top:3px}
   .battleResult{font-size:18px}.battleResult small{font-size:8px}
-  footer{display:none}
 }
 </style>
 </head>
@@ -432,7 +443,7 @@ footer{
   <div class="battleResult" id="battleResult" aria-live="polite"></div>
 
 </div>
-<footer>WHO WINS? • STICKMAN DUEL LAB • v8 SHIRO</footer>
+<footer><span class="fBrand">WHO WINS? • STICKMAN DUEL LAB • v8 SHIRO • </span>Version:D20261710-H06M15T1712 »»» developed by Tran Gia Bao</footer>
 
 <script>
 'use strict';
@@ -617,7 +628,8 @@ const SKILL_ROLL_CHANCE = 0.50;
 let round = 1;
 let score = 0;
 let streak = 0;
-let best = Number(localStorage.getItem('whoWinsBest') || 0);
+let best = 0;
+try{ best = Number(localStorage.getItem('whoWinsBest') || 0) || 0; }catch(e){}   // trình duyệt chặn localStorage thì vẫn chơi được
 let fighters = null;
 let phase = 'decision';
 let selected = null;
@@ -707,6 +719,7 @@ function rawBuild(profile){
 }
 
 function initializeSkillState(f){
+  const keepMode = f.skillMode;   // giữ chế độ ATK/SPD đã bốc: mô phỏng cân bằng phải khớp với người que đang hiển thị
   f.skillMode = null;
   f.momentumBonus = 0;
   f.adaptElapsed = 0;
@@ -722,10 +735,8 @@ function initializeSkillState(f){
   f.poisonTick = hasSkill(f,'poison') ? SKILLS.poison.interval : Infinity;
   f.regenTick = regenInterval(f);
 
-  if(hasSkill(f,'momentum')){
-    f.skillMode = Math.random() < 0.5 ? 'atk' : 'spd';
-  }else if(hasSkill(f,'frenzy')){
-    f.skillMode = Math.random() < 0.5 ? 'atk' : 'spd';
+  if(hasSkill(f,'momentum') || hasSkill(f,'frenzy')){
+    f.skillMode = (keepMode === 'atk' || keepMode === 'spd') ? keepMode : (Math.random() < 0.5 ? 'atk' : 'spd');
   }
 }
 
@@ -986,6 +997,16 @@ function applyDamage(target, damage, options = {}){
     antibodyHeal:0
   };
 
+  // GẮNG GƯỢNG: trong 3 giây ở 0 HP không nhận thêm sát thương (chỉ ĐÁNH MẠNH hạ gục ngay mới kết liễu được).
+  // Trước đây đòn kế tiếp giết luôn người đang gắng gượng nên kỹ năng chỉ kéo dài tới đòn đánh sau.
+  if(target.lastStandActive && !instantKill) return {
+    damageTaken:0,
+    enteredLastStand:false,
+    died:false,
+    shieldAbsorbed:0,
+    antibodyHeal:0
+  };
+
   // Direct damage (for example POISON and REFLECT) must still respect
   // reductions to damage received. Normal attacks can pass their already
   // mitigated value to avoid applying the same multiplier twice.
@@ -1226,8 +1247,8 @@ function simulateAttack(attacker, defender){
 
 
 function simulateDuel(baseA, baseB){
-  const A = structuredClone(baseA);
-  const B = structuredClone(baseB);
+  const A = {...baseA};   // người que chỉ gồm giá trị đơn giản; structuredClone không có trên trình duyệt cũ
+  const B = {...baseB};
   resetCombatState(A);
   resetCombatState(B);
 
@@ -1262,7 +1283,7 @@ function simulateDuel(baseA, baseB){
   let winner;
   if(A.alive && !B.alive) winner = 'A';
   else if(B.alive && !A.alive) winner = 'B';
-  else winner = A.currentHp >= B.currentHp ? 'A' : 'B';
+  else winner = hpPct(A) >= hpPct(B) ? 'A' : 'B';   // hết giờ: so theo % HP (HP tuyệt đối thiên vị người NẶNG CÂN)
 
   const winnerF = winner === 'A' ? A : B;
   const loserF = winner === 'A' ? B : A;
@@ -1556,7 +1577,7 @@ function startRound(){
 
 function decisionLoop(now){
   if(phase !== 'decision') return;
-  const dt = (now-lastTime)/1000; lastTime = now;
+  const dt = Math.min(.25,(now-lastTime)/1000); lastTime = now;   // chuyển tab rồi quay lại không làm mất hết giờ
   timeLeft -= dt;
   $('timerFill').style.width = `${clamp(timeLeft/CFG.decisionTime*100,0,100)}%`;
   $('timerText').textContent = `${Math.max(0,timeLeft).toFixed(1)}s`;
@@ -1716,6 +1737,13 @@ function choose(side){
   raf = requestAnimationFrame(combatLoop);
 }
 
+// Chữ nổi cho đòn độc: không hiện "0" khi khiên đỡ hết hay người bị đánh đang gắng gượng
+function showPoisonText(r){
+  if(r.damageTaken > 0) showCombatText(`<span class="damageInline"><i class="fa-solid fa-skull damageIcon" aria-hidden="true"></i><span class="damageNumber">${r.damageTaken}</span></span>`, 'poison');
+  else if(r.shieldAbsorbed > 0) showCombatText(`<span class="damageInline"><i class="fa-solid fa-shield-halved damageIcon" aria-hidden="true"></i><span class="damageNumber">${r.shieldAbsorbed}</span></span>`, 'block');
+  if(r.enteredLastStand) showCombatText('GẮNG GƯỢNG!', 'good');
+}
+
 function strike(attacker, defender, attackerSide){
   if(!attacker.alive || !defender.alive) return;
 
@@ -1814,17 +1842,13 @@ function combatLoop(now){
 
     if(fighters.A.alive && hasSkill(fighters.A,'poison') && fighters.A.poisonTick <= 0){
       fighters.A.poisonTick += SKILLS.poison.interval;
-      const poisonResult = applyDamage(fighters.B, SKILLS.poison.damage);
-      showCombatText(`<span class="damageInline"><i class="fa-solid fa-skull damageIcon" aria-hidden="true"></i><span class="damageNumber">${poisonResult.damageTaken}</span></span>`, 'poison');
-      if(poisonResult.enteredLastStand) showCombatText('GẮNG GƯỢNG!', 'good');
+      showPoisonText(applyDamage(fighters.B, SKILLS.poison.damage));
       renderAll();
     }
 
     if(fighters.B.alive && hasSkill(fighters.B,'poison') && fighters.B.poisonTick <= 0){
       fighters.B.poisonTick += SKILLS.poison.interval;
-      const poisonResult = applyDamage(fighters.A, SKILLS.poison.damage);
-      showCombatText(`<span class="damageInline"><i class="fa-solid fa-skull damageIcon" aria-hidden="true"></i><span class="damageNumber">${poisonResult.damageTaken}</span></span>`, 'poison');
-      if(poisonResult.enteredLastStand) showCombatText('GẮNG GƯỢNG!', 'good');
+      showPoisonText(applyDamage(fighters.A, SKILLS.poison.damage));
       renderAll();
     }
 
@@ -1854,7 +1878,7 @@ function finishCombat(){
   let winner;
   if(fighters.A.alive && !fighters.B.alive) winner = 'A';
   else if(fighters.B.alive && !fighters.A.alive) winner = 'B';
-  else winner = fighters.A.currentHp >= fighters.B.currentHp ? 'A' : 'B';
+  else winner = hpPct(fighters.A) >= hpPct(fighters.B) ? 'A' : 'B';   // hết giờ: so theo % HP
 
   const streakBeforeResult = streak;
   addMatchHistory(winner, streakBeforeResult);
@@ -1865,7 +1889,7 @@ function finishCombat(){
     score++;
     streak++;
     best = Math.max(best, streak);
-    localStorage.setItem('whoWinsBest', best);
+    try{ localStorage.setItem('whoWinsBest', best); }catch(e){}
   }else{
     streak = 0;
   }
