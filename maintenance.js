@@ -1,7 +1,9 @@
 /* Công tắc bảo trì dùng chung cho mọi game.
  * Mỗi game gọi: <script src="../maintenance.js" data-game="<id>"></script> ở đầu <head>.
  * Trang chủ gọi không có data-game và dùng window.gameMaintenance để làm mờ thẻ game.
- * Trạng thái lấy từ maintenance.json (cùng thư mục với file này). Lỗi mạng/file hỏng => chơi bình thường. */
+ * Trạng thái lấy từ maintenance.json (cùng thư mục với file này). Lỗi mạng/file hỏng => chơi bình thường.
+ * Theo dõi liên tục: trong lúc trang đang mở, maintenance.json được đọc lại mỗi 10 giây (và ngay khi quay lại tab),
+ * nên bật "on": true là game đang chơi dừng ngay; tắt bảo trì thì game tự tải lại. */
 (function () {
   'use strict';
   var DEFAULT_MSG = 'Trò chơi đang được bảo trì. Vui lòng trở lại sau.';
@@ -9,6 +11,13 @@
   var src = (me && me.src) || location.href;
   var gameId = me ? me.getAttribute('data-game') : null;
   var cfg = null;
+  var POLL_MS = 10000;
+  var jsonUrl = new URL('maintenance.json', src).href;
+  // Giữ bản gốc của hàm hẹn giờ: khi bảo trì, game bị chặn setTimeout/rAF nhưng việc kiểm tra lại vẫn phải chạy.
+  var nSetTimeout = window.setTimeout.bind(window);
+  var nClearTimeout = window.clearTimeout.bind(window);
+  var nRAF = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
+  var nCAF = window.cancelAnimationFrame ? window.cancelAnimationFrame.bind(window) : null;
 
   function entry(id) {
     return cfg && cfg.games && id && cfg.games[id] ? cfg.games[id] : null;
@@ -26,15 +35,52 @@
     return DEFAULT_MSG;
   }
 
-  var ready = fetch(new URL('maintenance.json', src).href + '?t=' + Date.now(), { cache: 'no-store' })
-    .then(function (r) { return r.ok ? r.json() : null; })
-    .then(function (j) { cfg = j && typeof j === 'object' ? j : null; })
-    .catch(function () { cfg = null; });
+  // Đọc maintenance.json (thêm ?t= để không bị bộ nhớ đệm/CDN trả bản cũ). Lỗi thì giữ nguyên trạng thái đang có.
+  function load() {
+    return fetch(jsonUrl + '?t=' + Date.now(), { cache: 'no-store' })
+      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (j) { if (j && typeof j === 'object') cfg = j; });
+  }
+  var ready = load().catch(function () { cfg = null; });   // lần đầu lỗi => chơi bình thường
+
+  // Danh sách game đang bảo trì (để biết trạng thái có đổi hay không)
+  function offSig() {
+    if (!cfg) return '';
+    if (cfg.all && cfg.all.on === true) return '*';
+    var g = cfg.games || {};
+    return Object.keys(g).filter(function (k) { return g[k] && g[k].on === true; }).sort().join(',');
+  }
+
+  // ---- Kiểm tra lại định kỳ ----
+  var listeners = [], lastSig = null, pollTimer = 0, checking = false, lastCheck = 0;
+  function notify() { listeners.forEach(function (fn) { try { fn(); } catch (e) {} }); }
+  function schedule() {
+    nClearTimeout(pollTimer);
+    if (document.visibilityState === 'hidden') return;   // tab ẩn: chờ hiện lại rồi kiểm tra ngay
+    pollTimer = nSetTimeout(check, POLL_MS);
+  }
+  function check() {
+    if (checking) return;
+    checking = true; lastCheck = Date.now();
+    load().then(function () {
+      var s = offSig();
+      if (s !== lastSig) { lastSig = s; notify(); }
+    }, function () {}).then(function () { checking = false; schedule(); });
+  }
+  function wake() {
+    if (document.visibilityState === 'hidden') return;
+    if (Date.now() - lastCheck > 2000) { nClearTimeout(pollTimer); check(); }
+  }
+  // Đăng ký trước bộ chặn thao tác bên dưới (cùng pha capture trên window) để vẫn nhận được khi game đã bị khoá.
+  ['visibilitychange', 'focus', 'pageshow', 'online'].forEach(function (t) { window.addEventListener(t, wake, true); });
+  ready.then(function () { lastSig = offSig(); lastCheck = Date.now(); schedule(); });
 
   window.gameMaintenance = {
     ready: ready,
     isOff: isOff,
-    message: message
+    message: message,
+    onChange: function (fn) { if (typeof fn === 'function') listeners.push(fn); },   // gọi lại khi danh sách bảo trì đổi
+    check: check
   };
 
   if (!gameId) return; // trang chủ: chỉ cung cấp dữ liệu
@@ -42,6 +88,18 @@
   // ---- Chế độ trong game ----
   var blocked = false;
   var overlay = null;
+  var ovParts = null;
+
+  // Ghi nhận Web Worker (ví dụ Stockfish của Cờ Vua) để dừng hẳn khi bảo trì.
+  var workers = [];
+  if (typeof window.Worker === 'function' && !window.Worker.__mtWrapped) {
+    var NativeWorker = window.Worker;
+    var WW = class extends NativeWorker {
+      constructor() { super(...arguments); workers.push(this); }
+    };
+    WW.__mtWrapped = true;
+    window.Worker = WW;
+  }
 
   // Ghi nhận AudioContext để tắt tiếng khi bảo trì.
   var audioCtxs = [];
@@ -72,11 +130,23 @@
 
   function freeze() {
     blocked = true;
-    // Dừng vòng lặp và mọi timer của game.
+    // Dừng vòng lặp và mọi timer của game (kể cả khung hình đã hẹn sẵn).
     window.requestAnimationFrame = function () { return 0; };
-    var last = setTimeout(function () {}, 0);
+    if (nRAF && nCAF) {
+      var lastFrame = nRAF(function () {});
+      for (var f = 0; f <= lastFrame; f++) nCAF(f);
+    }
+    var last = nSetTimeout(function () {}, 0);
     for (var i = 0; i <= last; i++) { clearTimeout(i); clearInterval(i); }
     window.setTimeout = window.setInterval = function () { return 0; };
+    // Dừng Worker, rung, đọc chữ; thoát toàn màn hình để lớp phủ hiện ra.
+    workers.forEach(function (w) { try { w.terminate(); } catch (e) {} });
+    try { if (navigator.vibrate) navigator.vibrate(0); } catch (e) {}
+    try { if (window.speechSynthesis) window.speechSynthesis.cancel(); } catch (e) {}
+    try {
+      if (document.fullscreenElement && document.exitFullscreen) document.exitFullscreen().catch(function () {});
+      else if (document.webkitFullscreenElement && document.webkitExitFullscreen) document.webkitExitFullscreen();
+    } catch (e) {}
     // Tắt âm thanh.
     audioCtxs.forEach(function (c) { try { if (c.state !== 'closed') c.suspend().catch(function () {}); } catch (e) {} });
     document.querySelectorAll('audio,video').forEach(function (m) { try { m.pause(); } catch (e) {} });
@@ -177,6 +247,7 @@
     retry.className = 'btn sec';
     retry.textContent = '↻ Thử lại';
     retry.addEventListener('click', function () { location.reload(); });
+    ovParts = { badge: wrap.querySelector('.badge'), h1: wrap.querySelector('h1'), msg: wrap.querySelector('.msg') };
     var btns = wrap.querySelector('.btns');
     btns.appendChild(home);
     btns.appendChild(retry);
@@ -189,10 +260,26 @@
     try { home.focus({ preventScroll: true }); } catch (e) {}
   }
 
-  ready.then(function () {
-    if (!isOff(gameId)) return;
-    freeze();
-    if (document.body) show();
-    else document.addEventListener('DOMContentLoaded', show, { once: true });
-  });
+  // Bật bảo trì (lúc mở trang hoặc giữa chừng): dừng game ngay và hiện lớp phủ.
+  // Tắt bảo trì khi game đang bị khoá: báo xong rồi tự tải lại, vì game đã bị dừng hẳn.
+  var resuming = false;
+  function apply() {
+    if (isOff(gameId)) {
+      if (blocked) return;
+      freeze();
+      if (document.body) show();
+      else document.addEventListener('DOMContentLoaded', show, { once: true });
+      schedule();   // freeze() xoá mọi timer, kể cả lần kiểm tra kế tiếp
+    } else if (blocked && !resuming) {
+      resuming = true;
+      if (ovParts) {
+        ovParts.badge.textContent = 'Đã xong';
+        ovParts.h1.textContent = 'Bảo trì xong!';
+        ovParts.msg.textContent = 'Đang tải lại trò chơi…';
+      }
+      nSetTimeout(function () { location.reload(); }, 1200);
+    }
+  }
+  ready.then(apply);
+  listeners.push(apply);
 })();
