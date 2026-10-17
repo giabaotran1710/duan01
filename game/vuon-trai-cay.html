@@ -920,13 +920,13 @@ const isMold=(y,x)=>!!st.mold&&st.mold[y][x]>0,isCake=(y,x)=>!!st.ck&&st.ck[y][x
 const isStat=(y,x)=>!!st.stat&&st.stat[y][x]!=null; // ô là tượng trái cây (chỉ vụ nổ mới tạc được)
 const isMole=(y,x)=>!!st.ml&&st.ml.y===y&&st.ml.x===x,isSnail=(y,x)=>!!st.snk&&st.snk[y][x]>=0,isSun=(y,x)=>!!st.suk&&st.suk[y][x]>=0,isBug=(y,x)=>isMole(y,x)||isSnail(y,x)||isSun(y,x),isCact=(y,x)=>!!st.ca&&st.ca[y][x]>0,slm=(y,x)=>!!st.sl&&st.sl[y][x]>0; // v66: chuột chũi ló lên (ô tạm thành vật cản), ốc sên (vật cản bò), chậu xương rồng (hộp chặn tia pháo), vệt nhớt (ô không đổi chỗ được)
 const bar=(r1,c1,r2,c2)=>!!st.bh&&(r1===r2?st.bv[r1][Math.min(c1,c2)]:st.bh[Math.min(r1,r2)][c1]); // có thanh chặn giữa 2 ô kề
-const same=(a,b)=>a&&b&&mt(a)&&mt(b)&&a.t===b.t&&!a.hn&&!b.hn&&!a.seed&&!b.seed&&!a.ic&&!b.ic;
+const same=(a,b)=>a&&b&&mt(a)&&mt(b)&&a.t===b.t&&!a.hn&&!b.hn&&!a.seed&&!b.seed; // v99: trái đóng băng ghép được (trúng hàng ghép = vỡ 1 lớp băng), vẫn không đổi chỗ được (lock)
 function runs(){
  const o=[],g=st.g;
  for(let r=0;r<R;r++)for(let c=0;c<C;){let e=c+1;const a=g[r][c];
-  if(a&&mt(a)&&!a.hn&&!a.ic){while(e<C&&same(a,g[r][e]))e++;if(e-c>=3)o.push({h:true,cells:Array.from({length:e-c},(_,i)=>[r,c+i])})}c=e}
+  if(a&&mt(a)&&!a.hn){while(e<C&&same(a,g[r][e]))e++;if(e-c>=3)o.push({h:true,cells:Array.from({length:e-c},(_,i)=>[r,c+i])})}c=e}
  for(let c=0;c<C;c++)for(let r=0;r<R;){let e=r+1;const a=g[r][c];
-  if(a&&mt(a)&&!a.hn&&!a.ic){while(e<R&&same(a,g[e][c]))e++;if(e-r>=3)o.push({h:false,cells:Array.from({length:e-r},(_,i)=>[r+i,c])})}r=e}
+  if(a&&mt(a)&&!a.hn){while(e<R&&same(a,g[e][c]))e++;if(e-r>=3)o.push({h:false,cells:Array.from({length:e-r},(_,i)=>[r+i,c])})}r=e}
  return o;
 }
 function squares(ex){ // ô vuông 2×2 cùng loại, không thuộc hàng/cột >=3 nào -> tạo chú ong
@@ -941,7 +941,7 @@ function hasMove(ret){
  const g=st.g,sw=(a,b)=>{[g[a[0]][a[1]],g[b[0]][b[1]]]=[g[b[0]][b[1]],g[a[0]][a[1]]]};
  for(let r=0;r<R;r++)for(let c=0;c<C;c++)for(const[dr,dc]of[[0,1],[1,0]]){
   const r2=r+dr,c2=c+dc;if(r2>=R||c2>=C)continue;
-  const A=g[r][c],B=g[r2][c2];if(!A||!B||lock(A)||lock(B)||slm(r,c)||slm(r2,c2)||bar(r,c,r2,c2))continue;const nc=A.s!==5&&B.s!==5&&A.s!==8&&B.s!==8&&A.s!==9&&B.s!==9&&A.s!==10&&B.s!==10&&A.s!==13&&B.s!==13;let ok=nc&&((isSp(A)&&isSp(B))||A.s===4||B.s===4); // v79: ong + cầu vồng lại là nước đi
+  const A=g[r][c],B=g[r2][c2];if(!A||!B||lock(A)||lock(B)||slm(r,c)||slm(r2,c2)||bar(r,c,r2,c2))continue;const nc=A.s!==5&&B.s!==5&&A.s!==8&&B.s!==8&&A.s!==9&&B.s!==9&&A.s!==10&&B.s!==10&&A.s!==13&&B.s!==13;let ok=(nc&&((isSp(A)&&isSp(B))||A.s===4||B.s===4))||(A.s===4&&B.s===9&&!!B.nt)||(B.s===4&&A.s===9&&!!A.nt); // v79: ong + cầu vồng lại là nước đi
   if(!ok){sw([r,c],[r2,c2]);ok=matches().length>0;sw([r,c],[r2,c2])}
   if(ok)return ret?[[r,c],[r2,c2]]:true}
  return false;
@@ -956,9 +956,9 @@ function planMatches(rs,hint){
   if(p){creates.push({r:p[0],c:p[1],s:3});used.add(i);used.add(j)}})});
  rs.forEach((a,i)=>{
   if(used.has(i)||a.cells.length<4)return;
-  const p=a.cells.find(([r,c])=>hint&&hint.some(h=>h.r===r&&h.c===c))||a.cells[a.sq?0:a.cells.length>>1];
+  const fc=a.cells.filter(([r,c])=>!st.g[r][c].ic),p=a.cells.find(([r,c])=>hint&&hint.some(h=>h.r===r&&h.c===c))||(a.sq?fc[0]:fc[fc.length>>1]);if(!p)return; // v99: quả đặc biệt không sinh ở ô đóng băng
   creates.push({r:p[0],c:p[1],s:a.sq?7:a.cells.length>=5?4:(a.h?2:1)})});
- return{clear,creates:creates.filter(o=>st.g[o.r][o.c].s===0)};
+ return{clear,creates:creates.filter(o=>st.g[o.r][o.c].s===0&&!st.g[o.r][o.c].ic)};
 }
 async function doClear(set,creates,combo,hc,src){ // src: 'match' = hàng ghép thật, 'hammer' = búa, {rb:Set} = các ô do cầu vồng chọn
  set=new Set([...set].filter(v=>{const t=st.g[v/C|0][v%C];return !(t&&t.pz)})); // v55: ô độc không bị phá bởi bất cứ thứ gì
@@ -1349,6 +1349,7 @@ async function spawnIce(list){ // v65: mỗi lần tảng băng bị tác độn
 }
 async function swap(a,b,free){ // free: găng tay -> đổi chỗ không cần tạo hàng, không tốn lượt
  if(st.busy||st.over||st.paused)return;
+ if(isCact(a.r,a.c)!==isCact(b.r,b.c))return cactSwap(a,b,free); // v99: đổi chỗ chậu xương rồng với trái kề bên (chậu vẫn không rơi)
  if(isSnail(a.r,a.c)!==isSnail(b.r,b.c))return snailSwap(a,b,free); // v79: đổi chỗ ốc sên với trái kề bên
  const g=st.g,A=g[a.r][a.c],B=g[b.r][b.c];if(!A||!B||lock(A)||lock(B))return;if(slm(a.r,a.c)||slm(b.r,b.c)){st.sel=null;shake=.6;sfx('bad');return} // v66: trái dính nhớt không đổi chỗ được
  if(!free&&bar(a.r,a.c,b.r,b.c)){st.sel=null;shake=.8;sfx('bad');return} // thanh chặn: không đổi chỗ qua được (găng tay thì được)
@@ -1358,17 +1359,19 @@ async function swap(a,b,free){ // free: găng tay -> đổi chỗ không cần t
  let gf=null;if(free){gf=st.tfx||(st.tfx={k:'glove',x:a.c,y:a.r,ang:0,al:1,sc:1});gf.k='glove';gf.idle=0;gf.on=1;await tw(gf,{x:a.c+.15,y:a.r-.15,ang:0,sc:.95,al:1},.18);await tw(gf,{sc:.8},.08)} // găng tay nhấc quả lên rồi đặt sang ô kia
  ex(a,b);
  await Promise.all([tw(A,{x:b.c,y:b.r},free?CFG.SWAP*1.8:CFG.SWAP),tw(B,{x:a.c,y:a.r},free?CFG.SWAP*1.8:CFG.SWAP),...(gf?[tw(gf,{x:b.c+.15,y:b.r-.15},CFG.SWAP*1.8)]:[])]);if(gf)toolEnd();
- let forced=null,src=null;const cup=A.s===5||B.s===5||A.s===8||B.s===8||A.s===9||B.s===9||A.s===10||B.s===10||A.s===13||B.s===13; // ly/hũ đổi chỗ như quả thường, không kích hoạt cầu vồng
+ let forced=null,src=null;const rn=x=>x.s===9&&x.nt,cup=A.s===5||B.s===5||A.s===8||B.s===8||(A.s===9&&!(B.s===4&&rn(A)))||(B.s===9&&!(A.s===4&&rn(B)))||A.s===10||B.s===10||A.s===13||B.s===13; // ly/hũ đổi chỗ như quả thường, không kích hoạt cầu vồng
  if(!cup&&!free&&(A.s===4||B.s===4)){ // v43: găng tay chỉ đổi chỗ, không kích hoạt cầu vồng
   forced=new Set();
   if(A.s===4&&B.s===4){for(let i=0;i<R*C;i++){const t=g[i/C|0][i%C];if(!t||t.s!==4||i===a.r*C+a.c||i===b.r*C+b.c)forced.add(i)} // sóng không xóa cầu vồng khác trên bàn
    src={rb:forced};await waveFx(b.r,b.c)}
+  else if(rn(A)||rn(B)){const N=rn(A)?A:B;N.nt=1;forced.add(a.r*C+a.c);forced.add(b.r*C+b.c);src={rb:[],m:true,t:-1}; // v99: cầu vồng + quả sồi: chỉ phá quả sồi (vỡ hẳn, tính cho nhiệm vụ), không quét trái khác
+   const rw=A.s===4?a:b;burst(rw.c,rw.r,'#ffe135',10);burst(rw.c,rw.r,'#e5283a',6);beep(990,.2,'square',.05)}
   else{const O=A.s===4?B:A;
    if(isSp(O)&&O.s!==7){ // v79: ong + cầu vồng: không biến quả thành ong, chỉ ăn hết trái cùng màu; mỗi con ong bị quét bay tới 1 mục tiêu // cầu vồng + quả đặc biệt: mọi quả cùng màu biến thành quả đặc biệt đó rồi cùng nổ
     g.forEach(row=>row.forEach(t=>{if(t&&t!==O&&t.t===O.t&&t.s===0&&!t.hn&&!t.vn&&!t.seed&&!t.ic){t.s=O.s<=2?1+(Math.random()*2|0):O.s;t.cd=0;t.sc=1.5;tw(t,{sc:1},.3)}}));
     praise('Siêu combo!');beep(990,.3,'square',.06);await wait(.45)}
    const cells=[];g.forEach((row,r)=>row.forEach((t,c)=>{if(t&&t.t===O.t&&t.s!==4){forced.add(r*C+c);cells.push([r,c])}}));forced.add(a.r*C+a.c);forced.add(b.r*C+b.c);
-   src={rb:cells.map(([r,c])=>r*C+c),m:!isSp(O),t:O.t};const rw=A.s===4?b:a; // v50: cầu vồng chạm quả thường: các quả cùng màu bị quét được tính như đã ghép (mật ong, nấm, hộp, hũ... kề bên phản ứng)
+   src={rb:cells.map(([r,c])=>r*C+c),m:true,t:O.t};const rw=A.s===4?b:a; // v99: cầu vồng ghép với bất kỳ trái nào (kể cả quả đặc biệt) đều tính là ghép // v50: cầu vồng chạm quả thường: các quả cùng màu bị quét được tính như đã ghép (mật ong, nấm, hộp, hũ... kề bên phản ứng)
    await rainbowFx(rw.r,rw.c,cells)}
  }else if(!cup&&!free&&isSp(A)&&isSp(B)){ // v77: găng tay chỉ đổi chỗ, không kích hoạt combo pháo/bom
   forced=new Set([a.r*C+a.c,b.r*C+b.c]);const S=[A.s,B.s],sw=S.filter(v=>v<=2).length,bm=S.filter(v=>v===3).length,put=(y,x)=>{if(y>=0&&y<R&&x>=0&&x<C)forced.add(y*C+x)};
@@ -1385,6 +1388,20 @@ async function swap(a,b,free){ // free: găng tay -> đổi chỗ không cần t
  if(!free)st.moves--;st.mv=!free;hud();st.honeyHit=false;st.seedHit=false;st.moldHit=false;
  await cascade(forced?null:[a,b],forced,src);
  if(!free)await afterTurn();st.mv=false; // vật phẩm không tính là một lượt: vật cản không lan/lớn, sâu không bò, hẹn giờ không đếm
+ await endCheck();
+ st.busy=false;
+}
+async function cactSwap(a,b,free){ // v99: chậu sang ô trái, trái sang ô chậu; như ốc sên: phải tạo hàng mới tính (găng tay thì không cần). Chậu là ô tường nên trọng lực không kéo nó
+ const g=st.g,[p,q]=isCact(a.r,a.c)?[a,b]:[b,a],T=g[q.r][q.c];
+ if(!T||st.wall[q.r][q.c]||lock(T)||!(T.s<=4||T.s===7||T.s===13)||slm(q.r,q.c)||(!free&&bar(a.r,a.c,b.r,b.c))){st.sel=null;shake=.6;sfx('bad');return}
+ if(free&&!useTool('glove'))return;
+ st.busy=true;st.sel=null;
+ const go=(f,t)=>{const u=g[t.r][t.c];g[t.r][t.c]=null;g[f.r][f.c]=u;for(const A of[st.ca,st.wall,st.hp,st.cc])if(A)[A[f.r][f.c],A[t.r][t.c]]=[A[t.r][t.c],A[f.r][f.c]];return tw(u,{x:f.c,y:f.r},CFG.SWAP)};
+ await go(p,q);
+ if(!free&&!matches().length){shake=1;sfx('bad');await go(q,p);st.busy=false;return}
+ if(!free)st.moves--;st.mv=!free;hud();st.honeyHit=false;st.seedHit=false;st.moldHit=false;
+ await cascade([p,p],null,null);
+ if(!free)await afterTurn();st.mv=false;
  await endCheck();
  st.busy=false;
 }
@@ -2249,12 +2266,12 @@ const GUIDE=[
  ['port','port','Ống tre','Trái cây rơi vào miệng ống sẽ chui ra ở miệng ống cùng màu dây buộc.',()=>!!st.port],
  ['nut','nut','Quả sồi','Ghép sát bên hoặc nổ trúng để đập vỡ quả sồi (2 lần). Quả sồi rơi và đổi chỗ được như trái cây.',()=>tAny(t=>t.nt)],
  ['soil','potato','Khoai lang','Ghép sát bên hoặc nổ trúng để xới đất. Hết lớp đất là đào được củ khoai lang bên dưới.',()=>!!st.soil],
- ['ice','ice','Băng','Khối băng trúng 3 lần thì tan, mỗi lần bắn mảnh băng làm đóng băng ô khác. Ô đóng băng không ghép, không đổi chỗ được, phá 2 lần mới hết băng.',()=>st.ib.length>0||tAny(t=>t.ic)],
+ ['ice','ice','Băng','Khối băng trúng 3 lần thì tan, mỗi lần bắn mảnh băng làm đóng băng ô khác. Trái đóng băng vẫn ghép được nhưng không đổi chỗ được, phá 2 lần mới hết băng.',()=>st.ib.length>0||tAny(t=>t.ic)],
  ['mush','mush','Nấm độc','Nấm độc thỉnh thoảng mọc lên và phun bào tử làm ô bên cạnh nhiễm độc. Ghép sát bên hoặc nổ trúng để phá nấm sớm.',()=>!!st.L.mush],
  ['mole','mole','Chuột chũi','Mỗi lần chỉ 1 chú ló lên khỏi hang. Ghép sát bên hoặc nổ trúng để bắt! Sau 2 lượt chuột lặn xuống và ló ở hang khác.',()=>!!st.hk],
  ['snail','snail','Ốc sên','Mỗi lượt bò 1 ô và để lại vệt nhớt. Trái dính nhớt không đổi chỗ được, ghép hoặc nổ trên ô đó để lau sạch. Ghép sát bên hoặc nổ trúng 2 lần để bắt ốc.',()=>st.sn.length>0],
  ['bfly','bfly','Bướm đổi màu','Trái có bướm đổi màu sau mỗi lượt (cánh dưới là màu kế tiếp). Ghép hoặc nổ trái đó để bắt bướm!',()=>!!st.L.bfly],
- ['cactus','cactus','Chậu xương rồng','Chặn tia pháo, tia dừng lại ngay ở chậu. Ghép sát bên hoặc nổ trúng để phá từng nhánh.',()=>!!st.ca],
+ ['cactus','cactus','Chậu xương rồng','Chặn tia pháo, tia dừng lại ngay ở chậu. Đổi chỗ được với trái bên cạnh nhưng không rơi. Ghép sát bên hoặc nổ trúng để phá từng nhánh.',()=>!!st.ca],
  ['sun','sun','Hướng dương','Mỗi lượt xoay 45°, vệt nắng mờ chỉ hướng sẽ bắn. Ghép sát hoặc nổ trúng 3 lần thì cuối lượt hoa bắn tia nắng phá cả đường thẳng đó.',()=>st.su.length>0],
  ['bub','bub','Bong bóng nước','Trái trong bong bóng không ghép được. Sau 3 lượt bong bóng tự tan và được tính. Pháo, bom nổ trúng làm vỡ sớm.',()=>!!(st.L.bubs&&st.L.bubs.length)]];
 const featIc=k=>/^[a-z]/.test(k)?`<img src="${icon(k)}" alt="">`:`<span class="fe">${k}</span>`;
@@ -2426,7 +2443,7 @@ cv.addEventListener('pointerdown',e=>{
  e.preventDefault();try{cv.setPointerCapture(e.pointerId)}catch(_){}
  const p=pt(e),r=Math.floor(p.y),c=Math.floor(p.x);
  if(st.tool==='hammer'||st.tool==='rake'){if(inB(r,c))(st.tool==='hammer'?useHammer:useRake)(r,c);return}
- if(!inB(r,c)||(st.wall[r][c]&&!isSnail(r,c))||(st.g[r][c]&&lock(st.g[r][c])))return; // v79: chọn được ốc sên để đổi chỗ
+ if(!inB(r,c)||(st.wall[r][c]&&!isSnail(r,c)&&!isCact(r,c))||(st.g[r][c]&&lock(st.g[r][c])))return; // v79: chọn được ốc sên để đổi chỗ
  if(st.sel&&Math.abs(st.sel.r-r)+Math.abs(st.sel.c-c)===1){const a=st.sel;st.sel=null;st.drag=null;swap(a,{r,c},st.tool==='glove')}
  else{st.sel={r,c};st.drag={x:p.x,y:p.y};if(st.tool==='glove'&&st.tfx){st.tfx.idle=0;tw(st.tfx,{x:c+.15,y:r-.15},.15)}const t=st.g[r][c];st.tap=st.tool!=='glove'&&t&&isSp(t)&&t.s!==7?{r,c}:null} // chạm (không vuốt) vào pháo/bom/cầu vồng -> nổ ngay; ong thì không
 });
@@ -2435,7 +2452,7 @@ cv.addEventListener('pointermove',e=>{
  const p=pt(e),dx=p.x-st.drag.x,dy=p.y-st.drag.y;
  if(Math.max(Math.abs(dx),Math.abs(dy))<.4)return;
  const horiz=Math.abs(dx)>Math.abs(dy),a=st.sel,b={r:a.r+(horiz?0:Math.sign(dy)),c:a.c+(horiz?Math.sign(dx):0)};
- st.drag=null;st.sel=null;st.tap=null;if(inB(b.r,b.c)&&(!st.wall[b.r][b.c]||isSnail(b.r,b.c)))swap(a,b,st.tool==='glove');
+ st.drag=null;st.sel=null;st.tap=null;if(inB(b.r,b.c)&&(!st.wall[b.r][b.c]||isSnail(b.r,b.c)||isCact(b.r,b.c)))swap(a,b,st.tool==='glove');
 });
 cv.addEventListener('pointerup',()=>{st.drag=null;const q=st.tap;st.tap=null;if(q&&st.sel&&st.sel.r===q.r&&st.sel.c===q.c)activate(q.r,q.c)});
 cv.addEventListener('pointercancel',()=>{st.drag=null;st.tap=null});
