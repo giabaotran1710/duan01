@@ -34,8 +34,8 @@ scanSpinY: 0,
   // Kế hoạch cú đánh: tổng thời gian suy nghĩ và độ dài mỗi lát tính (ms)
   thinkBudgetMs: 3200,
   sliceMs: 12,
-  scanExtraMs: 2500,
-  safeExtraMs: 2000,
+  scanExtraMs: 800,
+  safeExtraMs: 800,
 
   // Số cú ăn trực tiếp tốt nhất được tính kỹ, số cú được thử kỹ thuật điều bi
   potCandidates: 8,

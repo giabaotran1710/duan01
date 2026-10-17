@@ -1774,11 +1774,12 @@ let scale = 1;
 let ox = 0;
 let oy = 0;
 
+// Mặt bàn chơi (mép trong của băng cao su) = (w − 34) × (h − 34) = 1306 × 654, đúng tỉ lệ 2:1 của bàn chuẩn
 const table = {
   x: 130,
-  y: 80,
+  y: 106,
   w: 1340,
-  h: 740
+  h: 688
 };
 
 const BALL_R = 21;
@@ -1786,13 +1787,19 @@ const CORNER_POCKET_R = 43;
 const SIDE_POCKET_R = 34;
 
 // Độ mở miệng lỗ
-const CORNER_MOUTH = 50;     // khớp khoảng hở mép lỗ góc đang vẽ
+const CORNER_MOUTH = 62;     // khớp khoảng hở mép lỗ góc đang vẽ; cửa sổ vào lỗ ≈ 1 đường kính bi như bàn chuẩn
 const SIDE_MOUTH = 62;       // khớp khoảng hở mép lỗ giữa đang vẽ
 const SIDE_MOUTH_HALF = SIDE_MOUTH * 0.5;
 
 // Bán kính mép cong hai bên miệng lỗ
 const POCKET_JAW_R = 14;
 const CUSHION_THICKNESS = 17; // phải khớp với độ dày mép xanh đang vẽ
+
+// Các điểm chuẩn tính theo chiều dài mặt bàn chơi (từ mép trong băng đầu bàn):
+// vạch đề-pa (và chấm đặt bi cái) ở 1/4, chấm đặt bi 1 của tam giác ở 3/4 (như bàn chuẩn)
+const PLAY_LEN = table.w - 2 * CUSHION_THICKNESS;
+const HEAD_STRING_X = table.x + CUSHION_THICKNESS + PLAY_LEN * 0.25;
+const FOOT_SPOT_X = table.x + CUSHION_THICKNESS + PLAY_LEN * 0.75;
 // Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
 // Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
 // Đã giảm hitbox để bi không bị "hút ảo" khi chỉ lướt gần lỗ
@@ -2866,11 +2873,11 @@ function getFullCueZone(){
 
 function findSafeCueSpotInZone(zone){
   const preferred = [
-    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.5},
+    {x: HEAD_STRING_X, y: table.y + table.h * 0.5},
     {x: table.x + table.w * 0.33, y: table.y + table.h * 0.5},
     {x: table.x + table.w * 0.5,  y: table.y + table.h * 0.5},
-    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.35},
-    {x: table.x + table.w * 0.25, y: table.y + table.h * 0.65}
+    {x: HEAD_STRING_X, y: table.y + table.h * 0.35},
+    {x: HEAD_STRING_X, y: table.y + table.h * 0.65}
   ];
 
   for(const p of preferred){
@@ -2976,7 +2983,7 @@ function getBreakCueZone(){
 
   // Kim cương thứ 2 tính từ lỗ góc trái:
   // drawDiamonds đang chia bàn thành 8 phần => kim cương thứ 2 = 2/8 chiều dài bàn
-  const secondDiamondX = table.x + table.w * 2 / 8;
+  const secondDiamondX = HEAD_STRING_X;
 
   return {
     left: b.left,
@@ -3119,12 +3126,12 @@ class Ball{
 function rackBalls(){
   balls = [];
 
-  const cueX = table.x + table.w * 0.25;
+  const cueX = HEAD_STRING_X;
   const cueY = table.y + table.h * 0.5;
   cueBall = new Ball(cueX, cueY, 0);
   balls.push(cueBall);
 
-  const startX = table.x + table.w * 0.70;
+  const startX = FOOT_SPOT_X;
   const startY = table.y + table.h * 0.5;
   const gap = BALL_R * 2 + 1.2;
 
@@ -3133,7 +3140,7 @@ function rackBalls(){
     9,2,
     10,8,3,
     4,11,12,5,
-    13,6,14,7,15
+    13,6,14,15,7   // hai bi ở góc đáy tam giác: một sọc (13) và một trơn (7), bi 8 ở giữa
   ];
 
   let idx = 0;
@@ -3283,7 +3290,7 @@ function getBreakCueArea(){
     // Từ lỗ góc trái vào đến kim cương thứ 2.
     // Kim cương thứ 2 trên cạnh dài = 2/8 chiều dài bàn.
     minX: table.x + margin,
-    maxX: table.x + table.w * 0.25,
+    maxX: HEAD_STRING_X,
     minY: table.y + margin,
     maxY: table.y + table.h - margin
   };
@@ -4920,7 +4927,7 @@ function getCurrentTarget(side){
 function placeCueBall(){
   cueBall.active = true;
   cueBall.potted = false;
-  cueBall.x = table.x + table.w * 0.25;
+  cueBall.x = HEAD_STRING_X;
   cueBall.y = table.y + table.h * 0.5;
   cueBall.vx = 0;
   cueBall.rx = 0;
@@ -5158,8 +5165,16 @@ drawRealPockets();
 function drawDiamonds(){
   ctx.fillStyle = "rgba(255,234,160,.75)";
 
+  // Kim cương chia mặt bàn chơi (giữa hai mép băng) thành 8 phần dọc và 4 phần ngang;
+  // vị trí thứ 4 của băng dài là lỗ giữa nên không có kim cương
+  const nose = CUSHION_THICKNESS;
+  const playL = table.w - 2 * nose;
+  const playW = table.h - 2 * nose;
+
   for(let i=1;i<8;i++){
-    const x = table.x + table.w * i / 8;
+    if(i === 4) continue;
+
+    const x = table.x + nose + playL * i / 8;
 
     ctx.beginPath();
     ctx.moveTo(x, table.y - 35);
@@ -5177,7 +5192,7 @@ function drawDiamonds(){
   }
 
   for(let i=1;i<4;i++){
-    const y = table.y + table.h * i / 4;
+    const y = table.y + nose + playW * i / 4;
 
     ctx.beginPath();
     ctx.moveTo(table.x - 35, y);
@@ -7051,7 +7066,7 @@ function getAIThinkingCueBaseAngle(){
 
   return Math.atan2(
     table.y + table.h * 0.5 - cueBall.y,
-    table.x + table.w * 0.72 - cueBall.x
+    FOOT_SPOT_X - cueBall.x
   );
 }
 
