@@ -63,6 +63,15 @@ button{font:inherit;color:inherit;border:0;cursor:pointer}
 }
 .brand{font-weight:1000;letter-spacing:-.04em;font-size:21px;line-height:1}
 .brand small{display:block;margin-top:4px;color:var(--muted);font-size:8px;letter-spacing:.16em;text-transform:uppercase}
+.roundBlock{justify-self:center;display:flex;flex-direction:column;align-items:center;gap:5px}
+.diffBtn{
+  padding:3px 10px;border:1px solid var(--ink);border-radius:999px;background:var(--white);color:var(--ink);
+  font-size:8px;font-weight:1000;letter-spacing:.14em;box-shadow:2px 2px 0 var(--ink);transition:transform .1s,box-shadow .1s,opacity .2s;
+}
+.diffBtn[data-level="easy"]{background:var(--lime)}
+.diffBtn[data-level="hard"]{background:var(--b);border-color:#c72e42;color:#fff;box-shadow:2px 2px 0 #7d1a28}
+.diffBtn:active:not(:disabled){transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
+.diffBtn:disabled{opacity:.5;cursor:default}
 .roundBadge{
   justify-self:center;padding:8px 13px;border:1px solid var(--ink);border-radius:999px;
   background:var(--white);font-size:10px;font-weight:1000;letter-spacing:.12em;
@@ -339,7 +348,7 @@ footer{
   .choiceA{left:20%}.choiceB{right:20%}
   .stick{bottom:calc(11% + 5px);transform:translateX(-50%) scale(.86)}
   .miniHpWrap{top:-31px;width:96px}.miniHp{height:7px}.currentHpLabel{font-size:8px}.shieldLabel{font-size:7px}
-  .roundBadge{font-size:8px;padding:7px 9px}.timerLabel{font-size:8px}
+  .roundBadge{font-size:8px;padding:7px 9px}.diffBtn{font-size:7px;padding:3px 8px}.diffPre{display:none}.timerLabel{font-size:8px}
 }
 @media (max-width:430px){
   .brandBlock .brand{font-size:15px}.brandMark{width:32px;height:32px;font-size:14px}
@@ -359,7 +368,10 @@ footer{
       <div class="brandMark"><i class="fa-solid fa-bolt"></i></div>
       <div class="brand">WHO WINS?<small>STICKMAN DUEL LAB</small></div>
     </div>
-    <div class="roundBadge"><i class="fa-solid fa-crosshairs"></i> <span id="roundText">ROUND 1</span></div>
+    <div class="roundBlock">
+      <div class="roundBadge"><i class="fa-solid fa-crosshairs"></i> <span id="roundText">ROUND 1</span></div>
+      <button class="diffBtn" id="diffBtn" type="button" data-level="normal" aria-label="Đổi độ khó"><span class="diffPre">ĐỘ KHÓ: </span><span id="diffName">THƯỜNG</span></button>
+    </div>
     <div class="stats">
       <div class="statPill"><i class="fa-solid fa-star"></i><span>Điểm</span><b id="score">0</b></div>
       <div class="statPill"><i class="fa-solid fa-fire"></i><span>Chuỗi</span><b id="streak">0</b></div>
@@ -382,7 +394,7 @@ footer{
         <div class="stat statCore"><span>ATK</span><strong id="aATK">0</strong></div>
         <div class="stat"><span>DEF</span><strong id="aDEF">0</strong></div>
         <div class="stat"><span>SPD</span><strong id="aSPD">0</strong></div>
-        <div class="stat"><span>HỒI / 3S</span><strong id="aRegen">0</strong></div>
+        <div class="stat"><span id="aRegenLabel">HỒI / 3S</span><strong id="aRegen">0</strong></div>
         <div class="stat"><span>CRIT</span><strong id="aCrit">0%</strong></div>
         <div class="stat"><span>CRIT DMG</span><strong id="aCritDmg">0%</strong></div>
         <div class="stat skillStat"><span><i class="fa-solid fa-bolt"></i> KỸ NĂNG</span><strong id="aSkill">—</strong><small id="aSkillDesc">Không có kỹ năng đặc biệt.</small></div>
@@ -431,7 +443,7 @@ footer{
         <div class="stat statCore"><span>ATK</span><strong id="bATK">0</strong></div>
         <div class="stat"><span>DEF</span><strong id="bDEF">0</strong></div>
         <div class="stat"><span>SPD</span><strong id="bSPD">0</strong></div>
-        <div class="stat"><span>HỒI / 3S</span><strong id="bRegen">0</strong></div>
+        <div class="stat"><span id="bRegenLabel">HỒI / 3S</span><strong id="bRegen">0</strong></div>
         <div class="stat"><span>CRIT</span><strong id="bCrit">0%</strong></div>
         <div class="stat"><span>CRIT DMG</span><strong id="bCritDmg">0%</strong></div>
         <div class="stat skillStat"><span><i class="fa-solid fa-bolt"></i> KỸ NĂNG</span><strong id="bSkill">—</strong><small id="bSkillDesc">Không có kỹ năng đặc biệt.</small></div>
@@ -602,7 +614,7 @@ const SKILLS = {
   },
   medic: {
     id:'medic', name:'THẦY THUỐC',
-    desc:'Hồi phục HP mỗi 1 giây thay vì 3 giây.'
+    desc:'Hồi HP trong 1 giây thay vì 3 giây (cùng lượng HỒI, tốc độ gấp 3).'
   },
   tension: {
     id:'tension', name:'CĂNG THẲNG',
@@ -619,7 +631,56 @@ const SKILLS = {
 };
 
 const SKILL_KEYS = Object.keys(SKILLS);
-const SKILL_ROLL_CHANCE = 0.50;
+// ---------- độ khó ----------
+// Mỗi mức quyết định: trận đấu "sát" tới đâu (người thắng còn bao nhiêu % HP), thời gian phán đoán, tần suất có kỹ năng,
+// và xác suất người thứ hai nhận kỹ năng khắc chế người thứ nhất (đối kháng).
+//  band   : một lần mô phỏng tính là "sát" khi người thắng còn trong khoảng % HP này (và người thua đã gục)
+//  accept : % HP còn lại trung bình của người thắng mà ta chấp nhận;  pass: tỉ lệ lần mô phỏng phải "sát";  target: mức lý tưởng
+const DIFFICULTIES = {
+  easy:   { id:'easy',   name:'DỄ',     time:30, skillChance:.35, counter:0,   band:[22,70], accept:[28,60], pass:.60, target:42 },
+  normal: { id:'normal', name:'THƯỜNG', time:30, skillChance:.50, counter:0,   band:[1,15],  accept:[2,9],   pass:.70, target:5.5 },
+  hard:   { id:'hard',   name:'KHÓ',    time:20, skillChance:.80, counter:.65, band:[1,8],   accept:[1.5,5], pass:.75, target:3 }
+};
+const DIFF_ORDER = ['easy','normal','hard'];
+let difficulty = 'normal';
+const DIFF = () => DIFFICULTIES[difficulty];
+
+// Kỹ năng khắc chế nhau (độ KHÓ hay ghép đối thủ có kỹ năng trong danh sách này để trận đấu có chiều sâu hơn)
+const SKILL_COUNTERS = {
+  poison:['shield','restraint','antibody','stance','guard','medic'],
+  shield:['poison','armorPierce'],
+  evade:['combo','doublePunch'],
+  combo:['evade','block','counter'],
+  doublePunch:['evade','block','counter'],
+  armorPierce:['resolve','versatile','guard','stance'],
+  resolve:['armorPierce','poison'],
+  guard:['armorPierce','execute','poison'],
+  critImmune:['execute','tension'],
+  execute:['critImmune','shield'],
+  counter:['tension','combo','doublePunch'],
+  tension:['counter','evade','critImmune'],
+  lifesteal:['restraint','poison','mock'],
+  restraint:['lifesteal','medic','poison'],
+  medic:['restraint','poison'],
+  emergency:['execute','poison'],
+  antibody:['poison','execute'],
+  grit:['execute','poison'],
+  mock:['heavyweight','shield'],
+  heavyweight:['mock','armorPierce','poison'],
+  block:['combo','doublePunch'],
+  rage:['guard','evade'],
+  momentum:['restraint','mock'],
+  frenzy:['guard','evade'],
+  adapt:['mock','poison'],
+  stance:['armorPierce','poison'],
+  versatile:['armorPierce','mock']
+};
+// Kỹ năng ép cho người thứ hai (undefined = cứ bốc ngẫu nhiên như thường)
+function counterSkillFor(first, d){
+  if(!d.counter || !first.skill || Math.random() >= d.counter) return undefined;
+  const list = (SKILL_COUNTERS[first.skill] || []).filter(k => SKILLS[k]);
+  return list.length ? pick(list) : undefined;
+}
 
 
 
@@ -628,8 +689,12 @@ const SKILL_ROLL_CHANCE = 0.50;
 let round = 1;
 let score = 0;
 let streak = 0;
-let best = 0;
-try{ best = Number(localStorage.getItem('whoWinsBest') || 0) || 0; }catch(e){}   // trình duyệt chặn localStorage thì vẫn chơi được
+// Kỷ lục chuỗi lưu riêng cho từng độ khó ('whoWinsBest' giữ nguyên cho mức THƯỜNG). Trình duyệt chặn localStorage thì vẫn chơi được.
+const bestKey = id => id === 'normal' ? 'whoWinsBest' : 'whoWinsBest_' + id;
+function loadBest(id){ try{ return Number(localStorage.getItem(bestKey(id)) || 0) || 0; }catch{ return 0; } }
+try{ const saved = localStorage.getItem('whoWinsDiff'); if(DIFFICULTIES[saved]) difficulty = saved; }catch{}
+let best = loadBest(difficulty);
+let roundTime = CFG.decisionTime;
 let fighters = null;
 let phase = 'decision';
 let selected = null;
@@ -650,7 +715,6 @@ renderMatchHistory();
 // ---------- utilities ----------
 const clamp = (v,min,max) => Math.max(min, Math.min(max,v));
 const rand = (min,max) => min + Math.random() * (max-min);
-const randInt = (min,max) => Math.floor(rand(min,max+1));
 const pick = arr => arr[Math.floor(Math.random()*arr.length)];
 
 function weighted(arr){
@@ -704,7 +768,7 @@ const buildProfiles = [
 }
 ];
 
-function rawBuild(profile){
+function rawBuild(profile, forcedSkill){
   return {
     archetype: profile.name,
     hp: rand(...profile.hp),
@@ -714,7 +778,7 @@ function rawBuild(profile){
     regen: rand(...profile.regen),
     crit: rand(...profile.crit),
     critDmg: rand(...profile.critDmg),
-    skill: Math.random() < SKILL_ROLL_CHANCE ? pick(SKILL_KEYS) : null
+    skill: forcedSkill !== undefined ? forcedSkill : (Math.random() < DIFF().skillChance ? pick(SKILL_KEYS) : null)
   };
 }
 
@@ -777,8 +841,8 @@ function skillDescription(f){
   return SKILLS[f.skill].desc;
 }
 
-function createFighter(profile){
-  const f = rawBuild(profile);
+function createFighter(profile, forcedSkill){
+  const f = rawBuild(profile, forcedSkill);
 
   // Small natural variance. Do NOT normalize all stats toward one shared value.
   f.hp = Math.round(clamp(f.hp, 500, 1300));
@@ -809,32 +873,6 @@ function createFighter(profile){
   f.attacks = 0;
   return f;
 }
-
-function powerIndex(f){
-  // Hidden "real strength": sustained damage output + survivability.
-  // Regen is normalized per 3s, matching the visible mechanic.
-  const effectiveHit = Math.max(1, f.atk - f.def * CFG.defenseFactor);
-  const critMultiplier = 1 + (f.crit / 100) * ((f.critDmg / 100) - 1);
-  const dps = effectiveHit * f.spd * critMultiplier;
-  const sustain = f.hp + (f.regen * 12);
-  return (sustain * 0.56) + (dps * 24) + (f.def * 5.2);
-}
-
-function scaleFighterToPower(f, targetPower){
-  const current = powerIndex(f);
-  const ratio = targetPower / Math.max(1,current);
-  // Exponents preserve build identity while moving overall strength.
-  f.hp = Math.round(clamp(f.hp * Math.pow(ratio,.62), 500, 1300));
-  f.atk = Math.round(clamp(f.atk * Math.pow(ratio,.38), 55, 150));
-  f.def = Math.round(clamp(f.def * Math.pow(ratio,.26), 20, 110));
-  f.regen = Math.round(clamp(f.regen * Math.pow(ratio,.24), 4, 45));
-  f.spd = Number(clamp(f.spd * Math.pow(ratio,.17), .60, 1.45).toFixed(2));
-  f.maxHp = f.hp;
-  f.currentHp = f.hp;
-  return f;
-}
-
-
 
 function hasSkill(f, id){
   return f.skill === id;
@@ -952,10 +990,6 @@ function isExecuteCrit(attacker, isCrit){
   return hasSkill(attacker,'execute') &&
     isCrit &&
     Math.random()*100 < SKILLS.execute.chance;
-}
-
-function skillSummary(f){
-  return f.skill ? `${SKILLS[f.skill].name} — ${SKILLS[f.skill].desc}` : 'Không có kỹ năng';
 }
 
 function absorbShield(defender, damage){
@@ -1246,7 +1280,7 @@ function simulateAttack(attacker, defender){
 }
 
 
-function simulateDuel(baseA, baseB){
+function simulateDuel(baseA, baseB, band = DIFFICULTIES.normal.band){
   const A = {...baseA};   // người que chỉ gồm giá trị đơn giản; structuredClone không có trên trình duyệt cũ
   const B = {...baseB};
   resetCombatState(A);
@@ -1294,12 +1328,12 @@ function simulateDuel(baseA, baseB){
     winner,
     winnerPct,
     loserPct,
-    close: winnerPct >= 1 && winnerPct <= 15 && loserPct <= 0.001
+    close: winnerPct >= band[0] && winnerPct <= band[1] && loserPct <= 0.001
   };
 }
 
 
-function pairQuality(A, B){
+function pairQuality(A, B, d = DIFF()){
   let pass = 0;
   let totalWinnerPct = 0;
   let totalLoserPct = 0;
@@ -1307,7 +1341,7 @@ function pairQuality(A, B){
 
   const trials = 7;
   for(let i=0;i<trials;i++){
-    const sim = simulateDuel(A,B);
+    const sim = simulateDuel(A,B,d.band);
     totalWinnerPct += sim.winnerPct;
     totalLoserPct += sim.loserPct;
     if(sim.close) pass++;
@@ -1339,14 +1373,11 @@ function statContrast(A, B){
   return diffs.reduce((sum,v)=>sum+clamp(v,0,1),0) / diffs.length;
 }
 
-function scorePair(A, B){
-  const q = pairQuality(A,B);
+function scorePair(A, B, d = DIFF(), q = pairQuality(A,B,d)){
   const contrast = statContrast(A,B);
 
-  // The only balancing objective:
-  // winner finishes with 1–10% HP, loser finishes at 0%.
-  const target = 5.5;
-  const winnerDistance = Math.abs(q.avgWinnerPct - target);
+  // The only balancing objective: the winner finishes near the difficulty's target HP, the loser finishes at 0%.
+  const winnerDistance = Math.abs(q.avgWinnerPct - d.target);
   const closeBonus = q.passRate * 180;
   const contrastBonus = clamp(contrast - 0.42, 0, .48) * 28;
   const loserPenalty = q.avgLoserPct * 120;
@@ -1355,6 +1386,7 @@ function scorePair(A, B){
 }
 
 function generatePair(){
+  const d = DIFF();
   let bestPair = null;
   let bestScore = -Infinity;
 
@@ -1370,14 +1402,14 @@ function generatePair(){
     }
 
     const A = createFighter(profileA);
-    const B = createFighter(profileB);
+    const B = createFighter(profileB, counterSkillFor(A, d));
     applyMockDebuffs(A,B);
     applyMockDebuffs(B,A);
 
     if(statContrast(A,B) < 0.42) continue;
 
-    const q = pairQuality(A,B);
-    const score = scorePair(A,B);
+    const q = pairQuality(A,B,d);
+    const score = scorePair(A,B,d,q);
 
     if(score > bestScore){
       bestScore = score;
@@ -1387,9 +1419,9 @@ function generatePair(){
     // Accept a pair only when the winner normally finishes in the requested
     // 1–10% HP band and the loser is actually dead.
     if(
-      q.passRate >= 0.70 &&
-      q.avgWinnerPct >= 2 &&
-      q.avgWinnerPct <= 9 &&
+      q.passRate >= d.pass &&
+      q.avgWinnerPct >= d.accept[0] &&
+      q.avgWinnerPct <= d.accept[1] &&
       q.avgLoserPct <= 0.05 &&
       statContrast(A,B) >= 0.42
     ){
@@ -1450,6 +1482,7 @@ function renderFighter(id, f){
   const atkEl = $(p+'ATK');
   const defEl = $(p+'DEF');
   const regenEl = $(p+'Regen');
+  $(p+'RegenLabel').textContent = hasSkill(f,'medic') ? 'HỒI / 1S' : 'HỒI / 3S';   // THẦY THUỐC nhận đủ lượng HỒI mỗi 1 giây
 
   setStatValue(atkEl, Math.round(effectiveAtk(f)), atkBoosted ? 'buff' : atkDebuffed ? 'debuff' : '');
   setStatValue(defEl, Math.round(effectiveDef(f)), defBoosted ? 'buff' : '');
@@ -1479,7 +1512,26 @@ function renderFighter(id, f){
   shieldFill.style.width = `${shieldWidth}%`;
 }
 
+function renderDifficulty(){
+  const d = DIFF(), btn = $('diffBtn');
+  $('diffName').textContent = d.name;
+  btn.dataset.level = d.id;
+  btn.disabled = phase !== 'decision';   // chỉ đổi được trong lúc phán đoán
+  btn.setAttribute('aria-label', `Độ khó: ${d.name}. Bấm để đổi`);
+}
+
+// Đổi độ khó: làm lại ván hiện tại (chưa chọn gì), chuỗi về 0 và kỷ lục chuyển sang mức mới
+function setDifficulty(id){
+  if(!DIFFICULTIES[id] || id === difficulty || phase !== 'decision') return;
+  difficulty = id;
+  try{ localStorage.setItem('whoWinsDiff', id); }catch{}
+  best = loadBest(id);
+  streak = 0;
+  startRound();
+}
+
 function renderAll(){
+  renderDifficulty();
   renderFighter('A', fighters.A);
   renderFighter('B', fighters.B);
   $('score').textContent = score;
@@ -1559,7 +1611,8 @@ function startRound(){
   fighters = generatePair();
   phase = 'decision';
   selected = null;
-  timeLeft = CFG.decisionTime;
+  roundTime = DIFF().time;
+  timeLeft = roundTime;
   combatElapsed = 0;
   resultElapsed = 0;
   $('timerFill').style.width = '100%';
@@ -1579,7 +1632,7 @@ function decisionLoop(now){
   if(phase !== 'decision') return;
   const dt = Math.min(.25,(now-lastTime)/1000); lastTime = now;   // chuyển tab rồi quay lại không làm mất hết giờ
   timeLeft -= dt;
-  $('timerFill').style.width = `${clamp(timeLeft/CFG.decisionTime*100,0,100)}%`;
+  $('timerFill').style.width = `${clamp(timeLeft/roundTime*100,0,100)}%`;
   $('timerText').textContent = `${Math.max(0,timeLeft).toFixed(1)}s`;
   if(timeLeft <= 0){
     choose(null);
@@ -1626,8 +1679,6 @@ function handleChoice(side){
 }
 
 // ---------- combat animation helpers ----------
-const attackPoses = ['pose-jab','pose-cross','pose-kick','pose-upper','pose-hook','pose-roundhouse','pose-knee','pose-elbow'];
-
 function scheduleAnimationTimer(fn, delay){
   const id = window.setTimeout(() => {
     animationTimers.delete(id);
@@ -1723,6 +1774,7 @@ function choose(side){
   if(phase !== 'decision') return;
   selected = side; // null means timeout
   phase = 'combat';
+  renderDifficulty();
   setChoiceUI(side);
   $('timerText').textContent = 'FIGHT!';
   $('timerFill').style.width = '0%';
@@ -1889,7 +1941,7 @@ function finishCombat(){
     score++;
     streak++;
     best = Math.max(best, streak);
-    try{ localStorage.setItem('whoWinsBest', best); }catch(e){}
+    try{ localStorage.setItem(bestKey(difficulty), best); }catch{}
   }else{
     streak = 0;
   }
@@ -1940,6 +1992,10 @@ function resultLoop(now){
 
 
 // ---------- events ----------
+$('diffBtn').addEventListener('click', ()=>{
+  const i = DIFF_ORDER.indexOf(difficulty);
+  setDifficulty(DIFF_ORDER[(i+1) % DIFF_ORDER.length]);
+});
 $('choiceA').addEventListener('click', (e)=>{
   e.stopPropagation();
   handleChoice('A');
@@ -1952,16 +2008,6 @@ $('stickA').addEventListener('click', ()=>handleChoice('A'));
 $('stickB').addEventListener('click', ()=>handleChoice('B'));
 
 
-
-// ---------- future skill/passive extension point ----------
-const SkillSystem = {
-  /* Example shape for future expansion:
-  applyPassive(fighter, state) {},
-  beforeAttack(attacker, defender, state) {},
-  afterAttack(attacker, defender, state) {},
-  onDamageTaken(target, source, damage, state) {}
-  */
-};
 
 // Start.
 startRound();
