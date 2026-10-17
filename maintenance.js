@@ -2,8 +2,9 @@
  * Mỗi game gọi: <script src="../maintenance.js" data-game="<id>"></script> ở đầu <head>.
  * Trang chủ gọi không có data-game và dùng window.gameMaintenance để làm mờ thẻ game.
  * Trạng thái lấy từ maintenance.json (cùng thư mục với file này). Lỗi mạng/file hỏng => chơi bình thường.
- * Theo dõi liên tục: trong lúc trang đang mở, maintenance.json được đọc lại mỗi 10 giây (và ngay khi quay lại tab),
- * nên bật "on": true là game đang chơi dừng ngay; tắt bảo trì thì game tự tải lại. */
+ * Theo dõi liên tục: trong lúc trang đang mở, maintenance.json được đọc lại mỗi 3 giây (1,5 giây khi chạy trên máy mình:
+ * localhost / mạng nội bộ) và ngay khi quay lại tab, nên bật "on": true là game đang chơi dừng ngay; tắt bảo trì thì game tự tải lại.
+ * Các lần đọc lại dùng kiểm tra điều kiện (ETag) nên khi file không đổi chỉ tốn một phản hồi 304 rất nhẹ. */
 (function () {
   'use strict';
   var DEFAULT_MSG = 'Trò chơi đang được bảo trì. Vui lòng trở lại sau.';
@@ -11,7 +12,11 @@
   var src = (me && me.src) || location.href;
   var gameId = me ? me.getAttribute('data-game') : null;
   var cfg = null;
-  var POLL_MS = 10000;
+  var host = location.hostname;
+  var isLocal = host === 'localhost' || host === '::1' || host === '[::1]' || /^127\./.test(host) || /^10\./.test(host) ||
+    /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /\.local$/.test(host) || location.protocol === 'file:';
+  var POLL_MS = isLocal ? 1500 : 3000;
+  var FETCH_TIMEOUT_MS = 8000;
   var jsonUrl = new URL('maintenance.json', src).href;
   // Giữ bản gốc của hàm hẹn giờ: khi bảo trì, game bị chặn setTimeout/rAF nhưng việc kiểm tra lại vẫn phải chạy.
   var nSetTimeout = window.setTimeout.bind(window);
@@ -35,11 +40,18 @@
     return DEFAULT_MSG;
   }
 
-  // Đọc maintenance.json (thêm ?t= để không bị bộ nhớ đệm/CDN trả bản cũ). Lỗi thì giữ nguyên trạng thái đang có.
-  function load() {
-    return fetch(jsonUrl + '?t=' + Date.now(), { cache: 'no-store' })
+  // Đọc maintenance.json. Lần đầu thêm ?t= và no-store để chắc chắn lấy bản mới nhất; các lần đọc lại sau đó
+  // dùng no-cache (luôn hỏi lại máy chủ bằng ETag, file không đổi thì chỉ nhận 304 nhẹ).
+  // Có giới hạn thời gian để một yêu cầu bị treo không làm dừng việc theo dõi. Lỗi thì giữ nguyên trạng thái đang có.
+  function load(revalidate) {
+    var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+    var timer = ctl ? nSetTimeout(function () { ctl.abort(); }, FETCH_TIMEOUT_MS) : 0;
+    var opts = { cache: revalidate ? 'no-cache' : 'no-store' };
+    if (ctl) opts.signal = ctl.signal;
+    return fetch(revalidate ? jsonUrl : jsonUrl + '?t=' + Date.now(), opts)
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
-      .then(function (j) { if (j && typeof j === 'object') cfg = j; });
+      .then(function (j) { if (j && typeof j === 'object') cfg = j; })
+      .then(function () { nClearTimeout(timer); }, function (e) { nClearTimeout(timer); throw e; });
   }
   var ready = load().catch(function () { cfg = null; });   // lần đầu lỗi => chơi bình thường
 
@@ -62,14 +74,14 @@
   function check() {
     if (checking) return;
     checking = true; lastCheck = Date.now();
-    load().then(function () {
+    load(true).then(function () {
       var s = offSig();
       if (s !== lastSig) { lastSig = s; notify(); }
     }, function () {}).then(function () { checking = false; schedule(); });
   }
   function wake() {
     if (document.visibilityState === 'hidden') return;
-    if (Date.now() - lastCheck > 2000) { nClearTimeout(pollTimer); check(); }
+    if (Date.now() - lastCheck > 800) { nClearTimeout(pollTimer); check(); }
   }
   // Đăng ký trước bộ chặn thao tác bên dưới (cùng pha capture trên window) để vẫn nhận được khi game đã bị khoá.
   ['visibilitychange', 'focus', 'pageshow', 'online'].forEach(function (t) { window.addEventListener(t, wake, true); });
@@ -79,6 +91,7 @@
     ready: ready,
     isOff: isOff,
     message: message,
+    pollMs: POLL_MS,
     onChange: function (fn) { if (typeof fn === 'function') listeners.push(fn); },   // gọi lại khi danh sách bảo trì đổi
     check: check
   };
