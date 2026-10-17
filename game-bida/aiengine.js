@@ -29,10 +29,26 @@ cleanDirectPowerMaxPct: 90,
 
 // Dùng áp phê nhẹ, tránh bi cái rơi lỗ ảo
 scanSpinX: 0,
-scanSpinY: 0.04,
+scanSpinY: 0,
 
-// Giảm nhẹ để máy đỡ giật khi dùng cơ chế lỗ mới
-scanPerTick: 20,
+  // Kế hoạch cú đánh: tổng thời gian suy nghĩ và độ dài mỗi lát tính (ms)
+  thinkBudgetMs: 3200,
+  sliceMs: 12,
+  scanExtraMs: 2500,
+  safeExtraMs: 2000,
+
+  // Số cú ăn trực tiếp tốt nhất được tính kỹ, số cú được thử kỹ thuật điều bi
+  potCandidates: 8,
+  techniqueShots: 3,
+
+  // Lệch góc (độ) quanh điểm ngắm hình học để bù "ném" bi
+  aimOffsetsDeg: [0, 0.6, -0.6, 1.2, -1.2, 2, -2, 3, -3, 4.2, -4.2],
+
+  // Kỹ thuật điều bi: x = áp phê (phải +), y = culê (+) / retro (−)
+  techniques: [
+    {x:0, y:0}, {x:0, y:0.45}, {x:0, y:0.85}, {x:0, y:-0.45}, {x:0, y:-0.85},
+    {x:0.6, y:0}, {x:-0.6, y:0}, {x:0.5, y:0.5}, {x:-0.5, y:0.5}, {x:0.5, y:-0.5}, {x:-0.5, y:-0.5}
+  ],
 
   // Giới hạn frame mô phỏng cho mỗi cú thử.
   simFrameLimit: 760,
@@ -64,6 +80,9 @@ let AI_SCAN_TOKEN = 0;
    MAIN AI TURN
    ========================= */
 
+// Thời điểm AI còn đang tính toán (để chốt an toàn trong bida.html biết AI không bị treo)
+let AI_lastProgress = 0;
+
 function aiTakeShot(){
   if(gameOver) return;
   if(turn !== "ai") return;
@@ -90,576 +109,335 @@ function aiTakeShot(){
   setMessage("AI.GiaBao đang suy nghĩ...", true);
 
   startAIThinkSearch(bestShot => {
-    if(gameOver) return;
-    if(turn !== "ai") return;
-
     aiThinking = false;
 
-    showAICueAndShoot(
-      bestShot,
-      AI_ENGINE.previewMs
-    );
+    if(gameOver || turn !== "ai") return;
+
+    if(isMoving() || shotLocked || aiCueMove){
+      scheduleAIShot(260);
+      return;
+    }
+
+    showAICueAndShoot(bestShot, AI_ENGINE.previewMs);
   });
 }
 
+/*
+  Chạy kế hoạch cú đánh theo từng lát nhỏ (≤ sliceMs) để màn hình không bị giật,
+  có tổng thời gian tối đa; lỗi bất ngờ cũng không làm AI treo mà chuyển sang cú dự phòng.
+*/
 function startAIThinkSearch(done){
   const token = ++AI_SCAN_TOKEN;
+  const started = performance.now();
+  let gen = null;
+  let finished = false;
 
-  const targets = getAITargetBalls()
-    .slice()
-    .sort((a, b) => {
-      const ca = AI_hasCleanDirectCandidate(a) ? 0 : 1;
-      const cb = AI_hasCleanDirectCandidate(b) ? 0 : 1;
-
-      if(ca !== cb) return ca - cb;
-
-      const da = AI_dist(cueBall.x, cueBall.y, a.x, a.y);
-      const db = AI_dist(cueBall.x, cueBall.y, b.x, b.y);
-
-      return da - db;
-    });
-
-  if(!targets.length){
-    done(findAISafeFallbackShot());
-    return;
-  }
-
-  const cleanCandidates = AI_buildCleanDirectCandidates(targets);
-
-  const job = {
-    token,
-    done,
-    targets,
-
-    // Phase mới: tìm cú trực tiếp sạch trước
-    phase: cleanCandidates.length ? "cleanDirect" : "direct",
-    phaseStartedAt: performance.now(),
-
-    cleanCandidates,
-    cleanIndex: 0,
-    cleanPowerPct: AI_getCleanPowerMin(),
-
-    targetIndex: 0,
-    angles: null,
-    angleIndex: 0,
-    powerPct: AI_ENGINE.powerMinPct,
-
-    bestForCurrentTarget: null
+  const finish = shot => {
+    if(finished) return;
+    finished = true;
+    if(token === AI_SCAN_TOKEN) AI_SCAN_TOKEN++;
+    done(shot || findAISafeFallbackShot());
   };
 
-  setTimeout(() => AI_processScanJob(job), 0);
-}
+  const tick = () => {
+    if(finished) return;
 
-function AI_processScanJob(job){
-  if(job.token !== AI_SCAN_TOKEN) return;
-  if(gameOver) return;
-  if(turn !== "ai") return;
-
-  // Ưu tiên cú trực tiếp sạch trước
-  if(job.phase === "cleanDirect"){
-    AI_processCleanDirectJob(job);
-    return;
-  }
-
-  // Hết thời gian dò phase hiện tại
-  if(AI_isPhaseTimeout(job)){
-    AI_handlePhaseTimeout(job);
-    return;
-  }
-
-  let count = 0;
-
-  while(count < AI_ENGINE.scanPerTick){
-    if(AI_isPhaseTimeout(job)){
-      AI_handlePhaseTimeout(job);
+    // Lượt đã đổi, ván kết thúc hoặc đã có lượt tính mới: dừng và không giữ cờ "đang suy nghĩ"
+    if(token !== AI_SCAN_TOKEN || gameOver || turn !== "ai"){
+      finished = true;
+      aiThinking = false;
       return;
     }
 
-    const target = job.targets[job.targetIndex];
+    const t0 = AI_lastProgress = performance.now();
 
-    // Đã dò hết toàn bộ bi ở phase hiện tại
-    if(!target){
-      if(job.phase === "direct"){
-        AI_switchToKickPhase(job);
-        return;
+    try{
+      if(!gen) gen = AI_planShot(started);
+
+      while(performance.now() - t0 < AI_ENGINE.sliceMs){
+        const r = gen.next();
+
+        if(r.done){
+          finish(r.value);
+          return;
+        }
       }
-
-      if(job.phase === "kick"){
-        AI_switchToSafeKickPhase(job);
-        return;
-      }
-
-      const randomShot = findAIRandomShot();
-      setMessage("AI không tìm thấy cú chạm hợp lệ · đánh ngẫu nhiên", true);
-
-      AI_SCAN_TOKEN++;
-      job.done(randomShot);
+    }catch(err){
+      console.error("AI lỗi khi tính cú đánh:", err);
+      let shot = null;
+      try{ shot = findAIRandomShot(); }catch(e){}
+      finish(shot);
       return;
     }
 
-    if(!target.active){
-      AI_nextTarget(job);
-      continue;
-    }
+    setTimeout(tick, 0);
+  };
 
-    if(!job.angles){
-      if(job.phase === "direct"){
-        job.angles = AI_buildDirectAnglesToTarget(target);
-      }else if(job.phase === "safeKick"){
-        job.angles = AI_buildKickAnglesToTarget(
-          target,
-          AI_ENGINE.safeKickAngleSamples
-        );
-      }else{
-        job.angles = AI_buildKickAnglesToTarget(target);
-      }
-
-      job.angleIndex = 0;
-      job.powerPct = AI_getPhasePowerMin(job.phase);
-      job.bestForCurrentTarget = null;
-
-      if(!job.angles.length){
-        AI_nextTarget(job);
-        continue;
-      }
-    }
-
-    const angle = job.angles[job.angleIndex];
-    const power = job.powerPct / 100;
-
-    const dir = {
-      x: Math.cos(angle),
-      y: Math.sin(angle)
-    };
-
-    const sim = job.phase === "safeKick"
-      ? AI_predictLegalContact(dir, power, target.num)
-      : AI_predictLikeDeveloper(dir, power, target.num);
-
-    if(sim.ok){
-      const shot = AI_makeShotFromSimulation(
-        dir,
-        power,
-        target,
-        sim,
-        job.phase === "safeKick" ? "safe-kick-contact" : job.phase
-      );
-
-      if(job.phase === "safeKick"){
-        setMessage(
-          `AI chọn A băng an toàn: chạm bi ${shot.meta.targetNum} · lực ${Math.round(shot.power * 100)}%`,
-          true
-        );
-      }else{
-        setMessage(
-          `AI tìm thấy case: bi ${shot.meta.targetNum} vào lỗ · lực ${Math.round(shot.power * 100)}% · ${shot.meta.mode}`,
-          true
-        );
-      }
-
-      AI_SCAN_TOKEN++;
-      job.done(shot);
-      return;
-    }
-
-    AI_advanceScanCursor(job);
-    count++;
-  }
-
-  setMessage("AI.GiaBao đang suy nghĩ...", true);
-  setTimeout(() => AI_processScanJob(job), 0);
-}
-function AI_isPhaseTimeout(job){
-  const now = performance.now();
-
-  return now - job.phaseStartedAt >= AI_getPhaseMaxMs(job.phase);
+  setTimeout(tick, 0);
 }
 
-function AI_getPhaseMaxMs(phase){
-  if(phase === "direct"){
-    return AI_ENGINE.directScanMaxMs;
-  }
-
-  if(phase === "kick"){
-    return AI_ENGINE.kickScanMaxMs;
-  }
-
-  if(phase === "safeKick"){
-    return AI_ENGINE.safeKickScanMaxMs ?? 4500;
-  }
-
-  return 3000;
-}
-
-function AI_getPhasePowerMin(phase){
-  if(phase === "safeKick"){
-    return AI_ENGINE.safeKickPowerMinPct ?? 28;
-  }
-
-  return AI_ENGINE.powerMinPct;
-}
-
-function AI_getPhasePowerMax(phase){
-  if(phase === "safeKick"){
-    return AI_ENGINE.safeKickPowerMaxPct ?? 92;
-  }
-
-  return AI_ENGINE.powerMaxPct;
-}
-
-function AI_handlePhaseTimeout(job){
-  if(job.phase === "direct"){
-    setMessage("AI.GiaBao đang suy nghĩ...", true);
-    AI_switchToKickPhase(job);
-    return;
-  }
-
-  if(job.phase === "kick"){
-    setMessage("AI không thấy cú ăn bi · chuyển sang A băng chạm bi", true);
-    AI_switchToSafeKickPhase(job);
-    return;
-  }
-
-  const randomShot = findAIRandomShot();
-
-  setMessage("AI không tìm thấy cú chạm hợp lệ · đánh ngẫu nhiên", true);
-
-  AI_SCAN_TOKEN++;
-  job.done(randomShot);
-}
-
-function AI_switchToKickPhase(job){
-  job.phase = "kick";
-  job.phaseStartedAt = performance.now();
-
-  job.targetIndex = 0;
-  job.angles = null;
-  job.angleIndex = 0;
-  job.powerPct = AI_getPhasePowerMin(job.phase);
-  job.bestForCurrentTarget = null;
-
-  setTimeout(() => AI_processScanJob(job), 0);
-}
-function AI_switchToSafeKickPhase(job){
-  job.phase = "safeKick";
-  job.phaseStartedAt = performance.now();
-
-  job.targetIndex = 0;
-  job.angles = null;
-  job.angleIndex = 0;
-  job.powerPct = AI_getPhasePowerMin(job.phase);
-  job.bestForCurrentTarget = null;
-
-  setMessage("AI đang suy nghĩ...", true);
-
-  setTimeout(() => AI_processScanJob(job), 0);
-}
-
-
-function AI_advanceScanCursor(job){
-  job.powerPct++;
-
-  if(job.powerPct <= AI_getPhasePowerMax(job.phase)){
-    return;
-  }
-
-  job.powerPct = AI_getPhasePowerMin(job.phase);
-  job.angleIndex++;
-
-  if(job.angleIndex < job.angles.length){
-    return;
-  }
-  AI_finishPhase(job);
-}
-
-function AI_finishPhase(job){
-  if(job.bestForCurrentTarget){
-    const shot = job.bestForCurrentTarget;
-
-    setMessage(
-      `AI tìm thấy case: bi ${shot.meta.targetNum} vào lỗ · lực ${Math.round(shot.power * 100)}% · ${shot.meta.mode}`,
-      true
-    );
-
-    job.done(shot);
-    return;
-  }
-
-  AI_nextTarget(job);
-}
-
-function AI_nextTarget(job){
-  job.targetIndex++;
-  job.angles = null;
-  job.angleIndex = 0;
-  job.powerPct = AI_getPhasePowerMin(job.phase);
-  job.bestForCurrentTarget = null;
-}
 /* =========================
-   CLEAN DIRECT SHOT PRIORITY
-   AI ưu tiên cú trực tiếp sạch, không bi cản
+   KẾ HOẠCH CÚ ĐÁNH
+   1. Liệt kê cú ăn trực tiếp: mỗi bi mục tiêu × mỗi lỗ có đường đi sạch (điểm ngắm "bi ma").
+   2. Mỗi cú: chọn lực theo quãng đường, dò lệch góc nhỏ quanh điểm ngắm để bù "ném" bi,
+      rồi tìm hai mép của khoảng góc vẫn vào lỗ và ngắm vào giữa (chắc chắn nhất).
+   3. Kỹ thuật điều bi: thử culê / retro / bi dừng / áp phê với vài mức lực; giữ cú vẫn vào lỗ
+      và bi cái dừng ở chỗ có cú tiếp theo tốt nhất.
+   4. Không có cú ăn trực tiếp: dò quét (chạm bi khác, A băng); vẫn không có thì A băng an toàn chạm đúng bi.
    ========================= */
 
-function AI_getCleanPowerMin(){
-  return AI_ENGINE.cleanDirectPowerMinPct ?? 38;
+const AI_DEG = Math.PI / 180;
+
+function AI_baseSpin(){
+  return { x: AI_ENGINE.scanSpinX || 0, y: AI_ENGINE.scanSpinY || 0 };
 }
 
-function AI_getCleanPowerMax(){
-  return AI_ENGINE.cleanDirectPowerMaxPct ?? 90;
-}
+function* AI_planShot(started){
+  const elapsed = () => performance.now() - started;
+  const budget = AI_ENGINE.thinkBudgetMs;
+  const targets = getAITargetBalls();
 
-function AI_processCleanDirectJob(job){
-  if(job.token !== AI_SCAN_TOKEN) return;
-  if(gameOver) return;
-  if(turn !== "ai") return;
+  if(!targets.length) return findAISafeFallbackShot();
 
-  let count = 0;
+  const nowTarget = getCurrentTarget("ai");
+  const cands = AI_potCandidates({ x: cueBall.x, y: cueBall.y }, balls, targets)
+    .slice(0, AI_ENGINE.potCandidates);
+  const found = [];
 
-  while(count < AI_ENGINE.scanPerTick){
-    const c = job.cleanCandidates[job.cleanIndex];
+  for(const c of cands){
+    if(elapsed() > budget || (found.length >= 3 && elapsed() > budget * 0.5)) break;
 
-    if(!c){
-      AI_switchToNormalDirectPhase(job);
-      return;
-    }
-
-    if(!AI_cleanDirectCandidateStillValid(c)){
-      job.cleanIndex++;
-      job.cleanPowerPct = AI_getCleanPowerMin();
-      continue;
-    }
-
-    const power = job.cleanPowerPct / 100;
-
-    const sim = AI_predictLikeDeveloper(
-      c.dir,
-      power,
-      c.target.num
-    );
-
-    const samePocket =
-      sim &&
-      sim.ok &&
-      sim.targetPocketId === c.pocket.id;
-
-    if(samePocket){
-      const shot = AI_makeShotFromSimulation(
-        c.dir,
-        power,
-        c.target,
-        sim,
-        "direct-clean"
-      );
-
-      setMessage(
-        `AI chọn cú trực tiếp sạch: bi ${c.target.num} vào lỗ · lực ${Math.round(power * 100)}%`,
-        true
-      );
-
-      AI_SCAN_TOKEN++;
-      job.done(shot);
-      return;
-    }
-
-    job.cleanPowerPct++;
-
-    if(job.cleanPowerPct > AI_getCleanPowerMax()){
-      job.cleanIndex++;
-      job.cleanPowerPct = AI_getCleanPowerMin();
-    }
-
-    count++;
+    const shot = yield* AI_findPottingAim(c, elapsed, budget);
+    if(shot) found.push(shot);
   }
 
-  setMessage("AI.GiaBao đang suy nghĩ...", true);
-  setTimeout(() => AI_processScanJob(job), 0);
+  if(found.length){
+    found.sort((a, b) => b.score - a.score);
+
+    let best = null;
+
+    for(const shot of found.slice(0, AI_ENGINE.techniqueShots)){
+      const tuned = yield* AI_chooseTechnique(shot, nowTarget, elapsed, budget * 1.25);
+      if(!best || tuned.score > best.score) best = tuned;
+    }
+
+    return AI_finalizeShot(best);
+  }
+
+  const scan = yield* AI_scanForPot(targets, started);
+  if(scan) return scan;
+
+  const safe = yield* AI_scanSafeContact(targets, started);
+  if(safe) return safe;
+
+  const shot = findAIRandomShot();
+  shot.meta = Object.assign(shot.meta || {}, { label: "AI không tìm thấy cú chạm hợp lệ · đánh ngẫu nhiên" });
+  return shot;
 }
 
-function AI_switchToNormalDirectPhase(job){
-  job.phase = "direct";
-  job.phaseStartedAt = performance.now();
+// Mô phỏng một cú: có ăn đúng bi mục tiêu (bi chạm đầu tiên) không, vào lỗ nào, bi cái có rơi không
+function AI_simPot(dir, power, spin, targetNum){
+  const sim = simulateDeveloperPhysicsPrediction(dir, power, spin);
+  const pocket = sim.firstHitNum === targetNum ? sim.firstHitPocket : null;
+  const blackGone = targetNum !== 8 && (sim.finalBalls || []).some(b => b.num === 8 && !b.active);
 
-  job.targetIndex = 0;
-  job.angles = null;
-  job.angleIndex = 0;
-  job.powerPct = AI_getPhasePowerMin(job.phase);
-  job.bestForCurrentTarget = null;
-
-  setMessage("AI.GiaBao đang suy nghĩ...", true);
-
-  setTimeout(() => AI_processScanJob(job), 0);
+  return {
+    ok: !!pocket && !sim.cuePocket && !blackGone,
+    pocketId: pocket ? pocket.id : null,
+    scratch: !!sim.cuePocket,
+    sim
+  };
 }
 
-function AI_buildCleanDirectCandidates(targets){
-  const result = [];
+// Lực đủ để bi mục tiêu tới lỗ (có dư), tính ngược từ ma sát và góc cắt; trả về vài mức để thử
+function AI_powerOrder(c){
+  const vObj = (Math.sqrt(2 * PHYS.ROLL_A * c.pocketDist * 1.35) + 2.5) / 0.75;
+  const vHit = vObj / (0.975 * Math.max(0.3, Math.cos(c.cut)));
+  const v0 = Math.sqrt(vHit * vHit + 2 * 0.12 * c.cueDist);
+  const p = Math.pow(AI_clamp((v0 - 4) / 96, 0, 1), 2 / 3);
+  const list = [p, p + 0.08, p + 0.17, p - 0.06, p + 0.3].map(x => AI_clamp(x, 0.12, 0.95));
 
-  for(const target of targets){
-    if(!target || !target.active) continue;
+  return list.filter((x, i) => list.indexOf(x) === i);
+}
 
-    const list = AI_buildCleanDirectCandidatesForTarget(target);
+function* AI_findPottingAim(c, elapsed, budget){
+  const spin = AI_baseSpin();
+  const goes = (off, p) => {
+    const r = AI_simPot(AI_rotate(c.dir, off * AI_DEG), p, spin, c.target.num);
+    return r.ok && r.pocketId === c.pocket.id;
+  };
 
-    for(const c of list){
-      result.push(c);
+  let hit = null;
+
+  outer:
+  for(const p of AI_powerOrder(c)){
+    for(const off of AI_ENGINE.aimOffsetsDeg){
+      if(elapsed() > budget) return null;
+
+      const ok = goes(off, p);
+      yield;
+
+      if(ok){
+        hit = { off, p };
+        break outer;
+      }
     }
   }
 
-  result.sort((a, b) => b.score - a.score);
+  if(!hit) return null;
 
-  return result;
-}
+  // Hai mép của khoảng góc vẫn vào lỗ: bước 0,3° tới khi trượt, rồi chia đôi 4 lần
+  function* edge(sign){
+    let inside = hit.off;
+    let outside = null;
 
-function AI_buildCleanDirectCandidatesForTarget(target){
-  const result = [];
+    for(let k = 1; k <= 8; k++){
+      const t = hit.off + sign * 0.3 * k;
+      const ok = goes(t, hit.p);
+      yield;
 
-  for(const pocket of pockets){
-    const objectDir = AI_norm(
-      pocket.x - target.x,
-      pocket.y - target.y
-    );
-
-    const ghost = {
-      x: target.x - objectDir.x * BALL_R * 2,
-      y: target.y - objectDir.y * BALL_R * 2
-    };
-
-    if(!AI_isGhostPointPlayable(ghost)){
-      continue;
+      if(ok) inside = t;
+      else { outside = t; break; }
     }
 
-    if(!AI_isObjectPathCleanToPocket(target, pocket)){
-      continue;
+    if(outside === null) return inside;
+
+    for(let k = 0; k < 4; k++){
+      const m = (inside + outside) / 2;
+      const ok = goes(m, hit.p);
+      yield;
+
+      if(ok) inside = m;
+      else outside = m;
     }
 
-    if(!AI_isCuePathCleanToGhost(ghost, target)){
-      continue;
-    }
-
-    const dir = AI_norm(
-      ghost.x - cueBall.x,
-      ghost.y - cueBall.y
-    );
-
-    const cutAngle = Math.acos(
-      AI_clamp(
-        dir.x * objectDir.x + dir.y * objectDir.y,
-        -1,
-        1
-      )
-    );
-
-    // Cắt quá mỏng nhìn rất hack, bỏ qua
-    if(cutAngle > 1.28){
-      continue;
-    }
-
-    const cueDist = AI_dist(
-      cueBall.x,
-      cueBall.y,
-      ghost.x,
-      ghost.y
-    );
-
-    const pocketDist = AI_dist(
-      target.x,
-      target.y,
-      pocket.x,
-      pocket.y
-    );
-
-    let score = 100000;
-
-    score -= cueDist * 0.35;
-    score -= pocketDist * 0.85;
-    score -= cutAngle * 1800;
-
-    if(pocket.type === "corner"){
-      score += 520;
-    }else{
-      score += 260;
-    }
-
-    result.push({
-      target,
-      pocket,
-      ghost,
-      dir,
-      score,
-      mode:"direct-clean"
-    });
+    return inside;
   }
 
-  return result;
+  const lo = yield* edge(-1);
+  const hi = yield* edge(1);
+  const center = (lo + hi) / 2;
+  const width = hi - lo;
+
+  return {
+    c,
+    dir: AI_rotate(c.dir, center * AI_DEG),
+    power: hit.p,
+    spin,
+    width,
+    mode: "trực tiếp",
+    score: c.score + width * 900
+  };
 }
 
-function AI_hasCleanDirectCandidate(target){
-  if(!target || !target.active) return false;
+// Thử các kỹ thuật (xoáy + lực) cho một cú đã vào lỗ; chấm điểm theo vị trí bi cái cho cú tiếp theo
+function* AI_chooseTechnique(shot, nowTarget, elapsed, budget){
+  const groupAfter = nowTarget === "open" ? shot.c.target.type : nowTarget;
+  const powers = [shot.power, shot.power + 0.1, shot.power - 0.07]
+    .map(x => AI_clamp(x, 0.12, 0.95))
+    .filter((x, i, a) => a.indexOf(x) === i);
 
-  return AI_buildCleanDirectCandidatesForTarget(target).length > 0;
+  let best = null;
+
+  for(const sp of AI_ENGINE.techniques){
+    for(const p of powers){
+      if(best && elapsed() > budget) return best;
+
+      const r = AI_simPot(shot.dir, p, sp, shot.c.target.num);
+      yield;
+
+      if(!r.ok || r.pocketId !== shot.c.pocket.id) continue;
+
+      const pos = AI_positionScore(r.sim.finalBalls, groupAfter, shot.c.target.num);
+      // Ngang điểm thì ưu tiên cú đơn giản: ít áp phê, lực gần lực chuẩn
+      const score = shot.score + pos - Math.abs(sp.x) * 120 - Math.abs(p - shot.power) * 300;
+
+      if(!best || score > best.score){
+        best = Object.assign({}, shot, { power: p, spin: sp, score, posScore: pos });
+      }
+    }
+  }
+
+  return best || shot;
 }
 
-function AI_cleanDirectCandidateStillValid(c){
-  if(!c) return false;
-  if(!c.target || !c.target.active) return false;
+// Bi cái dừng ở đâu thì cú tiếp theo dễ tới đâu (càng cao càng tốt)
+function AI_positionScore(list, group, pottedNum){
+  const cue = list.find(b => b.num === 0);
 
-  return (
-    AI_isGhostPointPlayable(c.ghost) &&
-    AI_isCuePathCleanToGhost(c.ghost, c.target) &&
-    AI_isObjectPathCleanToPocket(c.target, c.pocket)
-  );
+  if(!cue || !cue.active) return -6000;
+  if(pottedNum === 8) return 0;
+
+  let next = list.filter(b => b.active && b.num !== 0 && b.num !== 8 && b.type === group);
+  if(!next.length) next = list.filter(b => b.active && b.num === 8);
+  if(!next.length) return 0;
+
+  const cands = AI_potCandidates(cue, list, next);
+  let s = 0;
+
+  if(cands.length){
+    s += (cands[0].score - 10000) * 0.6 + 900;
+    s += Math.min(cands.length, 4) * 110;
+  }else{
+    s -= 1400;
+  }
+
+  // Bi cái nằm sát băng thì khó đánh
+  const m = CUSHION_THICKNESS + BALL_R * 1.3;
+  if(cue.x < table.x + m || cue.x > table.x + table.w - m || cue.y < table.y + m || cue.y > table.y + table.h - m){
+    s -= 260;
+  }
+
+  return s;
 }
 
-function AI_isGhostPointPlayable(p){
+// Các cú ăn trực tiếp nhìn thấy được từ vị trí bi cái cue, với bố cục bi list
+function AI_potCandidates(cue, list, targets){
+  const out = [];
+
+  for(const t of targets){
+    if(!t || !t.active) continue;
+
+    for(const pocket of pockets){
+      const od = AI_norm(pocket.x - t.x, pocket.y - t.y);
+
+      // Lỗ giữa chỉ nhận bi đi vào gần vuông góc với băng
+      if(pocket.type === "side" && Math.abs(od.x) > 0.82) continue;
+
+      const ghost = { x: t.x - od.x * BALL_R * 2, y: t.y - od.y * BALL_R * 2 };
+
+      if(!AI_isPointPlayable(ghost)) continue;
+      if(!AI_segmentClear(list, t.x, t.y, pocket.x, pocket.y, [0, t.num], BALL_R * 2.02)) continue;
+      if(!AI_segmentClear(list, cue.x, cue.y, ghost.x, ghost.y, [0, t.num], BALL_R * 2.04)) continue;
+
+      const cueDist = AI_dist(cue.x, cue.y, ghost.x, ghost.y);
+      if(cueDist < 1) continue;
+
+      const dir = { x: (ghost.x - cue.x) / cueDist, y: (ghost.y - cue.y) / cueDist };
+      const cut = Math.acos(AI_clamp(dir.x * od.x + dir.y * od.y, -1, 1));
+
+      // Cắt quá mỏng nhìn rất hack, bỏ qua
+      if(cut > 1.28) continue;
+
+      const pocketDist = AI_dist(t.x, t.y, pocket.x, pocket.y);
+      const score = 10000 - cueDist * 0.35 - pocketDist * 0.85 - cut * 1800 + (pocket.type === "corner" ? 520 : 260);
+
+      out.push({ target: t, pocket, ghost, dir, cut, cueDist, pocketDist, score });
+    }
+  }
+
+  return out.sort((a, b) => b.score - a.score);
+}
+
+function AI_isPointPlayable(p){
   const b = AI_getPlayableBounds();
-
-  return (
-    p.x >= b.left &&
-    p.x <= b.right &&
-    p.y >= b.top &&
-    p.y <= b.bottom
-  );
+  return p.x >= b.left && p.x <= b.right && p.y >= b.top && p.y <= b.bottom;
 }
 
-function AI_isCuePathCleanToGhost(ghost, target){
-  return AI_isSegmentClearFromBalls(
-    cueBall.x,
-    cueBall.y,
-    ghost.x,
-    ghost.y,
-    [0, target.num],
-    BALL_R * 2.04
-  );
-}
-
-function AI_isObjectPathCleanToPocket(target, pocket){
-  return AI_isSegmentClearFromBalls(
-    target.x,
-    target.y,
-    pocket.x,
-    pocket.y,
-    [0, target.num],
-    BALL_R * 2.02
-  );
-}
-
-function AI_isSegmentClearFromBalls(x1, y1, x2, y2, ignoreNums = [], clearance = BALL_R * 2){
-  const ignore = new Set(ignoreNums);
-
-  for(const b of balls){
-    if(!b.active) continue;
-    if(ignore.has(b.num)) continue;
-
-    const d = AI_distancePointToSegment(
-      b.x,
-      b.y,
-      x1,
-      y1,
-      x2,
-      y2
-    );
-
-    if(d < clearance){
-      return false;
-    }
+function AI_segmentClear(list, x1, y1, x2, y2, ignoreNums, clearance){
+  for(const b of list){
+    if(!b.active || ignoreNums.includes(b.num)) continue;
+    if(AI_distancePointToSegment(b.x, b.y, x1, y1, x2, y2) < clearance) return false;
   }
 
   return true;
@@ -668,21 +446,155 @@ function AI_isSegmentClearFromBalls(x1, y1, x2, y2, ignoreNums = [], clearance =
 function AI_distancePointToSegment(px, py, x1, y1, x2, y2){
   const dx = x2 - x1;
   const dy = y2 - y1;
-
   const lenSq = dx * dx + dy * dy || 1;
+  const t = AI_clamp(((px - x1) * dx + (py - y1) * dy) / lenSq, 0, 1);
 
-  let t = (
-    (px - x1) * dx +
-    (py - y1) * dy
-  ) / lenSq;
-
-  t = AI_clamp(t, 0, 1);
-
-  const cx = x1 + dx * t;
-  const cy = y1 + dy * t;
-
-  return Math.hypot(px - cx, py - cy);
+  return Math.hypot(px - (x1 + dx * t), py - (y1 + dy * t));
 }
+
+// Không có cú ăn trực tiếp: quét góc chạm bi (kể cả qua băng) với vài mức lực
+function* AI_scanForPot(targets, started){
+  const limit = AI_ENGINE.thinkBudgetMs + AI_ENGINE.scanExtraMs;
+  const powers = [0.42, 0.58, 0.74, 0.9];
+
+  for(const mode of ["direct", "kick"]){
+    for(const t of targets){
+      if(!t.active) continue;
+
+      const angles = mode === "direct" ? AI_buildDirectAnglesToTarget(t) : AI_buildKickAnglesToTarget(t);
+
+      for(const a of angles){
+        for(const p of powers){
+          if(performance.now() - started > limit) return null;
+
+          const dir = { x: Math.cos(a), y: Math.sin(a) };
+          const r = AI_simPot(dir, p, AI_baseSpin(), t.num);
+          yield;
+
+          if(r.ok){
+            return AI_finalizeShot({
+              c: { target: t, pocket: AI_getPocketById(r.pocketId) },
+              dir, power: p, spin: AI_baseSpin(),
+              mode: mode === "direct" ? "dò góc" : "A băng"
+            });
+          }
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+// Cú an toàn: chạm đúng bi mục tiêu rồi có bi chạm băng (không phạm lỗi)
+function* AI_scanSafeContact(targets, started){
+  const limit = AI_ENGINE.thinkBudgetMs + AI_ENGINE.scanExtraMs + AI_ENGINE.safeExtraMs;
+  const powers = [0.36, 0.5, 0.66];
+
+  for(const t of targets){
+    if(!t.active) continue;
+
+    const angles = AI_buildDirectAnglesToTarget(t).concat(AI_buildKickAnglesToTarget(t, AI_ENGINE.safeKickAngleSamples));
+
+    for(const a of angles){
+      for(const p of powers){
+        if(performance.now() - started > limit) return null;
+
+        const dir = { x: Math.cos(a), y: Math.sin(a) };
+        const r = AI_predictLegalContact(dir, p, t.num);
+        yield;
+
+        if(r.ok){
+          return {
+            dir, power: p, spinX: AI_ENGINE.scanSpinX || 0, spinY: AI_ENGINE.scanSpinY || 0,
+            meta: { mode: "safe", targetNum: t.num, label: `AI chơi an toàn: chạm bi ${t.num} · lực ${Math.round(p * 100)}%` }
+          };
+        }
+      }
+    }
+  }
+
+  return null;
+}
+
+function AI_describeSpin(sp){
+  const parts = [];
+
+  if(sp.y > 0.25) parts.push("culê");
+  else if(sp.y < -0.25) parts.push("retro");
+  else parts.push("bi dừng");
+
+  if(sp.x > 0.25) parts.push("áp phê phải");
+  else if(sp.x < -0.25) parts.push("áp phê trái");
+
+  return parts.join(" + ");
+}
+
+function AI_finalizeShot(s){
+  const tech = AI_describeSpin(s.spin);
+  const pocket = s.c.pocket;
+  const where = pocket ? (pocket.type === "corner" ? "lỗ góc" : "lỗ giữa") : "lỗ";
+  const label = `AI: bi ${s.c.target.num} vào ${where} · ${tech} · lực ${Math.round(s.power * 100)}%`;
+
+  return {
+    dir: s.dir,
+    power: s.power,
+    spinX: s.spin.x,
+    spinY: s.spin.y,
+    meta: {
+      mode: s.mode || "trực tiếp",
+      targetNum: s.c.target.num,
+      targetPocketId: pocket ? pocket.id : null,
+      technique: tech,
+      label
+    }
+  };
+}
+
+/*
+  Bi trong tay: đặt bi cái để có cú ăn thẳng/ít cắt, khoảng cách vừa phải, đường đi sạch.
+  Trả null nếu không tìm được chỗ tốt (bida.html sẽ đặt ngẫu nhiên như cũ).
+*/
+function AI_pickBallInHandSpot(){
+  const targets = getAITargetBalls();
+  const zone = typeof getFullCueZone === "function" ? getFullCueZone() : null;
+  let best = null;
+
+  for(const t of targets){
+    for(const pocket of pockets){
+      const od = AI_norm(pocket.x - t.x, pocket.y - t.y);
+
+      if(pocket.type === "side" && Math.abs(od.x) > 0.82) continue;
+
+      const ghost = { x: t.x - od.x * BALL_R * 2, y: t.y - od.y * BALL_R * 2 };
+
+      if(!AI_isPointPlayable(ghost)) continue;
+      if(!AI_segmentClear(balls, t.x, t.y, pocket.x, pocket.y, [0, t.num], BALL_R * 2.02)) continue;
+
+      const pocketDist = AI_dist(t.x, t.y, pocket.x, pocket.y);
+
+      for(const dist of [120, 180, 250]){
+        for(const ang of [0.12, -0.12, 0.3, -0.3, 0]){
+          const d = AI_rotate(od, ang);
+          const spot = { x: ghost.x - d.x * dist, y: ghost.y - d.y * dist };
+
+          if(zone && (spot.x < zone.left || spot.x > zone.right || spot.y < zone.top || spot.y > zone.bottom)) continue;
+          if(!AI_isPointPlayable(spot) || !isCueSpotFree(spot.x, spot.y)) continue;
+          if(!AI_segmentClear(balls, spot.x, spot.y, ghost.x, ghost.y, [0, t.num], BALL_R * 2.04)) continue;
+
+          // Hơi cắt một chút giúp điều bi dễ hơn đánh thẳng tuyệt đối
+          const score = 10000 - pocketDist * 0.85 - Math.abs(Math.abs(ang) - 0.12) * 1500 - Math.abs(dist - 180) * 0.6 +
+            (pocket.type === "corner" ? 520 : 260);
+
+          if(!best || score > best.score) best = { x: spot.x, y: spot.y, score };
+        }
+      }
+    }
+  }
+
+  return best ? { x: best.x, y: best.y } : null;
+}
+
 /* =========================
    TARGET FILTER
    ========================= */
@@ -752,9 +664,10 @@ function findAIBreakShot(){
 
   return {
     dir,
-    power:0.86,
+    power:0.95,
     spinX:AI_rand(-0.06, 0.06),
-    spinY:0.16
+    spinY:0.16,
+    meta:{ label:"AI.GiaBao phá bi" }
   };
 }
 
@@ -971,73 +884,6 @@ function AI_getTargetPocketFromMainSim(sim, targetNum){
   return null;
 }
 /* =========================
-   SHOT BUILD
-   ========================= */
-
-function AI_makeShotFromSimulation(dir, power, target, sim, mode){
-  const powerPct = Math.round(power * 100);
-
-  const simFrames = sim.frames ?? (
-    sim.sim && sim.sim.cuePath
-      ? sim.sim.cuePath.length
-      : 0
-  );
-
-  let score = 100000;
-
-  if(mode === "direct"){
-    score += 12000;
-  }else{
-    score += 4000;
-  }
-
-  score -= powerPct * 42;
-  score -= simFrames * 4;
-
-  const cueDist = AI_dist(
-    cueBall.x,
-    cueBall.y,
-    target.x,
-    target.y
-  );
-
-  score -= cueDist * 0.15;
-
-  const pocketId = sim.targetPocketId || sim.targetPocket?.id || null;
-
-if(pocketId){
-  const p = AI_getPocketById(pocketId);
-  const pocketDist = AI_dist(
-      target.x,
-      target.y,
-      p.x,
-      p.y
-    );
-
-    score -= pocketDist * 0.22;
-
-    if(p.type === "corner"){
-      score += 420;
-    }
-  }
-
-  return {
-    dir,
-    power,
-    spinX: AI_ENGINE.scanSpinX || 0,
-spinY: AI_ENGINE.scanSpinY || 0,
-    meta: {
-      mode,
-      targetNum: target.num,
-      target,
-      targetPocketId: pocketId,
-firstHitNum: sim.firstHitNum,
-frames: simFrames,
-      score
-    }
-  };
-}
-/* =========================
    SAFE KICK CONTACT
    Khi không ăn được bi, AI tìm cú A băng chạm đúng bi mục tiêu
    ========================= */
@@ -1114,6 +960,7 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
   let blackPottedBad = false;
   let targetPocketId = null;
   let frames = 0;
+  const onHitFirst = hitNum => { if(firstHitNum === null) firstHitNum = hitNum; };
 
   const currentTarget = getCurrentTarget("ai");
   const blackIsLegal = currentTarget === "black";
@@ -1134,13 +981,13 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
 
     const steps = AI_clamp(
       Math.ceil(maxSpeed / (BALL_R * 0.22)),
-      6,
+      2,
       24
     );
 
     for(let s = 0; s < steps; s++){
       for(const b of simBalls){
-        if(!b.active) continue;
+        if(!b.active || ballIsResting(b)) continue;
 
         clothStep(b, 1 / steps);
         AI_limitSimBallSpeed(b);
@@ -1176,14 +1023,7 @@ function AI_simulateLegalContactShot(dir, power, targetNum){
         }
       }
 
-      AI_simHandleCollisionsLegal(
-        simBalls,
-        hitNum => {
-          if(firstHitNum === null){
-            firstHitNum = hitNum;
-          }
-        }
-      );
+      AI_simHandleCollisionsLegal(simBalls, onHitFirst);
 
       for(const b of simBalls){
         if(!b.active) continue;
@@ -1314,26 +1154,22 @@ function AI_simHandleRailTrack(b){
   let hit = false;
 
   if(b.x < left && !movingToLeftPocket){
-    b.x = left;
-    cushionBounce(b, 1, 0);
+    bounceOffPlane(b, 1, 0, left - b.x);
     hit = true;
   }
 
   if(b.x > right && !movingToRightPocket){
-    b.x = right;
-    cushionBounce(b, -1, 0);
+    bounceOffPlane(b, -1, 0, b.x - right);
     hit = true;
   }
 
   if(b.y < top && !movingToTopPocket){
-    b.y = top;
-    cushionBounce(b, 0, 1);
+    bounceOffPlane(b, 0, 1, top - b.y);
     hit = true;
   }
 
   if(b.y > bottom && !movingToBottomPocket){
-    b.y = bottom;
-    cushionBounce(b, 0, -1);
+    bounceOffPlane(b, 0, -1, b.y - bottom);
     hit = true;
   }
 
@@ -1530,6 +1366,7 @@ function AI_simulateShot(dir, power, targetNum){
   let targetPotted = false;
   let targetPocketId = null;
   let frames = 0;
+  const onHitFirst = hitNum => { if(firstHitNum === null) firstHitNum = hitNum; };
 
   for(frames = 0; frames < AI_ENGINE.simFrameLimit; frames++){
     let maxSpeed = 0;
@@ -1549,13 +1386,13 @@ function AI_simulateShot(dir, power, targetNum){
 
     const steps = AI_clamp(
       Math.ceil(maxSpeed / (BALL_R * 0.22)),
-      6,
+      2,
       24
     );
 
     for(let s = 0; s < steps; s++){
       for(const b of simBalls){
-        if(!b.active) continue;
+        if(!b.active || ballIsResting(b)) continue;
 
         clothStep(b, 1 / steps);
 
@@ -1578,14 +1415,7 @@ function AI_simulateShot(dir, power, targetNum){
 }
       }
 
-      AI_simHandleCollisions(
-        simBalls,
-        hitNum => {
-          if(firstHitNum === null){
-            firstHitNum = hitNum;
-          }
-        }
-      );
+      AI_simHandleCollisions(simBalls, onHitFirst);
 
       for(const b of simBalls){
         if(!b.active) continue;
@@ -1711,23 +1541,19 @@ function AI_simHandleRail(b){
   const movingToRightPocket = openLeftRight && b.vx > 0.15;
 
   if(b.x < left && !movingToLeftPocket){
-    b.x = left;
-    cushionBounce(b, 1, 0);
+    bounceOffPlane(b, 1, 0, left - b.x);
   }
 
   if(b.x > right && !movingToRightPocket){
-    b.x = right;
-    cushionBounce(b, -1, 0);
+    bounceOffPlane(b, -1, 0, b.x - right);
   }
 
   if(b.y < top && !movingToTopPocket){
-    b.y = top;
-    cushionBounce(b, 0, 1);
+    bounceOffPlane(b, 0, 1, top - b.y);
   }
 
   if(b.y > bottom && !movingToBottomPocket){
-    b.y = bottom;
-    cushionBounce(b, 0, -1);
+    bounceOffPlane(b, 0, -1, b.y - bottom);
   }
 
   const safeLeft = table.x - BALL_R * 2;
