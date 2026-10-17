@@ -64,7 +64,8 @@
     cotuong: ['curtain', '#450a0a', '#991b1b', '#fde68a'],
     gheptranh: ['tiles', '#312e81', '#4f46e5', '#e0e7ff'],
     covua: ['curtain', '#0b1220', '#1e3a5f', '#5cc8ff'],
-    stickman: ['diagonal', '#101114', '#2378ff', '#ef3f54']
+    stickman: ['diagonal', '#101114', '#2378ff', '#ef3f54'],
+    thamtubayes: ['iris', '#0f2a47', '#1e4a7a', '#ffd45e']
   };
   var t = THEMES[gameId] || ['iris', '#0f172a', '#1e293b', '#93c5fd'];
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
