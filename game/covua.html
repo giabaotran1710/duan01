@@ -184,6 +184,10 @@ button{font:inherit}
 .ana-move .am-head{font-size:13px}
 .ana-move p{margin:7px 0 0;color:#d6e4f2;font-size:12.5px;line-height:1.5}
 .ana-move .am-line{margin-top:7px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.3);font:12px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:#bfe6ff;overflow-wrap:anywhere}
+.ana-move .am-key{display:flex;align-items:center;gap:7px;margin-top:7px;font-size:12px;color:var(--muted)}
+.ana-move .am-key i{flex:none;width:22px;height:6px;border-radius:3px}
+.ana-move .am-key .ak-red{background:#e5483c}
+.ana-move .am-key .ak-green{background:#4caf3a}
 .ana-move .am-line span{display:block;margin-bottom:2px;font:800 10px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .ana-move .tip{display:block;color:var(--muted);font-size:12.5px}
 .ana-move .better{display:block;margin-top:2px;color:#a8e07a;font-weight:700;font-size:12.5px}
@@ -333,7 +337,8 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
         <div class="pieces" id="pieces"></div>
         <svg class="arrows" id="arrows" viewBox="0 0 800 800" aria-hidden="true">
           <defs><marker id="ah" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#1f7ae0"/></marker>
-            <marker id="ahg" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4caf3a"/></marker></defs>
+            <marker id="ahg" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#4caf3a"/></marker>
+            <marker id="ahr" viewBox="0 0 10 10" refX="5" refY="5" markerWidth="2.6" markerHeight="2.6" orient="auto-start-reverse"><path d="M0 0L10 5L0 10z" fill="#e5483c"/></marker></defs>
           <g id="arrowLayer"></g>
         </svg>
         <div class="banner" id="banner"></div>
@@ -889,6 +894,14 @@ function ReviewCore(){
     return f;
   }
 
+  // Mối đe doạ sau nước thứ i: nước đáp tốt nhất của đối thủ (mũi tên đỏ). Luôn có với nước thiếu chính xác/sai lầm/ngớ ngẩn;
+  // với nước khác chỉ khi lời đáp ăn quân hoặc chiếu (để không rối mắt vì những nước đáp êm).
+  function threat(meta, P, i, kind, lang){
+    const b = P[i+1]; if(!b || b.term || !b.best) return null;
+    const rf = moveFacts(meta[i+1].fen, b.best, lang); if(!rf) return null;
+    return (kind==='inaccuracy' || kind==='mistake' || kind==='blunder' || rf.cap || rf.check || rf.mate) ? rf : null;
+  }
+
   // Dữ kiện để giải thích nước thứ i. Điểm ở dạng "góc nhìn người đi nước này" (dương = có lợi cho họ).
   function explain(moves, meta, P, i, lang, r){
     const a = P[i], b = P[i+1]; if(!a || !b) return null;
@@ -901,6 +914,7 @@ function ReviewCore(){
             : { cp:-b.cp, mate:(b.mate===null||b.mate===undefined) ? null : -b.mate };
     f.line = lineInfo(fen, [moves[i]].concat(b.term ? [] : (b.pv||[])), 8, lang);
     f.reply = (!b.term && b.pv && b.pv.length) ? moveFacts(meta[i+1].fen, b.pv[0], lang) : null;
+    f.threat = threat(meta, P, i, f.kind, lang);
     if(a.best && a.best!==moves[i]){
       f.best = moveFacts(fen, a.best, lang);
       const pv = a.pv && a.pv[0]===a.best ? a.pv : [a.best].concat((a.pv||[]).slice(1));
@@ -959,7 +973,7 @@ function ReviewCore(){
     const harm = xs.length / xs.reduce((s,x)=>s+1/Math.max(1,x),0);
     return (mean+harm)/2;
   }
-  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, lineInfo, moveFacts, explain, classify, moveAccuracy, gameAccuracy };
+  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, lineInfo, moveFacts, threat, explain, classify, moveAccuracy, gameAccuracy };
 }
 // Lời giải thích cụ thể bằng tiếng Việt cho từng nước (dựa trên dữ kiện của ReviewCore.explain)
 function ExplainVi(){
@@ -1080,7 +1094,14 @@ function ExplainVi(){
       default:
         if(gain) P.push(gain);
     }
-    return { paras:P, lines:L };
+    // Chú giải mũi tên trên bàn cờ
+    const K = [];
+    if(f.threat){
+      const t = f.threat;
+      K.push({ color:'red', text:`Mũi tên đỏ — mối đe doạ của ${opp}: ${lc(moveDesc(t))} (${t.san}).` });
+    }
+    if(f.best && (f.kind==='inaccuracy' || f.kind==='mistake' || f.kind==='miss' || f.kind==='blunder')) K.push({ color:'green', text:`Mũi tên xanh — nước tốt hơn: ${f.best.san}.` });
+    return { paras:P, lines:L, keys:K };
   }
   return { build, PN };
 }
@@ -1318,6 +1339,9 @@ function ExplainVi(){
       el.style.left = ((col+1)*12.5)+'%'; el.style.top = (row*12.5)+'%';
       badges.appendChild(el);
       if(ana.open && r.best && WORSE.has(r.kind)) arrows.push({ uci:r.best, color:'#4caf3a', marker:'ahg' });
+      // mũi tên đỏ: mối đe doạ (nước đáp tốt nhất của đối thủ)
+      const th = ana.open ? RV.threat(ana.meta, ana.P, ply-1, r.kind, settings.lang) : null;
+      if(th) arrows.push({ uci:th.uci, color:'#e5483c', marker:'ahr' });
     }
     drawArrows(arrows);
   }
@@ -1933,7 +1957,8 @@ function ExplainVi(){
       // Lời giải thích cụ thể: quân nào đi/ăn, hy sinh gì, lời đáp của đối thủ, chuỗi nước chính xác và kết quả
       let ex = null;
       try { const f = RV.explain(ana.moves, ana.meta, ana.P, k, settings.lang, r); if(f) ex = XV.build(f, { human:game.human, opening:openingAt(k+1) }); } catch(e) {}
-      if(ex) html += ex.paras.map(t => `<p>${t}</p>`).join('') + ex.lines.map(l => `<div class="am-line"><span>${l.label}</span>${l.text}</div>`).join('');
+      if(ex) html += ex.paras.map(t => `<p>${t}</p>`).join('') + ex.lines.map(l => `<div class="am-line"><span>${l.label}</span>${l.text}</div>`).join('')
+        + ex.keys.map(c => `<div class="am-key"><i class="ak-${c.color}"></i>${c.text}</div>`).join('');
       else html += `<span class="tip">${info.tip}</span>`;
     }
     $('anaMove').innerHTML = html;
