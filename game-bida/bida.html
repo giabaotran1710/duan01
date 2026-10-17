@@ -1793,8 +1793,6 @@ const SIDE_MOUTH_HALF = SIDE_MOUTH * 0.5;
 // Bán kính mép cong hai bên miệng lỗ
 const POCKET_JAW_R = 14;
 const CUSHION_THICKNESS = 17; // phải khớp với độ dày mép xanh đang vẽ
-const RAIL_BOUNCE = 0.84;
-const RAIL_SIDE_FRICTION = 0.985;
 // Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
 // Vật lý riêng cho lỗ góc - KHÔNG ảnh hưởng hình vẽ
 // Đã giảm hitbox để bi không bị "hút ảo" khi chỉ lướt gần lỗ
@@ -1983,204 +1981,285 @@ const RULER_KNOB_SMOOTH = 0.22;
 
 let shotLocked = false;
 let spin = {x:0, y:0}; 
-let activeSpin = {x:0, y:0, life:0};
-const SPIN_PHYS = {
-  // Culê / đề-lùi khi bi cái còn đang chạy trên nỉ
-  clothTop: 0.030,
-  clothBack: 0.042,
+/* =========================
+   VẬT LÝ BI-A — dùng chung cho bàn thật, đường dự đoán và AI
+   Đơn vị: px và "khung hình" chuẩn 60 Hz (vận tốc px/khung, gia tốc px/khung²).
+   Bi Ø57,15 mm được vẽ bằng 2·BALL_R px ⇒ 1 px ≈ 1,36 mm.
 
-  // Áp phê ngang trên mặt bàn thật ra rất ít làm bi cong
-  sideDrift: 0.002,
+   Mỗi bi có vận tốc v = (vx, vy) và xoáy:
+   - r = (rx, ry): "vận tốc lăn" của xoáy quanh trục nằm ngang (rx = R·ωy, ry = −R·ωx).
+     Bi lăn tròn khi r = v. Culê (thuận): r cùng chiều v; retro (nghịch): r ngược chiều v.
+   - sz = R·ωz: áp phê (xoáy quanh trục đứng). Áp phê phải cho sz < 0.
 
-  // Hao xoáy theo thời gian
-  decay: 0.987,
+   Trên nỉ, điểm tiếp xúc trượt với vận tốc u = v − r:
+   - Trượt: a = −μt·g·û và dr/dt = −(5/2)·a (I = 2/5·m·R²) ⇒ |u| giảm đều, hết trượt sau
+     t = 2|u₀|/(7·μt·g); khi đó v = 5/7·v₀ + 2/7·r₀ (bi đứng yên mà còn xoáy: chạy 2/7·r₀).
+   - Lăn: a = −μl·g·v̂ và r = v.
+   - Áp phê không làm bi cong trên nỉ (cơ đánh ngang), chỉ hao dần; tác dụng khi chạm băng/bi.
+   ========================= */
+const PHYS = (() => {
+  const PX_PER_MM = BALL_R / 28.575;
+  const G = 9810 * PX_PER_MM / 3600;   // g theo px/khung² (≈ 2,0)
 
-  // Sau khi bi cái chạm bi mục tiêu
-  ballHitFollow: 1.18, // culê
-  ballHitDraw: 1.55,   // đề-lùi
-  ballHitSide: 0.76,   // áp phê trái/phải sau va chạm
-
-  // Khi chạm băng
-  railSide: 1.35,
-  railTop: 0.18,
-  railDecayX: 0.58,
-  railDecayY: 0.78,
-
-  minSpeed: 0.18
-};
-
-function decaySpinState(s, amount = 1){
-  const k = Math.pow(SPIN_PHYS.decay, amount);
-
-  s.x *= k;
-  s.y *= k;
-  s.life = Math.max(0, s.life - amount);
-
-  if(s.life <= 0 || (Math.abs(s.x) < 0.015 && Math.abs(s.y) < 0.015)){
-    s.x = 0;
-    s.y = 0;
-    s.life = 0;
-  }
-}
-
-function applyCueSpinOnCloth(b, steps = 1){
-  if(b !== cueBall) return;
-  if(activeSpin.life <= 0) return;
-
-  const speed = Math.hypot(b.vx, b.vy);
-
-  if(speed < SPIN_PHYS.minSpeed) return;
-
-  const n = norm(b.vx, b.vy);
-  const side = {
-    x:-n.y,
-    y:n.x
+  return {
+    SLIDE_A: 0.20 * G,      // ma sát trượt bi–nỉ μt ≈ 0,2
+    ROLL_A: 0.014 * G,      // ma sát lăn μl (nỉ bàn chơi, đã gồm hao năng lượng khi lăn)
+    SPIN_Z_A: 0.045 * G,    // hao áp phê do ma sát xoay tại điểm tiếp xúc
+    E_BALL: 0.95,           // hệ số phục hồi bi–bi
+    MU_BALL: 0.06,          // ma sát bi–bi: gây "ném" bi khi cắt mỏng hoặc có áp phê
+    MU_RAIL: 0.2,           // ma sát bi–băng
+    RAIL_ROLL_KEEP: 0.25,   // phần xoáy dọc hướng vào băng còn lại (điểm chạm băng cao hơn tâm bi)
+    TIP_MAX: 0.5,           // đầu cơ chạm xa tâm tối đa 0,5·R (xa hơn sẽ trượt cơ)
+    STOP_V: 0.05            // nhỏ hơn mức này coi như đứng yên
   };
+})();
 
-  const top = activeSpin.y;
-  const topK = top >= 0 ? SPIN_PHYS.clothTop : SPIN_PHYS.clothBack;
-
-  // Culê đẩy nhẹ theo hướng chạy, đề-lùi hãm hướng chạy
-  b.vx += n.x * top * topK / steps;
-  b.vy += n.y * top * topK / steps;
-
-  // Áp phê ngang chỉ làm lệch rất nhẹ trên mặt bàn
-  b.vx += side.x * activeSpin.x * SPIN_PHYS.sideDrift / steps;
-  b.vy += side.y * activeSpin.x * SPIN_PHYS.sideDrift / steps;
-
-  decaySpinState(activeSpin, 1 / steps);
+// Tốc độ bi cái theo lực 0..1 (≈ 0,3 m/s … 8,2 m/s như cú phá bi thật).
+// Đường cong lũy thừa giúp cú nhẹ dễ điều bi; tối đa = MAX_BALL_SPEED.
+function cueSpeedForPower(power){
+  return 4 + 96 * Math.pow(clamp(power, 0, 1), 1.5);
 }
 
-function applyCueSpinAfterBallHit(cue, hitNx, hitNy){
-  if(activeSpin.life <= 0) return;
-
-  const tx = -hitNy;
-  const ty = hitNx;
-
-  const follow = Math.max(0, activeSpin.y);
-  const draw = Math.max(0, -activeSpin.y);
-
-  // Culê: bi cái đi tiếp theo hướng bi mục tiêu
-  cue.vx += hitNx * follow * SPIN_PHYS.ballHitFollow;
-  cue.vy += hitNy * follow * SPIN_PHYS.ballHitFollow;
-
-  // Đề-lùi: bi cái kéo ngược lại
-  cue.vx -= hitNx * draw * SPIN_PHYS.ballHitDraw;
-  cue.vy -= hitNy * draw * SPIN_PHYS.ballHitDraw;
-
-  // Áp phê ngang: lệch theo tiếp tuyến sau va chạm
-  cue.vx += tx * activeSpin.x * SPIN_PHYS.ballHitSide;
-  cue.vy += ty * activeSpin.x * SPIN_PHYS.ballHitSide;
-
-  activeSpin.y *= 0.44;
-  activeSpin.x *= 0.62;
-  activeSpin.life = Math.max(activeSpin.life, 38);
-
-  limitBallSpeed(cue);
+// Hệ số phục hồi của băng: bi lao vào càng nhanh thì băng hấp thụ càng nhiều
+function cushionRestitution(vIn){
+  return clamp(0.86 - vIn * 0.0035, 0.62, 0.86);
 }
 
-function applyRailSpinEffect(b, rail){
-  if(b !== cueBall) return;
-  if(activeSpin.life <= 0) return;
+/*
+  Đầu cơ chạm bi cái ở điểm lệch (a, h) so với tâm (shotSpin.x: phải +, shotSpin.y: thuận +), cơ nằm ngang:
+    ω ngang = 5·v·h/(2R²) ⇒ r = 5/2·(h/R)·v   (h = 0,4R là lăn tròn ngay; h = 0 là bi trượt "chết")
+    ω đứng  = 5·v·a/(2R²) ⇒ sz = −5/2·(a/R)·v
+*/
+function strikeCueBall(b, dir, power, shotSpin){
+  const v = cueSpeedForPower(power);
+  let sx = clamp((shotSpin && shotSpin.x) || 0, -1, 1);
+  let sy = clamp((shotSpin && shotSpin.y) || 0, -1, 1);
+  const l = Math.hypot(sx, sy);
 
-  if(rail === "left" || rail === "right"){
-    const sideSign = rail === "left" ? 1 : -1;
-
-    // Áp phê ngang ăn mạnh khi chạm băng
-    b.vy += activeSpin.x * SPIN_PHYS.railSide * sideSign;
-
-    // Culê/đề-lùi ảnh hưởng nhẹ tốc độ bật ra
-    b.vx += Math.sign(b.vx || 1) * activeSpin.y * SPIN_PHYS.railTop;
+  if(l > 1){
+    sx /= l;
+    sy /= l;
   }
 
-  if(rail === "top" || rail === "bottom"){
-    const sideSign = rail === "top" ? -1 : 1;
+  const a = sx * PHYS.TIP_MAX;
+  const h = sy * PHYS.TIP_MAX;
 
-    b.vx += activeSpin.x * SPIN_PHYS.railSide * sideSign;
-    b.vy += Math.sign(b.vy || 1) * activeSpin.y * SPIN_PHYS.railTop;
-  }
-
-  activeSpin.x *= SPIN_PHYS.railDecayX;
-  activeSpin.y *= SPIN_PHYS.railDecayY;
-  activeSpin.life = Math.max(activeSpin.life, 25);
-
-  limitBallSpeed(b);
-}
-  
-  function applyCueSpinOnClothSim(b, simSpin, steps = 1){
-  if(b.num !== 0) return;
-  if(simSpin.life <= 0) return;
-
-  const speed = Math.hypot(b.vx, b.vy);
-
-  if(speed < SPIN_PHYS.minSpeed) return;
-
-  const n = norm(b.vx, b.vy);
-  const side = {
-    x:-n.y,
-    y:n.x
-  };
-
-  const top = simSpin.y;
-  const topK = top >= 0 ? SPIN_PHYS.clothTop : SPIN_PHYS.clothBack;
-
-  b.vx += n.x * top * topK / steps;
-  b.vy += n.y * top * topK / steps;
-
-  b.vx += side.x * simSpin.x * SPIN_PHYS.sideDrift / steps;
-  b.vy += side.y * simSpin.x * SPIN_PHYS.sideDrift / steps;
-
-  decaySpinState(simSpin, 1 / steps);
+  b.vx = dir.x * v;
+  b.vy = dir.y * v;
+  b.rx = dir.x * v * 2.5 * h;
+  b.ry = dir.y * v * 2.5 * h;
+  b.sz = -2.5 * a * v;
 }
 
-function applyCueSpinAfterBallHitSim(cue, hitNx, hitNy, simSpin){
-  if(simSpin.life <= 0) return;
-
-  const tx = -hitNy;
-  const ty = hitNx;
-
-  const follow = Math.max(0, simSpin.y);
-  const draw = Math.max(0, -simSpin.y);
-
-  cue.vx += hitNx * follow * SPIN_PHYS.ballHitFollow;
-  cue.vy += hitNy * follow * SPIN_PHYS.ballHitFollow;
-
-  cue.vx -= hitNx * draw * SPIN_PHYS.ballHitDraw;
-  cue.vy -= hitNy * draw * SPIN_PHYS.ballHitDraw;
-
-  cue.vx += tx * simSpin.x * SPIN_PHYS.ballHitSide;
-  cue.vy += ty * simSpin.x * SPIN_PHYS.ballHitSide;
-
-  simSpin.y *= 0.44;
-  simSpin.x *= 0.62;
-  simSpin.life = Math.max(simSpin.life, 38);
-
-  limitDeveloperSimBallSpeed(cue);
+function stopBall(b){
+  b.vx = 0;
+  b.vy = 0;
+  b.rx = 0;
+  b.ry = 0;
+  b.sz = 0;
 }
 
-function applyRailSpinEffectSim(b, rail, simSpin){
-  if(b.num !== 0) return;
-  if(simSpin.life <= 0) return;
+// Bi còn chạy hoặc còn trượt (bi đứng yên nhưng còn xoáy retro/culê vẫn sẽ chạy tiếp)
+function isBallMoving(b){
+  if(!b.active) return false;
 
-  if(rail === "left" || rail === "right"){
-    const sideSign = rail === "left" ? 1 : -1;
+  return Math.hypot(b.vx, b.vy) > PHYS.STOP_V ||
+    Math.hypot(b.vx - (b.rx || 0), b.vy - (b.ry || 0)) > PHYS.STOP_V;
+}
 
-    b.vy += simSpin.x * SPIN_PHYS.railSide * sideSign;
-    b.vx += Math.sign(b.vx || 1) * simSpin.y * SPIN_PHYS.railTop;
+// Một bước dt (khung hình) trên nỉ: trượt rồi lăn, di chuyển bi, hao áp phê.
+// Tích phân chính xác vì trong mỗi pha gia tốc không đổi.
+function clothStep(b, dt){
+  let rx = b.rx || 0;
+  let ry = b.ry || 0;
+  let t = dt;
+
+  const ux = b.vx - rx;
+  const uy = b.vy - ry;
+  const u = Math.hypot(ux, uy);
+
+  if(u > 1e-6){
+    const tSlide = 2 * u / (7 * PHYS.SLIDE_A);
+    const ts = Math.min(t, tSlide);
+    const ax = -PHYS.SLIDE_A * ux / u;
+    const ay = -PHYS.SLIDE_A * uy / u;
+
+    b.x += b.vx * ts + 0.5 * ax * ts * ts;
+    b.y += b.vy * ts + 0.5 * ay * ts * ts;
+    b.vx += ax * ts;
+    b.vy += ay * ts;
+    rx -= 2.5 * ax * ts;
+    ry -= 2.5 * ay * ts;
+
+    if(ts >= tSlide){
+      rx = b.vx;
+      ry = b.vy;
+    }
+
+    t -= ts;
   }
 
-  if(rail === "top" || rail === "bottom"){
-    const sideSign = rail === "top" ? -1 : 1;
+  if(t > 0){
+    const v = Math.hypot(b.vx, b.vy);
 
-    b.vx += simSpin.x * SPIN_PHYS.railSide * sideSign;
-    b.vy += Math.sign(b.vy || 1) * simSpin.y * SPIN_PHYS.railTop;
+    if(v > 0){
+      const tl = Math.min(t, v / PHYS.ROLL_A);
+      const s = (v - 0.5 * PHYS.ROLL_A * tl) * tl / v;
+      const k = Math.max(0, v - PHYS.ROLL_A * tl) / v;
+
+      b.x += b.vx * s;
+      b.y += b.vy * s;
+      b.vx *= k;
+      b.vy *= k;
+    }
+
+    rx = b.vx;
+    ry = b.vy;
   }
 
-  simSpin.x *= SPIN_PHYS.railDecayX;
-  simSpin.y *= SPIN_PHYS.railDecayY;
-  simSpin.life = Math.max(simSpin.life, 25);
+  b.rx = rx;
+  b.ry = ry;
 
-  limitDeveloperSimBallSpeed(b);
+  const sz = b.sz || 0;
+
+  if(sz){
+    b.sz = Math.sign(sz) * Math.max(0, Math.abs(sz) - PHYS.SPIN_Z_A * dt);
+  }
+}
+
+/*
+  Va chạm hai bi cùng khối lượng; (nx, ny) = vectơ đơn vị từ a sang b. Trả về true nếu có va chạm.
+  - Pháp tuyến: J = (1+e)/2·vₙ. Bi cái đánh thẳng gần như đứng lại nhưng giữ nguyên xoáy,
+    nên culê/retro/bi chết tự xuất hiện khi xoáy kéo bi trên nỉ.
+  - Tiếp tuyến: ma sát bi–bi theo độ trượt tại điểm chạm (gồm cả áp phê) ⇒ bi mục tiêu bị "ném" lệch vài độ;
+    xoáy dọc làm điểm chạm trượt theo phương đứng nên bi lăn bị ném ít hơn bi trượt.
+*/
+function ballImpact(a, b, nx, ny){
+  const vn = (a.vx - b.vx) * nx + (a.vy - b.vy) * ny;
+
+  if(vn <= 0) return false;
+
+  const jn = (1 + PHYS.E_BALL) * 0.5 * vn;
+
+  a.vx -= jn * nx;
+  a.vy -= jn * ny;
+  b.vx += jn * nx;
+  b.vy += jn * ny;
+
+  const tx = -ny;
+  const ty = nx;
+  const sT = (a.vx - b.vx) * tx + (a.vy - b.vy) * ty + (a.sz || 0) + (b.sz || 0);
+  const sZ = -((a.rx || 0) * nx + (a.ry || 0) * ny) - ((b.rx || 0) * nx + (b.ry || 0) * ny);
+  const slip = Math.hypot(sT, sZ);
+
+  if(slip > 1e-6){
+    const jt = -Math.min(PHYS.MU_BALL * jn, slip / 7) * sT / slip;
+
+    a.vx += jt * tx;
+    a.vy += jt * ty;
+    b.vx -= jt * tx;
+    b.vy -= jt * ty;
+    a.sz = (a.sz || 0) + 2.5 * jt;
+    b.sz = (b.sz || 0) + 2.5 * jt;
+  }
+
+  return true;
+}
+
+/*
+  Bi chạm băng hoặc má lỗ; (nx, ny) = pháp tuyến hướng vào lòng bàn. Trả về true nếu bi đang lao vào.
+  - Pháp tuyến: bật lại với hệ số e(v).
+  - Ma sát băng theo độ trượt tại điểm chạm s = v·t − sz ⇒ áp phê phải làm bi bật lệch sang phải,
+    áp phê thuận chiều chạy dọc băng làm góc bật mở rộng, nghịch chiều làm góc hẹp lại.
+  - Phần lớn xoáy dọc hướng vào băng bị hấp thụ.
+*/
+/*
+  Giải va chạm giữa các bi trong danh sách (bàn thật, dự đoán, AI dùng chung).
+  - Lượt đầu: chỉ các cặp đang chạm/chồng nhau (2R), nên góc cắt chính xác.
+  - Các lượt sau: xung lực truyền tiếp sang bi gần như chạm (cách < CONTACT_SKIN) với bi vừa bị va,
+    mô phỏng va chạm đồng thời trong cụm bi sát nhau (khung phá bi) thay vì từng cặp rời rạc.
+  onImpact(a, b) được gọi cho mỗi cặp có va chạm.
+*/
+const CONTACT_SKIN = 2;
+
+function resolveBallContacts(list, onImpact){
+  const minD = BALL_R * 2;
+  let hot = null;
+
+  for(let pass = 0; pass < 4; pass++){
+    const next = new Set();
+    const lim = pass ? minD + CONTACT_SKIN : minD;
+
+    for(let i = 0; i < list.length; i++){
+      const a = list[i];
+      if(!a.active) continue;
+
+      for(let j = i + 1; j < list.length; j++){
+        const b = list[j];
+        if(!b.active) continue;
+        if(hot && !hot.has(a) && !hot.has(b)) continue;
+
+        const dx = b.x - a.x;
+        const dy = b.y - a.y;
+        const d = Math.hypot(dx, dy);
+
+        if(!(d > 0 && d < lim)) continue;
+
+        const nx = dx / d;
+        const ny = dy / d;
+
+        if(d < minD){
+          const overlap = minD - d;
+
+          a.x -= nx * overlap / 2;
+          a.y -= ny * overlap / 2;
+          b.x += nx * overlap / 2;
+          b.y += ny * overlap / 2;
+        }
+
+        if(ballImpact(a, b, nx, ny)){
+          next.add(a);
+          next.add(b);
+          if(onImpact) onImpact(a, b);
+        }
+      }
+    }
+
+    if(!next.size) break;
+    hot = next;
+  }
+}
+
+function cushionBounce(b, nx, ny){
+  const vn = b.vx * nx + b.vy * ny;
+
+  if(vn >= 0) return false;
+
+  const jn = -(1 + cushionRestitution(-vn)) * vn;
+
+  b.vx += jn * nx;
+  b.vy += jn * ny;
+
+  const tx = -ny;
+  const ty = nx;
+  const s = b.vx * tx + b.vy * ty - (b.sz || 0);
+
+  if(Math.abs(s) > 1e-6){
+    const jt = -Math.sign(s) * Math.min(PHYS.MU_RAIL * jn, Math.abs(s) / 3.5);
+
+    b.vx += jt * tx;
+    b.vy += jt * ty;
+    b.sz = (b.sz || 0) - 2.5 * jt;
+  }
+
+  const rn = (b.rx || 0) * nx + (b.ry || 0) * ny;
+
+  if(rn < 0){
+    b.rx -= rn * nx * (1 - PHYS.RAIL_ROLL_KEEP);
+    b.ry -= rn * ny * (1 - PHYS.RAIL_ROLL_KEEP);
+  }
+
+  return true;
 }
 
 let groups = {
@@ -2507,7 +2586,7 @@ function norm(x,y){
   return {x:x/l, y:y/l};
 }
   
-const MAX_BALL_SPEED = 72;
+const MAX_BALL_SPEED = 100;
 
 function limitBallSpeed(b, max = MAX_BALL_SPEED){
   const sp = Math.hypot(b.vx, b.vy);
@@ -2744,6 +2823,9 @@ function moveCueBallInFullTable(p){
   }
 
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   aimWorld = {
@@ -2761,6 +2843,9 @@ function startBallInHand(owner, reasonText){
   cueBall.active = true;
   cueBall.potted = false;
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   const z = getFullCueZone();
@@ -2838,6 +2923,9 @@ function moveCueBallBeforeBreak(p){
   cueBall.x = safe.x;
   cueBall.y = safe.y;
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   // Cập nhật lại hướng ngắm mặc định theo vị trí mới của bi cái
@@ -2865,19 +2953,12 @@ function setMessage(text, sticky = false){
 }
 
 function isMoving(){
-  return balls.some(b => b.active && Math.hypot(b.vx,b.vy) > 0.16);
+  return balls.some(isBallMoving);
 }
 
 function stopTinyMotion(){
   for(const b of balls){
-    if(!b.active) continue;
-
-    const sp = Math.hypot(b.vx, b.vy);
-
-    if(sp < 0.22){
-      b.vx = 0;
-      b.vy = 0;
-    }
+    if(b.active && !isBallMoving(b)) stopBall(b);
   }
 }
 
@@ -2925,6 +3006,9 @@ class Ball{
     this.y = y;
     this.vx = 0;
     this.vy = 0;
+    this.rx = 0;
+    this.ry = 0;
+    this.sz = 0;
     this.num = num;
     this.active = true;
     this.potted = false;
@@ -3016,7 +3100,6 @@ isAiming = false;
 aimPower = 0;
 powerLockedDir = null;
 resetSpinToDefault();
-activeSpin = {x:0,y:0,life:0};
 
 rackBalls();
 
@@ -3190,6 +3273,9 @@ function startAICueBallDragThenShoot(mode = "break"){
   cueBall.active = true;
   cueBall.potted = false;
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   aiThinking = true;
@@ -3211,6 +3297,9 @@ function updateAICueBallMove(){
   cueBall.x = aiCueMove.sx + (aiCueMove.tx - aiCueMove.sx) * t;
   cueBall.y = aiCueMove.sy + (aiCueMove.ty - aiCueMove.sy) * t;
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   if(rawT >= 1){
@@ -3887,23 +3976,19 @@ currentShot = {
   railHit:false
 };
 
-  const force = 14 + power * 66;
-
-  cueBall.vx = dir.x * force;
-  cueBall.vy = dir.y * force;
-
-  activeSpin.x = clamp(shotSpin.x, -1, 1);
-activeSpin.y = clamp(shotSpin.y, -1, 1);
-
-// Cú càng mạnh thì xoáy còn tác dụng lâu hơn
-activeSpin.life = Math.round(75 + power * 95);
+  // Lực + điểm chạm cơ ⇒ vận tốc và xoáy ban đầu của bi cái
+  strikeCueBall(cueBall, dir, power, shotSpin);
 }
 
 /* =========================
    PHYSICS
    ========================= */
 
-function updatePhysics(){
+// Phần khung hình (đơn vị 60 Hz) bàn bi đã chạy trong lần cập nhật hiện tại
+let physFrameUsed = 0;
+
+// dt: số khung hình 60 Hz đã trôi qua (theo đồng hồ thật), để tốc độ bi giống nhau ở mọi tần số màn hình
+function updatePhysics(dt = 1){
   if(gameOver) return;
 
   let maxSpeed = 0;
@@ -3912,44 +3997,33 @@ function updatePhysics(){
     if(!b.active) continue;
 
     limitBallSpeed(b);
-    maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
+    maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy), Math.hypot(b.rx, b.ry));
   }
 
-  // Tăng sub-step để tránh bi xuyên mép/lỗ khi tốc độ cao
-  const steps = clamp(Math.ceil(maxSpeed / (BALL_R * 0.22)), 6, 24);
+  // Chia nhỏ bước để mỗi bước bi đi không quá ~0,22·R (tránh xuyên mép/lỗ khi nhanh)
+  const steps = clamp(Math.ceil(maxSpeed * dt / (BALL_R * 0.22)), Math.max(1, Math.ceil(6 * dt)), 64);
+  const h = dt / steps;
 
   for(let s = 0; s < steps; s++){
+    physFrameUsed = (s + 1) * h;
+
     for(const b of balls){
       if(!b.active) continue;
 
-      const speed = Math.hypot(b.vx, b.vy);
-
-      if(b === cueBall){
-  applyCueSpinOnCloth(b, steps);
-}
+      clothStep(b, h);
       limitBallSpeed(b);
 
-      const stepDX = b.vx / steps;
-      const stepDY = b.vy / steps;
+      // Hình bi quay theo xoáy thật (bi trượt "chết" không quay, bi retro quay ngược chiều chạy)
+      updateBallRollingVisual(b, b.rx * h, b.ry * h);
+      b.faceRot += b.sz * h / BALL_R;
 
-      b.x += stepDX;
-      b.y += stepDY;
+      handlePocket(b);
 
-      updateBallRollingVisual(b, stepDX, stepDY);
-
-      const friction = Math.pow(0.987, 1 / steps);
-      b.vx *= friction;
-      b.vy *= friction;
-
-      if(Math.abs(b.vx) < 0.015) b.vx = 0;
-      if(Math.abs(b.vy) < 0.015) b.vy = 0;
-handlePocket(b);
-
-if(b.active){
-  applyCornerPocketJaws(b, true);
-  applySidePocketMiddleJaws(b);
-  handleRail(b);
-}
+      if(b.active){
+        applyCornerPocketJaws(b, true);
+        applySidePocketMiddleJaws(b);
+        handleRail(b);
+      }
     }
 
     handleCollisions();
@@ -3960,12 +4034,12 @@ if(b.active){
 
       handlePocket(b);
 
-if(b.active){
-  applyCornerPocketJaws(b, true);
-  applySidePocketMiddleJaws(b);
-  handleRail(b);
-  limitBallSpeed(b);
-}
+      if(b.active){
+        applyCornerPocketJaws(b, true);
+        applySidePocketMiddleJaws(b);
+        handleRail(b);
+        limitBallSpeed(b);
+      }
     }
   }
 
@@ -3975,7 +4049,7 @@ if(b.active){
     finishShot();
   }
 }
-  
+
 function collideCircleObstacle(b, cx, cy, r){
   const dx = b.x - cx;
   const dy = b.y - cy;
@@ -3990,13 +4064,7 @@ function collideCircleObstacle(b, cx, cy, r){
     b.x += nx * overlap;
     b.y += ny * overlap;
 
-    const vn = b.vx * nx + b.vy * ny;
-
-    if(vn < 0){
-      const bounce = 0.78;
-      b.vx -= vn * bounce * nx;
-      b.vy -= vn * bounce * ny;
-    }
+    cushionBounce(b, nx, ny);
   }
 }
   
@@ -4035,18 +4103,7 @@ function collideCircleObstacle(b, cx, cy, r){
   b.x += nx * overlap;
   b.y += ny * overlap;
 
-  const vn = b.vx * nx + b.vy * ny;
-
-  if(vn < 0){
-    const bounce = 0.82;
-
-    b.vx -= (1 + bounce) * vn * nx;
-    b.vy -= (1 + bounce) * vn * ny;
-
-    // Ma sát nhẹ theo mép để bi không bật quá ảo
-    b.vx *= 0.992;
-    b.vy *= 0.992;
-  }
+  cushionBounce(b, nx, ny);
 
   return true;
 }
@@ -4320,36 +4377,28 @@ function handleRail(b){
   // Mép trái
   if(b.x < left && !movingToLeftPocket){
     b.x = left;
-    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
-    applyRailSpinEffect(b, "left");
+    cushionBounce(b, 1, 0);
     markRailHit(b);
   }
 
   // Mép phải
   if(b.x > right && !movingToRightPocket){
     b.x = right;
-    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
-    applyRailSpinEffect(b, "right");
+    cushionBounce(b, -1, 0);
     markRailHit(b);
   }
 
   // Mép trên
   if(b.y < top && !movingToTopPocket){
     b.y = top;
-    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
-    applyRailSpinEffect(b, "top");
+    cushionBounce(b, 0, 1);
     markRailHit(b);
   }
 
   // Mép dưới
   if(b.y > bottom && !movingToBottomPocket){
     b.y = bottom;
-    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
-    applyRailSpinEffect(b, "bottom");
+    cushionBounce(b, 0, -1);
     markRailHit(b);
   }
 
@@ -4520,13 +4569,12 @@ function handlePocket(b){
       continue;
     }
 
-    b.active = false;
-    b.vx = 0;
-    b.vy = 0;
-    b.potted = true;
-
-    // Animation hút/rơi xuống lỗ trước, sau đó mới chạy qua khay
+    // Hoạt cảnh rơi nhận vận tốc lúc lọt lỗ để bi chạy tiếp vào lòng lỗ, không khựng lại
     startPocketSinkAnimation(b, p);
+
+    b.active = false;
+    stopBall(b);
+    b.potted = true;
 
     if(b === cueBall){
       if(currentShot) currentShot.scratch = true;
@@ -4542,70 +4590,19 @@ function handlePocket(b){
 }
   
 function handleCollisions(){
-  for(let i=0; i<balls.length; i++){
-    for(let j=i+1; j<balls.length; j++){
-      const a = balls[i];
-      const b = balls[j];
-
-      if(!a.active || !b.active) continue;
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.hypot(dx,dy);
-      const minD = BALL_R * 2;
-
-      if(d > 0 && d < minD){
-        const nx = dx / d;
-        const ny = dy / d;
-        const overlap = minD - d;
-
-        a.x -= nx * overlap / 2;
-        a.y -= ny * overlap / 2;
-        b.x += nx * overlap / 2;
-        b.y += ny * overlap / 2;
-
-        const rvx = a.vx - b.vx;
-        const rvy = a.vy - b.vy;
-        const impact = rvx * nx + rvy * ny;
-
-        if(impact > 0){
-          const restitution = 0.94;
-          const impulse = impact * restitution;
-
-          a.vx -= impulse * nx;
-          a.vy -= impulse * ny;
-          b.vx += impulse * nx;
-          b.vy += impulse * ny;
-
-          const tx = -ny;
-          const ty = nx;
-
-          // Ghi nhận bi đầu tiên bi cái chạm.
-          if(currentShot && !currentShot.firstHit){
-            if(a === cueBall && b.num !== 0){
-              currentShot.firstHit = b;
-              currentShot.noHit = false;
-            }
-            if(b === cueBall && a.num !== 0){
-              currentShot.firstHit = a;
-              currentShot.noHit = false;
-            }
-          }
-
-          // Áp phê sau va chạm: mô phỏng điều bi cái.
-          if(a === cueBall || b === cueBall){
-  const cue = a === cueBall ? a : b;
-
-  // Vector từ bi cái đi tới bi mục tiêu
-  const hitNx = a === cueBall ? nx : -nx;
-  const hitNy = a === cueBall ? ny : -ny;
-
-  applyCueSpinAfterBallHit(cue, hitNx, hitNy);
-}
-        }
+  resolveBallContacts(balls, (a, b) => {
+    // Ghi nhận bi đầu tiên bi cái chạm.
+    if(currentShot && !currentShot.firstHit){
+      if(a === cueBall && b.num !== 0){
+        currentShot.firstHit = b;
+        currentShot.noHit = false;
+      }
+      if(b === cueBall && a.num !== 0){
+        currentShot.firstHit = a;
+        currentShot.noHit = false;
       }
     }
-  }
+  });
 }
 
 /* =========================
@@ -4636,8 +4633,6 @@ function isTargetBallPottedForCombo(side){
   return potted.some(b => b.type === target);
 }
 function finishShot(){
-  activeSpin.life = 0;
-
   if(!currentShot) return;
 
   const side = currentShot.side;
@@ -4829,6 +4824,9 @@ function placeCueBall(){
   cueBall.x = table.x + table.w * 0.25;
   cueBall.y = table.y + table.h * 0.5;
   cueBall.vx = 0;
+  cueBall.rx = 0;
+  cueBall.ry = 0;
+  cueBall.sz = 0;
   cueBall.vy = 0;
 
   // Nếu vị trí có bi khác, đẩy nhẹ lên/xuống để tránh chồng.
@@ -5406,46 +5404,92 @@ function getTraySlot(index){
     y: POTTED_TRAY.y + POTTED_TRAY.h - POTTED_TRAY.paddingBottom - trayBallR - index * TRAY_SLOT_GAP
   };
 }
+/*
+  Bi lọt lỗ: giữ nguyên đà lúc lọt (không dừng khựng), chạy tiếp vào lòng lỗ, chạm thành lỗ thì nảy nhẹ,
+  rồi chìm xuống: thu nhỏ, tối dần và bị miệng lỗ che dần. Mọi chuyển động tính theo dt (khung 60 Hz).
+*/
 function startPocketSinkAnimation(ball, pocket){
   sinkingBalls.push({
     num: ball.num,
     type: ball.type,
-
     x: ball.x,
     y: ball.y,
-
-    sx: ball.x,
-    sy: ball.y,
-
-    tx: pocket.x,
-    ty: pocket.y,
-
+    vx: ball.vx,
+    vy: ball.vy,
     pocket,
-
-    start: performance.now(),
-    duration: 280,
-
+    holeR: pocket.type === "side" ? SIDE_POCKET_R : CORNER_POCKET_R,
+    // phần khung hình bi đã chạy trên bàn trước khi lọt: khung đầu của hoạt cảnh chỉ chạy phần còn lại
+    skip: physFrameUsed,
+    inside: false,
+    depth: 0,
+    age: 0,
     scale: 1,
-    alpha: 1
+    shade: 0,
+    alpha: 1,
+    rollPhase: ball.rollPhase || 0,
+    rollDir: ball.rollDir || 0,
+    faceRot: ball.faceRot || 0
   });
 }
 
-function updateSinkingBalls(){
-  const now = performance.now();
-
+function updateSinkingBalls(frameDt = 1){
   for(let i = sinkingBalls.length - 1; i >= 0; i--){
     const a = sinkingBalls[i];
+    const p = a.pocket;
+    const dt = Math.max(0, frameDt - (a.skip || 0));
 
-    const rawT = clamp((now - a.start) / a.duration, 0, 1);
-    const t = 1 - Math.pow(1 - rawT, 3);
+    a.skip = 0;
+    a.age += dt;
 
-    a.x = a.sx + (a.tx - a.sx) * t;
-    a.y = a.sy + (a.ty - a.sy) * t;
+    // Lòng lỗ hơi trũng: kéo nhẹ về tâm; lưới/thành lỗ hãm đà
+    a.vx += ((p.x - a.x) * 0.03 - a.vx * 0.07) * dt;
+    a.vy += ((p.y - a.y) * 0.03 - a.vy * 0.07) * dt;
 
-    a.scale = 1 - t * 0.66;
-    a.alpha = 1 - t * 0.92;
+    const px = a.x;
+    const py = a.y;
 
-    if(rawT >= 1){
+    a.x += a.vx * dt;
+    a.y += a.vy * dt;
+
+    const move = Math.hypot(a.x - px, a.y - py);
+
+    if(move > 0){
+      a.rollDir = Math.atan2(a.y - py, a.x - px);
+      a.rollPhase += move / BALL_R * 1.35;
+    }
+
+    // Thành lỗ: khi bi đã vào hẳn trong lỗ thì không chạy ra ngoài, nảy lại mất đà
+    const dx = a.x - p.x;
+    const dy = a.y - p.y;
+    const d = Math.hypot(dx, dy) || 0.0001;
+    const wall = Math.max(3, a.holeR - BALL_R * a.scale * 0.62);
+
+    if(d <= wall) a.inside = true;
+
+    if(a.inside && d > wall){
+      const nx = dx / d;
+      const ny = dy / d;
+      const vn = a.vx * nx + a.vy * ny;
+
+      a.x = p.x + nx * wall;
+      a.y = p.y + ny * wall;
+
+      if(vn > 0){
+        a.vx -= 1.35 * vn * nx;
+        a.vy -= 1.35 * vn * ny;
+      }
+    }
+
+    // Tâm bi nằm trên lỗ thì rơi nhanh, còn trên mép thì vừa lăn vào vừa nghiêng xuống
+    a.depth = Math.min(1, a.depth + dt / (d < a.holeR ? 15 : 34));
+
+    const e = a.depth * a.depth * (3 - 2 * a.depth);
+
+    a.scale = 1 - 0.4 * e;
+    a.shade = 0.88 * e;
+    a.alpha = a.depth > 0.82 ? Math.max(0, 1 - (a.depth - 0.82) / 0.18) : 1;
+
+    if(a.depth >= 1 || a.age > 90){
       // Bi cái rơi lỗ thì không đưa vào khay
       if(a.num !== 0){
         startPocketAnimation(
@@ -5471,24 +5515,16 @@ function drawSinkingBalls(){
 }
 
 function drawSinkingBallIcon(a){
+  const p = a.pocket;
+
   ctx.save();
 
-  ctx.globalAlpha = clamp(a.alpha, 0, 1);
-
-  // Bóng tối dưới miệng lỗ
-  ctx.fillStyle = "rgba(0,0,0,.42)";
+  // Miệng lỗ che dần phần bi nằm ngoài lỗ khi bi chìm xuống
   ctx.beginPath();
-  ctx.ellipse(
-    a.x,
-    a.y + BALL_R * 0.34,
-    BALL_R * a.scale * 0.96,
-    BALL_R * a.scale * 0.42,
-    0,
-    0,
-    Math.PI * 2
-  );
-  ctx.fill();
+  ctx.arc(p.x, p.y, a.holeR + (1 - a.depth) * BALL_R * 2.6, 0, Math.PI * 2);
+  ctx.clip();
 
+  ctx.globalAlpha = clamp(a.alpha, 0, 1);
   ctx.translate(a.x, a.y);
   ctx.scale(a.scale, a.scale);
 
@@ -5499,16 +5535,22 @@ function drawSinkingBallIcon(a){
     type: a.type,
     active: true,
     potted: false,
-    rollPhase: 0,
-    rollDir: 0,
+    rollPhase: a.rollPhase,
+    rollDir: a.rollDir,
     faceX: 0,
     faceY: 0,
-    faceRot: 0
+    faceRot: a.faceRot
   });
+
+  // Càng xuống sâu càng tối
+  ctx.fillStyle = `rgba(0,0,0,${a.shade.toFixed(3)})`;
+  ctx.beginPath();
+  ctx.arc(0, 0, BALL_R + 0.5, 0, Math.PI * 2);
+  ctx.fill();
 
   ctx.restore();
 }
-  
+
 function startPocketAnimation(ball, pocket){
   const slotIndex = pottedTrayBalls.length + pocketAnimations.length;
   const slot = getTraySlot(slotIndex);
@@ -5535,7 +5577,7 @@ function startPocketAnimation(ball, pocket){
   });
 }
 
-function updatePocketAnimations(){
+function updatePocketAnimations(dt = 1){
   for(let i = pocketAnimations.length - 1; i >= 0; i--){
     const a = pocketAnimations[i];
 
@@ -5551,14 +5593,14 @@ function updatePocketAnimations(){
       continue;
     }
 
-    a.vy += a.gravity;
-    a.y += a.vy;
+    a.vy += a.gravity * dt;
+    a.y += a.vy * dt;
 
     // Giữ x cố định để bi rơi thẳng đứng
     a.x = a.tx;
 
     // Scale thu nhỏ dần về kích cỡ trong khay
-    a.scale += (POTTED_TRAY.ballScale - a.scale) * 0.08;
+    a.scale += (POTTED_TRAY.ballScale - a.scale) * (1 - Math.pow(0.92, dt));
 
     // Chạm vị trí đích thì nảy nhẹ rồi dừng
     if(a.y >= a.ty){
@@ -6209,6 +6251,9 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
   y:b.y,
   vx:0,
   vy:0,
+  rx:0,
+  ry:0,
+  sz:0,
   active:b.active,
   potted:b.potted,
   devBounces:0
@@ -6234,16 +6279,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
     };
   }
 
-  const force = 14 + power * 66;
-
-  simCue.vx = dir.x * force;
-  simCue.vy = dir.y * force;
-
-  const simSpin = {
-    x: clamp(shotSpin.x || 0, -1, 1),
-    y: clamp(shotSpin.y || 0, -1, 1),
-    life: 120
-  };
+  strikeCueBall(simCue, dir, power, shotSpin);
 
   pushDeveloperPathPoint(cuePath, simCue.x, simCue.y, 1);
 
@@ -6256,10 +6292,10 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
       if(!b.active) continue;
 
       limitDeveloperSimBallSpeed(b);
-      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy));
+      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy), Math.hypot(b.rx, b.ry));
     }
 
-    if(maxSpeed < 0.16 && frame > 8){
+    if(frame > 0 && !simBalls.some(isBallMoving)){
       break;
     }
 
@@ -6273,27 +6309,8 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
       for(const b of simBalls){
         if(!b.active) continue;
 
-        const speed = Math.hypot(b.vx, b.vy);
-
-        if(b.num === 0){
-  applyCueSpinOnClothSim(b, simSpin, steps);
-}
-
+        clothStep(b, 1 / steps);
         limitDeveloperSimBallSpeed(b);
-
-        const stepDX = b.vx / steps;
-        const stepDY = b.vy / steps;
-
-        b.x += stepDX;
-        b.y += stepDY;
-
-        const friction = Math.pow(0.987, 1 / steps);
-
-        b.vx *= friction;
-        b.vy *= friction;
-
-        if(Math.abs(b.vx) < 0.015) b.vx = 0;
-        if(Math.abs(b.vy) < 0.015) b.vy = 0;
 
         const pocket = handleDeveloperSimPocket(b);
 
@@ -6311,7 +6328,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
        if(b.active){
   applyCornerPocketJaws(b, false);
   applySidePocketMiddleJaws(b);
-  handleDeveloperSimRailWithLimit(b, simSpin);
+  handleDeveloperSimRailWithLimit(b);
 }
       }
 
@@ -6329,8 +6346,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
             hitBall.y,
             1
           );
-        },
-        simSpin
+        }
       );
 
       for(const b of simBalls){
@@ -6352,7 +6368,7 @@ function simulateDeveloperPhysicsPrediction(dir, power, shotSpin){
         if(b.active){
   applyCornerPocketJaws(b, false);
   applySidePocketMiddleJaws(b);
-  handleDeveloperSimRailWithLimit(b, simSpin);
+  handleDeveloperSimRailWithLimit(b);
   limitDeveloperSimBallSpeed(b);
 }
       }
@@ -6397,65 +6413,16 @@ function pushDeveloperPathPoint(path, x, y, minGap = 8){
   }
 }
 
-function handleDeveloperSimCollisions(simBalls, onFirstHit, simSpin){
-  for(let i = 0; i < simBalls.length; i++){
-    for(let j = i + 1; j < simBalls.length; j++){
-      const a = simBalls[i];
-      const b = simBalls[j];
-
-      if(!a.active || !b.active) continue;
-
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      const d = Math.hypot(dx, dy);
-      const minD = BALL_R * 2;
-
-      if(d > 0 && d < minD){
-        const nx = dx / d;
-        const ny = dy / d;
-        const overlap = minD - d;
-
-        a.x -= nx * overlap / 2;
-        a.y -= ny * overlap / 2;
-        b.x += nx * overlap / 2;
-        b.y += ny * overlap / 2;
-
-        const rvx = a.vx - b.vx;
-        const rvy = a.vy - b.vy;
-        const impact = rvx * nx + rvy * ny;
-
-        if(impact > 0){
-          if(a.num === 0 && b.num !== 0){
-            onFirstHit(b);
-          }
-
-          if(b.num === 0 && a.num !== 0){
-            onFirstHit(a);
-          }
-
-          const restitution = 0.94;
-          const impulse = impact * restitution;
-
-          a.vx -= impulse * nx;
-          a.vy -= impulse * ny;
-          b.vx += impulse * nx;
-          b.vy += impulse * ny;
-
-          const tx = -ny;
-          const ty = nx;
-
-          if(a.num === 0 || b.num === 0){
-  const cue = a.num === 0 ? a : b;
-
-  const hitNx = a.num === 0 ? nx : -nx;
-  const hitNy = a.num === 0 ? ny : -ny;
-
-  applyCueSpinAfterBallHitSim(cue, hitNx, hitNy, simSpin);
-}
-        }
-      }
+function handleDeveloperSimCollisions(simBalls, onFirstHit){
+  resolveBallContacts(simBalls, (a, b) => {
+    if(a.num === 0 && b.num !== 0){
+      onFirstHit(b);
     }
-  }
+
+    if(b.num === 0 && a.num !== 0){
+      onFirstHit(a);
+    }
+  });
 }
 
 function handleDeveloperSimPocket(b){
@@ -6465,8 +6432,7 @@ function handleDeveloperSimPocket(b){
     }
 
     b.active = false;
-    b.vx = 0;
-    b.vy = 0;
+    stopBall(b);
     b.potted = true;
 
     return p;
@@ -6474,18 +6440,15 @@ function handleDeveloperSimPocket(b){
 
   return null;
 }
-function handleDeveloperSimRailWithLimit(b, simSpin){
+function handleDeveloperSimRailWithLimit(b){
   const rail = handleDeveloperSimRail(b);
 
   if(!rail) return null;
 
-  applyRailSpinEffectSim(b, rail, simSpin);
-
   b.devBounces = (b.devBounces || 0) + 1;
 
   if(b.devBounces >= DEV_MAX_BOUNCES){
-    b.vx = 0;
-    b.vy = 0;
+    stopBall(b);
   }
 
   return rail;
@@ -6507,29 +6470,25 @@ function handleDeveloperSimRail(b){
 
   if(b.x < left && !movingToLeftPocket){
     b.x = left;
-    b.vx = Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 1, 0);
     return "left";
   }
 
   if(b.x > right && !movingToRightPocket){
     b.x = right;
-    b.vx = -Math.abs(b.vx) * RAIL_BOUNCE;
-    b.vy *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, -1, 0);
     return "right";
   }
 
   if(b.y < top && !movingToTopPocket){
     b.y = top;
-    b.vy = Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, 1);
     return "top";
   }
 
   if(b.y > bottom && !movingToBottomPocket){
     b.y = bottom;
-    b.vy = -Math.abs(b.vy) * RAIL_BOUNCE;
-    b.vx *= RAIL_SIDE_FRICTION;
+    cushionBounce(b, 0, -1);
     return "bottom";
   }
 
@@ -7474,7 +7433,14 @@ function hexToRgb(hex){
    LOOP
    ========================= */
 
+let lastLoopTime = null;
+
 function loop(){
+  // Số khung hình 60 Hz đã trôi qua; giới hạn 3 để không "nhảy cóc" khi tab bị ẩn
+  const now = performance.now();
+  const dt = lastLoopTime === null ? 1 : clamp((now - lastLoopTime) / (1000 / 60), 0, 3);
+  lastLoopTime = now;
+
   updateAICueBallMove();
   updateAimRulerSmooth();
   updateAIThinkingCueMotion();
@@ -7483,11 +7449,11 @@ function loop(){
   processDeveloperPowerScanJob();
 
   if(!aiCueMove){
-    updatePhysics();
+    updatePhysics(dt);
   }
 
-  updateSinkingBalls();
-updatePocketAnimations();
+  updateSinkingBalls(dt);
+  updatePocketAnimations(dt);
 draw();
   updateDeveloperPowerUI();
 
