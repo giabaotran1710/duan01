@@ -181,6 +181,10 @@ button{font:inherit}
 .ana-graph{display:block;width:100%;height:66px;margin-top:10px;border-radius:9px;background:#2f3438;cursor:pointer;touch-action:manipulation}
 .ana-move{margin-top:10px;padding:9px 10px;border-radius:12px;background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.06);font-size:13px;line-height:1.5;min-height:42px}
 .ana-move b{color:var(--gold-2)}
+.ana-move .am-head{font-size:13px}
+.ana-move p{margin:7px 0 0;color:#d6e4f2;font-size:12.5px;line-height:1.5}
+.ana-move .am-line{margin-top:7px;padding:6px 8px;border-radius:8px;background:rgba(0,0,0,.3);font:12px/1.5 ui-monospace,"SFMono-Regular",Menlo,Consolas,monospace;color:#bfe6ff;overflow-wrap:anywhere}
+.ana-move .am-line span{display:block;margin-bottom:2px;font:800 10px/1.2 system-ui,-apple-system,"Segoe UI",sans-serif;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
 .ana-move .tip{display:block;color:var(--muted);font-size:12.5px}
 .ana-move .better{display:block;margin-top:2px;color:#a8e07a;font-weight:700;font-size:12.5px}
 .ana-table{width:100%;margin-top:10px;border-collapse:collapse;font-size:12.5px}
@@ -431,7 +435,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
       <li><b>Nhập thành</b>: Vua đi 2 ô về phía Xe, Xe nhảy qua đứng cạnh Vua. Chỉ được khi Vua và Xe đó chưa đi, giữa chúng trống, Vua không đang bị chiếu và không đi qua ô bị tấn công.</li>
       <li>Không được đi nước làm Vua mình bị chiếu. Bị chiếu mà không thoát được là <b>chiếu hết</b> (thua).</li>
       <li><b>Hòa</b> khi: hết nước đi mà Vua không bị chiếu (pat), thế cờ lặp lại 3 lần, 50 nước liền không ăn quân và không đi Tốt, hoặc không bên nào đủ quân để chiếu hết.</li>
-      <li><b>Phân tích</b>: Stockfish 19 chấm từng nước của cả hai bên — <b>!!</b> thiên tài (hy sinh quân mà vẫn là nước tốt nhất), <b>!</b> tuyệt vời (gần như nước duy nhất giữ được thế cờ), ★ tốt nhất, rất tốt, tốt, khai cuộc (theo sách), <b>?!</b> thiếu chính xác, <b>?</b> sai lầm, <b>X</b> bỏ lỡ (không tận dụng sai lầm của đối thủ), <b>??</b> ngớ ngẩn — kèm độ chính xác của mỗi bên.</li>
+      <li><b>Phân tích</b>: Stockfish 19 chấm từng nước của cả hai bên — <b>!!</b> thiên tài (hy sinh quân mà vẫn là nước tốt nhất), <b>!</b> tuyệt vời (gần như nước duy nhất giữ được thế cờ), ★ tốt nhất, rất tốt, tốt, khai cuộc (theo sách), <b>?!</b> thiếu chính xác, <b>?</b> sai lầm, <b>X</b> bỏ lỡ (không tận dụng sai lầm của đối thủ), <b>??</b> ngớ ngẩn — kèm độ chính xác của mỗi bên. Mỗi nước có lời giải thích cụ thể: quân nào đi hay ăn, hy sinh gì, đối thủ đáp ra sao, chuỗi nước chính xác của Stockfish và kết quả (chiếu hết, hơn/kém bao nhiêu điểm quân).</li>
       <li><b>Khai cuộc</b>: tên khai cuộc và mã ECO của ván hiện ngay dưới tiêu đề Biên bản (cả bạn lẫn Stockfish đi). Nhận theo thế cờ nên cả khi đi đảo nước vẫn đúng; bấm vào một nước cũ để xem khai cuộc lúc đó. Có 3.864 tên.</li>
       <li>Biên bản ghi theo ký hiệu quốc tế rút gọn: <b>x</b> là ăn quân, <b>+</b> chiếu, <b>#</b> chiếu hết, <b>O-O</b> nhập thành gần, <b>O-O-O</b> nhập thành xa. Nút <b>VN/EN</b> đổi chữ cái quân giữa Việt (V H X T M) và quốc tế (K Q R B N).</li>
     </ul>
@@ -784,7 +788,8 @@ function ReviewCore(){
   // Kết quả của một thế cờ; cp theo góc nhìn bên đang đi
   const terminalResult = m => ({ term:m.term, cp: m.term==='mate' ? -10000 : 0, mate:null, best:null, second:null, pv:[], nLegal:0 });
   const engineResult = (res, nLegal) => ({ term:null, cp:cpOfLine(res), mate:res.mate, best:res.best,
-    second: res.lines && res.lines[1] ? cpOfLine(res.lines[1]) : null, pv:res.pv||[], nLegal });
+    second: res.lines && res.lines[1] ? cpOfLine(res.lines[1]) : null,
+    secondBest: res.lines && res.lines[1] && res.lines[1].pv && res.lines[1].pv[0] || null, pv:res.pv||[], nLegal });
 
   // Hy sinh: quân vừa đi (Mã trở lên) đứng ở ô bị ăn mà thiệt quân, và nước đó không phải đổi quân ngang giá
   function isSacrifice(meta, moves, i){
@@ -840,6 +845,76 @@ function ReviewCore(){
     return best ? best.uci : chosen;
   }
 
+
+  // ---------- dữ kiện cụ thể của từng nước (để giải thích, không chứa chữ) ----------
+  const sideOfFen = fen => fen.split(' ')[1]==='b' ? 1 : 0;
+  const isMateSan = san => /#$/.test(san);
+
+  // Chạy một chuỗi nước (UCI) từ thế `fen`: ghi SAN, quân bị ăn của từng bên, có kết thúc bằng chiếu hết không.
+  // Dừng sau `maxPlies` nước, nhưng nếu nước cuối là ăn quân thì đi tiếp (tối đa +2) để không dừng giữa một loạt đổi quân.
+  function lineInfo(fen, ucis, maxPlies, lang){
+    const A = board(); A.load(fen);
+    const start = A.turn, out = { sans:[], won:[], lost:[], mate:false, start, plies:0, net:0, more:false };
+    const soft = Math.min(ucis.length, maxPlies||8), hard = Math.min(ucis.length, soft+2);
+    for(let k=0;k<hard;k++){
+      const legal = A.moves(), mv = A.findUci(ucis[k]); if(!mv) break;
+      const san = A.san(mv, legal, lang), side = A.turn;
+      const cap = mv.flag===2 ? 1 : (mv.cap ? mv.cap&7 : 0);
+      A.play(mv);
+      out.sans.push(san); out.plies++;
+      if(cap) (side===start ? out.won : out.lost).push(cap);
+      if(k+1>=soft && !cap) break;
+    }
+    out.more = ucis.length > out.plies;
+    out.mate = out.sans.length>0 && isMateSan(out.sans[out.sans.length-1]);
+    out.net = out.won.reduce((x,t)=>x+VAL[t],0) - out.lost.reduce((x,t)=>x+VAL[t],0);
+    return out;
+  }
+
+  // Một nước đi: quân nào, đi đâu, ăn gì, chiếu/chiếu hết, và quân vừa đi có thể bị ăn không (bởi quân nào, có ăn lại được không)
+  function moveFacts(fen, uci, lang){
+    const A = board(); A.load(fen);
+    const legal = A.moves(), mv = A.findUci(uci); if(!mv) return null;
+    const f = { uci, san:A.san(mv, legal, lang), piece:mv.piece&7, from:A.sqName(mv.from), to:A.sqName(mv.to),
+      cap: mv.flag===2 ? 1 : (mv.cap ? mv.cap&7 : 0), ep: mv.flag===2, promo: mv.promo ? mv.promo&7 : 0,
+      castle: mv.flag===3 ? 'short' : mv.flag===4 ? 'long' : null, check:false, mate:false, hang:null };
+    A.play(mv);
+    f.check = A.inCheck(); f.mate = isMateSan(f.san);
+    const caps = A.moves().filter(x => x.to===mv.to);
+    if(caps.length){
+      caps.sort((x,y) => VAL[x.piece&7]-VAL[y.piece&7]);
+      A.play(caps[0]);
+      f.hang = { by:caps[0].piece&7, n:caps.length, recapture:A.moves().some(x => x.to===mv.to) };
+    }
+    return f;
+  }
+
+  // Dữ kiện để giải thích nước thứ i. Điểm ở dạng "góc nhìn người đi nước này" (dương = có lợi cho họ).
+  function explain(moves, meta, P, i, lang, r){
+    const a = P[i], b = P[i+1]; if(!a || !b) return null;
+    const fen = meta[i].fen, mv = moveFacts(fen, moves[i], lang); if(!mv) return null;
+    const f = { kind:r ? r.kind : null, loss:r ? r.loss : 0, mover:sideOfFen(fen), mv, index:i,
+      inCheckBefore:false, nLegal:meta[i].nLegal, bookless:false };
+    { const A = board(); A.load(fen); f.inCheckBefore = A.inCheck(); }
+    f.before = { cp:a.cp, mate:a.mate===undefined ? null : a.mate };
+    f.after = b.term==='mate' ? { mated:true } : b.term==='draw' ? { draw:true, cp:0 }
+            : { cp:-b.cp, mate:(b.mate===null||b.mate===undefined) ? null : -b.mate };
+    f.line = lineInfo(fen, [moves[i]].concat(b.term ? [] : (b.pv||[])), 8, lang);
+    f.reply = (!b.term && b.pv && b.pv.length) ? moveFacts(meta[i+1].fen, b.pv[0], lang) : null;
+    if(a.best && a.best!==moves[i]){
+      f.best = moveFacts(fen, a.best, lang);
+      const pv = a.pv && a.pv[0]===a.best ? a.pv : [a.best].concat((a.pv||[]).slice(1));
+      f.bestLine = lineInfo(fen, pv, 8, lang);
+    }
+    if(a.secondBest){
+      f.second = moveFacts(fen, a.secondBest, lang);
+      f.secondCp = a.second;
+      f.secondGap = a.second!==null ? Math.round(winPct(a.cp) - winPct(a.second)) : null;
+    }
+    if(i>0) f.prev = moveFacts(meta[i-1].fen, moves[i-1], lang);
+    return f;
+  }
+
   // Chấm nước thứ i (đi từ thế i sang thế i+1). P[i] là kết quả phân tích thế i.
   function classify(moves, meta, P, i){
     const a = P[i], b = P[i+1];
@@ -884,7 +959,130 @@ function ReviewCore(){
     const harm = xs.length / xs.reduce((s,x)=>s+1/Math.max(1,x),0);
     return (mean+harm)/2;
   }
-  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, classify, moveAccuracy, gameAccuracy };
+  return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, lineInfo, moveFacts, explain, classify, moveAccuracy, gameAccuracy };
+}
+// Lời giải thích cụ thể bằng tiếng Việt cho từng nước (dựa trên dữ kiện của ReviewCore.explain)
+function ExplainVi(){
+  const PN = ['', 'Tốt','Mã','Tượng','Xe','Hậu','Vua'];
+  const B = t => `<b>${t}</b>`;
+  const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
+  const list = arr => {
+    const c = {}; for(const t of arr) c[t] = (c[t]||0) + 1;
+    const out = Object.keys(c).sort((x,y) => y-x).map(t => c[t]>1 ? `${c[t]} ${PN[t]}` : PN[t]);
+    return out.length>1 ? out.slice(0,-1).join(', ') + ' và ' + out[out.length-1] : out[0] || '';
+  };
+  const cpStr = cp => (cp>0 ? '+' : cp<0 ? '−' : '') + (Math.abs(cp)/100).toFixed(1).replace('.', ',');
+  const evStr = e => {
+    if(!e) return '';
+    if(e.mate!==null && e.mate!==undefined) return e.mate>0 ? `chiếu hết sau ${e.mate}` : `bị chiếu hết sau ${-e.mate}`;
+    return cpStr(e.cp);
+  };
+  // "Tượng ăn tốt ở f7 và chiếu Vua", "Mã đi tới f3", "Nhập thành ngắn"...
+  function moveDesc(m){
+    if(m.castle) return m.castle==='short' ? 'Nhập thành ngắn' : 'Nhập thành dài';
+    const s = m.promo ? `Tốt lên hàng cuối và phong ${PN[m.promo]}${m.cap ? ' (ăn ' + PN[m.cap] + ')' : ''}`
+            : m.ep ? `Tốt ăn tốt qua đường ở ${m.to}`
+            : m.cap ? `${PN[m.piece]} ăn ${PN[m.cap]} ở ${m.to}` : `${PN[m.piece]} đi tới ${m.to}`;
+    return s + (m.mate ? ' và chiếu hết' : m.check ? ' và chiếu Vua' : '');
+  }
+  // "1.e4 e5 2.Nf3 …" bắt đầu từ nửa nước thứ k của ván
+  function numLine(k, ln){
+    let ply = k, out = '';
+    ln.sans.forEach((s, j) => { out += (ply%2===0 ? `${Math.floor(ply/2)+1}.` : (j===0 ? `${Math.floor(ply/2)+1}…` : '')) + s + ' '; ply++; });
+    return out.trim() + (ln.more ? ' …' : '');
+  }
+  // "mất Tượng và ăn 2 Tốt (kém 1 điểm quân)" theo chuỗi chính xác
+  function material(ln, comp){
+    if(!ln.lost.length && !ln.won.length) return null;
+    const base = ln.lost.length && ln.won.length ? `đổi ${list(ln.lost)} lấy ${list(ln.won)}` : ln.lost.length ? `mất ${list(ln.lost)}` : `ăn ${list(ln.won)}`;
+    const net = ln.net>0 ? ` (hơn ${ln.net} điểm quân)` : ln.net<0 ? ` (kém ${-ln.net} điểm quân${comp ? ', bù lại bằng thế trận' : ''})` : ' (ngang quân)';
+    return base + net;
+  }
+
+  // ctx: { human: 0|1, opening: {eco,name}|null }  →  { paras:[html], lines:[{label,text}] }
+  function build(f, ctx){
+    const mine = f.mover===ctx.human, who = mine ? 'Bạn' : 'Stockfish', opp = mine ? 'Stockfish' : 'Bạn';
+    const m = f.mv, k = f.index, P = [], L = [];
+    const shift = `${evStr(f.before)} → ${f.after.mated ? 'chiếu hết' : f.after.draw ? 'hòa' : evStr(f.after)}`;
+    const gain = f.after.mated ? null : `Đánh giá thế cờ (tính cho ${who}): ${shift}.`;
+    const mated = !f.after.mated && f.after.mate!==null && f.after.mate!==undefined && f.after.mate<0;
+    const bestOutcome = () => {
+      if(f.before.mate>0) return `chiếu hết sau ${f.before.mate} nước`;
+      const mat = f.bestLine && material(f.bestLine);
+      return f.bestLine && f.bestLine.mate ? 'dẫn tới chiếu hết' : mat ? `${who} ${mat}` : `giữ lợi thế ${evStr(f.before)}`;
+    };
+    P.push(moveDesc(m) + '.');
+    switch(f.kind){
+      case 'brilliant': {
+        if(m.hang) P.push(`${B('Đây là đòn hy sinh')}: ${PN[m.piece]} ở ${m.to} có thể bị ${PN[m.hang.by]} của ${opp} ăn${m.hang.recapture ? ' (dù ăn lại được thì vẫn thiệt quân)' : ' mà không có quân nào ăn lại được'}.`);
+        const ln = f.line;
+        if(ln.mate) P.push(`Nhưng chuỗi chính xác của Stockfish kết thúc bằng ${B('chiếu hết')}${ln.lost.length ? `, dù ${who} có thể mất ${list(ln.lost)}` : ''}.`);
+        else { const mat = material(ln, true); P.push(`Nhưng đó vẫn là nước mạnh nhất${mat ? `: theo chuỗi chính xác, ${who} ${mat}` : ''}.`); }
+        if(gain) P.push(gain);
+        L.push({ label:'Chuỗi chính xác', text:numLine(k, ln) });
+        break;
+      }
+      case 'great': {
+        const sec = f.second ? `nước tốt thứ hai (${f.second.san}) chỉ còn ${Math.abs(f.secondCp)>=9000 ? 'thua hoặc bị chiếu hết' : cpStr(f.secondCp)}` : 'mọi nước khác đều kém hẳn';
+        P.push(`${B('Gần như nước duy nhất')}: ${sec}${f.secondGap ? `, kém ${f.secondGap}% cơ hội thắng` : ''}.`);
+        if(f.line.mate) P.push(`Chuỗi chính xác kết thúc bằng ${B('chiếu hết')}.`);
+        else { const mat = material(f.line); if(mat) P.push(`Theo chuỗi chính xác, ${who} ${mat}.`); }
+        if(gain) P.push(gain);
+        L.push({ label:'Chuỗi chính xác', text:numLine(k, f.line) });
+        break;
+      }
+      case 'best': {
+        if(f.best) P.push(`Gần ngang nước Stockfish chọn (${f.best.san}).`);
+        if(!f.after.mated){
+          if(f.line.mate) P.push(`Dẫn tới ${B('chiếu hết')} theo chuỗi chính xác.`);
+          else { const mat = material(f.line); P.push(mat ? `Theo chuỗi chính xác, ${who} ${mat}.` : `Không bên nào mất quân trong ${f.line.plies} nước đầu của chuỗi chính xác.`); }
+          if(gain) P.push(gain);
+          if(f.line.sans.length>1) L.push({ label:'Chuỗi chính xác', text:numLine(k, f.line) });
+        }
+        break;
+      }
+      case 'excellent': case 'good': {
+        const pct = Math.max(1, Math.round(f.loss*100));
+        if(f.best) P.push(f.kind==='excellent'
+          ? `Gần ngang nước tốt nhất ${B(f.best.san)} (${lc(moveDesc(f.best))}): chỉ kém khoảng ${pct}% cơ hội thắng.`
+          : `Nước tốt nhất là ${B(f.best.san)} (${lc(moveDesc(f.best))}); nước này kém khoảng ${pct}% cơ hội thắng (${shift}).`);
+        if(f.bestLine) L.push({ label:'Chuỗi tốt nhất', text:numLine(k, f.bestLine) });
+        break;
+      }
+      case 'inaccuracy': case 'mistake': case 'blunder': {
+        const r = f.reply;
+        let prob;
+        if(mated) prob = `Hậu quả: ${who} bị ${B('chiếu hết')} sau ${-f.after.mate} nước${r ? ` (${opp} đáp ${B(r.san)})` : ''}`;
+        else if(r && r.cap) prob = `${m.hang && r.to===m.to ? `${PN[m.piece]} ở ${m.to} ${m.cap ? 'bị ăn lại' : 'bị bỏ hở'}: ` : ''}${opp} đáp ${B(r.san)}, ${PN[r.piece]} ăn ${PN[r.cap]} của ${who} ở ${r.to}${r.check ? ' và chiếu' : ''}`;
+        else if(r) prob = `${opp} có thể đáp ${B(r.san)} (${lc(moveDesc(r))})`;
+        else prob = 'Nước này làm thế cờ xấu đi';
+        const mat = !mated && material(f.line);
+        const calm = mat && f.line.net>=0 ? ' — quân số không thiệt nhưng thế trận xấu đi' : '';
+        P.push(`${prob}. ${mat ? `Theo chuỗi chính xác, ${who} ${mat}${calm}. ` : ''}${gain || ''}`.trim());
+        if(f.best) P.push(`Nên đi ${B(f.best.san)} (${lc(moveDesc(f.best))}): ${bestOutcome()}.`);
+        L.push({ label:'Nếu đi như vậy', text:numLine(k, f.line) });
+        if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
+        break;
+      }
+      case 'miss': {
+        P.push(`${opp} vừa đi ${B(f.prev ? f.prev.san : '…')} — một sai lầm — nhưng ${who} không tận dụng.`);
+        if(f.best) P.push(`Lẽ ra ${B(f.best.san)} (${lc(moveDesc(f.best))}): ${bestOutcome()}.`);
+        if(gain) P.push(gain);
+        if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
+        break;
+      }
+      case 'book':
+        P.push(ctx.opening ? `Khai cuộc quen thuộc: ${B(ctx.opening.eco + ' ' + ctx.opening.name)}.` : 'Nước khai cuộc quen thuộc trong sách.');
+        break;
+      case 'forced':
+        P.push(f.inCheckBefore ? `Vua của ${mine ? 'bạn' : 'Stockfish'} đang bị chiếu và đây là nước ${B('duy nhất')} thoát chiếu.` : `Thế cờ chỉ có ${B('một nước hợp lệ')} duy nhất.`);
+        break;
+      default:
+        if(gain) P.push(gain);
+    }
+    return { paras:P, lines:L };
+  }
+  return { build, PN };
 }
 </script>
 <script>
@@ -1546,7 +1744,7 @@ function ReviewCore(){
   }
 
   // ================= Phân tích ván cờ (Stockfish 19 chấm từng nước) =================
-  const RV = ReviewCore();
+  const RV = ReviewCore(), XV = ExplainVi();
   const ICON = {
     star:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6.1 6.6.8-4.9 4.6 1.3 6.6L12 17.3l-5.9 3.3 1.3-6.6-4.9-4.6 6.6-.8z"/></svg>',
     thumb:'<svg viewBox="0 0 24 24"><path fill="currentColor" d="M2 10h4v11H2zM8 21h9.5c.9 0 1.6-.6 1.8-1.4l1.6-6.5c.3-1.2-.6-2.4-1.9-2.4H14l.8-4.1c.2-1.1-.6-2.2-1.7-2.3L12.4 4 8 9.5z"/></svg>',
@@ -1677,18 +1875,6 @@ function ReviewCore(){
       renderAnalysis(); renderMoves(); renderMarks();
     });
   }
-  const scratch = ChessCore();
-  function sanAt(fen, uci){ scratch.load(fen); const m = scratch.findUci(uci); return m ? scratch.san(m, null, settings.lang) : uci; }
-  // Điểm của thế thứ i (sau i nước) theo góc nhìn người chơi, dạng chữ
-  function scoreText(i){
-    const p = ana.P[i]; if(!p) return '';
-    if(p.term==='mate') return 'chiếu hết';
-    if(p.term==='draw') return 'hòa';
-    const whiteToMove = i%2===0, sgnHuman = (whiteToMove ? 1 : -1) * (game.human===0 ? 1 : -1);
-    if(p.mate !== null && p.mate !== undefined){ const m = p.mate*sgnHuman; return (m>0 ? 'bạn' : 'Stockfish') + ' chiếu hết sau ' + Math.abs(p.mate) + ' nước'; }
-    const cp = p.cp*sgnHuman;
-    return (cp>0?'+':cp<0?'−':'') + (Math.abs(cp)/100).toFixed(1).replace('.',',');
-  }
   function graphSVG(cur){
     const N = ana.moves.length, W = 300, H = 66, pts = [];
     for(let i=0;i<=N;i++){
@@ -1743,10 +1929,12 @@ function ReviewCore(){
     else {
       const who = k%2===game.human ? 'Bạn' : 'Stockfish', num = k%2===0 ? `${k/2+1}.` : `${(k+1)/2}…`;
       const info = CLS[r.kind];
-      html = `<i class="cl k-${r.kind}">${info.sym}</i><b>${num} ${game.sans[k]}</b> — ${who} đi nước <b>${info.name.toLowerCase()}</b>.`;
-      html += `<span class="tip">${info.tip} Thế cờ sau nước này: ${scoreText(k+1)}.</span>`;
-      if(r.best && r.kind!=='best' && r.kind!=='great' && r.kind!=='brilliant' && r.kind!=='forced' && r.best!==ana.moves[k])
-        html += `<span class="better">Nước tốt nhất: ${sanAt(ana.meta[k].fen, r.best)} (${scoreText(k)})</span>`;
+      html = `<div class="am-head"><i class="cl k-${r.kind}">${info.sym}</i><b>${num} ${game.sans[k]}</b> — ${who} đi nước <b>${info.name.toLowerCase()}</b></div>`;
+      // Lời giải thích cụ thể: quân nào đi/ăn, hy sinh gì, lời đáp của đối thủ, chuỗi nước chính xác và kết quả
+      let ex = null;
+      try { const f = RV.explain(ana.moves, ana.meta, ana.P, k, settings.lang, r); if(f) ex = XV.build(f, { human:game.human, opening:openingAt(k+1) }); } catch(e) {}
+      if(ex) html += ex.paras.map(t => `<p>${t}</p>`).join('') + ex.lines.map(l => `<div class="am-line"><span>${l.label}</span>${l.text}</div>`).join('');
+      else html += `<span class="tip">${info.tip}</span>`;
     }
     $('anaMove').innerHTML = html;
     // bảng thống kê
