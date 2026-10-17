@@ -34,8 +34,8 @@ scanSpinY: 0,
   // Kế hoạch cú đánh: tổng thời gian suy nghĩ và độ dài mỗi lát tính (ms)
   thinkBudgetMs: 3200,
   sliceMs: 12,
-  scanExtraMs: 2500,
-  safeExtraMs: 2000,
+  scanExtraMs: 800,
+  safeExtraMs: 800,
 
   // Số cú ăn trực tiếp tốt nhất được tính kỹ, số cú được thử kỹ thuật điều bi
   potCandidates: 8,
@@ -83,6 +83,9 @@ let AI_SCAN_TOKEN = 0;
 // Thời điểm AI còn đang tính toán (để chốt an toàn trong bida.html biết AI không bị treo)
 let AI_lastProgress = 0;
 
+// Lời nhắn "đang suy nghĩ" cho lượt tính kế tiếp (bida.html dùng khi AI vừa đặt bi cái)
+let AI_nextThinkMessage = null;
+
 function aiTakeShot(){
   if(gameOver) return;
   if(turn !== "ai") return;
@@ -106,7 +109,8 @@ function aiTakeShot(){
   if(aiThinking) return;
 
   aiThinking = true;
-  setMessage("AI.GiaBao đang suy nghĩ...", true);
+  setMessage(AI_nextThinkMessage || "AI.GiaBao đang suy nghĩ...", true);
+  AI_nextThinkMessage = null;
 
   startAIThinkSearch(bestShot => {
     aiThinking = false;
@@ -227,12 +231,13 @@ function* AI_planShot(started){
   const scan = yield* AI_scanForPot(targets, started);
   if(scan) return scan;
 
+  setMessage("AI không thấy cú ăn bi · chuyển sang A băng chạm bi", true);
+
   const safe = yield* AI_scanSafeContact(targets, started);
   if(safe) return safe;
 
-  const shot = findAIRandomShot();
-  shot.meta = Object.assign(shot.meta || {}, { label: "AI không tìm thấy cú chạm hợp lệ · đánh ngẫu nhiên" });
-  return shot;
+  setMessage("AI không tìm thấy cú chạm hợp lệ · đánh ngẫu nhiên", true);
+  return findAIRandomShot();
 }
 
 // Mô phỏng một cú: có ăn đúng bi mục tiêu (bi chạm đầu tiên) không, vào lỗ nào, bi cái có rơi không
@@ -325,7 +330,7 @@ function* AI_findPottingAim(c, elapsed, budget){
     power: hit.p,
     spin,
     width,
-    mode: "trực tiếp",
+    mode: "direct-clean",
     score: c.score + width * 900
   };
 }
@@ -475,7 +480,7 @@ function* AI_scanForPot(targets, started){
             return AI_finalizeShot({
               c: { target: t, pocket: AI_getPocketById(r.pocketId) },
               dir, power: p, spin: AI_baseSpin(),
-              mode: mode === "direct" ? "dò góc" : "A băng"
+              mode
             });
           }
         }
@@ -505,9 +510,11 @@ function* AI_scanSafeContact(targets, started){
         yield;
 
         if(r.ok){
+          setMessage(`AI chọn A băng an toàn: chạm bi ${t.num} · lực ${Math.round(p * 100)}%`, true);
+
           return {
             dir, power: p, spinX: AI_ENGINE.scanSpinX || 0, spinY: AI_ENGINE.scanSpinY || 0,
-            meta: { mode: "safe", targetNum: t.num, label: `AI chơi an toàn: chạm bi ${t.num} · lực ${Math.round(p * 100)}%` }
+            meta: { mode: "safe", targetNum: t.num }
           };
         }
       }
@@ -533,8 +540,16 @@ function AI_describeSpin(sp){
 function AI_finalizeShot(s){
   const tech = AI_describeSpin(s.spin);
   const pocket = s.c.pocket;
-  const where = pocket ? (pocket.type === "corner" ? "lỗ góc" : "lỗ giữa") : "lỗ";
-  const label = `AI: bi ${s.c.target.num} vào ${where} · ${tech} · lực ${Math.round(s.power * 100)}%`;
+  const mode = s.mode || "direct-clean";
+  const pct = Math.round(s.power * 100);
+
+  // Toast cũ của AI (không thêm toast mới cho kỹ thuật)
+  setMessage(
+    mode === "direct-clean"
+      ? `AI chọn cú trực tiếp sạch: bi ${s.c.target.num} vào lỗ · lực ${pct}%`
+      : `AI tìm thấy case: bi ${s.c.target.num} vào lỗ · lực ${pct}% · ${mode}`,
+    true
+  );
 
   return {
     dir: s.dir,
@@ -542,11 +557,10 @@ function AI_finalizeShot(s){
     spinX: s.spin.x,
     spinY: s.spin.y,
     meta: {
-      mode: s.mode || "trực tiếp",
+      mode,
       targetNum: s.c.target.num,
       targetPocketId: pocket ? pocket.id : null,
-      technique: tech,
-      label
+      technique: tech
     }
   };
 }
@@ -666,8 +680,7 @@ function findAIBreakShot(){
     dir,
     power:0.95,
     spinX:AI_rand(-0.06, 0.06),
-    spinY:0.16,
-    meta:{ label:"AI.GiaBao phá bi" }
+    spinY:0.16
   };
 }
 
