@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<title>Thám Tử Bayes</title>
+<style>
+:root{
+  --bg:#0f2a47;--grid:rgba(160,200,255,.07);--panel:rgba(255,255,255,.06);--line:rgba(190,220,255,.35);
+  --ink:#eaf2ff;--dim:#9db6d4;--stamp:#ff6a5c;--hi:#ffd45e;--ok:#46d39a;--btn:#ffd45e;--btnink:#10243c;
+  box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px);
+  color-scheme:dark}
+@media (prefers-color-scheme:light){:root:not([data-theme="dark"]){
+  --bg:#e8f1fb;--grid:rgba(20,70,130,.08);--panel:rgba(255,255,255,.7);--line:rgba(20,70,130,.35);
+  --ink:#10243c;--dim:#46607e;--stamp:#d6382a;--hi:#a86d00;--ok:#0f8f5f;--btn:#10243c;--btnink:#ffd45e;color-scheme:light}}
+:root[data-theme="dark"]{color-scheme:dark}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;margin:0}
+body{background:var(--bg);color:var(--ink);font-family:Georgia,"Times New Roman",serif;
+  background-image:linear-gradient(var(--grid) 1px,transparent 1px),linear-gradient(90deg,var(--grid) 1px,transparent 1px);
+  background-size:24px 24px;user-select:none;-webkit-user-select:none;touch-action:manipulation;overscroll-behavior:none}
+#app{max-width:520px;margin:0 auto;min-height:100%;padding:12px 14px 20px;display:flex;flex-direction:column;gap:12px}
+.screen{display:none;flex-direction:column;gap:12px;flex:1}
+.screen.on{display:flex}
+h1{font-size:44px;line-height:1;margin:22px 0 4px;letter-spacing:-1px}
+h2{margin:0;font-size:22px}
+p{margin:0;line-height:1.5}
+.dim{color:var(--dim)}
+.panel{border:1.5px dashed var(--line);background:var(--panel);border-radius:6px;padding:14px}
+.btn{font:700 18px Georgia,serif;min-height:54px;border:0;border-radius:6px;background:var(--btn);color:var(--btnink);padding:0 20px;cursor:pointer;transition:transform .08s}
+.btn:active{transform:translateY(2px) scale(.98)}
+.btn.ghost{background:transparent;color:var(--ink);border:1.5px solid var(--line);min-height:48px;font-size:16px}
+.btn:disabled{opacity:.4}
+.row{display:flex;gap:10px}.row>*{flex:1}
+#hud{display:flex;justify-content:space-between;align-items:center;font-size:16px}
+.hearts{color:var(--stamp);font-size:20px;letter-spacing:2px}
+.hearts .lost{opacity:.22}
+#case h2{display:flex;gap:8px;align-items:center}
+#case .fact{padding:7px 0;border-bottom:1px dashed var(--line)}
+#case .fact:last-of-type{border:0}
+.obs{margin-top:8px;padding:10px;background:rgba(255,212,94,.14);border-left:4px solid var(--hi)}
+.q{font-weight:700;margin-top:8px}
+#val{font-size:52px;font-weight:700;text-align:center;line-height:1}
+input[type=range]{width:100%;height:44px;accent-color:var(--hi);margin:6px 0}
+#grid{width:100%;display:block;border:1.5px solid var(--line);border-radius:4px;background:rgba(0,0,0,.18)}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:14px;margin-top:8px}
+.dot{display:inline-block;width:11px;height:11px;border-radius:50%;margin-right:5px;vertical-align:-1px}
+#stamp{display:inline-block;border:3px solid var(--stamp);color:var(--stamp);font-size:24px;font-weight:700;padding:3px 12px;border-radius:4px;transform:rotate(-4deg);animation:st .28s ease-out}
+#stamp.good{border-color:var(--ok);color:var(--ok)}
+@keyframes st{from{transform:rotate(-4deg) scale(2);opacity:0}to{transform:rotate(-4deg) scale(1);opacity:1}}
+.big{font-size:40px;font-weight:700}
+.sol p{margin-top:7px;font-size:15px;line-height:1.55}.sol b{color:var(--hi)}
+.center{text-align:center}
+@media (prefers-reduced-motion:reduce){#stamp{animation:none}.btn{transition:none}}
+</style>
+</head>
+<body>
+<div id="app">
+
+<section id="s-menu" class="screen on">
+  <h1>Thám Tử<br>Bayes</h1>
+  <p class="dim">Bằng chứng xuất hiện, nhưng nghi phạm có thật sự là thủ phạm? Dùng tỉ lệ nền và độ chính xác của bằng chứng để ước lượng xác suất đúng.</p>
+  <div class="panel">
+    <p><b>Cách chơi</b></p>
+    <p class="dim">12 hồ sơ, càng về sau càng nhiều bằng chứng (có cả bằng chứng không xuất hiện hoặc gây nhiễu). Mỗi hồ sơ, kéo thanh trượt đến xác suất bạn tin. Lệch quá 15 điểm % là mất 1 tim. Hết 3 tim là thua. Có 3 lần xem gợi ý. Hồ sơ hóc búa (Monty Hall, hai đứa trẻ, nhân chứng, DNA...) được nhân 1,5 điểm.</p>
+  </div>
+  <p class="dim" id="best"></p>
+  <div style="flex:1"></div>
+  <button class="btn" id="b-start">Mở hồ sơ đầu tiên</button>
+</section>
+
+<section id="s-play" class="screen">
+  <div id="hud"><span id="h-case"></span><span class="hearts" id="h-hearts"></span><span id="h-score"></span></div>
+  <div id="case" class="panel"></div>
+  <div id="ask" class="panel">
+    <div id="val">50%</div>
+    <input type="range" id="slider" min="0" max="100" step="1" value="50" aria-label="Xác suất ước lượng">
+    <div class="row">
+      <button class="btn ghost" id="b-hint">Gợi ý (3)</button>
+      <button class="btn" id="b-submit">Chốt đáp án</button>
+    </div>
+  </div>
+  <div id="board" class="panel" style="display:none">
+    <canvas id="grid"></canvas>
+    <div class="legend" id="legend"></div>
+  </div>
+  <div id="result" class="panel" style="display:none"></div>
+</section>
+
+<section id="s-end" class="screen">
+  <h1 id="e-title"></h1>
+  <div class="panel center"><div class="big" id="e-score"></div><p class="dim" id="e-sub"></p></div>
+  <p id="e-note" class="dim"></p>
+  <div style="flex:1"></div>
+  <button class="btn" id="b-again">Chơi lại</button>
+</section>
+
+</div>
+<script>
+// ===== CONFIG =====
+const CONFIG={TOTAL_CASES:12,LIVES:3,HINTS:3,TOLERANCE:15,POP:1000,COLS:40,EV_COUNT:n=>n<=2?1:n<=8?2:3,ABSENT_FROM:6,NOISE_FROM:9,PUZZLE_AT:[3,5,7,9,11,12],PUZZLE_MULT:1.5,
+  PRIOR:[1,25],SENS:[70,99],FPR:[2,25],SENS2:[60,95],FPR2:[10,40],
+  TRAP_GAP:0.2,ERR_PENALTY:5,COMBO_BONUS:10,COMBO_CAP:50,BEST_KEY:'bayes-tham-tu:best'};
+const TEMPLATES=[
+ {i:'🧪',t:'Xét nghiệm',ctx:'{p}% dân số mắc bệnh Sương Mù.',s:'Người bệnh xét nghiệm dương tính {s}%.',f:'Người khỏe vẫn dương tính nhầm {f}%.',ev:'Bạn vừa nhận kết quả dương tính.',q:'Xác suất bạn thật sự mắc bệnh?',
+  lab:['Bệnh và dương tính','Khỏe nhưng dương tính']},
+ {i:'📧',t:'Thư rác',ctx:'{p}% thư đến hộp thư của bạn là thư rác.',s:'Thư rác chứa cụm “trúng thưởng” {s}%.',f:'Thư thường cũng chứa cụm đó {f}%.',ev:'Một thư mới có cụm “trúng thưởng”.',q:'Xác suất đó là thư rác?',
+  lab:['Thư rác có cụm đó','Thư thường có cụm đó']},
+ {i:'👣',t:'Vụ trộm',ctx:'Trong khu phố, {p}% cư dân là kẻ trộm.',s:'Máy quét dấu giày báo “khớp” với kẻ trộm thật {s}%.',f:'Người vô tội bị báo “khớp” nhầm {f}%.',ev:'Máy báo “khớp” với một cư dân.',q:'Xác suất cư dân đó là kẻ trộm?',
+  lab:['Trộm bị báo khớp','Vô tội bị báo khớp']},
+ {i:'⚙️',t:'Nhà máy',ctx:'{p}% máy trên dây chuyền bị lỗi ngầm.',s:'Máy lỗi làm đèn cảnh báo sáng {s}%.',f:'Máy tốt vẫn sáng đèn nhầm {f}%.',ev:'Đèn cảnh báo của một máy đang sáng.',q:'Xác suất máy đó thật sự lỗi?',
+  lab:['Máy lỗi sáng đèn','Máy tốt sáng đèn']},
+ {i:'⛈️',t:'Thời tiết',ctx:'Vào mùa này, {p}% số ngày có bão.',s:'Ngày có bão, trời có mây đen từ sáng {s}%.',f:'Ngày không bão cũng có mây đen {f}%.',ev:'Sáng nay mây đen kéo kín trời.',q:'Xác suất hôm nay có bão?',
+  lab:['Bão và mây đen','Không bão nhưng mây đen']},
+ {i:'🛂',t:'Hải quan',ctx:'{p}% hành khách qua cửa khẩu mang hàng cấm.',s:'Chó nghiệp vụ sủa báo hiệu với người mang hàng cấm {s}%.',f:'Người không mang gì cũng bị chó sủa nhầm {f}%.',ev:'Chó nghiệp vụ vừa sủa trước một hành khách.',q:'Xác suất người đó mang hàng cấm?',lab:['Mang hàng cấm bị chó báo','Vô tội bị chó báo']},
+ {i:'🎓',t:'Gian lận thi cử',ctx:'{p}% bài thi của kỳ này có gian lận.',s:'Phần mềm báo “trùng lặp” với bài gian lận thật {s}%.',f:'Bài làm trung thực vẫn bị báo nhầm {f}%.',ev:'Phần mềm báo một bài thi “trùng lặp”.',q:'Xác suất bài đó thật sự gian lận?',lab:['Gian lận bị báo','Trung thực bị báo nhầm']},
+ {i:'🔥',t:'Báo cháy',ctx:'{p}% căn phòng khách sạn có nguy cơ cháy thật.',s:'Có cháy thật, cảm biến khói reo {s}%.',f:'Không cháy, cảm biến vẫn reo nhầm vì hơi nước hoặc bụi {f}%.',ev:'Cảm biến ở một phòng đang reo.',q:'Xác suất phòng đó thật sự có cháy?',lab:['Cháy thật và reo','Không cháy nhưng reo']},
+ {i:'💳',t:'Thẻ ngân hàng',ctx:'{p}% giao dịch thẻ là gian lận.',s:'Hệ thống chặn giao dịch gian lận {s}%.',f:'Giao dịch hợp lệ vẫn bị chặn nhầm {f}%.',ev:'Một giao dịch của bạn vừa bị chặn.',q:'Xác suất đó thật sự là gian lận?',lab:['Gian lận bị chặn','Hợp lệ bị chặn nhầm']},
+ {i:'🐟',t:'Hồ cá',ctx:'{p}% cá trong hồ bị nhiễm ký sinh.',s:'Cá nhiễm khi vớt lên có đốm trắng {s}%.',f:'Cá khỏe cũng có đốm trắng do nắng {f}%.',ev:'Bạn vớt được một con cá có đốm trắng.',q:'Xác suất con cá nhiễm ký sinh?',lab:['Cá nhiễm có đốm','Cá khỏe có đốm']},
+ {i:'🤖',t:'Tài khoản bot',ctx:'{p}% tài khoản mới đăng ký là bot.',s:'Bot đăng bài liên tục ngay phút đầu {s}%.',f:'Người thật cũng làm vậy {f}%.',ev:'Một tài khoản mới đăng bài liên tục ngay phút đầu.',q:'Xác suất đó là bot?',lab:['Bot đăng liên tục','Người thật đăng liên tục']},
+ {i:'🍄',t:'Nấm rừng',ctx:'Trong rừng, {p}% nấm hái được là nấm độc.',s:'Nấm độc có mũ màu rực rỡ {s}%.',f:'Nấm ăn được cũng có mũ rực rỡ {f}%.',ev:'Bạn thấy một cây nấm mũ màu rực rỡ.',q:'Xác suất cây nấm đó độc?',lab:['Nấm độc rực rỡ','Nấm ăn được rực rỡ']},
+ {i:'🚗',t:'Kiểm tra nồng độ cồn',ctx:'Trong đợt kiểm tra, {p}% tài xế có nồng độ cồn vượt mức.',s:'Máy đo báo vượt mức với người thật sự vượt {s}%.',f:'Người không vượt mức bị báo nhầm {f}%.',ev:'Máy đo báo vượt mức với một tài xế.',q:'Xác suất tài xế đó thật sự vượt mức?',lab:['Vượt mức bị báo','Không vượt bị báo nhầm']},
+ {i:'🌱',t:'Lô hạt giống',ctx:'{p}% hạt trong lô là hạt lép.',s:'Hạt lép nổi trên mặt nước {s}%.',f:'Hạt tốt cũng nổi nhầm {f}%.',ev:'Một hạt vừa nổi lên mặt nước.',q:'Xác suất hạt đó là hạt lép?',lab:['Hạt lép nổi','Hạt tốt nổi']},
+ {i:'📱',t:'Pin điện thoại',ctx:'{p}% điện thoại của một lô bị lỗi pin.',s:'Máy lỗi pin nóng bất thường khi sạc {s}%.',f:'Máy tốt cũng nóng khi sạc {f}%.',ev:'Máy của bạn nóng bất thường khi sạc.',q:'Xác suất pin bị lỗi?',lab:['Pin lỗi và nóng','Pin tốt nhưng nóng']},
+ {i:'🔑',t:'Xâm nhập tài khoản',ctx:'{p}% tài khoản trong công ty từng bị xâm nhập.',s:'Tài khoản bị xâm nhập có đăng nhập từ nước lạ {s}%.',f:'Tài khoản bình thường cũng có đăng nhập từ nước lạ do đi công tác {f}%.',ev:'Một tài khoản vừa đăng nhập từ nước lạ.',q:'Xác suất tài khoản đã bị xâm nhập?',lab:['Bị xâm nhập, đăng nhập lạ','Bình thường, đăng nhập lạ']},
+ {i:'🐕',t:'Chó khu trọ',ctx:'{p}% chó trong khu trọ nhiễm giun.',s:'Chó nhiễm giun cọ mông xuống đất {s}%.',f:'Chó khỏe cũng cọ mông {f}%.',ev:'Bạn thấy một chú chó đang cọ mông xuống đất.',q:'Xác suất chú chó nhiễm giun?',lab:['Nhiễm giun và cọ mông','Khỏe nhưng cọ mông']},
+ {i:'🧾',t:'Hóa đơn giả',ctx:'{p}% hóa đơn gửi lên phòng kế toán là hóa đơn giả.',s:'Hóa đơn giả có lỗi chính tả {s}%.',f:'Hóa đơn thật cũng có lỗi chính tả {f}%.',ev:'Một hóa đơn có lỗi chính tả.',q:'Xác suất đó là hóa đơn giả?',lab:['Giả có lỗi','Thật có lỗi']},
+ {i:'🐝',t:'Trại ong',ctx:'{p}% tổ ong trong trang trại bị bệnh.',s:'Tổ ong bệnh có đàn bay thưa thớt {s}%.',f:'Tổ khỏe cũng bay thưa vào mùa lạnh {f}%.',ev:'Một tổ ong có đàn bay thưa thớt.',q:'Xác suất tổ ong đó bị bệnh?',lab:['Tổ bệnh bay thưa','Tổ khỏe bay thưa']},
+ {i:'🎮',t:'Kẻ gian lận game',ctx:'{p}% người chơi trong trận là kẻ gian lận.',s:'Hệ thống gắn cờ kẻ gian lận thật {s}%.',f:'Người chơi giỏi thật bị gắn cờ nhầm {f}%.',ev:'Một người chơi vừa bị hệ thống gắn cờ.',q:'Xác suất người đó thật sự gian lận?',lab:['Gian lận bị gắn cờ','Giỏi thật bị gắn cờ']},
+ {i:'🏅',t:'Kiểm tra doping',ctx:'{p}% vận động viên trong giải dùng chất cấm.',s:'Xét nghiệm dương tính với người dùng chất cấm {s}%.',f:'Vận động viên sạch vẫn dương tính nhầm {f}%.',ev:'Một vận động viên vừa có kết quả dương tính.',q:'Xác suất người đó thật sự dùng chất cấm?',lab:['Dùng chất cấm, dương tính','Sạch nhưng dương tính']},
+ {i:'🏠',t:'Mối mọt',ctx:'{p}% nhà gỗ trong làng bị mối mọt.',s:'Nhà bị mối có bột gỗ dưới chân cột {s}%.',f:'Nhà không mối cũng có bụi gỗ do mài {f}%.',ev:'Bạn thấy bột gỗ dưới chân cột một ngôi nhà.',q:'Xác suất ngôi nhà bị mối mọt?',lab:['Bị mối, có bột gỗ','Không mối, có bột gỗ']},
+ {i:'🛒',t:'Hàng giả',ctx:'{p}% sản phẩm trên sàn bán lẻ là hàng giả.',s:'Hàng giả có giá rẻ bất thường {s}%.',f:'Hàng thật giảm giá cũng rẻ bất thường {f}%.',ev:'Bạn thấy một món giá rẻ bất thường.',q:'Xác suất món đó là hàng giả?',lab:['Hàng giả rẻ bất thường','Hàng thật rẻ bất thường']},
+ {i:'🚦',t:'Kẹt xe',ctx:'{p}% buổi sáng đường vành đai bị tắc nghiêm trọng.',s:'Khi tắc, ứng dụng bản đồ hiện màu đỏ {s}%.',f:'Khi không tắc, ứng dụng vẫn hiện đỏ do lỗi dữ liệu {f}%.',ev:'Ứng dụng đang hiện đường vành đai màu đỏ.',q:'Xác suất đường thật sự đang tắc?',lab:['Tắc thật, hiện đỏ','Không tắc, hiện đỏ']},
+ {i:'✈️',t:'Chuyến bay hoãn',ctx:'{p}% chuyến bay ở sân bay này bị hoãn vì sự cố kỹ thuật.',s:'Khi có sự cố, nhân viên mặt đất gọi điện bàn bạc gấp {s}%.',f:'Khi không có sự cố, họ vẫn gọi điện gấp {f}%.',ev:'Nhân viên mặt đất đang gọi điện bàn bạc gấp trước cửa ra máy bay.',q:'Xác suất chuyến bay bị hoãn vì sự cố kỹ thuật?',lab:['Có sự cố, gọi gấp','Không sự cố, gọi gấp']},
+ {i:'🦷',t:'Răng trẻ em',ctx:'{p}% trẻ em trong trường có răng sâu.',s:'Trẻ sâu răng kêu ê buốt khi ăn đồ lạnh {s}%.',f:'Trẻ răng tốt cũng kêu ê buốt {f}%.',ev:'Một em kêu ê buốt khi ăn kem.',q:'Xác suất em đó bị sâu răng?',lab:['Sâu răng, ê buốt','Răng tốt, ê buốt']},
+ {i:'🕵️',t:'Điệp viên',ctx:'{p}% nhân viên của tòa nhà là điệp viên.',s:'Điệp viên vào kho tài liệu ngoài giờ {s}%.',f:'Nhân viên bình thường cũng vào kho ngoài giờ do tăng ca {f}%.',ev:'Camera ghi một nhân viên vào kho ngoài giờ.',q:'Xác suất nhân viên đó là điệp viên?',lab:['Điệp viên vào kho','Nhân viên thường vào kho']},
+ {i:'🐔',t:'Cúm gia cầm',ctx:'{p}% đàn gà trong vùng nhiễm cúm.',s:'Đàn nhiễm cúm có gà bỏ ăn {s}%.',f:'Đàn khỏe cũng có gà bỏ ăn do nóng {f}%.',ev:'Bạn thấy trong một đàn có gà bỏ ăn.',q:'Xác suất đàn gà nhiễm cúm?',lab:['Nhiễm cúm, gà bỏ ăn','Khỏe, gà bỏ ăn']},
+ {i:'🌊',t:'Cảnh báo lũ',ctx:'{p}% trận mưa lớn ở thượng nguồn gây lũ ở hạ lưu.',s:'Khi lũ sắp tới, mực nước sông dâng nhanh {s}%.',f:'Khi không có lũ, mực nước vẫn dâng nhanh do xả đập {f}%.',ev:'Mực nước sông đang dâng nhanh.',q:'Xác suất lũ sắp tới?',lab:['Có lũ, nước dâng nhanh','Không lũ, nước dâng nhanh']},
+ {i:'🧸',t:'Đồ chơi lỗi',ctx:'{p}% món đồ chơi trong lô bị bong chi tiết nhỏ.',s:'Món lỗi có mối ghép lỏng {s}%.',f:'Món tốt cũng có mối ghép trông lỏng {f}%.',ev:'Bạn thấy một món có mối ghép lỏng.',q:'Xác suất món đó bị bong chi tiết?',lab:['Món lỗi, ghép lỏng','Món tốt, ghép lỏng']},
+ {i:'🧊',t:'Tủ lạnh cửa hàng',ctx:'{p}% tủ lạnh trong cửa hàng bị hỏng gioăng.',s:'Tủ hỏng gioăng đọng nước quanh cửa {s}%.',f:'Tủ tốt cũng đọng nước vào ngày ẩm {f}%.',ev:'Một chiếc tủ đang đọng nước quanh cửa.',q:'Xác suất tủ hỏng gioăng?',lab:['Hỏng gioăng, đọng nước','Tủ tốt, đọng nước']},
+ {i:'🌾',t:'Sâu bệnh ruộng lúa',ctx:'{p}% ruộng lúa trong xã bị rầy nâu.',s:'Ruộng bị rầy có cây cháy vàng từng mảng {s}%.',f:'Ruộng không rầy cũng cháy vàng do thiếu nước {f}%.',ev:'Bạn thấy một ruộng cháy vàng từng mảng.',q:'Xác suất ruộng bị rầy nâu?',lab:['Có rầy, cháy vàng','Không rầy, cháy vàng']}
+];
+const COLORS={prior:'#ffd45e',tp:'#46d39a',fp:'#ff6a5c',off:'rgba(150,175,205,.35)'};
+const STATE={MENU:'MENU',PLAYING:'PLAYING',REVEAL:'REVEAL',GAME_OVER:'GAME_OVER',VICTORY:'VICTORY'};
+
+// ===== STATE =====
+const G={state:STATE.MENU,idx:0,lives:0,score:0,combo:0,hints:0,cur:null,hinted:false,lastT:-1,best:0};
+
+// ===== STORAGE =====
+function loadBest(){try{const v=parseInt(localStorage.getItem(CONFIG.BEST_KEY),10);return Number.isFinite(v)?v:0}catch(e){return 0}}
+function saveBest(v){try{localStorage.setItem(CONFIG.BEST_KEY,String(v))}catch(e){}}
+
+// ===== GAMEPLAY =====
+const rnd=(a,b)=>a+Math.floor(Math.random()*(b-a+1));
+function posterior(p,S,F){const o=p/(1-p)*(S/F);return o/(1+o)}
+const shuffle=a=>{for(let i=a.length-1;i>0;i--){const j=rnd(0,i);[a[i],a[j]]=[a[j],a[i]]}return a};
+const pc1=v=>(v*100).toFixed(1).replace('.',',')+'%';
+const pf=v=>(v*100).toFixed(2).replace(/\.?0+$/,'').replace('.',',')+'%';
+const d4=v=>v===0?'0':v<0.001?v.toExponential(2).replace('.',','):v.toFixed(4).replace('.',',');
+const sub=n=>String.fromCharCode(0x2080+n);
+function solveHtml(c){
+  let h=`<p style='margin-top:12px'><b>Lời giải chi tiết</b></p>`;
+  if(!c.puz){
+    const e=c.evs,n=e.length,nm=j=>n>1?'B'+sub(j+1):'B';
+    h+=`<p>Đặt <b>A</b> = giả thuyết cần xét, <b>Ā</b> = ngược lại; <b>B</b> = ${n>1?'toàn bộ bằng chứng (B₁…B'+sub(n)+', độc lập khi đã biết A hoặc Ā)':'bằng chứng quan sát được'}.</p>`;
+    h+=`<p><b>P(A|B) = P(B|A)·P(A) / [P(B|A)·P(A) + P(B|Ā)·P(Ā)]</b></p>`;
+    h+=`<p>① Tỉ lệ nền: P(A) = ${pf(c.p)}, P(Ā) = ${pf(1-c.p)}.</p>`;
+    let lA=1,lN=1,l='';
+    e.forEach((x,j)=>{const a=x.on?x.s:1-x.s,b=x.on?x.f:1-x.f;lA*=a;lN*=b;
+      l+='<br>'+(x.on?`P(${nm(j)}|A) = ${pf(a)}; P(${nm(j)}|Ā) = ${pf(b)}`:`${nm(j)} không xuất hiện: P(${nm(j)}|A) = 1 − ${pf(x.s)} = ${pf(a)}; P(${nm(j)}|Ā) = 1 − ${pf(x.f)} = ${pf(b)}`)});
+    h+=`<p>② Khả năng của bằng chứng:${l}${n>1?`<br>Nhân lại: P(B|A) = ${d4(lA)}; P(B|Ā) = ${d4(lN)}`:''}</p>`;
+    const num=lA*c.p,den=num+lN*(1-c.p);
+    h+=`<p>③ Thay số: tử = ${d4(lA)} × ${d4(c.p)} = ${d4(num)}; mẫu = ${d4(num)} + ${d4(lN)} × ${d4(1-c.p)} = ${d4(den)}.</p>`;
+    h+=`<p>④ P(A|B) = ${d4(num)} / ${d4(den)} = <b>${pf(num/den)}</b>.</p>`;
+  }else{
+    if(c.pre)h+=`<p>${c.pre}</p>`;
+    if(c.hy){
+      const w=c.hy.map(x=>x.pr*x.lk),tot=w.reduce((a,b)=>a+b,0),k=c.ask||0;
+      h+=`<p><b>P(Aᵢ|B) = P(B|Aᵢ)·P(Aᵢ) / Σⱼ P(B|Aⱼ)·P(Aⱼ)</b></p>`;
+      h+=c.hy.map((x,i)=>`<p>A${sub(i+1)} = ${x.n}: P(A${sub(i+1)}) = ${x.ps||pf(x.pr)}; P(B|A${sub(i+1)}) = ${x.ls||pf(x.lk)}; tích = ${d4(w[i])}</p>`).join('');
+      h+=`<p>P(B) = ${w.map(d4).join(' + ')} = ${d4(tot)}.<br>P(A${sub(k+1)}|B) = ${d4(w[k])} / ${d4(tot)} = <b>${pf(w[k]/tot)}</b>.</p>`;
+    }
+    if(c.tail)h+=`<p>${c.tail}</p>`;
+  }
+  return `<div class='sol'>${h}</div>`;
+}
+const PUZZLES=[
+ ()=>{const knows=Math.random()<.7,n=knows?rnd(3,6):3,post=knows?(n-1)/n:.5;
+  return {t:{i:'🚪',t:'Cánh cửa bí mật',lab:['Giải ở cửa còn lại','Giải ở cửa bạn chọn']},post,
+   hy:knows?[{n:'giải ở cửa 1 (cửa bạn chọn)',pr:1/n,ps:`1/${n}`,lk:1/(n-1),ls:`1/${n-1}`},{n:`giải ở cửa ${n}`,pr:1/n,ps:`1/${n}`,lk:1,ls:'1'}]:[{n:'giải ở cửa 1',pr:1/3,ps:'1/3',lk:.5,ls:'1/2'},{n:'giải ở cửa 3',pr:1/3,ps:'1/3',lk:.5,ls:'1/2'}],ask:1,
+   pre:knows?`B = “người dẫn mở ${n-2} cửa trống, chỉ chừa cửa ${n}”. Nếu giải nằm ở cửa khác 1 và ${n}, B không thể xảy ra (P(B|A) = 0), nên chỉ còn hai giả thuyết dưới đây. Nếu giải ở cửa 1, người dẫn chọn ngẫu nhiên 1 trong ${n-1} cửa để chừa lại.`:'B = “người dẫn mở ngẫu nhiên cửa 2 và thấy trống”. Giải ở cửa 2 thì B không thể xảy ra (P(B|A) = 0). Với hai cửa còn lại, người dẫn chọn cửa 2 với xác suất 1/2.',
+   text:knows?`<p>Có ${n} cánh cửa, sau một cánh là giải thưởng. Bạn chọn cửa số 1. Người dẫn chương trình biết rõ giải ở đâu, luôn mở ${n-2} cửa trống khác và chỉ để lại cửa số ${n}.</p><p class='q'>Xác suất giải thưởng nằm sau cửa số ${n} (nếu bạn đổi cửa)?</p>`:`<p>Có 3 cánh cửa, sau một cánh là giải thưởng. Bạn chọn cửa số 1. Người dẫn chương trình KHÔNG biết giải ở đâu, mở ngẫu nhiên cửa số 2 và tình cờ thấy trống.</p><p class='q'>Xác suất giải thưởng nằm sau cửa số 3?</p>`,
+   hint:knows?`Xác suất bạn chọn trúng ngay từ đầu chỉ là 1/${n}, và hành động của người dẫn không làm con số đó đổi.`:'Loại bỏ các trường hợp mà người dẫn lẽ ra đã mở trúng giải, rồi xem còn lại gì.',
+   explain:knows?`Cửa bạn chọn giữ nguyên xác suất 1/${n} vì người dẫn mở cửa có chủ đích. Phần còn lại ${n-1}/${n} dồn vào cửa duy nhất còn đóng.`:'Người dẫn mở ngẫu nhiên nên có thể đã lộ giải. Biết cửa 2 trống, chỉ còn hai khả năng ngang nhau (cửa 1 hoặc cửa 3): 50%.'};},
+ ()=>{const V=[
+   {q:'Biết ít nhất một bé là con trai.',post:1/3,hint:'Liệt kê các cặp có thể: trai-trai, trai-gái, gái-trai.',ex:'Còn 3 trường hợp ngang nhau (TT, TG, GT), chỉ 1 trường hợp có hai bé đều trai: 1/3.'},
+   {q:'Bạn gặp bố đi cùng một bé trai, bé này được chọn ngẫu nhiên trong hai bé.',post:.5,hint:'Gia đình hai trai có dễ cho bạn gặp một bé trai hơn gia đình trai-gái không?',ex:'Cặp trai-trai: 1/4 × 1. Mỗi cặp trai-gái và gái-trai: 1/4 × 1/2. Tỉ lệ 1 / (1 + 1/2 + 1/2) = 1/2.'},
+   {q:'Biết bé lớn là con trai.',post:.5,hint:'Thông tin này chỉ nói về bé lớn. Bé nhỏ có liên quan gì không?',ex:'Hai lần sinh độc lập, bé nhỏ là trai với xác suất 1/2.'},
+   {q:'Biết ít nhất một bé là con trai sinh vào thứ Ba.',post:13/27,hint:'Có 14 × 14 = 196 cặp (giới tính, ngày) ngang nhau. Đếm các cặp có ít nhất một bé trai sinh thứ Ba.',ex:'Có 27 cặp có ít nhất một bé trai sinh thứ Ba, trong đó 13 cặp cả hai đều trai: 13/27 ≈ 48,1%.'}],x=V[rnd(0,3)];
+  return {t:{i:'👶',t:'Hai đứa trẻ',lab:['Hai bé đều trai','Có bé gái']},post:x.post,
+   hy:(()=>{const L=x.q.includes('thứ Ba')?[['13/49',13/49],['1/7',1/7],['1/7',1/7],['0',0]]:x.q.includes('ngẫu nhiên')?[['1',1],['1/2',.5],['1/2',.5],['0',0]]:x.q.includes('lớn')?[['1',1],['1',1],['0',0],['0',0]]:[['1',1],['1',1],['1',1],['0',0]];return ['TT','TG','GT','GG'].map((s,i)=>({n:`gia đình ${s} (lớn–nhỏ)`,pr:.25,ps:'1/4',ls:L[i][0],lk:L[i][1]}))})(),ask:0,
+   pre:'Bốn loại gia đình (bé lớn–bé nhỏ): TT, TG, GT, GG, mỗi loại P = 1/4. Cần tính P(TT | B) với B = thông tin đã biết.',hint:x.hint,explain:x.ex,
+   text:`<p>Một gia đình có hai con; giới tính và ngày sinh của mỗi bé đều ngang xác suất. ${x.q}</p><p class='q'>Xác suất cả hai bé đều là con trai?</p>`};},
+ ()=>{let a,q,k,w,h,post;do{a=[9,19,49,99][rnd(0,3)];q=[75,80,90][rnd(0,2)];k=rnd(3,6);w=Math.pow(q/100,k);h=Math.pow(.5,k);post=w/(w+a*h)}while(post<.08||post>.92);
+  return {t:{i:'🪙',t:'Đồng xu thiên vị',lab:['Đồng thiên vị','Đồng thường']},post,
+   hy:[{n:'đồng thiên vị',pr:1/(a+1),ps:`1/${a+1}`,lk:w,ls:`${q}%^${k}`},{n:'đồng thường',pr:a/(a+1),ps:`${a}/${a+1}`,lk:h,ls:`0,5^${k}`}],ask:0,pre:`B = “${k} lần tung đều ngửa”. Các lần tung độc lập nên nhân xác suất.`,
+   text:`<p>Trong túi có ${a} đồng xu thường (ngửa 50%) và 1 đồng xu thiên vị (ngửa ${q}%). Bạn bốc ngẫu nhiên một đồng, tung ${k} lần và cả ${k} lần đều ngửa.</p><p class='q'>Xác suất đó là đồng thiên vị?</p>`,
+   hint:'Đồng thường chiếm đa số, nhưng mỗi lần ngửa liên tiếp làm hai bên được cộng điểm theo tỉ lệ khác nhau.',
+   explain:`Trọng số đồng thiên vị: 1 × ${q/100}^${k} ≈ ${w.toFixed(3)}. Đồng thường: ${a} × 0,5^${k} ≈ ${(a*h).toFixed(3)}. Tỉ lệ thiên vị = ${pc1(post)}.`};},
+ ()=>{let sh,er,ask,w,tot,post;const nm=['A','B','C'];
+  do{sh=[[50,30,20],[60,30,10],[45,35,20]][rnd(0,2)];er=[rnd(1,3),rnd(3,6),rnd(6,10)];ask=rnd(0,2);w=sh.map((s,i)=>s*er[i]);tot=w[0]+w[1]+w[2];post=w[ask]/tot}while(post<.08||post>.92);
+  return {t:{i:'🏭',t:'Ba dây chuyền',lab:['Lỗi từ dây chuyền '+nm[ask],'Lỗi từ dây chuyền khác']},post,
+   hy:sh.map((s,i)=>({n:`dây chuyền ${nm[i]}`,pr:s/100,ps:s+'%',lk:er[i]/100,ls:er[i]+'%'})),ask,pre:`B = “sản phẩm bị chọn là sản phẩm lỗi”. Cần P(dây chuyền ${nm[ask]} | B).`,
+   text:`<p>Ba dây chuyền A, B, C làm ra lần lượt ${sh[0]}%, ${sh[1]}%, ${sh[2]}% sản phẩm, với tỉ lệ lỗi ${er[0]}%, ${er[1]}%, ${er[2]}%. Một sản phẩm được chọn ngẫu nhiên và bị lỗi.</p><p class='q'>Xác suất nó đến từ dây chuyền ${nm[ask]}?</p>`,
+   hint:'Số sản phẩm lỗi của mỗi dây chuyền = tỉ phần × tỉ lệ lỗi. So sánh các phần đóng góp.',
+   explain:`Trọng số = tỉ phần × tỉ lệ lỗi: A ${w[0]}, B ${w[1]}, C ${w[2]}. Dây chuyền ${nm[ask]}: ${w[ask]}/${tot} = ${pc1(post)}.`};},
+ ()=>{let p,r,m,post;do{p=[10,15,20,25][rnd(0,3)];r=[75,80,85,90][rnd(0,3)];m=rnd(1,2);
+   const a=p/100*Math.pow(r/100,m),b=(1-p/100)*Math.pow(1-r/100,m);post=a/(a+b)}while(post<.1||post>.92);
+  return {t:{i:'🚕',t:'Nhân chứng',lab:['Taxi xanh','Taxi vàng bị khai là xanh']},post,
+   hy:[{n:'taxi xanh',pr:p/100,ps:p+'%',lk:Math.pow(r/100,m),ls:`${r}%^${m}`},{n:'taxi vàng',pr:1-p/100,ps:(100-p)+'%',lk:Math.pow(1-r/100,m),ls:`${100-r}%^${m}`}],ask:0,pre:`B = “${m===1?'nhân chứng khai':'cả hai nhân chứng đều khai'} taxi xanh”. Nhân chứng độc lập nên nhân xác suất.`,
+   text:`<p>${p}% taxi trong thành phố màu xanh, còn lại màu vàng. Sau một vụ tai nạn, ${m===1?'một nhân chứng':'hai nhân chứng độc lập'} nhận màu đúng ${r}% (bất kể màu thật) và ${m===1?'khai':'đều khai'} đó là taxi xanh.</p><p class='q'>Xác suất đó thật sự là taxi xanh?</p>`,
+   hint:'Có bao nhiêu taxi vàng bị nhận nhầm thành xanh so với taxi xanh được nhận đúng?',
+   explain:`Xanh: ${p}% × ${r}%^${m}. Vàng: ${100-p}% × ${100-r}%^${m}. Tỉ lệ nền thấp kéo xác suất xuống dù nhân chứng khá đáng tin: ${pc1(post)}.`};},
+ ()=>{let m,N,post;do{m=[1000,10000][rnd(0,1)];N=[2000,5000,20000][rnd(0,2)];post=1/(1+(N-1)/m)}while(post<.1||post>.9);
+  const extra=(N-1)/m;
+  return {t:{i:'🧬',t:'DNA trùng khớp',lab:['Thủ phạm','Người vô tội trùng DNA']},post,
+   hy:[{n:'người bị bắt là thủ phạm',pr:1/N,ps:`1/${N}`,lk:1,ls:'1'},{n:'người bị bắt là người vô tội',pr:(N-1)/N,ps:`${N-1}/${N}`,lk:1/m,ls:`1/${m}`}],ask:0,pre:'B = “người bị bắt có DNA trùng khớp”. Người được chọn ngẫu nhiên từ cả thành phố.',
+   text:`<p>DNA ở hiện trường trùng ngẫu nhiên với 1 trong ${m} người vô tội. Thành phố có ${N} người, chắc chắn có đúng 1 thủ phạm và người đó chắc chắn trùng DNA. Một người bị bắt chỉ vì DNA trùng, không còn bằng chứng nào khác.</p><p class='q'>Xác suất người đó là thủ phạm?</p>`,
+   hint:`Trong ${N-1} người vô tội, ước tính có bao nhiêu người cũng trùng DNA?`,
+   explain:`Ngoài thủ phạm, trung bình có ${extra.toFixed(1).replace('.',',')} người vô tội cũng trùng DNA. Thủ phạm là 1 trong ${(1+extra).toFixed(1).replace('.',',')} người trùng: ${pc1(post)}. Tỉ lệ trùng nhầm 1/${m} không phải xác suất vô tội.`};},
+ ()=>{const t=TEMPLATES[rnd(0,TEMPLATES.length-1)];let p,s,f,h,post;
+  do{p=rnd(1,20)/100;s=rnd(80,99)/100;f=rnd(3,20)/100;h=posteriorEvs(p,[{s,f,on:true}]);post=h*s+(1-h)*f}while(h<.1||h>.7||post<.15||post>.75);
+  const fill=x=>x.replace('{p}',Math.round(p*100)).replace('{s}',Math.round(s*100)).replace('{f}',Math.round(f*100));
+  return {t:{i:t.i,t:t.t+' (lần hai)',lab:['Lần hai giống lần đầu','Lần hai khác lần đầu']},post,
+   hy:[{n:'giả thuyết đúng',pr:p,lk:s},{n:'giả thuyết sai',pr:1-p,lk:f}],ask:0,pre:'Bước 1 — cập nhật sau lần kiểm tra đầu (B₁ = “kết quả lần đầu”).',
+   tail:`Bước 2 — lần hai độc lập khi đã biết giả thuyết: P(B₂|B₁) = P(B₂|A)·P(A|B₁) + P(B₂|Ā)·P(Ā|B₁) = ${pf(s)} × ${pf(h)} + ${pf(f)} × ${pf(1-h)} = <b>${pf(post)}</b>.`,
+   text:`<p>${fill(t.ctx)} ${fill(t.s)} ${fill(t.f)}</p><p>${t.ev} Bạn kiểm tra lại đúng cách đó, độc lập với lần trước (cùng độ chính xác).</p><p class='q'>Xác suất lần kiểm tra thứ hai cũng cho kết quả giống lần đầu?</p>`,
+   hint:'Cập nhật xác suất sau lần đầu trước, rồi dùng nó làm tỉ lệ nền mới.',
+   explain:`Sau lần đầu, xác suất giả thuyết đúng là ${pc1(h)}. Lần hai: ${pc1(h)} × ${pc1(s)} + ${pc1(1-h)} × ${pc1(f)} ≈ ${pc1(post)}.`};},
+ ()=>{let n1,n2,n3,post;do{n1=rnd(1,4);n2=rnd(1,5);n3=rnd(1,4);post=2*n1/(2*n1+n2)}while(post<.2||post>.9);
+  return {t:{i:'📦',t:'Hộp bi',lab:['Hộp vàng-vàng','Hộp vàng-bạc']},post,
+   hy:[{n:'hộp vàng-vàng',pr:n1/(n1+n2+n3),ps:`${n1}/${n1+n2+n3}`,lk:1,ls:'1'},{n:'hộp vàng-bạc',pr:n2/(n1+n2+n3),ps:`${n2}/${n1+n2+n3}`,lk:.5,ls:'1/2'},{n:'hộp bạc-bạc',pr:n3/(n1+n2+n3),ps:`${n3}/${n1+n2+n3}`,lk:0,ls:'0'}],ask:0,pre:'B = “viên bi rút ra màu vàng”. Bi còn lại cũng vàng khi và chỉ khi đó là hộp vàng-vàng.',
+   text:`<p>Có ${n1+n2+n3} hộp kín: ${n1} hộp chứa 2 bi vàng, ${n2} hộp chứa 1 vàng 1 bạc, ${n3} hộp chứa 2 bi bạc. Bạn chọn ngẫu nhiên một hộp, rút ngẫu nhiên một bi và được bi vàng.</p><p class='q'>Xác suất bi còn lại trong hộp cũng là vàng?</p>`,
+   hint:'Hãy đếm theo từng viên bi vàng chứ không theo hộp.',
+   explain:`Có ${2*n1} viên vàng nằm trong hộp vàng-vàng và ${n2} viên vàng nằm trong hộp vàng-bạc. Viên bạn rút là 1 trong ${2*n1+n2} viên vàng ngang nhau: ${pc1(post)}.`};},
+ ()=>{const n=rnd(3,5),post=1/n,L='ABCDE'.slice(0,n).split('').join(', ');
+  return {t:{i:'⛓️',t:'Lời cai ngục',lab:['A được ân xá','Người khác được ân xá']},post,
+   hy:[{n:'A được ân xá',pr:1/n,ps:`1/${n}`,lk:1/(n-1),ls:`1/${n-1}`},{n:'B được ân xá',pr:1/n,ps:`1/${n}`,lk:0,ls:'0'},{n:`một trong ${n-2} người còn lại được ân xá`,pr:(n-2)/n,ps:`${n-2}/${n}`,lk:1/(n-2),ls:`1/${n-2}`}],ask:0,pre:`B = “cai ngục nói: B bị xử tử”. Nếu A được ân xá, cai ngục chọn ngẫu nhiên 1 trong ${n-1} người kia; nếu người khác được ân xá, ông chỉ chọn trong ${n-2} người bị xử tử còn lại.`,
+   text:`<p>Có ${n} tù nhân (${L}); một người được ân xá ngẫu nhiên, những người còn lại bị xử tử. A xin cai ngục nói tên một người khác chắc chắn bị xử tử. Cai ngục (không bao giờ nêu tên A hay người được ân xá) đáp: “B bị xử tử”.</p><p class='q'>Xác suất A được ân xá?</p>`,
+   hint:'Dù A có được ân xá hay không, cai ngục có luôn nêu được tên một người khác bị xử tử không?',
+   explain:`Cai ngục luôn nêu được tên một người khác A bị xử tử, bất kể A có được ân xá hay không, nên nghe một cái tên không làm đổi khả năng của A: vẫn 1/${n}. Phần còn lại dồn cho những người chưa được nêu tên.`};},
+ ()=>{const n=[10,15,20,23,30,40][rnd(0,5)];let q=1;for(let k=0;k<n;k++)q*=(365-k)/365;const post=1-q;
+  return {t:{i:'🎂',t:'Trùng sinh nhật',lab:['Có người trùng sinh nhật','Không ai trùng']},post,
+   tail:`Đặt A = “có ít nhất hai người trùng ngày sinh”. Công thức phần bù: P(A) = 1 − P(Ā), với P(Ā) = (365/365) × (364/365) × … × (${365-n+1}/365) ≈ ${pf(q)}. Vậy P(A) = 1 − ${pf(q)} = <b>${pf(post)}</b>.`,
+   text:`<p>Trong một nhóm ${n} người chọn ngẫu nhiên (bỏ qua năm nhuận, mỗi ngày sinh ngang khả năng).</p><p class='q'>Xác suất có ít nhất hai người trùng ngày sinh?</p>`,
+   hint:'Dễ hơn khi tính xác suất không ai trùng nhau rồi lấy phần bù.',
+   explain:`Xác suất không ai trùng = (365/365) × (364/365) × … × (${365-n+1}/365) ≈ ${pc1(q)}. Phần bù: ${pc1(post)}. Số cặp người tăng rất nhanh (${n*(n-1)/2} cặp).`};},
+ ()=>{let p,k,post;do{p=[2,5,10][rnd(0,2)]/100;k=[5,10,20][rnd(0,2)];post=p/(1-Math.pow(1-p,k))}while(post<.06||post>.9);
+  const pp=1-Math.pow(1-p,k);
+  return {t:{i:'🧫',t:'Xét nghiệm gộp',lab:['Người đó nhiễm','Người đó không nhiễm']},post,
+   hy:[{n:'người đó nhiễm',pr:p,lk:1},{n:'người đó không nhiễm',pr:1-p,lk:1-Math.pow(1-p,k-1),ls:`1 − ${pf(1-p)}^${k-1}`}],ask:0,pre:`B = “ống dương tính”. Nếu người đó nhiễm thì P(B|A) = 1. Nếu không, ống dương tính khi ít nhất một trong ${k-1} người còn lại nhiễm.`,
+   text:`<p>Phòng xét nghiệm gộp mẫu của ${k} người vào một ống. Mỗi người nhiễm độc lập với xác suất ${Math.round(p*100)}%; phép thử hoàn hảo: ống dương tính khi và chỉ khi có ít nhất một người nhiễm. Ống vừa cho kết quả dương tính.</p><p class='q'>Xác suất một người cụ thể trong ống thật sự nhiễm?</p>`,
+   hint:'Xác suất ống dương tính (có ít nhất một người nhiễm) là bao nhiêu? Nếu người đó nhiễm thì ống chắc chắn dương.',
+   explain:`P(ống dương) = 1 − ${(1-p).toFixed(2).replace('.',',')}^${k} ≈ ${pc1(pp)}. P(người đó nhiễm | ống dương) = ${pc1(p)} / ${pc1(pp)} ≈ ${pc1(post)}.`};},
+ ()=>{let a,q,k,pb,post;do{a=[4,9,19][rnd(0,2)];q=[80,90][rnd(0,1)];k=rnd(2,5);const w=Math.pow(q/100,k),h=Math.pow(.5,k);pb=w/(w+a*h);post=pb*q/100+(1-pb)*.5}while(pb<.1||pb>.9);
+  return {t:{i:'🪙',t:'Đồng xu: lần tới',lab:['Lần tới ngửa','Lần tới sấp']},post,
+   hy:[{n:'đồng thiên vị',pr:1/(a+1),ps:`1/${a+1}`,lk:Math.pow(q/100,k),ls:`${q}%^${k}`},{n:'đồng thường',pr:a/(a+1),ps:`${a}/${a+1}`,lk:Math.pow(.5,k),ls:`0,5^${k}`}],ask:0,pre:`Bước 1 — cập nhật sau ${k} lần ngửa (B = “${k} lần đều ngửa”).`,
+   tail:`Bước 2 — P(ngửa tiếp) = P(ngửa|thiên vị)·P(thiên vị|B) + P(ngửa|thường)·P(thường|B) = ${q}% × ${pf(pb)} + 50% × ${pf(1-pb)} = <b>${pf(post)}</b>.`,
+   text:`<p>Trong túi có ${a} đồng xu thường (ngửa 50%) và 1 đồng thiên vị (ngửa ${q}%). Bạn bốc ngẫu nhiên một đồng và tung ${k} lần, cả ${k} lần đều ngửa.</p><p class='q'>Xác suất lần tung tiếp theo cũng ngửa?</p>`,
+   hint:'Tính xác suất đó là đồng thiên vị trước, rồi trộn hai khả năng theo trọng số đó.',
+   explain:`Sau ${k} lần ngửa, xác suất là đồng thiên vị ≈ ${pc1(pb)}. Lần tới ngửa: ${pc1(pb)} × ${q}% + ${pc1(1-pb)} × 50% ≈ ${pc1(post)}.`};},
+ ()=>{let rA,rB,askA,la,lb,post;do{rA=rnd(2,9);rB=rnd(2,9);askA=Math.random()<.5;la=rA*(rA-1)/90;lb=rB*(rB-1)/90;post=(askA?la:lb)/(la+lb)}while(rA===rB||post<.1||post>.92);
+  const nm=askA?'A':'B';
+  return {t:{i:'🎱',t:'Hai hộp bi',lab:['Hộp '+nm,'Hộp còn lại']},post,
+   hy:[{n:'hộp A',pr:.5,ps:'1/2',lk:la,ls:`${rA}/10 × ${rA-1}/9`},{n:'hộp B',pr:.5,ps:'1/2',lk:lb,ls:`${rB}/10 × ${rB-1}/9`}],ask:askA?0:1,pre:'B = “rút được 2 bi đỏ liên tiếp, không hoàn lại”. Chọn hộp ngẫu nhiên nên P = 1/2 mỗi hộp.',
+   text:`<p>Hộp A có ${rA} bi đỏ và ${10-rA} bi xanh. Hộp B có ${rB} bi đỏ và ${10-rB} bi xanh. Bạn chọn ngẫu nhiên một hộp, rút liên tiếp 2 bi không hoàn lại và được 2 bi đỏ.</p><p class='q'>Xác suất bạn đã chọn hộp ${nm}?</p>`,
+   hint:'Tính xác suất rút 2 bi đỏ liên tiếp (không hoàn lại) ở từng hộp, rồi so sánh.',
+   explain:`Rút 2 đỏ: hộp A = ${rA}/10 × ${rA-1}/9 ≈ ${pc1(la)}; hộp B = ${rB}/10 × ${rB-1}/9 ≈ ${pc1(lb)}. Hộp ${nm} chiếm ${pc1(post)}.`};},
+ ()=>{const S=rnd(7,10);let tot=0,six=0;for(let a=1;a<=6;a++)for(let b=1;b<=6;b++)if(a+b===S){tot++;if(a===6||b===6)six++}
+  const post=six/tot;
+  return {t:{i:'🎲',t:'Hai xúc xắc',lab:['Có mặt 6','Không có mặt 6']},post,
+   hy:[{n:'có ít nhất một mặt 6',pr:11/36,ps:'11/36',lk:six/11,ls:`${six}/11`},{n:'không có mặt 6',pr:25/36,ps:'25/36',lk:(tot-six)/25,ls:`${tot-six}/25`}],ask:0,pre:`B = “tổng hai mặt bằng ${S}”. Trong 36 kết quả ngang nhau có 11 kết quả chứa ít nhất một mặt 6.`,
+   text:`<p>Tung hai xúc xắc cân đối. Bạn biết tổng hai mặt bằng ${S}.</p><p class='q'>Xác suất ít nhất một xúc xắc ra mặt 6?</p>`,
+   hint:`Liệt kê các cặp (a, b) có tổng ${S}.`,
+   explain:`Có ${tot} cặp ngang nhau có tổng ${S}, trong đó ${six} cặp có mặt 6: ${six}/${tot} = ${pc1(post)}.`};},
+ ()=>{let a,b,n,h,la,lb,post;do{a=[60,70,80,90][rnd(0,3)];b=[20,30,40][rnd(0,2)];n=rnd(3,4);h=rnd(0,n);
+   la=Math.pow(a/100,h)*Math.pow(1-a/100,n-h);lb=Math.pow(b/100,h)*Math.pow(1-b/100,n-h);post=la/(la+lb)}while(post<.08||post>.92);
+  return {t:{i:'🏹',t:'Xạ thủ',lab:['Xạ thủ A','Xạ thủ B']},post,
+   hy:[{n:'xạ thủ A',pr:.5,ps:'1/2',lk:la,ls:`${a}%^${h} × ${100-a}%^${n-h}`},{n:'xạ thủ B',pr:.5,ps:'1/2',lk:lb,ls:`${b}%^${h} × ${100-b}%^${n-h}`}],ask:0,pre:`B = “${n} phát bắn, trúng ${h} phát”. Các phát độc lập nên nhân xác suất (hệ số tổ hợp giống nhau ở hai người nên triệt tiêu).`,
+   text:`<p>Hai xạ thủ: A trúng bạ ${a}% mỗi phát, B trúng ${b}%. Bạn chọn ngẫu nhiên một người; người đó bắn ${n} phát, trúng ${h} phát (các phát độc lập).</p><p class='q'>Xác suất đó là xạ thủ A?</p>`,
+   hint:'So sánh khả năng mỗi người tạo ra đúng kết quả đó, nhớ tính cả số phát trượt.',
+   explain:`Khả năng của A: ${a}%^${h} × ${100-a}%^${n-h} ≈ ${la.toFixed(4).replace('.',',')}; của B: ${b}%^${h} × ${100-b}%^${n-h} ≈ ${lb.toFixed(4).replace('.',',')}. A chiếm ${pc1(post)}.`};},
+ ()=>{let t,k,p,m,post;do{t=[70,75,80,90][rnd(0,3)];k=rnd(2,4);p=[10,20,30,50][rnd(0,3)]/100;m=(1+Math.pow(2*t/100-1,k))/2;post=p*m/(p*m+(1-p)*(1-m))}while(post<.1||post>.92);
+  return {t:{i:'🗣️',t:'Tin đồn truyền miệng',lab:['Xảy ra và tin đúng','Không xảy ra nhưng tin báo có']},post,
+   hy:[{n:'sự kiện xảy ra',pr:p,lk:m},{n:'sự kiện không xảy ra',pr:1-p,lk:1-m}],ask:0,pre:`Tin còn đúng nội dung sau ${k} người khi số lần đảo là chẵn: m = (1 + (2 × ${t}% − 1)^${k}) / 2 = ${pf(m)}. B = “người cuối báo: sự kiện đã xảy ra”; P(B|A) = m, P(B|Ā) = 1 − m.`,
+   text:`<p>Một sự kiện xảy ra thật với xác suất ${Math.round(p*100)}% (trước khi có tin). Tin được truyền qua ${k} người liên tiếp; mỗi người nói thật ${t}%, còn lại thì đảo ngược nội dung (“có” thành “không” và ngược lại). Người cuối cùng báo bạn: “Sự kiện đã xảy ra”.</p><p class='q'>Xác suất sự kiện thật sự đã xảy ra?</p>`,
+   hint:'Tin giữ nguyên nội dung khi số lần đảo là chẵn. Hãy tính xác suất tin vẫn đúng nội dung sau toàn chuỗi.',
+   explain:`Xác suất tin sau ${k} người vẫn đúng nội dung = (1 + (2 × ${t}% − 1)^${k}) / 2 ≈ ${pc1(m)}. Khi đó: ${pc1(p)} × ${pc1(m)} so với ${pc1(1-p)} × ${pc1(1-m)}, cho ${pc1(post)}.`};}
+];
+function genPuzzle(){
+  if(!G.pdeck||!G.pdeck.length)G.pdeck=shuffle(PUZZLES.map((_,i)=>i));
+  const r=PUZZLES[G.pdeck.pop()](),tp=Math.round(r.post*CONFIG.POP);
+  return {...r,puz:true,p:0,evs:[{s:.5,f:.5,on:true}],t:{ctx:'',s:'',f:'',ev:'',q:'',...r.t},g:{nH:tp,tp,fp:CONFIG.POP-tp,fn:0,tn:0}};
+}
+function posteriorEvs(p,evs){let o=p/(1-p);evs.forEach(e=>{o*=e.on?e.s/e.f:(1-e.s)/(1-e.f)});return o/(1+o)}
+function genCase(n){
+  if(CONFIG.PUZZLE_AT.includes(n))return genPuzzle();
+  if(!G.deck||!G.deck.length){G.deck=TEMPLATES.map((_,i)=>i);for(let i=G.deck.length-1;i>0;i--){const j=rnd(0,i);[G.deck[i],G.deck[j]]=[G.deck[j],G.deck[i]]}}
+  const t=G.deck.pop();
+  const nEv=CONFIG.EV_COUNT(n);let c;
+  for(let k=0;k<150;k++){
+    const p=rnd(...CONFIG.PRIOR)/100,evs=[];
+    for(let j=0;j<nEv;j++){
+      let s=(j?rnd(...CONFIG.SENS2):rnd(...CONFIG.SENS))/100,f=(j?rnd(...CONFIG.FPR2):rnd(...CONFIG.FPR))/100;
+      if(j&&s<f+0.2)s=Math.min(.97,f+.2+rnd(0,15)/100);
+      if(j&&n>=CONFIG.NOISE_FROM&&Math.random()<.3)s=f=rnd(15,50)/100;
+      evs.push({s,f,on:j===0||n<CONFIG.ABSENT_FROM||Math.random()>.35});
+    }
+    if(evs[0].s<=evs[0].f+0.3)continue;
+    const post=posteriorEvs(p,evs);
+    if(post<0.05||post>0.95||Math.abs(post-evs[0].s)<CONFIG.TRAP_GAP)continue;
+    c={t:TEMPLATES[t],p,evs,post};break;
+  }
+  return c||{t:TEMPLATES[t],p:.05,evs:[{s:.9,f:.1,on:true}],post:posterior(.05,.9,.1)};
+}
+function groups(c){
+  if(c.puz)return c.g;
+  const N=CONFIG.POP,nH=Math.round(N*c.p),nN=N-nH;
+  const fH=c.evs.reduce((a,e)=>a*(e.on?e.s:1-e.s),1),fN=c.evs.reduce((a,e)=>a*(e.on?e.f:1-e.f),1);
+  const tp=Math.round(nH*fH),fp=Math.round(nN*fN);
+  return {nH,tp,fp,fn:nH-tp,tn:nN-fp};
+}
+function startGame(){
+  Object.assign(G,{idx:0,lives:CONFIG.LIVES,score:0,combo:0,hints:CONFIG.HINTS,lastT:-1,deck:null,pdeck:null,cur:null});
+  nextCase();
+}
+function nextCase(){
+  G.idx++;G.cur=genCase(G.idx);G.hinted=false;G.state=STATE.PLAYING;
+  const c=G.cur,pc=v=>Math.round(v*100);
+  const fill=x=>x.replace('{p}',pc(c.p)).replace('{s}',pc(c.evs[0].s)).replace('{f}',pc(c.evs[0].f));
+  let h=`<h2><span>${c.t.i}</span>Hồ sơ ${c.t.t}</h2>`;
+  h+=`<div class="fact">${fill(c.t.ctx)}</div><div class="fact">${fill(c.t.s)}</div><div class="fact">${fill(c.t.f)}</div>`;
+  c.evs.slice(1).forEach((e,j)=>{h+=`<div class="fact">Bằng chứng độc lập thứ ${j+2}: nếu giả thuyết đúng, nó xuất hiện ${pc(e.s)}%; nếu sai, nó vẫn xuất hiện ${pc(e.f)}%.</div>`});
+  h+=`<div class="obs">${c.t.ev}`+c.evs.slice(1).map((e,j)=>`<br>Bằng chứng ${j+2}: ${e.on?'có xuất hiện':'không xuất hiện'}.`).join('')+`</div><p class="q">${c.t.q}</p>`;
+  if(c.puz)h=`<h2><span>${c.t.i}</span>Hồ sơ hóc búa: ${c.t.t}</h2>${c.text}`;
+  $('case').innerHTML=h;
+  $('slider').value=50;$('slider').disabled=false;updateVal();
+  show('ask',true);show('board',false);show('result',false);
+  $('b-submit').disabled=false;$('b-hint').disabled=G.hints<=0;
+  updateHUD();showScreen('s-play');window.scrollTo(0,0);
+}
+function submit(){
+  if(G.state!==STATE.PLAYING)return;
+  G.state=STATE.REVEAL;
+  const c=G.cur,guess=+$('slider').value,truth=c.post*100,err=Math.abs(guess-truth);
+  const ok=err<=CONFIG.TOLERANCE;
+  G.combo=ok?G.combo+1:0;
+  let pts=Math.max(0,Math.round(100-err*CONFIG.ERR_PENALTY));if(c.puz)pts=Math.round(pts*CONFIG.PUZZLE_MULT);
+  if(G.combo>1)pts+=Math.min((G.combo-1)*CONFIG.COMBO_BONUS,CONFIG.COMBO_CAP);
+  G.score+=pts;
+  if(!ok)G.lives--;
+  show('ask',false);show('board',true);show('result',true);
+  drawGrid(true);renderLegend(true);
+  const g=groups(c),verdict=err<=5?'Chuẩn xác':ok?'Khá gần':'Trực giác đánh lừa bạn';
+  const last=G.lives<=0||G.idx>=CONFIG.TOTAL_CASES;
+  $('result').innerHTML=
+   `<div class="center"><span id="stamp" class="${ok?'good':''}">${verdict}</span></div>
+    <p style="margin-top:10px">Bạn chọn <b>${guess}%</b>, đáp án <b>${truth.toFixed(1)}%</b> (lệch ${err.toFixed(1)} điểm). +${pts} điểm${G.combo>1?` · chuỗi ${G.combo}`:''}.</p>
+    <p class="dim" style="margin-top:8px">${c.puz?`${c.explain} Quy về ${CONFIG.POP} trường hợp khớp dữ kiện: ${g.tp} (xanh) so với ${g.fp} (đỏ).`:`Trong ${CONFIG.POP} trường hợp, có ${g.tp} đúng-và-có-bằng-chứng (xanh) và ${g.fp} sai-nhưng-vẫn-có-bằng-chứng (đỏ). Xác suất = ${g.tp} / (${g.tp} + ${g.fp}) ≈ ${(g.tp/(g.tp+g.fp)*100).toFixed(1)}%.`}</p>
+    ${solveHtml(c)}
+    <button class="btn" id="b-next" style="width:100%;margin-top:12px">${last?'Xem kết quả':'Hồ sơ tiếp theo'}</button>`;
+  $('b-next').onclick=()=>{if(G.state===STATE.REVEAL)advance()};
+  updateHUD();
+  $('result').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function advance(){
+  if(G.lives<=0)return endGame(false);
+  if(G.idx>=CONFIG.TOTAL_CASES)return endGame(true);
+  nextCase();
+}
+function useHint(){
+  if(G.state!==STATE.PLAYING||G.hints<=0)return;
+  G.hints--;G.hinted=true;
+  if(G.cur.puz){$('case').insertAdjacentHTML('beforeend',`<div class='obs'>Gợi ý: ${G.cur.hint}</div>`);G.hinted=false;$('b-hint').textContent=`Gợi ý (${G.hints})`;$('b-hint').disabled=true;return}
+  show('board',true);drawGrid(false);renderLegend(false);
+  $('b-hint').textContent=`Gợi ý (${G.hints})`;$('b-hint').disabled=G.hints<=0;
+  $('board').scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+function endGame(win){
+  G.state=win?STATE.VICTORY:STATE.GAME_OVER;
+  const newBest=G.score>G.best;if(newBest){G.best=G.score;saveBest(G.best)}
+  $('e-title').textContent=win?'Kết án thành công':'Vụ án bị đóng';
+  $('e-score').textContent=G.score+' điểm';
+  $('e-sub').textContent=(newBest?'Kỷ lục mới! ':'Kỷ lục: '+G.best+' · ')+`Đã giải ${win?CONFIG.TOTAL_CASES:G.idx} hồ sơ`;
+  $('e-note').textContent='Ghi nhớ: xác suất cuối cùng phụ thuộc cả độ chính xác của bằng chứng lẫn tỉ lệ nền. Khi hiện tượng hiếm, ngay cả bằng chứng tốt vẫn dễ cho kết quả dương tính nhầm.';
+  showScreen('s-end');
+}
+
+// ===== RENDERING =====
+const cv=()=>$('grid');
+function drawGrid(reveal){
+  const c=G.cur;if(!c)return;
+  const canvas=cv(),dpr=Math.min(window.devicePixelRatio||1,2);
+  const w=canvas.clientWidth||300,cols=CONFIG.COLS,rows=CONFIG.POP/cols,cell=w/cols,h=Math.ceil(cell*rows);
+  canvas.style.height=h+'px';canvas.width=Math.round(w*dpr);canvas.height=Math.round(h*dpr);
+  const x=canvas.getContext('2d');x.setTransform(dpr,0,0,dpr,0,0);x.clearRect(0,0,w,h);
+  const g=groups(c),r=cell*0.34;
+  for(let i=0;i<CONFIG.POP;i++){
+    let col;
+    if(reveal)col=i<g.tp?COLORS.tp:(i>=g.nH&&i<g.nH+g.fp?COLORS.fp:COLORS.off);
+    else col=i<g.nH?COLORS.prior:COLORS.off;
+    x.fillStyle=col;x.beginPath();x.arc((i%cols+.5)*cell,(Math.floor(i/cols)+.5)*cell,r,0,6.2832);x.fill();
+  }
+}
+function renderLegend(reveal){
+  const lab=i=>G.cur.evs.length>1?['Giả thuyết đúng và khớp mọi bằng chứng','Giả thuyết sai nhưng vẫn khớp mọi bằng chứng'][i]:G.cur.t.lab[i],g=groups(G.cur),d=(c)=>`<span class="dot" style="background:${c}"></span>`;
+  $('legend').innerHTML=reveal
+   ?`<span>${d(COLORS.tp)}${lab(0)}: ${g.tp}</span><span>${d(COLORS.fp)}${lab(1)}: ${g.fp}</span>`
+   :`<span>${d(COLORS.prior)}Giả thuyết đúng ngay từ đầu: ${g.nH}/${CONFIG.POP}</span>`;
+}
+
+// ===== UI =====
+function $(id){return document.getElementById(id)}
+function show(id,on){$(id).style.display=on?'':'none'}
+function showScreen(id){document.querySelectorAll('.screen').forEach(s=>s.classList.toggle('on',s.id===id))}
+function updateVal(){$('val').textContent=$('slider').value+'%'}
+function updateHUD(){
+  $('h-case').textContent=`Hồ sơ ${G.idx}/${CONFIG.TOTAL_CASES}`;
+  $('h-score').textContent=G.score+' đ';
+  let h='';for(let i=0;i<CONFIG.LIVES;i++)h+=`<span class="${i<G.lives?'':'lost'}">♥</span>`;
+  $('h-hearts').innerHTML=h;
+  $('b-hint').textContent=`Gợi ý (${G.hints})`;
+}
+function init(){
+  G.best=loadBest();
+  $('best').textContent=G.best?`Kỷ lục: ${G.best} điểm`:'Chưa có kỷ lục.';
+  $('b-start').onclick=()=>{if(G.state===STATE.MENU||G.state===STATE.GAME_OVER||G.state===STATE.VICTORY)startGame()};
+  $('b-again').onclick=startGame;
+  $('b-submit').onclick=submit;
+  $('b-hint').onclick=useHint;
+  $('slider').addEventListener('input',updateVal);
+  let rt;window.addEventListener('resize',()=>{clearTimeout(rt);rt=setTimeout(()=>{
+    if(G.state===STATE.REVEAL)drawGrid(true);else if(G.state===STATE.PLAYING&&G.hinted)drawGrid(false)},120)});
+  document.addEventListener('dblclick',e=>e.preventDefault());
+}
+init();
+</script>
+</body>
+</html>
