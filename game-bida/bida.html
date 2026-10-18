@@ -241,6 +241,7 @@ canvas{
   background:rgba(0,0,0,.24);
   border-color:rgba(255,255,255,.11);
   box-shadow:0 3px 10px rgba(0,0,0,.28);
+  backdrop-filter:none;   /* làm mờ nền phía sau canvas đang chuyển động rất nặng với GPU điện thoại */
 }
 
 #spinTitle{
@@ -1409,7 +1410,40 @@ canvas{
    ========================================================= */
 
 const canvas = document.getElementById("game");
-const ctx = canvas.getContext("2d");
+let ctx = canvas.getContext("2d");
+
+/*
+  Chống giật trên máy yếu.
+  - Lớp tĩnh (nền + bàn + khung khay bi) vẽ một lần vào canvas phụ rồi dán lại mỗi khung hình (xem renderStaticLayer).
+  - Tự giới hạn 60 khung/giây (màn 120 Hz không phải vẽ gấp đôi) và chỉ 30 khung/giây khi đứng yên chờ đánh.
+  - Tự hạ chất lượng (độ phân giải canvas, hiệu ứng đổ bóng mờ) nếu thấy khung hình chậm, nhớ lại cho lần chơi sau.
+*/
+const QUALITY_STEPS = [
+  { dpr: 2,    fx: true  },
+  { dpr: 1.5,  fx: true  },
+  { dpr: 1.5,  fx: false },
+  { dpr: 1.25, fx: false }
+];
+const QUALITY_SAVED_MAX = 2;   // lần sau chỉ nhớ tới mức này (tránh kẹt ở mức thấp vì một lúc máy bận)
+let qualityLevel = 0;
+try{
+  qualityLevel = Math.max(0, Math.min(QUALITY_SAVED_MAX, parseInt(localStorage.getItem("bida:quality"), 10) || 0));
+}catch(e){}
+
+// Đổ bóng mờ (shadowBlur) rất tốn trên điện thoại: ở mức chất lượng thấp bỏ đi, các nét vẽ vẫn giữ nguyên
+let shadowFx = QUALITY_STEPS[qualityLevel].fx;
+{
+  const proto = Object.getOwnPropertyDescriptor(CanvasRenderingContext2D.prototype, "shadowBlur");
+  if(proto && proto.set){
+    const mainCtx = ctx;
+    let wanted = 0;
+    Object.defineProperty(mainCtx, "shadowBlur", {
+      configurable: true,
+      get(){ return wanted; },
+      set(v){ wanted = v; proto.set.call(mainCtx, shadowFx ? v : 0); }
+    });
+  }
+}
 
 const powerFill = document.getElementById("powerFill");
 const powerWrap = document.getElementById("powerWrap");
@@ -1542,10 +1576,18 @@ function getSelectedDeveloperPowerCase(){
   return devPowerCases[devCaseIndex] || null;
 }
 
+function setTextIfChanged(el, text){
+  if(el.textContent !== text) el.textContent = text;
+}
+
+function setTitleIfChanged(el, text){
+  if(el.title !== text) el.title = text;
+}
+
 function updateDeveloperPowerUI(){
   if(gameOver){
     devCaseBar.style.display = "none";
-    resetBtn.textContent = "CHƠI LẠI";
+    setTextIfChanged(resetBtn, "CHƠI LẠI");
     resetBtn.classList.add("show");
     resetBtn.classList.remove("devShoot");
     return;
@@ -1553,7 +1595,7 @@ function updateDeveloperPowerUI(){
 
   if(!developerAimGuide){
     devCaseBar.style.display = "none";
-    resetBtn.textContent = "CHƠI LẠI";
+    setTextIfChanged(resetBtn, "CHƠI LẠI");
     resetBtn.classList.remove("show");
     resetBtn.classList.remove("devShoot");
     return;
@@ -1562,9 +1604,9 @@ function updateDeveloperPowerUI(){
   devCaseBar.style.display = "flex";
 
   if(devScanJob){
-    devPowerCaseLabel.textContent = "...";
+    setTextIfChanged(devPowerCaseLabel, "...");
   }else{
-    devPowerCaseLabel.textContent = `${devPowerCases.length ? devCaseIndex + 1 : 0}/${devPowerCases.length}`;
+    setTextIfChanged(devPowerCaseLabel, `${devPowerCases.length ? devCaseIndex + 1 : 0}/${devPowerCases.length}`);
   }
 
   const selected = getSelectedDeveloperPowerCase();
@@ -1579,13 +1621,13 @@ function updateDeveloperPowerUI(){
     !cueBallDragging;
 
   if(canShoot){
-    resetBtn.textContent = "ĐÁNH";
-    resetBtn.title = `Đánh lực ${selected.selectedPercent}%`;
+    setTextIfChanged(resetBtn, "ĐÁNH");
+    setTitleIfChanged(resetBtn, `Đánh lực ${selected.selectedPercent}%`);
     resetBtn.classList.add("show");
     resetBtn.classList.add("devShoot");
   }else{
-    resetBtn.textContent = "CHƠI LẠI";
-    resetBtn.title = "Chơi lại";
+    setTextIfChanged(resetBtn, "CHƠI LẠI");
+    setTitleIfChanged(resetBtn, "Chơi lại");
     resetBtn.classList.remove("show");
     resetBtn.classList.remove("devShoot");
   }
@@ -2626,11 +2668,17 @@ function updateTargetBoard(){
   renderTargetBalls(playerTargetBallsEl, groups.player);
   renderTargetBalls(aiTargetBallsEl, groups.ai);
 }
+let lastShotTimerPercent = -1;
+
 function setPlayerTimerVisual(secondsLeft){
   if(!playerTargetCardEl) return;
 
   const left = clamp(secondsLeft, 0, PLAYER_SHOT_SECONDS);
   const percent = left / PLAYER_SHOT_SECONDS * 100;
+
+  // Vòng đếm giờ đổi rất chậm: ghi lại style (kéo theo vẽ lại phần tử) chỉ khi đổi từ 0,3%
+  if(Math.abs(percent - lastShotTimerPercent) < 0.3 && percent > 0 && percent < 100) return;
+  lastShotTimerPercent = percent;
 
   playerTargetCardEl.style.setProperty("--shotTimer", percent.toFixed(2));
 
@@ -2799,7 +2847,7 @@ function getHudEdges(){
 }
 
 function resize(){
-  dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
+  dpr = Math.max(1, Math.min(QUALITY_STEPS[qualityLevel].dpr, window.devicePixelRatio || 1));
 
   // Kích thước thật của vùng nhìn thấy (iOS: innerHeight đổi khi thanh địa chỉ co/giãn)
   const vv = window.visualViewport;
@@ -2953,11 +3001,120 @@ const squash = clamp(0.30 + visibleDepth * 0.70, 0.30, 1);
   };
 }
   
+/*
+  Ảnh dựng sẵn (sprite) để mỗi khung hình chỉ cần drawImage thay vì vẽ lại chữ và gradient cho từng bi:
+  - badge số (vòng trắng + số) cho từng bi
+  - lớp phủ chung: điểm sáng + viền tối mép + đường viền ngoài
+  Vẽ ở độ phân giải gấp ~1,5 lần điểm ảnh thật rồi thu nhỏ nên vẫn nét. Dựng lại khi đổi kích thước/chất lượng.
+*/
+let ballSprites = null;
+const BALL_BADGE_R = BALL_R * 0.52;
+
+function ballSpriteSS(){
+  return Math.max(1, Math.min(4, scale * dpr * 1.5));
+}
+
+function getBallSprites(){
+  const ss = ballSpriteSS();
+
+  if(ballSprites && Math.abs(ballSprites.ss - ss) < 0.001) return ballSprites;
+
+  ballSprites = { ss, badge: {}, overlay: null, glow: null };
+
+  // Lớp phủ chung (highlight + rim + viền), tâm ở giữa ảnh
+  const half = BALL_R + 2;
+  const size = Math.ceil(half * 2 * ss);
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+
+  const g = c.getContext("2d");
+  g.translate(size / 2, size / 2);
+  g.scale(ss, ss);
+
+  g.save();
+  g.beginPath();
+  g.arc(0, 0, BALL_R, 0, Math.PI * 2);
+  g.clip();
+
+  g.globalAlpha = .42;
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.arc(-BALL_R * 0.42, -BALL_R * 0.46, BALL_R * 0.32, 0, Math.PI * 2);
+  g.fill();
+  g.globalAlpha = 1;
+
+  const rim = g.createRadialGradient(0, 0, BALL_R * 0.42, 0, 0, BALL_R);
+  rim.addColorStop(0, "rgba(0,0,0,0)");
+  rim.addColorStop(1, "rgba(0,0,0,.30)");
+  g.fillStyle = rim;
+  g.fillRect(-BALL_R, -BALL_R, BALL_R * 2, BALL_R * 2);
+  g.restore();
+
+  g.strokeStyle = "rgba(0,0,0,.45)";
+  g.lineWidth = 1.5;
+  g.beginPath();
+  g.arc(0, 0, BALL_R, 0, Math.PI * 2);
+  g.stroke();
+
+  ballSprites.overlay = { canvas: c, size: size / ss };
+
+  // Vòng vàng quanh bi có thể ăn (có quầng sáng mờ): mờ một lần ở đây, mỗi khung hình chỉ dán ảnh
+  const px = scale * dpr;
+  const blurLogical = 18 / px;                 // shadowBlur gốc tính bằng điểm ảnh màn hình
+  const gHalf = BALL_R + 6 + blurLogical * 1.3;
+  const gSize = Math.ceil(gHalf * 2 * ss);
+  const gc = document.createElement("canvas");
+  gc.width = gSize;
+  gc.height = gSize;
+
+  const gg = gc.getContext("2d");
+  gg.translate(gSize / 2, gSize / 2);
+  gg.scale(ss, ss);
+  gg.beginPath();
+  gg.arc(0, 0, BALL_R + 4, 0, Math.PI * 2);
+  gg.lineWidth = 4;
+  gg.strokeStyle = "rgba(255,225,80,.95)";
+  gg.shadowColor = "rgba(255,215,0,.95)";
+  gg.shadowBlur = 18 * ss / px;
+  gg.stroke();
+
+  ballSprites.glow = { canvas: gc, size: gSize / ss };
+  return ballSprites;
+}
+
+function getBadgeSprite(num){
+  const sp = getBallSprites();
+  let b = sp.badge[num];
+  if(b) return b;
+
+  const size = Math.ceil((BALL_BADGE_R * 2 + 2) * sp.ss);
+  const c = document.createElement("canvas");
+  c.width = size;
+  c.height = size;
+
+  const g = c.getContext("2d");
+  g.translate(size / 2, size / 2);
+  g.scale(sp.ss, sp.ss);
+
+  g.fillStyle = "#fff";
+  g.beginPath();
+  g.arc(0, 0, BALL_BADGE_R, 0, Math.PI * 2);
+  g.fill();
+
+  g.fillStyle = "#111";
+  g.font = `900 ${BALL_R * 0.62}px Arial`;
+  g.textAlign = "center";
+  g.textBaseline = "middle";
+  g.fillText(num, 0, 0.6);
+
+  b = sp.badge[num] = { canvas: c, size: size / sp.ss };
+  return b;
+}
+
   function drawRollingNumberBadge(b, face){
   // Nếu số đã khuất xuống dưới mặt bàn thì không vẽ.
   if(face.alpha <= 0.03) return;
-
-  const badgeR = BALL_R * 0.52;
 
   ctx.save();
 
@@ -2974,16 +3131,8 @@ const squash = clamp(0.30 + visibleDepth * 0.70, 0.30, 1);
 
   ctx.globalAlpha = face.alpha;
 
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(0, 0, badgeR, 0, Math.PI * 2);
-  ctx.fill();
-
-  ctx.fillStyle = "#111";
-  ctx.font = `900 ${BALL_R * 0.62}px Arial`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText(b.num, 0, 0.6);
+  const badge = getBadgeSprite(b.num);
+  ctx.drawImage(badge.canvas, -badge.size / 2, -badge.size / 2, badge.size, badge.size);
 
   ctx.restore();
 }
@@ -5260,17 +5409,49 @@ function drawBreakCueZone(){
   ctx.restore();
 }
 
+/* Lớp tĩnh: nền, bàn, khung khay bi. Vẽ lại khi đổi kích thước / độ phân giải, còn lại chỉ dán ảnh. */
+let staticLayer = null;
+let staticKey = "";
+
+function renderStaticLayer(){
+  const key = canvas.width + "x" + canvas.height + "@" + ox.toFixed(2) + "," + oy.toFixed(2) + "," + scale.toFixed(5) + "," + dpr;
+  if(staticLayer && staticKey === key) return;
+
+  staticKey = key;
+  if(!staticLayer) staticLayer = document.createElement("canvas");
+  staticLayer.width = canvas.width;
+  staticLayer.height = canvas.height;
+
+  const mainCtx = ctx;
+  ctx = staticLayer.getContext("2d");
+
+  try{
+    ctx.setTransform(dpr,0,0,dpr,0,0);
+    ctx.translate(ox,oy);
+    ctx.scale(scale,scale);
+
+    drawBackground();
+    drawTable();
+    drawPottedTrayFrame();
+  }finally{
+    ctx = mainCtx;
+  }
+}
+
 function draw(){
+  renderStaticLayer();
+
+  ctx.setTransform(1,0,0,1,0,0);
+  ctx.clearRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(staticLayer,0,0);
+
   ctx.setTransform(dpr,0,0,dpr,0,0);
-  ctx.clearRect(0,0,innerWidth,innerHeight);
 
   ctx.save();
   ctx.translate(ox,oy);
   ctx.scale(scale,scale);
 
-drawBackground();
-drawTable();
-drawPottedTray();
+drawPottedTrayBalls();
 drawAICueDragGuide();
 drawBreakCueZone();
 drawBalls();
@@ -5279,8 +5460,6 @@ drawAiming();
 drawAIThinkingCueMotion();
 drawAICueVisual();
 drawAICueStick();
-
-
 
   ctx.restore();
 }
@@ -5926,7 +6105,7 @@ function updatePocketAnimations(dt = 1){
   }
 }
 
-function drawPottedTray(){
+function drawPottedTrayFrame(){
   ctx.save();
 
   // Thân khay
@@ -5994,17 +6173,58 @@ function drawPottedTray(){
     ctx.stroke();
   }
 
+  ctx.restore();
+}
+
+/* Bi đã nằm yên trong khay chỉ đổi khi có bi lọt lỗ: vẽ vào một ảnh nhỏ rồi dán lại, không vẽ lại từng bi mỗi khung hình */
+let trayLayer = null;
+let trayKey = "";
+
+function trayBallsSignature(){
+  let h = pottedTrayBalls.length;
+  for(let i = 0; i < pottedTrayBalls.length; i++){
+    h = (h * 31 + (pottedTrayBalls[i].num + 1) * (i + 7)) | 0;
+  }
+  return h;
+}
+
+function drawPottedTrayBalls(){
   // Bi đang nằm trong khay
-  for(const item of pottedTrayBalls){
-    drawTrayBallIcon(item.num, item.type, item.x, item.y, POTTED_TRAY.ballScale);
+  if(pottedTrayBalls.length){
+    const px = scale * dpr;
+    const pad = BALL_R + 4;
+    const lx = POTTED_TRAY.x - pad;
+    const ly = POTTED_TRAY.y - pad;
+    const lw = POTTED_TRAY.w + pad * 2;
+    const lh = POTTED_TRAY.h + pad * 2;
+    const key = trayBallsSignature() + "@" + px.toFixed(4);
+
+    if(!trayLayer || trayKey !== key){
+      trayKey = key;
+      if(!trayLayer) trayLayer = document.createElement("canvas");
+      trayLayer.width = Math.ceil(lw * px);
+      trayLayer.height = Math.ceil(lh * px);
+
+      const mainCtx = ctx;
+      ctx = trayLayer.getContext("2d");
+
+      try{
+        ctx.setTransform(px, 0, 0, px, -lx * px, -ly * px);
+        for(const item of pottedTrayBalls){
+          drawTrayBallIcon(item.num, item.type, item.x, item.y, POTTED_TRAY.ballScale);
+        }
+      }finally{
+        ctx = mainCtx;
+      }
+    }
+
+    ctx.drawImage(trayLayer, lx, ly, lw, lh);
   }
 
   // Bi đang rơi
   for(const a of pocketAnimations){
     drawTrayBallIcon(a.num, a.type, a.x, a.y, a.scale);
   }
-
-  ctx.restore();
 }
 
 function drawTrayBallIcon(num, type, x, y, scaleSize){
@@ -6973,18 +7193,8 @@ function drawDeveloperPredictedObjectPath(prediction){
 function drawTargetGlow(ball){
   if(!ball || !ball.active) return;
 
-  ctx.save();
-
-  ctx.beginPath();
-  ctx.arc(ball.x, ball.y, BALL_R + 4, 0, Math.PI * 2);
-
-  ctx.lineWidth = 4;
-  ctx.strokeStyle = "rgba(255,225,80,.95)";
-  ctx.shadowColor = "rgba(255,215,0,.95)";
-  ctx.shadowBlur = 18;
-  ctx.stroke();
-
-  ctx.restore();
+  const glow = getBallSprites().glow;
+  ctx.drawImage(glow.canvas, ball.x - glow.size / 2, ball.y - glow.size / 2, glow.size, glow.size);
 }
 
 function getAimTableEnd(startX, startY, dir){
@@ -7662,42 +7872,11 @@ function drawBall(b){
     drawRollingNumberBadge(b, face);
   }
 
-  // Highlight cố định theo nguồn sáng, không xoay theo bi.
-  ctx.globalAlpha = .42;
-  ctx.fillStyle = "#fff";
-  ctx.beginPath();
-  ctx.arc(
-    b.x - BALL_R * 0.42,
-    b.y - BALL_R * 0.46,
-    BALL_R * 0.32,
-    0,
-    Math.PI*2
-  );
-  ctx.fill();
-  ctx.globalAlpha = 1;
-
-  // Rim tối ở mép để bi có cảm giác tròn.
-  const rim = ctx.createRadialGradient(
-    b.x,
-    b.y,
-    BALL_R * 0.42,
-    b.x,
-    b.y,
-    BALL_R
-  );
-  rim.addColorStop(0, "rgba(0,0,0,0)");
-  rim.addColorStop(1, "rgba(0,0,0,.30)");
-
-  ctx.fillStyle = rim;
-  ctx.fillRect(b.x-BALL_R,b.y-BALL_R,BALL_R*2,BALL_R*2);
-
   ctx.restore();
 
-  ctx.strokeStyle = "rgba(0,0,0,.45)";
-  ctx.lineWidth = 1.5;
-  ctx.beginPath();
-  ctx.arc(b.x,b.y,BALL_R,0,Math.PI*2);
-  ctx.stroke();
+  // Điểm sáng cố định theo nguồn sáng, viền tối ở mép để bi tròn, đường viền ngoài: dán một lớp dựng sẵn.
+  const ov = getBallSprites().overlay;
+  ctx.drawImage(ov.canvas, b.x - ov.size / 2, b.y - ov.size / 2, ov.size, ov.size);
 }
 
 function roundRect(x,y,w,h,r,fill){
@@ -7911,10 +8090,102 @@ function aiWatchdog(){
   }
 }
 
+/* ---------- nhịp khung hình + tự chỉnh chất lượng ---------- */
+const FRAME_MS = 1000 / 60;
+const IDLE_FRAME_MS = 1000 / 30;
+const FRAME_SLACK = 6;
+let lastFrameTime = 0;
+let wakeFrame = true;        // có thao tác của người chơi: vẽ ngay ở nhịp kế tiếp
+let perfFrames = 0;
+let perfSum = 0;
+let perfCooldown = 90;       // bỏ qua những khung đầu / ngay sau khi đổi mức chất lượng (đang dựng lại lớp tĩnh)
+let perfSlowWindows = 0;     // số cửa sổ 45 khung liên tiếp bị chậm
+let lastFrameCalm = false;
+let aiSliceBase = 0;
+
+["pointerdown", "pointermove", "pointerup", "touchstart", "touchmove"].forEach(ev => {
+  window.addEventListener(ev, () => { wakeFrame = true; }, { capture: true, passive: true });
+});
+
+// Đứng yên chờ người chơi đánh: không có chuyển động nào cần vẽ mượt 60 khung/giây
+function isCalmFrame(){
+  return !isMoving() && !shotLocked &&
+    !isAiming && !powerDragging && !rulerDragging && !cueBallDragging &&
+    !aiCueMove && !aiCueVisual && !aiCueAim && !aiThinkingCue &&
+    !sinkingBalls.length && !pocketAnimations.length &&
+    !devScanJob;
+}
+
+function applyQuality(level){
+  qualityLevel = Math.max(0, Math.min(QUALITY_STEPS.length - 1, level));
+  shadowFx = QUALITY_STEPS[qualityLevel].fx;
+  try{ localStorage.setItem("bida:quality", String(Math.min(qualityLevel, QUALITY_SAVED_MAX))); }catch(e){}
+  perfCooldown = 90;
+  resize();
+}
+
+// Khung hình trung bình quá chậm so với nhịp mục tiêu (60 → chậm hơn ~35%) thì hạ chất lượng một bậc
+function monitorFrame(interval, target){
+  if(interval > 250) return;                 // vừa chuyển tab / tạm dừng: không tính
+  if(perfCooldown > 0){ perfCooldown--; return; }
+
+  perfFrames++;
+  perfSum += interval / target;
+
+  if(perfFrames < 45) return;
+
+  const avg = perfSum / perfFrames;
+  perfFrames = 0;
+  perfSum = 0;
+
+  // AI tính theo từng lát trên cùng luồng với việc vẽ: khung hình đang chậm thì ngắn lát lại, chậm nữa thì nghỉ giữa các lát
+  if(typeof AI_ENGINE !== "undefined"){
+    if(!aiSliceBase) aiSliceBase = AI_ENGINE.sliceMs;
+
+    if(avg > 1.15){
+      if(AI_ENGINE.sliceMs > 6) AI_ENGINE.sliceMs = Math.max(6, AI_ENGINE.sliceMs - 2);
+      else AI_ENGINE.gapMs = Math.min(12, (AI_ENGINE.gapMs || 0) + 4);
+    }else if(avg < 1.06){
+      if(AI_ENGINE.gapMs > 0) AI_ENGINE.gapMs = Math.max(0, AI_ENGINE.gapMs - 4);
+      else AI_ENGINE.sliceMs = Math.min(aiSliceBase, AI_ENGINE.sliceMs + 1);
+    }
+  }
+
+  // Máy đang bận tính nước đi của AI thì chậm là do AI (đã chỉnh ở trên), chưa hạ đồ hoạ.
+  // Phải chậm hai cửa sổ liền nhau (~1,5 giây) mới hạ, để một cú khựng thoáng qua không làm giảm hình ảnh.
+  if(avg > 1.35 && !aiThinking){
+    perfSlowWindows++;
+  }else if(avg <= 1.35){
+    perfSlowWindows = 0;
+  }
+
+  if(perfSlowWindows >= 2 && qualityLevel < QUALITY_STEPS.length - 1){
+    perfSlowWindows = 0;
+    applyQuality(qualityLevel + 1);
+  }
+}
+
 function loop(){
-  // Số khung hình 60 Hz đã trôi qua; giới hạn 3 để không "nhảy cóc" khi tab bị ẩn
   const now = performance.now();
-  const dt = lastLoopTime === null ? 1 : clamp((now - lastLoopTime) / (1000 / 60), 0, 3);
+
+  // Chưa toàn màn hình: bàn nằm dưới màn chắn, chỉ cần vẽ thưa
+  const target = fsPaused ? 250 : (isCalmFrame() && !wakeFrame ? IDLE_FRAME_MS : FRAME_MS);
+
+  // Nhường những lần rAF dư (màn 120 Hz hoặc đang ở nhịp 30): chỉ xử lý khi đủ thời gian.
+  // Dư địa 6 ms: màn 120 Hz vẽ mỗi 2 nhịp (60), màn 90 Hz vẫn vẽ mọi nhịp, màn 60 Hz không bao giờ bị bỏ khung.
+  if(lastFrameTime && now - lastFrameTime < target - FRAME_SLACK){
+    requestAnimationFrame(loop);
+    return;
+  }
+
+  const interval = lastFrameTime ? now - lastFrameTime : FRAME_MS;
+  lastFrameTime = now;
+  wakeFrame = false;
+
+  // Số khung hình 60 Hz đã trôi qua; giới hạn 3 để không "nhảy cóc" khi tab bị ẩn
+  let dt = lastLoopTime === null ? 1 : clamp((now - lastLoopTime) / (1000 / 60), 0, 3);
+  // Khung trước là khung "đứng yên" (cách 33 ms): cú đánh đầu tiên không được nhảy cóc hai khung
+  if(lastFrameCalm) dt = Math.min(dt, 1);
   lastLoopTime = now;
 
   // Chưa toàn màn hình: chỉ vẽ lại bàn, mọi thứ khác đứng yên
@@ -7938,8 +8209,12 @@ function loop(){
 
   updateSinkingBalls(dt);
   updatePocketAnimations(dt);
-draw();
+  draw();
   updateDeveloperPowerUI();
+
+  // Nhịp ở chế độ đứng yên (30) là chủ ý, không đo như khung chậm
+  lastFrameCalm = isCalmFrame();
+  monitorFrame(interval, lastFrameCalm ? IDLE_FRAME_MS : FRAME_MS);
 
   requestAnimationFrame(loop);
 }
@@ -7947,6 +8222,6 @@ draw();
 fsRefresh();
 loop();
 </script>
-<script src="aiengine.js"></script>
+<script src="aiengine.js?v=20261019"></script>
 </body>
 </html>

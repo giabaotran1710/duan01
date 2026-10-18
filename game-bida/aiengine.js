@@ -34,6 +34,7 @@ scanSpinY: 0,
   // Kế hoạch cú đánh: tổng thời gian suy nghĩ và độ dài mỗi lát tính (ms)
   thinkBudgetMs: 3200,
   sliceMs: 12,
+  gapMs: 0,           // nghỉ giữa các lát; bida.html tự tăng khi khung hình bị chậm
   scanExtraMs: 800,
   safeExtraMs: 800,
 
@@ -174,7 +175,7 @@ function startAIThinkSearch(done){
       return;
     }
 
-    setTimeout(tick, 0);
+    setTimeout(tick, AI_ENGINE.gapMs || 0);
   };
 
   setTimeout(tick, 0);
