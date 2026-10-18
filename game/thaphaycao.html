@@ -273,6 +273,32 @@
 
   .num-box.rerolled { animation: flip 0.35s ease; }
 
+  /* Ô lũy thừa / căn: gạch ngang trên số trong dấu căn để không nhầm √49+5 với √(49+5) */
+  .expr { display: inline-block; line-height: 1.25; }
+  .rd   { display: inline-block; border-top: 2px solid currentColor; padding: 0 1px; margin-left: 1px; line-height: 1.05; }
+  .idx  { font-size: 0.6em; vertical-align: 0.65em; line-height: 0; margin-right: -1px; }
+  .num-box.hard { font-size: 17px; }
+
+  #tip {
+    position: absolute;
+    top: 56px;
+    left: 50%;
+    transform: translateX(-50%);
+    max-width: 94%;
+    padding: 6px 14px;
+    border-radius: 999px;
+    background: rgba(26,26,46,0.92);
+    color: #fff;
+    font-size: 13px;
+    font-weight: 700;
+    text-align: center;
+    pointer-events: none;
+    z-index: 35;
+    opacity: 0;
+    transition: opacity 0.25s;
+  }
+  #tip.on { opacity: 1; }
+
   @keyframes pop {
     0%   { transform: translateX(-50%) scale(1); }
     50%  { transform: translateX(-50%) scale(1.22); }
@@ -591,6 +617,10 @@
       <div style="color:#888; font-size:13px;">Ô đỏ: Làm ngược lại logic trên</div>
     </div>
     <div class="how-to-row">
+      <div class="how-to-arrow">√</div>
+      <div style="color:#888; font-size:13px;">Càng về sau càng có ô khó: bình phương, lập phương, căn bậc hai/ba (5², 3³, √49, ³√27) và kết hợp + − × ÷ (5²-10). Kết quả luôn từ 1 đến 99</div>
+    </div>
+    <div class="how-to-row">
       <div class="how-to-arrow" style="color:var(--gold)">★</div>
       <div style="color:#888; font-size:13px;">Đúng liên tiếp để nhân điểm; cứ 10 lần đúng được hồi 1 tim</div>
     </div>
@@ -602,6 +632,7 @@
 <div id="game-area">
   <div id="field">
     <div id="danger-line"></div>
+    <div id="tip"></div>
     <button id="btn-mute" class="tool-btn" type="button" aria-label="Bật/tắt âm thanh">🔊</button>
     <button id="btn-pause" class="tool-btn" type="button" aria-label="Tạm dừng">⏸</button>
   </div>
@@ -647,10 +678,10 @@ const EXPR_CHANCE      = 0.15;
 const RED_CHANCE       = 0.08;
 const MAX_LIVES        = 6;
 const SCORE_PER_SEC    = 458;
-const SCORE_NORMAL     = 300;
-const SCORE_EXPR       = 500;
-const SCORE_RED        = 1000;
-const SCORE_RED_EXPR   = 2500;
+// Điểm theo độ khó của ô: 0 số thường · 1 phép tính · 2 lũy thừa/căn đơn lẻ · 3 lũy thừa/căn kết hợp với một số
+const SCORE_TIER       = [300, 500, 700, 950];
+const SCORE_RED_TIER   = [1000, 2500, 3200, 4000];
+const MAX_HARD_ON_SCREEN = 2;   // tối đa 2 ô khó (tier ≥ 2) cùng lúc để không dồn quá nặng
 const COMBO_STEP       = 5;      // mỗi 5 lần đúng liên tiếp tăng hệ số nhân
 const COMBO_MULT_STEP  = 0.5;    // mỗi bậc cộng thêm ×0,5
 const COMBO_MULT_MAX   = 3;      // tối đa ×3
@@ -726,30 +757,139 @@ const sfx = {
 function syncMuteBtn() { $('btn-mute').textContent = muted ? '🔇' : '🔊'; }
 
 /* ---------- Sinh ô số ---------- */
+
+/*
+  Các loại ô khó xuất hiện dần theo thời gian chơi (giây): đầu ván chỉ có số thường và phép tính như cũ.
+  Xác suất của mỗi loại tăng tuyến tính từ `from` tới `full` rồi giữ ở `max`.
+  Mọi kết quả đều là số nguyên từ 1 đến 99.
+*/
+const POW_FAMILIES = [
+  { id: 'sq',    from: 15,  full: 70,  max: 0.10, tier: 2, tip: 'Mới: ô bình phương (5² = 25)' },
+  { id: 'sqrt',  from: 30,  full: 90,  max: 0.08, tier: 2, tip: 'Mới: ô căn bậc hai (√49 = 7)' },
+  { id: 'cube',  from: 45,  full: 105, max: 0.07, tier: 2, tip: 'Mới: ô lập phương (3³ = 27)' },
+  { id: 'cbrt',  from: 60,  full: 120, max: 0.06, tier: 2, tip: 'Mới: ô căn bậc ba (³√27 = 3)' },
+  { id: 'sqv',   from: 75,  full: 150, max: 0.10, tier: 3, tip: 'Mới: bình phương/căn kết hợp + − × ÷' },
+  { id: 'cubev', from: 100, full: 180, max: 0.09, tier: 3, tip: 'Mới: lập phương/căn bậc ba kết hợp + − × ÷' }
+];
+
+const SQ_BASES   = [2, 3, 4, 5, 6, 7, 8, 9];             // n² ≤ 81
+const CUBE_BASES = [2, 3, 4];                             // n³ ≤ 64
+const SQRT_ROOTS = [2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];  // √(m²), m² ≤ 144
+const CBRT_ROOTS = [2, 3, 4, 5, 6, 7, 8, 9];              // ∛(m³), m³ ≤ 729
+const pick = arr => arr[randInt(0, arr.length - 1)];
+
+function powWeight(f, t) {
+  if (t <= f.from) return 0;
+  return f.max * Math.min(1, (t - f.from) / (f.full - f.from));
+}
+
+function hardOnScreen() { return boxes.reduce((n, b) => n + (!b.dead && b.tier >= 2 ? 1 : 0), 0); }
+
+// Chọn loại ô cho lần sinh tiếp theo
+function pickKind() {
+  if (hardOnScreen() < MAX_HARD_ON_SCREEN) {
+    let r = Math.random();
+    for (const f of POW_FAMILIES) {
+      const w = powWeight(f, totalTime);
+      if (r < w) return f.id;
+      r -= w;
+    }
+  }
+  return Math.random() < EXPR_CHANCE ? 'expr' : 'plain';
+}
+
+const tierOfKind = kind => kind === 'plain' ? 0 : kind === 'expr' ? 1 : (kind === 'sqv' || kind === 'cubev') ? 3 : 2;
+
+// Một số hạng lũy thừa/căn: html hiển thị + giá trị
+function powItem(type) {
+  if (type === 'sq')   { const n = pick(SQ_BASES);   return { html: n + '²', value: n * n }; }
+  if (type === 'cube') { const n = pick(CUBE_BASES); return { html: n + '³', value: n * n * n }; }
+  if (type === 'sqrt') { const m = pick(SQRT_ROOTS); return { html: '√<span class="rd">' + (m * m) + '</span>', value: m }; }
+  const m = pick(CBRT_ROOTS);                       // cbrt
+  return { html: '<span class="idx">3</span>√<span class="rd">' + (m * m * m) + '</span>', value: m };
+}
+
+// Lũy thừa/căn kết hợp với một số bằng + − × ÷ (hai thứ tự), kết quả nguyên trong [1, 99]
+function genVariant(types) {
+  for (let i = 0; i < 120; i++) {
+    const it = powItem(pick(types));
+    const p = it.value;
+    const op = pick(['+', '-', '×', '÷']);
+    const pFirst = Math.random() < 0.5;
+    let k, res, left, right;
+
+    if (op === '+') {
+      if (99 - p < 1) continue;
+      k = randInt(1, Math.min(60, 99 - p)); res = p + k;
+    } else if (op === '-') {
+      if (pFirst) { if (p < 2) continue; k = randInt(1, p - 1); res = p - k; }
+      else        { if (p > 98) continue; k = randInt(p + 1, 99); res = k - p; }
+    } else if (op === '×') {
+      const maxK = Math.min(12, Math.floor(99 / p));
+      if (maxK < 2) continue;
+      k = randInt(2, maxK); res = p * k;
+    } else if (pFirst) {                                  // P ÷ k (chia hết)
+      const ds = []; for (let d = 2; d < p; d++) if (p % d === 0) ds.push(d);
+      if (!ds.length) continue;
+      k = pick(ds); res = p / k;
+    } else {                                              // k ÷ P (k ≤ 99, chia hết)
+      const maxR = Math.floor(99 / p);
+      if (maxR < 2) continue;
+      res = randInt(2, maxR); k = p * res;
+    }
+
+    if (res < 1 || res > 99 || res !== Math.floor(res)) continue;
+
+    // + và × giao hoán nên đảo vị trí ngẫu nhiên; − và ÷ giữ đúng thứ tự đã tính
+    const swap = (op === '+' || op === '×') ? Math.random() < 0.5 : !pFirst;
+    left = swap ? String(k) : it.html;
+    right = swap ? it.html : String(k);
+    return { html: '<span class="expr">' + left + op + right + '</span>', value: res };
+  }
+  const it = powItem(types[0]);
+  return { html: it.html, value: it.value };
+}
+
+// Tạo nội dung ô theo loại; trả về { html, value } (giá trị luôn là số nguyên 1..99)
+function makeBox(kind) {
+  if (kind === 'plain') { const v = randInt(1, 99); return { html: String(v), value: v }; }
+  if (kind === 'expr')  { const e = genExpression(); return { html: e.display, value: e.value }; }
+  if (kind === 'sqv')   return genVariant(['sq', 'sqrt']);
+  if (kind === 'cubev') return genVariant(['cube', 'cbrt']);
+  const it = powItem(kind);
+  return { html: '<span class="expr">' + it.html + '</span>', value: it.value };
+}
+
+// Giới thiệu loại ô mới ngay lần đầu xuất hiện trong ván
+const announced = new Set();
+let tipTimer = null;
+function announceKind(kind) {
+  const f = POW_FAMILIES.find(x => x.id === kind);
+  if (!f || announced.has(kind)) return;
+  announced.add(kind);
+  const el = $('tip');
+  el.textContent = f.tip;
+  el.classList.add('on');
+  clearTimeout(tipTimer);
+  tipTimer = setTimeout(() => el.classList.remove('on'), 3200);
+}
+
 function spawnInLane(lane, startY) {
   const laneWidth = fieldEl().clientWidth / NUM_LANES;
   let x = Math.round((lane * laneWidth) + (laneWidth / 2));
 
   const isRed = Math.random() < RED_CHANCE;
-  const isExpr = Math.random() < EXPR_CHANCE;
-  let displayText, numValue;
-
-  let safetyBreak = 0;
+  const kind = pickKind();
+  let made, safetyBreak = 0;
   do {
-    if (isExpr) {
-      const e = genExpression();
-      displayText = e.display;
-      numValue = e.value;
-    } else {
-      numValue = randInt(1, 99);
-      displayText = String(numValue);
-    }
+    made = makeBox(kind);
     safetyBreak++;
-  } while (numValue === playerValue && safetyBreak < 50);
+  } while (made.value === playerValue && safetyBreak < 50);
+  const tier = tierOfKind(kind);
 
   const el = document.createElement('div');
-  el.className = 'num-box ' + (isRed ? 'red-box' : 'blue-box');
-  el.textContent = displayText;
+  el.className = 'num-box ' + (isRed ? 'red-box' : 'blue-box') + (tier >= 2 ? ' hard' : '');
+  el.innerHTML = made.html;
 
   const y = startY !== undefined ? startY : -45 - randInt(0, 20);
   el.style.top  = y + 'px';
@@ -769,7 +909,8 @@ function spawnInLane(lane, startY) {
     el.style.left = finalX + 'px';
   });
 
-  boxes.push({ el, lane, y, value: numValue, isRed, isExpr, dead: false });
+  boxes.push({ el, lane, y, value: made.value, isRed, kind, tier, dead: false });
+  announceKind(kind);
 }
 
 function genExpression() {
@@ -793,14 +934,13 @@ function genExpression() {
 function rerollEqualBoxes() {
   for (const box of boxes) {
     if (box.dead || box.value !== playerValue) continue;
-    let text, val, guard = 0;
+    let made, guard = 0;
     do {
-      if (box.isExpr) { const e = genExpression(); text = e.display; val = e.value; }
-      else { val = randInt(1, 99); text = String(val); }
+      made = makeBox(box.kind);
       guard++;
-    } while (val === playerValue && guard < 50);
-    box.value = val;
-    box.el.textContent = text;
+    } while (made.value === playerValue && guard < 50);
+    box.value = made.value;
+    box.el.innerHTML = made.html;
     box.el.classList.remove('rerolled');
     void box.el.offsetWidth;
     box.el.classList.add('rerolled');
@@ -990,9 +1130,7 @@ function handleAnswer(isSwipeRight) {
     correctCount++;
     if (combo > maxCombo) maxCombo = combo;
 
-    const base = target.isExpr
-      ? (target.isRed ? SCORE_RED_EXPR : SCORE_EXPR)
-      : (target.isRed ? SCORE_RED : SCORE_NORMAL);
+    const base = target.isRed ? SCORE_RED_TIER[target.tier] : SCORE_TIER[target.tier];
     const pts = Math.round(base * comboMult());
     score += pts;
     showFeedback('+' + pts, target.isRed ? '#c0392b' : '#2a9d8f');
@@ -1048,6 +1186,9 @@ function initGame() {
   combo = 0;
   maxCombo = 0;
   correctCount = 0;
+  announced.clear();
+  clearTimeout(tipTimer);
+  $('tip').classList.remove('on');
 
   renderLives();
   renderCombo(false);
