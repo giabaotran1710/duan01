@@ -1,4 +1,5 @@
-/* Tìm điểm khác biệt — phần vẽ: các loại vật thể (vẽ bằng canvas 2D) và 10 phông nền chủ đề.
+/* Tìm điểm khác biệt — phần vẽ: các loại vật thể (vẽ bằng canvas 2D) và phông nền các chủ đề cũ
+   (thêm chủ đề mới ở timkhacbiet-art2.js, số đo ở timkhacbiet-meta.js).
    Mọi chi tiết "ngẫu nhiên" của vật thể đều lấy từ hạt giống riêng của vật đó (o.k) nên ảnh A và ảnh B luôn vẽ giống hệt nhau,
    trừ đúng những chỗ khác biệt. Toạ độ vật thể: gốc (0,0) ở giữa vật, kích thước w × h ở tỉ lệ 1. */
 (function (root) {
@@ -70,172 +71,215 @@
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   }
   function pick(r, a) { return a[Math.floor(r() * a.length) % a.length]; }
+  /* các điểm rải trong một vùng theo hạt giống của vật: n điểm đầu luôn giống nhau dù n đổi,
+     nên thêm/bớt 1 hoạ tiết (đốm, quả...) chỉ làm xuất hiện/mất đúng 1 cái */
+  function spots(r, n, x0, y0, x1, y1, md, inside) {
+    var out = [], tries = 0, x, y, i, ok, dx, dy;
+    while (out.length < n && tries < 600) {
+      tries++; x = x0 + r() * (x1 - x0); y = y0 + r() * (y1 - y0);
+      if (inside && !inside(x, y)) continue;
+      ok = true;
+      for (i = 0; i < out.length; i++) { dx = out[i][0] - x; dy = out[i][1] - y; if (dx * dx + dy * dy < md * md) { ok = false; break; } }
+      if (ok) out.push([x, y]);
+    }
+    return out;
+  }
+  function inEll(cx, cy, rx, ry) { return function (x, y) { var a = (x - cx) / rx, b = (y - cy) / ry; return a * a + b * b <= 1; }; }
+  /* sọc song song cắt trong một hình (clip) */
+  function clipStripes(g, path, n, x0, x1, y0, y1, wid, col, vertical) {
+    var i, t;
+    g.save(); path(); g.clip();
+    for (i = 0; i < n; i++) {
+      t = (i + 1) / (n + 1);
+      g.fillStyle = col;
+      if (vertical) g.fillRect(x0 + (x1 - x0) * t - wid / 2, y0, wid, y1 - y0);
+      else g.fillRect(x0, y0 + (y1 - y0) * t - wid / 2, x1 - x0, wid);
+    }
+    g.restore();
+  }
 
   /* ---------- các loại vật thể ----------
-     w,h: kích thước ở tỉ lệ 1; zone: vùng mặc định; hue:[a,b] sat lit: màu chủ đạo; vmax: số biến thể;
+     w,h: kích thước ở tỉ lệ 1; zone: vùng mặc định; hue:[a,b] sat lit: màu chủ đạo; vmax: số biến thể (kiểu dáng);
+     pat:[a,b]: số hoạ tiết lặp lại (sọc, đốm, cửa sổ, cánh hoa...) — điểm khác "hoạ tiết" là đổi số này đúng 1 đơn vị;
      asym: lật ngang nhìn thấy được; max: số lượng tối đa mỗi ảnh; low: màu nhạt/xám (đổi màu bằng độ sáng) */
   var T = {};
-  function def(name, o) { o.name = name; T[name] = o; }
+  function def(name, o) { o.name = name; o.vmax = o.vmax || 1; T[name] = o; }
 
   /* ===== trên trời ===== */
-  def('sun', { w: 84, h: 84, zone: 'sky', hue: [40, 50], sat: 96, lit: 56, vmax: 3, max: 1, draw: function (g, o, c) {
-    var n = o.v === 1 ? 12 : 8, i;
-    for (i = 0; i < n; i++) { g.save(); g.rotate(i * TAU / n); poly(g, [-4.5, -29, 4.5, -29, 0, -41], c(0, 0, 6), 1.5); g.restore(); }
+  def('sun', { w: 84, h: 84, zone: 'sky', hue: [40, 50], sat: 96, lit: 56, vmax: 2, max: 1, pat: [7, 12], draw: function (g, o, c) {
+    var n = o.p, i;
+    for (i = 0; i < n; i++) { g.save(); g.rotate(i * TAU / n); poly(g, [-5, -29, 5, -29, 0, -42], c(0, 0, 6), 1.5); g.restore(); }
     circ(g, 0, 0, 25, c(), 2); circ(g, -7, -8, 8, c(0, -8, 20, .55), 0);
-    if (o.v === 2) {
+    if (o.v === 1) {
       circ(g, -8, -3, 2.6, '#5a3b00', 0); circ(g, 8, -3, 2.6, '#5a3b00', 0);
       arc(g, 0, 3, 9, .15 * Math.PI, .85 * Math.PI, 2.4, '#5a3b00');
     }
   } });
-  def('cloud', { w: 112, h: 74, zone: 'sky', hue: [195, 215], sat: 55, lit: 93, vmax: 2, low: true, draw: function (g, o, c) {
+  def('cloud', { w: 112, h: 74, zone: 'sky', hue: [195, 215], sat: 55, lit: 93, low: true, pat: [0, 4], draw: function (g, o, c) {
     blob(g, [[-30, 8, 18], [-8, -4, 24], [22, 0, 21], [44, 10, 13], [2, 14, 44, 12]], c());
-    if (o.v === 1) for (var i = -1; i <= 1; i++) { line(g, i * 22 - 3, 30, i * 22 - 8, 40, 3, '#4aa3ff'); }
+    var xs = [-24, 22, -2, 40], i;
+    for (i = 0; i < o.p; i++) { g.beginPath(); g.moveTo(xs[i], 27); g.quadraticCurveTo(xs[i] - 7, 38, xs[i], 41); g.quadraticCurveTo(xs[i] + 7, 38, xs[i], 27); fs(g, '#4aa3ff', 1); }
   } });
-  def('bird', { w: 56, h: 40, zone: 'sky', hue: [0, 360], sat: 70, lit: 55, vmax: 2, asym: true, draw: function (g, o, c) {
+  def('bird', { w: 56, h: 40, zone: 'sky', hue: [0, 360], sat: 70, lit: 55, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
     poly(g, [-16, 0, -31, -8, -29, 6], c(0, 0, -8));
     ell(g, 0, 2, 19, 13, c()); circ(g, 15, -7, 9, c(0, 0, 4)); poly(g, [22, -9, 32, -5, 22, -2], '#ff9d2e', 1.5);
     circ(g, 17, -9, 2, '#222', 0);
-    if (o.v === 1) poly(g, [-10, 0, 2, -22, 10, 0], c(0, 0, -14)); else ell(g, -3, 7, 12, 6, c(0, 0, -14), 2, .5);
+    var up = o.v === 1, i, wx = up ? -2 : -3, wy = up ? -9 : 7, rot = up ? -.9 : .5;
+    ell(g, wx, wy, 13, 6.5, c(0, 0, -14), 2, rot);
+    for (i = 0; i < o.p; i++) { var t = (i + 1) / (o.p + 1) * 2 - 1; g.save(); g.translate(wx, wy); g.rotate(rot); line(g, t * 10, -4.5, t * 10, 4.5, 2, c(0, -10, 22)); g.restore(); }
   } });
-  def('balloon', { w: 62, h: 98, zone: 'sky', hue: [0, 360], sat: 80, lit: 55, vmax: 3, draw: function (g, o, c) {
+  def('balloon', { w: 62, h: 98, zone: 'sky', hue: [0, 360], sat: 80, lit: 55, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
     var env = function () { g.beginPath(); g.ellipse(0, -16, 28, 34, 0, 0, TAU); };
     line(g, -9, 30, -7, 38, 1.5, '#6b4a2b'); line(g, 9, 30, 7, 38, 1.5, '#6b4a2b');
     rrect(g, -10, 37, 20, 13, 3, '#b07a3c');
     env(); fs(g, c(), 2);
-    g.save(); env(); g.clip();
-    if (o.v === 0) { ell(g, 0, -16, 10, 36, c(40, 0, 18), 0); }
-    else if (o.v === 1) { var i, j; for (i = -1; i <= 1; i++) for (j = -2; j <= 1; j++) circ(g, i * 15, j * 15 - 6, 4, c(40, -10, 24), 0); }
-    else { rrect(g, -34, -22, 68, 12, 0, c(40, 0, 22), 0); }
-    g.restore();
+    clipStripes(g, env, o.p, -28, 28, -50, 18, 6, c(40, 0, 18), o.v === 0);
     poly(g, [-9, 26, 9, 26, 5, 31, -5, 31], c(0, 0, -15), 1.5);
     circ(g, -9, -30, 6, 'rgba(255,255,255,.4)', 0);
   } });
-  def('star', { w: 54, h: 54, zone: 'sky', hue: [40, 55], sat: 95, lit: 58, vmax: 3, draw: function (g, o, c) {
+  def('star', { w: 54, h: 54, zone: 'sky', hue: [40, 55], sat: 95, lit: 58, pat: [4, 7], draw: function (g, o, c) {
     glow(g, 0, 0, 26, c(0, 0, 20, .5));
-    star(g, [5, 4, 6][o.v], 24, [5, 4, 6][o.v] === 4 ? 7 : 11, c(), 2);
+    star(g, o.p, 24, o.p === 4 ? 8 : 11, c(), 2);
   } });
-  def('plane', { w: 100, h: 46, zone: 'sky', hue: [0, 360], sat: 65, lit: 55, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('plane', { w: 100, h: 46, zone: 'sky', hue: [0, 360], sat: 65, lit: 55, vmax: 2, asym: true, pat: [3, 6], draw: function (g, o, c) {
     poly(g, [-34, -3, -46, -20, -30, -20, -14, -3], c(0, 0, -10));
     ell(g, 0, 0, 42, 11, '#f3f6fb'); poly(g, [-6, 4, 14, 4, -12, 20, -22, 20], c(0, 0, -6));
-    for (var i = 0; i < 4; i++) circ(g, -14 + i * 9, -2, 2.6, '#6fa8dc', 0);
+    for (var i = 0; i < o.p; i++) circ(g, -24 + i * 10, -2, 3.8, '#6fa8dc', 0);
     ell(g, 34, -2, 9, 6, '#6fa8dc', 1.5);
-    if (o.v === 1) rrect(g, -38, 4, 78, 3.5, 1, c(), 0);
-    if (o.v === 2) { line(g, 41, 0, 47, 0, 3, '#444'); line(g, 47, -11, 47, 11, 3, '#444'); }
+    if (o.v === 1) rrect(g, -38, 5, 78, 3.5, 1, c(), 0);
   } });
-  def('kite', { w: 54, h: 90, zone: 'sky', hue: [0, 360], sat: 80, lit: 58, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 2, i;
+  def('kite', { w: 54, h: 90, zone: 'sky', hue: [0, 360], sat: 80, lit: 58, pat: [2, 5], draw: function (g, o, c) {
+    var n = o.p, i;
     g.beginPath(); g.moveTo(0, 24); g.bezierCurveTo(-10, 30, 8, 36, -2, 44); g.lineWidth = 1.8; g.strokeStyle = '#5b4636'; g.stroke();
-    for (i = 0; i < n; i++) { var t = (i + 1) / (n + 1); poly(g, [-2 + (t - .5) * 6 - 4, 26 + t * 16, -2 + (t - .5) * 6 + 4, 26 + t * 16 + 3, -2 + (t - .5) * 6 - 4, 26 + t * 16 + 6], c(150, 0, 0), 1); }
+    for (i = 0; i < n; i++) { var t = (i + 1) / (n + 1), x = -2 + (t - .5) * 6, y = 26 + t * 16; poly(g, [x - 5, y, x + 5, y + 3, x - 5, y + 6], c(150, 0, 0), 1); }
     poly(g, [0, -42, 24, -8, 0, 24], c()); poly(g, [0, -42, -24, -8, 0, 24], c(40, 0, 12));
     line(g, 0, -42, 0, 24, 1.6, OL); line(g, -24, -8, 24, -8, 1.6, OL);
   } });
-  def('butterfly', { w: 54, h: 44, zone: 'sky', hue: [0, 360], sat: 75, lit: 62, vmax: 3, draw: function (g, o, c) {
+  def('butterfly', { w: 54, h: 44, zone: 'sky', hue: [0, 360], sat: 75, lit: 62, vmax: 2, pat: [0, 3], draw: function (g, o, c) {
     ell(g, -14, -8, 14, 12, c(), 2, -.5); ell(g, 14, -8, 14, 12, c(), 2, .5);
     ell(g, -11, 10, 10, 9, c(30, 0, 8), 2, .4); ell(g, 11, 10, 10, 9, c(30, 0, 8), 2, -.4);
-    if (o.v >= 1) { circ(g, -15, -9, 4, '#fff', 0); circ(g, 15, -9, 4, '#fff', 0); }
-    if (o.v === 2) { circ(g, -11, 11, 3, '#fff', 0); circ(g, 11, 11, 3, '#fff', 0); }
+    var P = [[-15, -9], [-20, -3], [-10, -14]], i;
+    for (i = 0; i < o.p; i++) { circ(g, P[i][0], P[i][1], 3.6, '#fff', 0); circ(g, -P[i][0], P[i][1], 3.6, '#fff', 0); }
+    if (o.v === 1) { circ(g, -11, 11, 3, c(0, 0, -25), 0); circ(g, 11, 11, 3, c(0, 0, -25), 0); }
     rrect(g, -2.5, -14, 5, 28, 2.5, '#3a2a28', 0);
     arc(g, -3, -14, 7, Math.PI * 1.1, Math.PI * 1.7, 1.6, '#3a2a28'); arc(g, 3, -14, 7, Math.PI * 1.3, Math.PI * 1.9, 1.6, '#3a2a28');
   } });
-  def('rainbow', { w: 160, h: 84, zone: 'sky', hue: [0, 360], sat: 80, lit: 58, vmax: 3, draw: function (g, o, c) {
-    var n = [7, 6, 5][o.v], i;
+  def('rainbow', { w: 160, h: 84, zone: 'sky', hue: [0, 360], sat: 80, lit: 58, pat: [4, 7], draw: function (g, o, c) {
+    var n = o.p, i;
     g.lineCap = 'butt';
     for (i = 0; i < n; i++) arc(g, 0, 40, 72 - i * 9, Math.PI, 0, 9.5, c(i * (300 / n), 0, 0));
     g.lineCap = 'round';
   } });
 
   /* ===== trên mặt đất ===== */
-  def('tree', { w: 86, h: 118, zone: 'ground', hue: [95, 140], sat: 52, lit: 42, vmax: 3, draw: function (g, o, c, r) {
-    var i, p;
+  def('tree', { w: 86, h: 118, zone: 'ground', hue: [95, 140], sat: 52, lit: 42, vmax: 2, pat: [3, 8], draw: function (g, o, c, r) {
+    var i, P;
     rrect(g, -7, 22, 14, 36, 3, '#7b4f2a'); rrect(g, -7, 22, 5, 36, 2, 'rgba(255,255,255,.12)', 0);
     blob(g, [[0, -18, 33], [-22, 0, 24], [22, 2, 24], [0, 10, 28]], c());
     circ(g, -10, -26, 9, c(0, 0, 10, .5), 0);
-    if (o.v === 1) for (i = 0; i < 6; i++) { circ(g, -26 + r() * 52, -30 + r() * 52, 4.2, '#e5392e', 1.5); }
-    if (o.v === 2) for (i = 0; i < 8; i++) { p = [-28 + r() * 56, -34 + r() * 56]; circ(g, p[0], p[1], 3.6, '#ffe3ee', 0); }
+    P = spots(r, o.p, -30, -40, 30, 20, 13, function (x, y) { return (x * x) / 900 + ((y + 10) * (y + 10)) / 1000 <= 1; });
+    for (i = 0; i < P.length; i++) {
+      if (o.v === 0) { circ(g, P[i][0], P[i][1], 6, '#e5392e', 1.5); circ(g, P[i][0] - 1.6, P[i][1] - 1.8, 1.6, 'rgba(255,255,255,.6)', 0); }
+      else { circ(g, P[i][0], P[i][1], 5, '#ffe3ee', 1.2); circ(g, P[i][0], P[i][1], 1.8, '#ffb703', 0); }
+    }
   } });
-  function pineShape(g, o, c, snow, r) {
-    var tiers = [[-60, -22, 22], [-42, 4, 30], [-20, 32, 38]], i, t;
+  function pineShape(g, o, c, snow) {
+    var tiers = [[-60, -22, 22], [-42, 4, 30], [-20, 32, 38]], i, t, n = o.p, y, hw;
     rrect(g, -6, 30, 12, 28, 2, '#7a4a24');
     for (i = 0; i < 3; i++) { t = tiers[i]; poly(g, [0, t[0], -t[2], t[1], t[2], t[1]], c(0, 0, i * 3)); }
-    if (snow) for (i = 0; i < 3; i++) { t = tiers[i]; var y = t[0] + (t[1] - t[0]) * .5, x = t[2] * .5; poly(g, [0, t[0], -x, y, -x * .4, y + 4, 0, y - 1, x * .4, y + 4, x, y], '#f7fbff', 1.2); }
-    if (o.v === 1) { var cs = ['#ff5252', '#ffd23f', '#52a7ff', '#ff8cf0', '#ffd23f', '#ff5252']; for (i = 0; i < 6; i++) circ(g, -26 + i * 10.5 + (i % 2) * 2, [-8, 6, -4, 16, 24, 24][i] + (i === 5 ? 4 : 0), 3.6, cs[i], 1); }
+    if (snow) for (i = 0; i < 3; i++) { t = tiers[i]; y = t[0] + (t[1] - t[0]) * .5; hw = t[2] * .5; poly(g, [0, t[0], -hw, y, -hw * .4, y + 4, 0, y - 1, hw * .4, y + 4, hw, y], '#f7fbff', 1.2); }
+    /* các dải sọc (dây kim tuyến) ngang thân cây */
+    for (i = 0; i < n; i++) {
+      y = -46 + (i + .5) * (78 / n);
+      hw = y < -22 ? (y + 60) * 22 / 38 : y < 4 ? (y + 42) * 30 / 46 : (y + 20) * 38 / 52;
+      hw = Math.max(6, hw - 3);
+      g.beginPath(); g.moveTo(-hw, y - 3); g.quadraticCurveTo(0, y + 5, hw, y - 3);
+      g.lineWidth = 3.4; g.strokeStyle = snow ? '#ff5d73' : '#ffd23f'; g.lineCap = 'round'; g.stroke();
+    }
+    if (o.v === 1) { g.save(); g.translate(0, -62); star(g, 5, 9, 4, '#ffd23f', 1.5); g.restore(); }
   }
-  def('pine', { w: 76, h: 124, zone: 'ground', hue: [130, 160], sat: 45, lit: 32, vmax: 3, draw: function (g, o, c, r) {
-    var oo = { v: o.v === 2 ? 0 : o.v }; pineShape(g, oo, c, false, r);
-    if (o.v === 2) { g.save(); g.translate(0, -62); star(g, 5, 9, 4, '#ffd23f', 1.5); g.restore(); }
-  } });
-  def('bush', { w: 76, h: 48, zone: 'ground', hue: [105, 150], sat: 50, lit: 40, vmax: 3, draw: function (g, o, c, r) {
+  def('pine', { w: 76, h: 124, zone: 'ground', hue: [130, 160], sat: 45, lit: 32, vmax: 2, pat: [2, 5], draw: function (g, o, c) { pineShape(g, o, c, false); } });
+  def('spine', { w: 76, h: 124, zone: 'ground', hue: [130, 160], sat: 45, lit: 32, vmax: 2, pat: [2, 5], draw: function (g, o, c) { pineShape(g, o, c, true); } });
+  def('bush', { w: 76, h: 48, zone: 'ground', hue: [105, 150], sat: 50, lit: 40, vmax: 2, pat: [2, 7], draw: function (g, o, c, r) {
     blob(g, [[-22, 4, 16], [0, -4, 20], [22, 4, 16], [0, 8, 28, 13]], c());
-    var i, p; if (o.v === 1) for (i = 0; i < 6; i++) { p = [-28 + r() * 56, -12 + r() * 28]; circ(g, p[0], p[1], 3.5, '#d62f45', 1.2); }
-    if (o.v === 2) for (i = 0; i < 5; i++) { p = [-28 + r() * 56, -12 + r() * 26]; circ(g, p[0], p[1], 4, '#ffd23f', 1.2); circ(g, p[0], p[1], 1.5, '#fff', 0); }
+    var P = spots(r, o.p, -30, -16, 30, 14, 11, function (x, y) { return (x * x) / 1000 + (y * y) / 300 <= 1; }), i;
+    for (i = 0; i < P.length; i++) {
+      if (o.v === 0) circ(g, P[i][0], P[i][1], 5.4, '#d62f45', 1.2);
+      else { circ(g, P[i][0], P[i][1], 5.4, '#ffd23f', 1.2); circ(g, P[i][0], P[i][1], 1.6, '#fff', 0); }
+    }
   } });
-  def('flower', { w: 42, h: 78, zone: 'ground', hue: [0, 360], sat: 85, lit: 60, vmax: 3, draw: function (g, o, c) {
-    var n = [6, 8, 5][o.v], i;
+  def('flower', { w: 42, h: 78, zone: 'ground', hue: [0, 360], sat: 85, lit: 60, vmax: 2, pat: [5, 8], draw: function (g, o, c) {
+    var n = o.p, i;
     line(g, 0, -4, 0, 36, 3.4, '#3f8f3a'); ell(g, -9, 20, 9, 4, '#4fae48', 1.5, -.5); ell(g, 9, 28, 9, 4, '#4fae48', 1.5, .5);
-    for (i = 0; i < n; i++) { g.save(); g.translate(0, -18); g.rotate(i * TAU / n); ell(g, 0, -11, 6.5, 11, c(), 1.5); g.restore(); }
-    circ(g, 0, -18, 7, '#ffd23f', 1.5);
+    for (i = 0; i < n; i++) { g.save(); g.translate(0, -18); g.rotate(i * TAU / n); ell(g, 0, -11, 6, 11, c(), 1.5); g.restore(); }
+    circ(g, 0, -18, 7, o.v === 0 ? '#ffd23f' : '#6b3e1f', 1.5);
   } });
-  def('house', { w: 114, h: 112, zone: 'ground', hue: [0, 360], sat: 55, lit: 72, vmax: 3, asym: true, draw: function (g, o, c) {
-    rrect(g, 20, -40, 14, 30, 2, '#9c5a43');
+  def('house', { w: 114, h: 112, zone: 'ground', hue: [0, 360], sat: 55, lit: 72, vmax: 2, asym: true, pat: [1, 3], draw: function (g, o, c) {
+    if (o.v === 0) rrect(g, 20, -40, 14, 30, 2, '#9c5a43');
     rrect(g, -40, 0, 80, 54, 3, c());
     poly(g, [-52, 4, 0, -52, 52, 4], c(180, 10, -28));
     rrect(g, -9, 24, 18, 30, 3, '#7a4a2a'); circ(g, 4, 40, 1.6, '#ffd23f', 0);
-    var win = function (x, y, s) { rrect(g, x, y, s, s, 2, '#bfe6ff'); line(g, x + s / 2, y, x + s / 2, y + s, 1.5, '#fff'); line(g, x, y + s / 2, x + s, y + s / 2, 1.5, '#fff'); };
-    if (o.v === 0) win(-33, 12, 18);
-    else if (o.v === 1) { win(-34, 12, 16); win(18, 12, 16); }
-    else { circ(g, 0, -14, 8, '#bfe6ff', 2); win(18, 14, 16); }
+    var P = [[-33, 10], [17, 10], [-33, 32]], i;
+    for (i = 0; i < o.p; i++) { var x = P[i][0], y = P[i][1], s = 16; rrect(g, x, y, s, s, 2, '#bfe6ff'); line(g, x + s / 2, y, x + s / 2, y + s, 1.5, '#fff'); line(g, x, y + s / 2, x + s, y + s / 2, 1.5, '#fff'); }
+    circ(g, 0, -16, 7, '#bfe6ff', 2);
   } });
-  def('fence', { w: 114, h: 52, zone: 'ground', hue: [25, 40], sat: 55, lit: 62, vmax: 3, draw: function (g, o, c) {
-    var n = [5, 4, 6][o.v], i, x;
+  def('fence', { w: 114, h: 52, zone: 'ground', hue: [25, 40], sat: 55, lit: 62, pat: [4, 7], draw: function (g, o, c) {
+    var n = o.p, i, x;
     rrect(g, -54, -8, 108, 7, 2, c(0, 0, -8)); rrect(g, -54, 10, 108, 7, 2, c(0, 0, -8));
     for (i = 0; i < n; i++) { x = -48 + i * (96 / (n - 1)); poly(g, [x - 6, 24, x - 6, -14, x, -22, x + 6, -14, x + 6, 24], c()); }
   } });
-  def('sheep', { w: 74, h: 58, zone: 'ground', hue: [0, 360], sat: 50, lit: 90, vmax: 3, asym: true, low: true, draw: function (g, o, c) {
+  def('sheep', { w: 74, h: 58, zone: 'ground', hue: [0, 360], sat: 50, lit: 90, vmax: 3, asym: true, low: true, pat: [0, 3], draw: function (g, o, c) {
     line(g, -14, 14, -14, 26, 5, '#3c3340'); line(g, 4, 14, 4, 26, 5, '#3c3340'); line(g, 16, 14, 16, 26, 5, '#3c3340'); line(g, -26, 12, -26, 26, 5, '#3c3340');
     blob(g, [[-18, -2, 16], [0, -10, 18], [18, -2, 16], [-4, 8, 17], [12, 8, 15]], c());
+    var P = [[-18, -4], [4, -12], [-4, 8]], i;
+    for (i = 0; i < o.p; i++) ell(g, P[i][0], P[i][1], 6.5, 5, '#5a4e5e', 0);
     ell(g, 28, 0, 10, 12, '#3c3340'); ell(g, 21, -9, 4, 6, '#3c3340', 1.5, .5); circ(g, 31, -3, 1.8, '#fff', 0);
     if (o.v === 1) circ(g, 23, 14, 4, '#ffd23f', 1.5);
     if (o.v === 2) { poly(g, [20, -14, 28, -9, 28, -19], '#ff6fa5', 1.2); poly(g, [20, -14, 12, -19, 12, -9], '#ff6fa5', 1.2); }
   } });
-  def('windmill', { w: 92, h: 136, zone: 'ground', hue: [0, 360], sat: 55, lit: 62, vmax: 3, draw: function (g, o, c) {
-    var i, a = [.2, .55, .9][o.v];
+  def('windmill', { w: 92, h: 136, zone: 'ground', hue: [0, 360], sat: 55, lit: 62, vmax: 2, pat: [3, 5], draw: function (g, o, c) {
+    var i, n = o.p, a = [.2, .55][o.v];
     poly(g, [-19, 66, 19, 66, 11, -14, -11, -14], c()); poly(g, [-14, -12, 0, -34, 14, -12], c(180, 10, -26));
     rrect(g, -6, 44, 12, 22, 2, '#7a4a2a'); rrect(g, -4, 14, 8, 10, 1, '#bfe6ff');
-    for (i = 0; i < 4; i++) {
-      g.save(); g.translate(0, -22); g.rotate(a + i * Math.PI / 2);
-      rrect(g, -2.5, -44, 5, 44, 1, '#8a5a30'); poly(g, [3, -42, 17, -42, 17, -12, 3, -12], 'rgba(255,255,255,.9)', 1.5);
+    for (i = 0; i < n; i++) {
+      g.save(); g.translate(0, -22); g.rotate(a + i * TAU / n);
+      rrect(g, -2.5, -44, 5, 44, 1, '#8a5a30'); poly(g, [3, -42, 15, -42, 15, -12, 3, -12], 'rgba(255,255,255,.9)', 1.5);
       g.restore();
     }
     circ(g, 0, -22, 5, '#8a5a30');
   } });
-  def('rock', { w: 62, h: 44, zone: 'ground', hue: [200, 260], sat: 12, lit: 62, vmax: 3, low: true, draw: function (g, o, c) {
+  def('rock', { w: 62, h: 44, zone: 'ground', hue: [200, 260], sat: 12, lit: 62, vmax: 2, low: true, pat: [0, 3], draw: function (g, o, c) {
+    if (o.v === 1) poly(g, [-34, 20, -30, 8, -22, 4, -18, 20], c(0, 0, -8));
     poly(g, [-28, 18, -22, -8, -6, -20, 14, -16, 28, 2, 26, 18], c());
     poly(g, [-6, -20, 14, -16, 28, 2, 6, -2], c(0, 0, 10), 0);
-    if (o.v === 1) blob(g, [[-14, -4, 8, 5], [-4, -12, 7, 4]], '#6fbf4a');
-    if (o.v === 2) poly(g, [-34, 20, -30, 8, -22, 4, -18, 20], c(0, 0, -8));
+    var P = [[-14, 4], [8, 8], [-2, -8]], i;
+    for (i = 0; i < o.p; i++) ell(g, P[i][0], P[i][1], 6.5, 5, '#7cbf4a', 0);
   } });
-  def('mushroom', { w: 48, h: 54, zone: 'ground', hue: [0, 20], sat: 75, lit: 50, vmax: 3, draw: function (g, o, c) {
+  def('mushroom', { w: 48, h: 54, zone: 'ground', hue: [0, 20], sat: 75, lit: 50, pat: [2, 6], draw: function (g, o, c) {
     rrect(g, -8, -2, 16, 28, 5, '#f6e7cf'); g.beginPath(); g.moveTo(-24, 4); g.bezierCurveTo(-24, -34, 24, -34, 24, 4); g.closePath(); fs(g, c());
-    var sp = [[-10, -12, 4], [8, -16, 4], [2, -4, 3], [14, -4, 3]]; for (var i = 0; i < o.v + 2 && i < 4; i++) circ(g, sp[i][0], sp[i][1], sp[i][2], '#fff', 0);
+    var sp = [[-11, -11, 5], [9, -14, 5], [0, -3, 4.4], [15, -3, 3.8], [-16, -1, 3.8], [-1, -20, 3.8]];
+    for (var i = 0; i < o.p; i++) circ(g, sp[i][0], sp[i][1], sp[i][2], '#fff', 0);
   } });
-  def('lamp', { w: 34, h: 114, zone: 'ground', hue: [40, 50], sat: 90, lit: 62, vmax: 2, draw: function (g, o, c) {
+  def('lamp', { w: 34, h: 114, zone: 'ground', hue: [40, 50], sat: 90, lit: 62, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -3, -34, 6, 90, 2, '#3b4252'); rrect(g, -9, 52, 18, 6, 2, '#3b4252');
+    for (var i = 0; i < o.p; i++) rrect(g, -6, 28 - i * 15, 12, 7, 2, '#7d879a', 0);
     if (o.v === 0) glow(g, 0, -42, 30, c(0, 0, 10, .55));
     rrect(g, -9, -56, 18, 24, 5, o.v === 0 ? c() : '#8b93a1'); poly(g, [-12, -56, 12, -56, 0, -66], '#3b4252');
   } });
-  def('snail', { w: 54, h: 42, zone: 'ground', hue: [0, 360], sat: 60, lit: 62, vmax: 2, asym: true, draw: function (g, o, c) {
+  def('snail', { w: 54, h: 42, zone: 'ground', hue: [0, 360], sat: 60, lit: 62, asym: true, pat: [1, 3], draw: function (g, o, c) {
     ell(g, 2, 14, 24, 6, '#d9c9a8'); ell(g, 22, 6, 8, 10, '#d9c9a8'); line(g, 22, -2, 20, -12, 2, '#a99877'); line(g, 26, -2, 29, -11, 2, '#a99877');
     circ(g, 20, -12, 2, '#222', 0); circ(g, 29, -11, 2, '#222', 0);
-    circ(g, -4, 0, 17, c()); if (o.v === 0) { arc(g, -4, 0, 10, 0, TAU * .85, 2.4, c(0, 0, -18)); arc(g, -4, 0, 4.5, 0, TAU * .8, 2.2, c(0, 0, -18)); }
-    else { arc(g, -4, 0, 12, -2, 2, 3, c(40, 0, 14)); arc(g, -4, 0, 6, -2, 2, 3, c(40, 0, 14)); }
+    circ(g, -4, 0, 17, c());
+    for (var i = 0; i < o.p; i++) arc(g, -4, 0, 13 - i * 4.2, 0, TAU * .85, 2.4, c(0, 0, -20));
   } });
-  def('owl', { w: 54, h: 68, zone: 'ground', hue: [20, 40], sat: 40, lit: 45, vmax: 3, draw: function (g, o, c) {
+  def('owl', { w: 54, h: 68, zone: 'ground', hue: [20, 40], sat: 40, lit: 45, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
     poly(g, [-18, -22, -12, -34, -6, -24], c(0, 0, -8)); poly(g, [18, -22, 12, -34, 6, -24], c(0, 0, -8));
     ell(g, 0, 4, 22, 28, c()); ell(g, 0, 12, 13, 17, c(0, -10, 22), 0);
+    var P = [[-6, 4], [6, 4], [0, 12], [-6, 20], [6, 20]], i;
+    for (i = 0; i < o.p; i++) { g.beginPath(); g.moveTo(P[i][0] - 4.5, P[i][1] - 3); g.lineTo(P[i][0], P[i][1] + 2.5); g.lineTo(P[i][0] + 4.5, P[i][1] - 3); g.lineWidth = 3; g.strokeStyle = c(0, 0, -22); g.stroke(); }
     line(g, -8, 30, -8, 34, 3, '#e69a2c'); line(g, 8, 30, 8, 34, 3, '#e69a2c');
     if (o.v === 1) { arc(g, -9, -8, 6, .15, Math.PI - .15, 2.4, '#2a1d14'); arc(g, 9, -8, 6, .15, Math.PI - .15, 2.4, '#2a1d14'); }
-    else { circ(g, -9, -8, 8, '#fff', 1.5); circ(g, 9, -8, 8, '#fff', 1.5); circ(g, -9, -8, 3.4, '#222', 0); circ(g, 9, -8, 3.4, '#222', 0);
-      if (o.v === 2) { circ(g, -9, -8, 10, 'rgba(0,0,0,0)', 2.6); circ(g, 9, -8, 10, 'rgba(0,0,0,0)', 2.6); } }
+    else { circ(g, -9, -8, 8, '#fff', 1.5); circ(g, 9, -8, 8, '#fff', 1.5); circ(g, -9, -8, 3.4, '#222', 0); circ(g, 9, -8, 3.4, '#222', 0); }
     poly(g, [-4, -2, 4, -2, 0, 5], '#e69a2c', 1.5);
   } });
   def('bunny', { w: 50, h: 70, zone: 'ground', hue: [0, 360], sat: 20, lit: 88, vmax: 3, low: true, draw: function (g, o, c) {
@@ -247,93 +291,98 @@
   } });
 
   /* ===== bãi biển ===== */
-  def('umbrella', { w: 98, h: 98, zone: 'ground', hue: [0, 360], sat: 80, lit: 56, vmax: 3, draw: function (g, o, c) {
-    var i, n = 6;
+  def('umbrella', { w: 98, h: 98, zone: 'ground', hue: [0, 360], sat: 80, lit: 56, vmax: 2, pat: [4, 7], draw: function (g, o, c) {
+    var i, n = o.p, wseg = 92 / n;
     rrect(g, -2.5, -10, 5, 58, 2, '#8b6b4a');
     g.save(); g.beginPath(); g.moveTo(-46, 0); g.bezierCurveTo(-46, -50, 46, -50, 46, 0); g.closePath(); g.clip();
     g.fillStyle = c(); g.fillRect(-48, -52, 96, 54);
-    for (i = 0; i < n; i++) if (i % 2 === 0) { poly(g, [0, 6, -46 + i * 15.3, 4, -46 + (i + 1) * 15.3, 4], o.v === 1 ? c(0, 0, -16) : '#fff', 0); }
-    if (o.v === 2) for (i = 0; i < 7; i++) circ(g, -34 + i * 11, -14 + (i % 2) * 10, 3.2, '#fff', 0);
+    for (i = 0; i < n; i++) if (i % 2 === 0) poly(g, [0, 8, -46 + i * wseg, 4, -46 + (i + 1) * wseg, 4], o.v === 1 ? c(0, 0, -16) : '#fff', 0);
     g.restore();
     g.beginPath(); g.moveTo(-46, 0); g.bezierCurveTo(-46, -50, 46, -50, 46, 0); g.lineWidth = 2; g.strokeStyle = OL; g.stroke();
-    for (i = 0; i < 4; i++) arc(g, -34.5 + i * 23, 0, 11.5, 0, Math.PI, 2, OL);
+    for (i = 0; i < n; i++) arc(g, -46 + (i + .5) * wseg, 0, wseg / 2, 0, Math.PI, 2, OL);
   } });
-  def('sailboat', { w: 98, h: 96, zone: 'sea', hue: [0, 360], sat: 70, lit: 52, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('sailboat', { w: 98, h: 96, zone: 'sea', hue: [0, 360], sat: 70, lit: 52, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
     poly(g, [-38, 24, 38, 24, 26, 42, -26, 42], c());
     line(g, 0, -44, 0, 24, 3, '#5b4636');
-    if (o.v !== 1) poly(g, [-4, -38, -4, 18, -32, 18], '#fff7e6', 1.5);
-    poly(g, [4, -44, 4, 18, 34, 18], '#fff', 1.5);
-    poly(g, [0, -44, 14, -39, 0, -34], o.v === 1 ? '#ff5252' : c(150, 0, 0), 1);
-    if (o.v === 2) { circ(g, -12, 33, 3.4, '#bfe6ff', 1.2); circ(g, 0, 33, 3.4, '#bfe6ff', 1.2); circ(g, 12, 33, 3.4, '#bfe6ff', 1.2); }
+    if (o.v === 0) poly(g, [-4, -38, -4, 18, -32, 18], '#fff7e6', 1.5);
+    var sail = function () { g.beginPath(); g.moveTo(4, -44); g.lineTo(4, 18); g.lineTo(34, 18); g.closePath(); };
+    sail(); fs(g, '#fff', 1.5);
+    clipStripes(g, sail, o.p, 4, 34, -44, 18, 5, c(0, 0, 8), false);
+    poly(g, [0, -44, 14, -39, 0, -34], '#ff5252', 1);
     arc(g, -22, 46, 10, Math.PI, 0, 2.5, 'rgba(255,255,255,.8)'); arc(g, 6, 46, 10, Math.PI, 0, 2.5, 'rgba(255,255,255,.8)');
   } });
-  def('palm', { w: 98, h: 138, zone: 'ground', hue: [110, 140], sat: 55, lit: 40, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('palm', { w: 98, h: 138, zone: 'ground', hue: [110, 140], sat: 55, lit: 40, asym: true, pat: [1, 4], draw: function (g, o, c) {
     var i;
     g.beginPath(); g.moveTo(-8, 66); g.bezierCurveTo(-4, 20, 6, -10, 16, -40); g.lineTo(26, -36); g.bezierCurveTo(14, -8, 8, 22, 10, 66); g.closePath(); fs(g, '#a9774a');
     for (i = 0; i < 6; i++) { g.save(); g.translate(20, -42); g.rotate(-2.5 + i * .55); g.beginPath(); g.moveTo(0, 0); g.bezierCurveTo(14, -18, 40, -22, 52, 2); g.bezierCurveTo(36, -8, 14, -6, 0, 0); fs(g, c(0, 0, i % 2 ? 4 : -4), 1.6); g.restore(); }
-    if (o.v !== 1) { circ(g, 14, -36, 6, '#6b4a2b'); circ(g, 26, -34, 6, '#6b4a2b'); }
-    if (o.v === 2) circ(g, 20, -28, 6, '#6b4a2b');
+    var P = [[13, -35], [26, -33], [19, -27], [8, -29]];
+    for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 6, '#6b4a2b');
   } });
-  def('crab', { w: 66, h: 46, zone: 'ground', hue: [0, 12], sat: 80, lit: 52, vmax: 2, draw: function (g, o, c) {
+  def('crab', { w: 66, h: 46, zone: 'ground', hue: [0, 12], sat: 80, lit: 52, vmax: 2, pat: [0, 3], draw: function (g, o, c) {
     var i, up = o.v === 0;
     for (i = 0; i < 3; i++) { line(g, -16, 6 + i * 5, -30, 12 + i * 5, 3, c(0, 0, -12)); line(g, 16, 6 + i * 5, 30, 12 + i * 5, 3, c(0, 0, -12)); }
     ell(g, 0, 8, 22, 15, c());
+    var P = [[-9, 8], [9, 8], [0, 14]];
+    for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.8, c(0, 0, 24), 0);
     line(g, -14, -2, -26, up ? -12 : 4, 4, c(0, 0, -8)); line(g, 14, -2, 26, up ? -12 : 4, 4, c(0, 0, -8));
     circ(g, -28, up ? -16 : 8, 8, c()); circ(g, 28, up ? -16 : 8, 8, c());
     line(g, -6, -4, -6, -12, 2.4, c(0, 0, -12)); line(g, 6, -4, 6, -12, 2.4, c(0, 0, -12)); circ(g, -6, -14, 3.6, '#fff'); circ(g, 6, -14, 3.6, '#fff'); circ(g, -6, -14, 1.6, '#222', 0); circ(g, 6, -14, 1.6, '#222', 0);
   } });
-  def('starfish', { w: 50, h: 50, zone: 'ground', hue: [10, 40], sat: 85, lit: 58, vmax: 2, draw: function (g, o, c) {
+  def('starfish', { w: 50, h: 50, zone: 'ground', hue: [10, 40], sat: 85, lit: 58, pat: [0, 5], draw: function (g, o, c) {
     star(g, 5, 23, 9, c(), 2.2);
-    if (o.v === 0) for (var i = 0; i < 5; i++) circ(g, Math.cos(-Math.PI / 2 + i * TAU / 5) * 13, Math.sin(-Math.PI / 2 + i * TAU / 5) * 13, 2.2, c(0, 0, 18), 0);
+    for (var i = 0; i < o.p; i++) circ(g, Math.cos(-Math.PI / 2 + i * TAU / 5) * 12, Math.sin(-Math.PI / 2 + i * TAU / 5) * 12, 4, c(0, 0, 24), 0);
   } });
-  def('beachball', { w: 50, h: 50, zone: 'ground', hue: [0, 360], sat: 80, lit: 56, vmax: 3, draw: function (g, o, c) {
-    var i, a = o.v * .5;
+  def('beachball', { w: 50, h: 50, zone: 'ground', hue: [0, 360], sat: 80, lit: 56, pat: [2, 4], draw: function (g, o, c) {
+    var i, n = o.p * 2;
     g.save(); g.beginPath(); g.arc(0, 0, 22, 0, TAU); g.clip(); g.fillStyle = '#fff'; g.fillRect(-24, -24, 48, 48);
-    for (i = 0; i < 6; i++) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 30, a + i * TAU / 6, a + (i + 1) * TAU / 6); g.closePath(); g.fillStyle = i % 2 ? c(0, 0, 0) : c(150, 0, 0); if (i % 3) g.fill(); }
+    for (i = 0; i < n; i += 2) { g.beginPath(); g.moveTo(0, 0); g.arc(0, 0, 30, i * TAU / n, (i + 1) * TAU / n); g.closePath(); g.fillStyle = (i / 2) % 2 ? c(150, 0, 0) : c(); g.fill(); }
     g.restore(); circ(g, 0, 0, 22, 'rgba(0,0,0,0)', 2); circ(g, 0, 0, 4, '#fff', 1.5); circ(g, -8, -9, 5, 'rgba(255,255,255,.55)', 0);
   } });
-  def('lighthouse', { w: 54, h: 138, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 2, i, ya = -34, yb = 64, ht = (yb - ya) / n;
+  def('lighthouse', { w: 54, h: 138, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, pat: [2, 5], draw: function (g, o, c) {
+    var n = o.p, i, ya = -34, yb = 64, ht = (yb - ya) / (2 * n);
     g.save(); g.beginPath(); g.moveTo(-18, yb); g.lineTo(18, yb); g.lineTo(11, ya); g.lineTo(-11, ya); g.closePath(); g.clip();
-    for (i = 0; i < n; i++) { g.fillStyle = i % 2 ? '#fff' : c(); g.fillRect(-20, ya + i * ht, 40, ht + 1); }
+    g.fillStyle = '#fff'; g.fillRect(-20, ya, 40, yb - ya);
+    for (i = 0; i < n; i++) { g.fillStyle = c(); g.fillRect(-20, ya + (2 * i + .5) * ht, 40, ht); }
     g.restore(); poly(g, [-18, yb, 18, yb, 11, ya, -11, ya], 'rgba(0,0,0,0)', 2);
     rrect(g, -16, -42, 32, 8, 2, '#3b4252'); rrect(g, -9, -64, 18, 22, 3, '#ffe27a'); poly(g, [-12, -64, 12, -64, 0, -76], c(0, 0, -12));
-    glow(g, 0, -53, 26, 'rgba(255,240,150,.45)'); rrect(g, -4, 40, 8, 24, 2, '#7a4a2a', 1.5);
+    glow(g, 0, -53, 26, 'rgba(255,240,150,.45)'); rrect(g, -4, 46, 8, 18, 2, '#7a4a2a', 1.5);
   } });
-  def('sandcastle', { w: 78, h: 60, zone: 'ground', hue: [38, 44], sat: 60, lit: 68, vmax: 3, draw: function (g, o, c) {
-    var ts = o.v === 1 ? [[-24, 14], [24, 14]] : o.v === 2 ? [[-26, 12], [0, 20], [26, 12]] : [[0, 20]];
+  def('sandcastle', { w: 78, h: 60, zone: 'ground', hue: [38, 44], sat: 60, lit: 68, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
+    var ts = o.v === 1 ? [[-24, 14], [24, 14]] : [[-26, 12], [0, 20], [26, 12]], i, k;
     rrect(g, -34, 6, 68, 24, 3, c());
-    for (var i = 0; i < ts.length; i++) { rrect(g, ts[i][0] - 9, -ts[i][1], 18, ts[i][1] + 30, 2, c(0, 0, 4)); for (var k = -1; k <= 1; k++) rrect(g, ts[i][0] + k * 6 - 2.5, -ts[i][1] - 6, 5, 7, 1, c(0, 0, 4), 1); }
+    for (i = 0; i < ts.length; i++) { rrect(g, ts[i][0] - 9, -ts[i][1], 18, ts[i][1] + 30, 2, c(0, 0, 4)); for (k = -1; k <= 1; k++) rrect(g, ts[i][0] + k * 6 - 2.5, -ts[i][1] - 6, 5, 7, 1, c(0, 0, 4), 1); }
     line(g, 0, -26, 0, -38, 2, '#8b6b4a'); poly(g, [0, -38, 12, -34, 0, -30], '#ff5252', 1);
-    rrect(g, -5, 14, 10, 16, 4, c(0, 0, -16), 1.2);
+    var X = [-14, 14, 0];
+    for (i = 0; i < o.p; i++) rrect(g, X[i] - 4, 14, 8, 12, 4, c(0, 0, -18), 1);
   } });
 
   /* ===== dưới biển ===== */
-  def('fish', { w: 74, h: 48, zone: 'water', hue: [0, 360], sat: 80, lit: 58, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('fish', { w: 74, h: 48, zone: 'water', hue: [0, 360], sat: 80, lit: 58, vmax: 2, asym: true, pat: [1, 4], draw: function (g, o, c) {
     poly(g, [-22, 0, -40, -16, -36, 0, -40, 16], c(0, 0, -10));
     poly(g, [-4, -16, 6, -26, 14, -14], c(0, 0, -10));
     ell(g, 0, 0, 28, 17, c());
-    if (o.v === 1) { g.save(); g.beginPath(); g.ellipse(0, 0, 28, 17, 0, 0, TAU); g.clip(); g.fillStyle = c(0, 0, 18); g.fillRect(-12, -20, 6, 40); g.fillRect(2, -20, 6, 40); g.restore(); }
-    if (o.v === 2) { circ(g, -6, 6, 3, c(0, 0, 20), 0); circ(g, 6, -6, 3, c(0, 0, 20), 0); circ(g, 8, 8, 2.4, c(0, 0, 20), 0); circ(g, -10, -5, 2.4, c(0, 0, 20), 0); }
+    var body = function () { g.beginPath(); g.ellipse(0, 0, 28, 17, 0, 0, TAU); }, i;
+    if (o.v === 0) { g.save(); body(); g.clip(); g.fillStyle = c(0, 0, 20); for (i = 0; i < o.p; i++) g.fillRect(-16 + i * 9, -20, 5, 40); g.restore(); }
+    else { var P = [[-7, 5], [4, -7], [7, 7], [-15, -3]]; for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 5, c(0, 0, 26), 0); }
     circ(g, 16, -4, 4.5, '#fff', 1.2); circ(g, 17, -4, 2, '#222', 0); arc(g, 10, 2, 9, -.9, .9, 1.6, OL);
   } });
-  def('jelly', { w: 56, h: 80, zone: 'water', hue: [280, 340], sat: 70, lit: 70, vmax: 2, draw: function (g, o, c) {
-    var i;
-    for (i = -2; i <= 2; i++) { g.beginPath(); g.moveTo(i * 8, 4); g.bezierCurveTo(i * 8 - 8, 16, i * 8 + 8, 26, i * 8, 36); g.lineWidth = 3; g.strokeStyle = c(0, 0, -10); g.lineCap = 'round'; g.stroke(); }
+  def('jelly', { w: 56, h: 80, zone: 'water', hue: [280, 340], sat: 70, lit: 70, vmax: 2, pat: [3, 6], draw: function (g, o, c) {
+    var i, n = o.p, x;
+    for (i = 0; i < n; i++) { x = -18 + i * (36 / (n - 1)); g.beginPath(); g.moveTo(x, 4); g.bezierCurveTo(x - 7, 16, x + 7, 26, x, 36); g.lineWidth = 3; g.strokeStyle = c(0, 0, -10); g.lineCap = 'round'; g.stroke(); }
     g.beginPath(); g.moveTo(-24, 8); g.bezierCurveTo(-26, -34, 26, -34, 24, 8); g.quadraticCurveTo(12, 14, 0, 8); g.quadraticCurveTo(-12, 14, -24, 8); fs(g, c());
     circ(g, -8, -14, 5, 'rgba(255,255,255,.5)', 0);
     if (o.v === 1) { circ(g, 6, -10, 3, c(0, 0, -20), 0); circ(g, 12, 0, 2.4, c(0, 0, -20), 0); circ(g, -2, -2, 2.4, c(0, 0, -20), 0); }
   } });
-  def('seaweed', { w: 36, h: 106, zone: 'floor', hue: [110, 150], sat: 60, lit: 38, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 2, i, x;
+  def('seaweed', { w: 36, h: 106, zone: 'floor', hue: [110, 150], sat: 60, lit: 38, pat: [2, 4], draw: function (g, o, c) {
+    var n = o.p, i, x;
     for (i = 0; i < n; i++) {
       x = (i - (n - 1) / 2) * 11; g.beginPath(); g.moveTo(x, 50);
       g.bezierCurveTo(x - 14, 25, x + 14, 5, x - 4, -14 - i * 6); g.bezierCurveTo(x + 6, -30 - i * 4, x - 6, -40 - i * 4, x, -50 + i * 4);
       g.lineWidth = 7; g.strokeStyle = c(0, 0, -6 + i * 5); g.lineCap = 'round'; g.stroke();
     }
   } });
-  def('coral', { w: 74, h: 86, zone: 'floor', hue: [320, 360], sat: 75, lit: 60, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 2, i, y;
+  def('coral', { w: 74, h: 86, zone: 'floor', hue: [320, 360], sat: 75, lit: 60, pat: [2, 5], draw: function (g, o, c) {
+    var n = o.p, i, y;
     rrect(g, -6, -10, 12, 54, 5, c());
     for (i = 0; i < n; i++) {
       y = 26 - i * (62 / n); var sd = i % 2 ? 1 : -1;
@@ -341,81 +390,88 @@
     }
     circ(g, 0, -12, 8, c(0, 0, 6), 1.5);
   } });
-  def('bubbles', { w: 38, h: 58, zone: 'water', hue: [190, 200], sat: 80, lit: 80, vmax: 3, low: true, draw: function (g, o, c) {
-    var n = o.v + 2, P = [[0, 18, 10], [8, -2, 8], [-4, -22, 6], [6, -34, 4]], i;
-    for (i = 0; i < n; i++) { circ(g, P[i][0], P[i][1], P[i][2], c(0, 0, 0, .35), 2); circ(g, P[i][0] - P[i][2] * .35, P[i][1] - P[i][2] * .35, P[i][2] * .28, 'rgba(255,255,255,.8)', 0); }
+  def('bubbles', { w: 38, h: 58, zone: 'water', hue: [190, 200], sat: 80, lit: 80, low: true, pat: [2, 4], draw: function (g, o, c) {
+    var P = [[0, 18, 10], [8, -2, 8], [-4, -22, 6], [6, -34, 4]], i;
+    for (i = 0; i < o.p; i++) { circ(g, P[i][0], P[i][1], P[i][2], c(0, 0, 0, .35), 2); circ(g, P[i][0] - P[i][2] * .35, P[i][1] - P[i][2] * .35, P[i][2] * .28, 'rgba(255,255,255,.8)', 0); }
   } });
-  def('chest', { w: 74, h: 58, zone: 'floor', hue: [20, 30], sat: 55, lit: 40, vmax: 2, draw: function (g, o, c) {
+  def('chest', { w: 74, h: 58, zone: 'floor', hue: [20, 30], sat: 55, lit: 40, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -32, -2, 64, 30, 3, c());
     if (o.v === 1) { glow(g, 0, -4, 34, 'rgba(255,224,102,.7)'); poly(g, [-30, -4, -26, -14, 26, -14, 30, -4], '#ffd23f', 1.5); circ(g, -10, -9, 3, '#fff2a8', 0); circ(g, 8, -11, 3, '#fff2a8', 0); poly(g, [-34, -4, -28, -24, 28, -24, 34, -4], c(0, 0, -10), 1.5); }
     else { g.beginPath(); g.moveTo(-32, -2); g.bezierCurveTo(-32, -26, 32, -26, 32, -2); g.closePath(); fs(g, c(0, 0, -6)); }
-    rrect(g, -32, 8, 64, 5, 0, '#c9a227', 0); rrect(g, -6, 2, 12, 14, 3, '#ffd23f', 1.5); circ(g, 0, 8, 2, '#5a3b00', 0);
+    var X = [-20, 20, 0];
+    for (var i = 0; i < o.p; i++) rrect(g, X[i] - 2.5, -2, 5, 30, 0, '#c9a227', 0);
+    rrect(g, -6, 4, 12, 13, 3, '#ffd23f', 1.5); circ(g, 0, 10, 2, '#5a3b00', 0);
   } });
-  def('submarine', { w: 106, h: 58, zone: 'water', hue: [40, 52], sat: 92, lit: 56, vmax: 3, asym: true, draw: function (g, o, c) {
-    var n = [2, 3, 4][o.v], i;
+  def('submarine', { w: 106, h: 58, zone: 'water', hue: [40, 52], sat: 92, lit: 56, asym: true, pat: [2, 5], draw: function (g, o, c) {
+    var n = o.p, i;
     line(g, 6, -20, 6, -30, 3, '#555'); line(g, 6, -30, 16, -30, 3, '#555');
     rrect(g, -8, -24, 28, 14, 5, c(0, 0, -6));
     ell(g, 0, 4, 46, 19, c()); poly(g, [-44, 0, -52, -10, -52, 14], c(0, 0, -12)); rrect(g, -56, -4, 7, 16, 2, '#555', 1);
-    for (i = 0; i < n; i++) circ(g, -18 + i * (n === 2 ? 28 : n === 3 ? 20 : 15), 4, 5, '#bfe6ff', 2);
+    for (i = 0; i < n; i++) circ(g, -26 + i * 13, 4, 4.6, '#bfe6ff', 2);
   } });
-  def('turtle', { w: 86, h: 58, zone: 'water', hue: [95, 135], sat: 55, lit: 42, vmax: 2, asym: true, draw: function (g, o, c) {
+  def('turtle', { w: 86, h: 58, zone: 'water', hue: [95, 135], sat: 55, lit: 42, asym: true, pat: [3, 6], draw: function (g, o, c) {
     ell(g, -28, 8, 10, 5, c(0, 0, -6), 1.5, .6); ell(g, 14, 20, 10, 5, c(0, 0, -6), 1.5, -.4); ell(g, -12, -16, 10, 5, c(0, 0, -6), 1.5, -.6);
     poly(g, [-34, 6, -44, 2, -36, 12], c(0, 0, -6), 1.2);
     ell(g, 36, -2, 11, 9, c(0, 0, 10)); circ(g, 40, -4, 2, '#222', 0);
     g.beginPath(); g.ellipse(0, 0, 32, 22, 0, Math.PI, 0); g.closePath(); fs(g, c(30, 0, 6));
-    if (o.v === 0) { poly(g, [-8, -8, 8, -8, 12, 4, 0, 10, -12, 4], c(30, 0, 18), 1.4); line(g, -8, -8, -16, -18, 1.4, OL); line(g, 8, -8, 16, -18, 1.4, OL); }
-    else { circ(g, -12, -8, 4, c(30, 0, 18), 1); circ(g, 8, -12, 4, c(30, 0, 18), 1); circ(g, 14, -2, 4, c(30, 0, 18), 1); circ(g, -2, 0, 4, c(30, 0, 18), 1); }
+    var P = [[-15, -6], [0, -13], [15, -6], [-6, -3], [8, -3], [-24, -3]];
+    for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.6, c(30, 0, 22), 1);
   } });
 
   /* ===== vũ trụ ===== */
-  def('planet', { w: 88, h: 88, zone: 'any', hue: [0, 360], sat: 65, lit: 55, vmax: 3, draw: function (g, o, c, r) {
-    var gr = g.createRadialGradient(-10, -12, 4, 0, 0, 30);
+  def('planet', { w: 88, h: 88, zone: 'any', hue: [0, 360], sat: 65, lit: 55, vmax: 2, pat: [1, 4], draw: function (g, o, c) {
+    var gr = g.createRadialGradient(-10, -12, 4, 0, 0, 30), i;
     gr.addColorStop(0, c(0, 0, 18)); gr.addColorStop(1, c(0, 0, -16));
-    if (o.v !== 1) { g.save(); g.rotate(-.4); g.beginPath(); g.ellipse(0, 0, 42, 11, 0, Math.PI, TAU); g.lineWidth = 5; g.strokeStyle = c(40, -10, 14); g.stroke(); g.restore(); }
+    var ring = o.v === 0;
+    if (ring) { g.save(); g.rotate(-.4); g.beginPath(); g.ellipse(0, 0, 42, 11, 0, Math.PI, TAU); g.lineWidth = 5; g.strokeStyle = c(40, -10, 14); g.stroke(); g.restore(); }
     circ(g, 0, 0, 28, gr, 2);
-    g.save(); g.beginPath(); g.arc(0, 0, 28, 0, TAU); g.clip(); g.fillStyle = c(0, 0, -12, .5); g.fillRect(-30, 4, 60, 6); g.fillRect(-30, -12, 60, 4); g.restore();
-    if (o.v === 1) { circ(g, -9, 8, 5, c(0, 0, -20, .6), 0); circ(g, 10, -8, 4, c(0, 0, -20, .6), 0); circ(g, 8, 12, 3, c(0, 0, -20, .6), 0); }
-    if (o.v !== 1) { g.save(); g.rotate(-.4); g.beginPath(); g.ellipse(0, 0, 42, 11, 0, 0, Math.PI); g.lineWidth = 5; g.strokeStyle = c(40, -10, 14); g.stroke(); g.restore(); }
-    if (o.v === 2) { circ(g, 34, -26, 8, '#d7dbe5', 1.5); circ(g, 31, -28, 2.2, '#aeb4c4', 0); }
+    g.save(); g.beginPath(); g.arc(0, 0, 28, 0, TAU); g.clip(); g.fillStyle = c(30, 0, 18, .85);
+    for (i = 0; i < o.p; i++) g.fillRect(-30, -20 + i * (40 / o.p) + 4, 60, 5);
+    g.restore();
+    if (ring) { g.save(); g.rotate(-.4); g.beginPath(); g.ellipse(0, 0, 42, 11, 0, 0, Math.PI); g.lineWidth = 5; g.strokeStyle = c(40, -10, 14); g.stroke(); g.restore(); }
+    else { circ(g, 34, -26, 8, '#d7dbe5', 1.5); circ(g, 31, -28, 2.2, '#aeb4c4', 0); }
   } });
-  def('rocket', { w: 50, h: 112, zone: 'any', hue: [0, 360], sat: 70, lit: 55, vmax: 3, draw: function (g, o, c) {
+  def('rocket', { w: 50, h: 112, zone: 'any', hue: [0, 360], sat: 70, lit: 55, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
     poly(g, [-10, 36, 0, 70, 10, 36], '#ffb02e', 1.5); poly(g, [-5, 36, 0, 56, 5, 36], '#fff2a8', 0);
     poly(g, [-16, 20, -30, 40, -16, 40], c(150, 0, -6)); poly(g, [16, 20, 30, 40, 16, 40], c(150, 0, -6));
     g.beginPath(); g.moveTo(0, -56); g.bezierCurveTo(20, -36, 18, 14, 14, 40); g.lineTo(-14, 40); g.bezierCurveTo(-18, 14, -20, -36, 0, -56); fs(g, '#f3f6fb');
     g.beginPath(); g.moveTo(0, -56); g.bezierCurveTo(10, -46, 15, -38, 16, -30); g.lineTo(-16, -30); g.bezierCurveTo(-15, -38, -10, -46, 0, -56); fs(g, c(), 1.5);
-    if (o.v === 1) { circ(g, 0, -12, 7, '#7ec8ff', 2); circ(g, 0, 8, 6, '#7ec8ff', 2); } else circ(g, 0, -8, 8, '#7ec8ff', 2);
-    if (o.v === 2) rrect(g, -15, 22, 30, 7, 0, c(), 1);
+    for (var i = 0; i < o.p; i++) circ(g, 0, -16 + i * 15, 6, '#7ec8ff', 2);
+    if (o.v === 1) rrect(g, -15, 26, 30, 7, 0, c(), 1);
   } });
-  def('crescent', { w: 62, h: 62, zone: 'any', hue: [42, 52], sat: 90, lit: 70, vmax: 2, asym: true, draw: function (g, o, c) {
+  def('crescent', { w: 62, h: 62, zone: 'any', hue: [42, 52], sat: 90, lit: 70, asym: true, pat: [0, 3], draw: function (g, o, c) {
     glow(g, 0, 0, 36, c(0, 0, 10, .35));
-    g.save(); g.beginPath(); g.arc(0, 0, 26, 0, TAU); g.arc(12, -6, 22, 0, TAU, true); g.clip('evenodd'); g.fillStyle = c(); g.fillRect(-30, -30, 60, 60); g.restore();
+    g.save(); g.beginPath(); g.arc(0, 0, 26, 0, TAU); g.arc(12, -6, 22, 0, TAU, true); g.clip('evenodd'); g.fillStyle = c(); g.fillRect(-30, -30, 60, 60);
+    var P = [[-17, 0, 4.6], [-9, 15, 4], [-14, -14, 3.8]];
+    for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], P[i][2], c(0, 0, -16), 0);
+    g.restore();
     g.beginPath(); g.arc(0, 0, 26, Math.PI * .62, Math.PI * 1.55); g.lineWidth = 2; g.strokeStyle = OL; g.stroke();
-    if (o.v === 1) { circ(g, -14, 2, 3.4, c(0, 0, -14), 0); circ(g, -8, 14, 2.6, c(0, 0, -14), 0); }
   } });
-  def('ufo', { w: 100, h: 60, zone: 'any', hue: [190, 330], sat: 20, lit: 78, vmax: 3, low: true, draw: function (g, o, c) {
-    var n = o.v === 2 ? 5 : 3, i;
+  def('ufo', { w: 100, h: 60, zone: 'any', hue: [190, 330], sat: 20, lit: 78, vmax: 2, low: true, pat: [3, 6], draw: function (g, o, c) {
+    var n = o.p, i;
     g.beginPath(); g.arc(0, -6, 17, Math.PI, 0); g.closePath(); fs(g, 'rgba(150,230,255,.85)');
     if (o.v === 1) { circ(g, 0, -12, 7, '#7be07a', 1.5); circ(g, -2.5, -13, 1.6, '#222', 0); circ(g, 2.5, -13, 1.6, '#222', 0); }
     ell(g, 0, 6, 46, 14, c(0, 0, 0)); ell(g, 0, 10, 40, 8, c(0, 0, -16), 0);
-    for (i = 0; i < n; i++) circ(g, -30 + i * (60 / (n - 1)), 8, 3.6, i % 2 ? '#ffd23f' : '#ff6b6b', 1);
+    for (i = 0; i < n; i++) circ(g, -32 + i * (64 / (n - 1)), 8, 3.6, i % 2 ? '#ffd23f' : '#ff6b6b', 1);
   } });
-  def('satellite', { w: 100, h: 66, zone: 'any', hue: [40, 52], sat: 15, lit: 76, vmax: 2, low: true, draw: function (g, o, c) {
-    var i;
-    rrect(g, -44, -10, 30, 20, 2, '#3a63c8'); rrect(g, 14, -10, 30, 20, 2, '#3a63c8'); for (i = 1; i < 3; i++) { line(g, -44 + i * 10, -10, -44 + i * 10, 10, 1.4, '#9cc0ff'); line(g, 14 + i * 10, -10, 14 + i * 10, 10, 1.4, '#9cc0ff'); }
+  def('satellite', { w: 100, h: 66, zone: 'any', hue: [40, 52], sat: 15, lit: 76, vmax: 2, low: true, pat: [2, 4], draw: function (g, o, c) {
+    var i, n = o.p;
+    rrect(g, -44, -10, 30, 20, 2, '#3a63c8'); rrect(g, 14, -10, 30, 20, 2, '#3a63c8');
+    for (i = 1; i < n; i++) { line(g, -44 + i * 30 / n, -10, -44 + i * 30 / n, 10, 1.4, '#9cc0ff'); line(g, 14 + i * 30 / n, -10, 14 + i * 30 / n, 10, 1.4, '#9cc0ff'); }
     rrect(g, -14, -14, 28, 28, 4, c(), 2); rrect(g, -8, -8, 16, 16, 2, c(0, 0, -16), 1);
     if (o.v === 0) { arc(g, 0, -14, 14, Math.PI * 1.1, Math.PI * 1.9, 4, '#d7dbe5'); line(g, 0, -14, 0, -30, 2, '#d7dbe5'); circ(g, 0, -32, 3, '#ff6b6b', 0); }
     else { line(g, 0, -14, 0, -34, 2, '#d7dbe5'); circ(g, 0, -36, 3.5, '#ff6b6b', 0); line(g, -8, 14, -8, 26, 2, '#d7dbe5'); line(g, 8, 14, 8, 26, 2, '#d7dbe5'); }
   } });
-  def('astronaut', { w: 56, h: 76, zone: 'any', hue: [10, 30], sat: 85, lit: 55, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('astronaut', { w: 56, h: 76, zone: 'any', hue: [10, 30], sat: 85, lit: 55, vmax: 2, asym: true, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -26, -4, 12, 24, 4, '#c9ced9'); rrect(g, -9, 30, 7, 22, 3, '#f3f6fb'); rrect(g, 2, 30, 7, 22, 3, '#f3f6fb');
-    rrect(g, -17, -6, 30, 40, 7, '#f3f6fb'); rrect(g, -9, 6, 14, 10, 2, c(), 1.4);
+    rrect(g, -17, -6, 30, 40, 7, '#f3f6fb'); rrect(g, -10, 4, 16, 14, 2, '#c9ced9', 1.4);
+    for (var i = 0; i < o.p; i++) circ(g, -6 + i * 5.5, 11, 3, i % 2 ? '#3bd16f' : c(), 0);
     if (o.v === 1) { line(g, 12, 0, 24, -20, 8, '#f3f6fb'); } else line(g, 12, 2, 20, 22, 8, '#f3f6fb');
     line(g, -17, 2, -22, 20, 8, '#f3f6fb');
-    if (o.v === 2) { line(g, 24, 24, 24, -30, 2, '#8b6b4a'); poly(g, [24, -30, 40, -25, 24, -19], c(), 1.2); }
     circ(g, -2, -22, 19, '#f3f6fb'); ell(g, 1, -22, 12, 10, '#26344d', 1.5); ell(g, -3, -26, 4, 2.4, 'rgba(255,255,255,.7)', 0);
   } });
-  def('alien', { w: 52, h: 68, zone: 'any', hue: [90, 150], sat: 65, lit: 55, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 1, i;
+  def('alien', { w: 52, h: 68, zone: 'any', hue: [90, 150], sat: 65, lit: 55, pat: [1, 3], draw: function (g, o, c) {
+    var n = o.p, i;
     line(g, -8, -22, -14, -34, 2.4, c(0, 0, -16)); circ(g, -14, -36, 3.6, '#ff6bd8', 1); line(g, 8, -22, 14, -34, 2.4, c(0, 0, -16)); circ(g, 14, -36, 3.6, '#ff6bd8', 1);
     rrect(g, -12, 14, 8, 20, 4, c(0, 0, -10)); rrect(g, 4, 14, 8, 20, 4, c(0, 0, -10));
     ell(g, 0, 18, 15, 14, c(0, 0, -4)); ell(g, 0, -6, 21, 24, c());
@@ -424,24 +480,24 @@
   } });
 
   /* ===== thành phố ===== */
-  def('building', { w: 76, h: 160, zone: 'ground', hue: [0, 360], sat: 35, lit: 58, vmax: 3, draw: function (g, o, c, r) {
-    var cols = 3, rows = 7, i, j;
+  def('building', { w: 76, h: 160, zone: 'ground', hue: [0, 360], sat: 35, lit: 58, vmax: 2, pat: [5, 8], draw: function (g, o, c, r) {
+    var cols = 3, rows = o.p, i, j, rh = 112 / rows, lit = [];
+    for (i = 0; i < 24; i++) lit.push(r() > .45);
     if (o.v === 0) { line(g, 0, -80, 0, -58, 2.4, '#555'); circ(g, 0, -82, 3, '#ff5252', 0); }
-    else if (o.v === 1) { rrect(g, -14, -76, 28, 18, 3, '#8b6b4a'); poly(g, [-17, -76, 17, -76, 0, -86], '#5b4636', 1.2); }
-    else rrect(g, -18, -68, 22, 10, 2, '#8b93a1');
+    else { rrect(g, -14, -76, 28, 18, 3, '#8b6b4a'); poly(g, [-17, -76, 17, -76, 0, -86], '#5b4636', 1.2); }
     rrect(g, -34, -60, 68, 140, 3, c());
     rrect(g, -34, -60, 14, 140, 2, c(0, 0, -10), 0);
-    for (j = 0; j < rows; j++) for (i = 0; i < cols; i++) rrect(g, -22 + i * 20, -50 + j * 19, 13, 12, 1.5, r() > .45 ? '#ffe9a0' : '#35455f', 1);
-    rrect(g, -8, 56, 16, 24, 2, '#35455f', 1);
+    for (j = 0; j < rows; j++) for (i = 0; i < cols; i++) rrect(g, -22 + i * 20, -54 + j * rh, 13, Math.min(12, rh - 5), 1.5, lit[j * 3 + i] ? '#ffe9a0' : '#35455f', 1);
+    rrect(g, -8, 58, 16, 22, 2, '#35455f', 1);
   } });
-  def('car', { w: 104, h: 50, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('car', { w: 104, h: 50, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 2, asym: true, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -46, -2, 92, 22, 7, c());
     g.beginPath(); g.moveTo(-26, -2); g.lineTo(-18, -20); g.lineTo(18, -20); g.lineTo(30, -2); g.closePath(); fs(g, c(0, 0, 6));
-    poly(g, [-21, -4, -15, -17, -2, -17, -2, -4], '#bfe6ff', 1.4); poly(g, [2, -4, 2, -17, 16, -17, 24, -4], '#bfe6ff', 1.4);
+    var n = o.p, i, x0 = -21, x1 = 24, w = (x1 - x0) / n;
+    for (i = 0; i < n; i++) { var a = x0 + i * w + 1.5, b = x0 + (i + 1) * w - 1.5; poly(g, [a, -4, i === 0 ? a + 6 : a, -17, i === n - 1 ? b - 8 : b, -17, b, -4], '#bfe6ff', 1.4); }
     circ(g, -28, 20, 9, '#2b2b36'); circ(g, -28, 20, 4, '#c9ced9', 0); circ(g, 28, 20, 9, '#2b2b36'); circ(g, 28, 20, 4, '#c9ced9', 0);
     rrect(g, 42, 4, 6, 5, 1, '#ffe27a', 1); rrect(g, -48, 4, 5, 5, 1, '#ff5252', 1);
     if (o.v === 1) { rrect(g, -8, -28, 16, 8, 2, '#ffd23f', 1.2); rrect(g, -46, 8, 92, 3, 0, '#fff', 0); }
-    if (o.v === 2) { rrect(g, -18, -26, 36, 6, 2, '#6b4a2b', 1); rrect(g, -12, -34, 24, 9, 2, c(150, 0, 0), 1.2); }
   } });
   def('traffic', { w: 34, h: 100, zone: 'ground', hue: [0, 0], sat: 0, lit: 30, vmax: 3, draw: function (g, o, c) {
     rrect(g, -3, -10, 6, 66, 2, '#3b4252'); rrect(g, -10, 50, 20, 7, 2, '#3b4252');
@@ -451,92 +507,90 @@
   } });
 
   /* ===== xứ tuyết ===== */
-  def('snowman', { w: 66, h: 100, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 3, draw: function (g, o, c) {
+  def('snowman', { w: 66, h: 100, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 2, pat: [2, 4], draw: function (g, o, c) {
     circ(g, 0, 28, 24, '#f7fbff'); circ(g, 0, -4, 18, '#f7fbff'); circ(g, 0, -32, 13, '#f7fbff');
-    circ(g, 0, 22, 2.4, '#333', 0); circ(g, 0, 32, 2.4, '#333', 0); circ(g, 0, -4, 2.2, '#333', 0);
+    var Y = [-6, 4, 18, 30];
+    for (var i = 0; i < o.p; i++) circ(g, 0, Y[i], 3.6, '#333', 0);
     circ(g, -4.5, -35, 1.8, '#222', 0); circ(g, 4.5, -35, 1.8, '#222', 0); poly(g, [0, -32, 14, -30, 0, -28], '#ff8a2e', 1);
     line(g, -16, -6, -34, -18, 3, '#7b4f2a'); line(g, 16, -6, 34, -14, 3, '#7b4f2a');
     rrect(g, -15, -22, 30, 7, 3, c(), 1.4); rrect(g, 7, -20, 7, 18, 2, c(), 1.4);
     if (o.v === 0) { rrect(g, -9, -62, 18, 18, 1, '#2b2f3a'); rrect(g, -14, -46, 28, 5, 2, '#2b2f3a'); }
-    else if (o.v === 1) { g.beginPath(); g.arc(0, -42, 12, Math.PI, 0); g.closePath(); fs(g, c(150, 0, 0)); circ(g, 0, -55, 3.5, '#fff', 1); }
+    else { g.beginPath(); g.arc(0, -42, 12, Math.PI, 0); g.closePath(); fs(g, c(150, 0, 0)); circ(g, 0, -55, 3.5, '#fff', 1); }
   } });
-  def('spine', { w: 76, h: 124, zone: 'ground', hue: [130, 160], sat: 45, lit: 32, vmax: 3, draw: function (g, o, c, r) {
-    pineShape(g, { v: o.v === 2 ? 0 : o.v }, c, true, r);
-    if (o.v === 2) { g.save(); g.translate(0, -62); star(g, 5, 9, 4, '#ffd23f', 1.5); g.restore(); }
-  } });
-  def('igloo', { w: 106, h: 74, zone: 'ground', hue: [200, 210], sat: 50, lit: 92, vmax: 3, low: true, draw: function (g, o, c) {
+  def('igloo', { w: 106, h: 74, zone: 'ground', hue: [200, 210], sat: 50, lit: 92, vmax: 2, low: true, pat: [2, 4], draw: function (g, o, c) {
+    var i;
     g.beginPath(); g.arc(0, 18, 44, Math.PI, 0); g.closePath(); fs(g, c());
     g.save(); g.beginPath(); g.arc(0, 18, 44, Math.PI, 0); g.closePath(); g.clip();
-    for (var i = 0; i < 3; i++) { arc(g, 0, 18, 14 + i * 14, Math.PI, 0, 1.6, 'rgba(60,90,130,.45)'); }
+    for (i = 0; i < o.p; i++) arc(g, 0, 18, 44 * (i + 1) / (o.p + 1), Math.PI, 0, 1.8, 'rgba(60,90,130,.5)');
     for (var j = -1; j <= 1; j++) line(g, j * 22, 18, j * 12, -26, 1.4, 'rgba(60,90,130,.4)');
     g.restore();
     rrect(g, -14, 0, 28, 24, 12, c(0, 0, -12)); g.beginPath(); g.arc(0, 18, 10, Math.PI, 0); g.lineTo(10, 24); g.lineTo(-10, 24); g.closePath(); g.fillStyle = '#26344d'; g.fill();
     if (o.v === 1) { line(g, 0, -26, 0, -42, 2, '#8b6b4a'); poly(g, [0, -42, 14, -37, 0, -32], '#ff5252', 1); }
-    if (o.v === 2) { circ(g, 26, 8, 4, '#bfe6ff', 1.4); circ(g, -26, 8, 4, '#bfe6ff', 1.4); }
   } });
-  def('snowflake', { w: 52, h: 52, zone: 'sky', hue: [195, 215], sat: 85, lit: 56, vmax: 3, draw: function (g, o, c) {
-    var i;
+  def('snowflake', { w: 52, h: 52, zone: 'sky', hue: [195, 215], sat: 85, lit: 56, pat: [1, 3], draw: function (g, o, c) {
+    var i, k;
     for (i = 0; i < 6; i++) {
       g.save(); g.rotate(i * Math.PI / 3);
-      line(g, 0, 0, 0, -23, 3, c()); line(g, 0, -12, -8, -19, 2.4, c()); line(g, 0, -12, 8, -19, 2.4, c());
-      if (o.v === 1) circ(g, 0, -24, 2.4, c(0, 0, 8), 0); if (o.v === 2) { line(g, 0, -5, -5, -9, 2, c()); line(g, 0, -5, 5, -9, 2, c()); }
+      line(g, 0, 0, 0, -23, 3, c());
+      for (k = 0; k < o.p; k++) { var y = -8 - k * 6; line(g, 0, y, -6, y - 6, 2.4, c()); line(g, 0, y, 6, y - 6, 2.4, c()); }
       g.restore();
     }
     circ(g, 0, 0, 4, c(0, 0, 10), 0);
   } });
-  def('penguin', { w: 56, h: 80, zone: 'ground', hue: [0, 360], sat: 80, lit: 55, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('penguin', { w: 56, h: 80, zone: 'ground', hue: [0, 360], sat: 80, lit: 55, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
     ell(g, -10, 36, 9, 4.5, '#ff9d2e', 1.2); ell(g, 10, 36, 9, 4.5, '#ff9d2e', 1.2);
     ell(g, 0, 4, 22, 34, c(0, -28, -22)); ell(g, 0, 10, 14, 25, '#f7fbff', 0);
     ell(g, -22, 6, 6, 18, c(0, -28, -22), 1.4, .25); ell(g, 22, 6, 6, 18, c(0, -28, -22), 1.4, -.25);
     circ(g, -7, -16, 4.4, '#fff', 1); circ(g, 7, -16, 4.4, '#fff', 1); circ(g, -6, -16, 1.8, '#111', 0); circ(g, 8, -16, 1.8, '#111', 0);
     poly(g, [-4, -10, 12, -9, -4, -4], '#ff9d2e', 1.2);
-    if (o.v === 1) { rrect(g, -17, -2, 34, 7, 3, c(), 1.4); rrect(g, 8, 2, 7, 17, 2, c(), 1.4); }
-    if (o.v === 2) { g.beginPath(); g.arc(0, -26, 13, Math.PI, 0); g.closePath(); fs(g, c()); circ(g, 0, -39, 3.4, '#fff', 1); }
+    rrect(g, -17, -2, 34, 7, 3, c(), 1.4); rrect(g, 8, 2, 8, 18, 2, c(), 1.4);
+    for (var i = 0; i < o.p; i++) rrect(g, 8, 4 + i * 5, 8, 3.2, 0, '#fff', 0);
+    if (o.v === 1) { g.beginPath(); g.arc(0, -26, 13, Math.PI, 0); g.closePath(); fs(g, c()); circ(g, 0, -39, 3.4, '#fff', 1); }
   } });
-  def('gift', { w: 52, h: 52, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, vmax: 3, draw: function (g, o, c) {
+  def('gift', { w: 52, h: 52, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
+    var i, box = function () { g.beginPath(); g.rect(-22, -14, 44, 36); };
     rrect(g, -22, -14, 44, 36, 3, c());
-    if (o.v === 1) { for (var i = 0; i < 3; i++) for (var j = 0; j < 2; j++) circ(g, -12 + i * 12, -4 + j * 16, 3, '#fff', 0); }
-    else if (o.v === 2) { g.save(); g.beginPath(); g.rect(-22, -14, 44, 36); g.clip(); for (var k = -3; k < 5; k++) line(g, -30 + k * 14, 26, -6 + k * 14, -18, 5, c(0, 0, 16)); g.restore(); }
+    if (o.v === 0) { var P = [[-13, -5], [13, -5], [-13, 13], [13, 13], [-13, 4]]; for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 3.8, '#fff', 0); }
+    else clipStripes(g, box, o.p, -22, 22, -14, 22, 4, c(0, 0, 18), true);
     rrect(g, -22, -22, 44, 10, 3, c(0, 0, -10), 1.5);
-    if (o.v === 0) { rrect(g, -4.5, -22, 9, 44, 0, '#ffd23f', 1); ell(g, -8, -26, 8, 5, '#ffd23f', 1.4, -.4); ell(g, 8, -26, 8, 5, '#ffd23f', 1.4, .4); circ(g, 0, -24, 3.4, '#ffbf00', 1); }
-    else { ell(g, -8, -26, 8, 5, '#fff', 1.4, -.4); ell(g, 8, -26, 8, 5, '#fff', 1.4, .4); circ(g, 0, -24, 3.4, '#ddd', 1); }
+    rrect(g, -4, -22, 8, 44, 0, '#ffd23f', 1); ell(g, -8, -26, 8, 5, '#ffd23f', 1.4, -.4); ell(g, 8, -26, 8, 5, '#ffd23f', 1.4, .4); circ(g, 0, -24, 3.4, '#ffbf00', 1);
   } });
-  def('cabin', { w: 114, h: 104, zone: 'ground', hue: [20, 32], sat: 55, lit: 42, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('cabin', { w: 114, h: 104, zone: 'ground', hue: [20, 32], sat: 55, lit: 42, vmax: 2, asym: true, pat: [3, 6], draw: function (g, o, c) {
     var i;
     rrect(g, 20, -40, 14, 30, 2, '#9c5a43'); rrect(g, 17, -44, 20, 8, 3, '#f7fbff', 1.2);
-    for (i = 0; i < 3; i++) { circ(g, 28 + i * 6, -52 - i * 10, 5 + i * 1.6, 'rgba(255,255,255,.6)', 0); }
+    for (i = 0; i < 3; i++) circ(g, 28 + i * 6, -52 - i * 10, 5 + i * 1.6, 'rgba(255,255,255,.6)', 0);
     rrect(g, -40, 0, 80, 50, 2, c());
-    for (i = 1; i < 5; i++) line(g, -40, i * 10, 40, i * 10, 1.4, 'rgba(0,0,0,.25)');
+    for (i = 1; i <= o.p; i++) line(g, -40, i * 50 / (o.p + 1), 40, i * 50 / (o.p + 1), 1.8, 'rgba(0,0,0,.3)');
     poly(g, [-54, 4, 0, -44, 54, 4], '#7b4f2a'); poly(g, [-54, 4, 0, -44, 54, 4], 'rgba(0,0,0,0)', 2);
     poly(g, [-50, 2, 0, -40, 50, 2, 46, 8, 0, -30, -46, 8], '#f7fbff', 1.4);
     rrect(g, -8, 22, 16, 28, 3, '#5b3a22', 1.5);
     if (o.v === 0) { rrect(g, -34, 14, 18, 16, 2, '#ffd86b', 1.5); glow(g, -25, 22, 26, 'rgba(255,220,100,.4)'); }
-    else if (o.v === 1) { circ(g, 0, -14, 7, '#ffd86b', 1.5); rrect(g, 18, 14, 16, 16, 2, '#9ec9ff', 1.5); }
-    else { rrect(g, -34, 14, 14, 14, 2, '#9ec9ff', 1.5); rrect(g, 20, 14, 14, 14, 2, '#9ec9ff', 1.5); }
+    else rrect(g, -34, 14, 14, 14, 2, '#9ec9ff', 1.5);
   } });
 
   /* ===== sa mạc ===== */
-  def('cactus', { w: 58, h: 108, zone: 'ground', hue: [130, 150], sat: 45, lit: 40, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('cactus', { w: 58, h: 108, zone: 'ground', hue: [130, 150], sat: 45, lit: 40, vmax: 3, asym: true, pat: [1, 3], draw: function (g, o, c) {
     var arm = function (sd, y) { g.beginPath(); g.moveTo(sd * 8, y); g.lineTo(sd * 22, y); g.lineTo(sd * 22, y - 22); g.lineWidth = 12; g.strokeStyle = OL; g.lineCap = 'round'; g.lineJoin = 'round'; g.stroke(); g.lineWidth = 9; g.strokeStyle = c(); g.stroke(); };
     if (o.v === 0 || o.v === 1) arm(-1, 10); if (o.v === 0 || o.v === 2) arm(1, 22);
-    rrect(g, -11, -50, 22, 104, 11, c()); line(g, -4, -42, -4, 44, 1.6, c(0, 0, 10)); line(g, 4, -42, 4, 44, 1.6, c(0, 0, -10));
+    rrect(g, -11, -50, 22, 104, 11, c());
+    for (var i = 0; i < o.p; i++) { var x = (i - (o.p - 1) / 2) * 6; line(g, x, -42, x, 44, 1.8, c(0, 0, 14)); }
     if (o.v === 1) { circ(g, 0, -52, 6, '#ff6fa5', 1.5); circ(g, 0, -52, 2, '#ffd23f', 0); }
   } });
-  def('pyramid', { w: 118, h: 86, zone: 'ground', hue: [36, 42], sat: 70, lit: 62, vmax: 3, draw: function (g, o, c) {
+  def('pyramid', { w: 118, h: 86, zone: 'ground', hue: [36, 42], sat: 70, lit: 62, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
     poly(g, [-54, 40, 0, -40, 54, 40], c()); poly(g, [0, -40, 54, 40, 10, 40], c(0, 0, -14), 0); poly(g, [-54, 40, 0, -40, 54, 40], 'rgba(0,0,0,0)', 2);
-    for (var i = 1; i < 4; i++) line(g, -54 + i * 12 + 2, 40 - i * 21, 54 - i * 12 - 2, 40 - i * 21, 1.4, 'rgba(0,0,0,.18)');
-    if (o.v === 1) { rrect(g, -7, 22, 14, 18, 2, '#3b2a1a', 1.2); }
-    if (o.v === 2) { line(g, 0, -40, 0, -56, 2, '#8b6b4a'); poly(g, [0, -56, 14, -51, 0, -46], '#ff5252', 1); }
+    for (var i = 1; i <= o.p; i++) { var y = 40 - i * 80 / (o.p + 1), hw = 54 * (y + 40) / 80; line(g, -hw + 2, y, hw - 2, y, 1.8, 'rgba(0,0,0,.28)'); }
+    if (o.v === 1) rrect(g, -7, 22, 14, 18, 2, '#3b2a1a', 1.2);
   } });
-  def('tent', { w: 106, h: 74, zone: 'ground', hue: [0, 360], sat: 60, lit: 55, vmax: 3, asym: true, draw: function (g, o, c) {
-    poly(g, [-50, 30, -4, -32, 50, 30], c()); poly(g, [-4, -32, 50, 30, 20, 30], c(0, 0, -10), 0);
-    if (o.v === 1) { g.save(); g.beginPath(); g.moveTo(-50, 30); g.lineTo(-4, -32); g.lineTo(50, 30); g.closePath(); g.clip(); for (var i = -3; i < 4; i++) poly(g, [-4 + i * 14, -34, -4 + i * 14 + 7, -34, -4 + i * 20 + 10, 32, -4 + i * 20, 32], c(150, 0, 14), 0); g.restore(); }
-    poly(g, [-50, 30, -4, -32, 50, 30], 'rgba(0,0,0,0)', 2);
+  def('tent', { w: 106, h: 74, zone: 'ground', hue: [0, 360], sat: 60, lit: 55, vmax: 2, asym: true, pat: [0, 4], draw: function (g, o, c) {
+    var tri = function () { g.beginPath(); g.moveTo(-50, 30); g.lineTo(-4, -32); g.lineTo(50, 30); g.closePath(); };
+    tri(); fs(g, c(), 0);
+    clipStripes(g, tri, o.p, -50, 50, -32, 30, 5, c(150, 0, 14), true);
+    poly(g, [-4, -32, 50, 30, 20, 30], 'rgba(0,0,0,.14)', 0);
+    tri(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke();
     poly(g, [-14, 30, -4, 0, 8, 30], '#3b2a1a', 1.4);
-    line(g, -4, -32, -4, -44, 2, '#8b6b4a'); poly(g, [-4, -44, 12, -40, -4, -36], '#ffd23f', 1);
-    if (o.v === 2) { rrect(g, -30, 30, 60, 6, 2, c(150, 0, 0), 1.2); }
+    if (o.v === 0) { line(g, -4, -32, -4, -44, 2, '#8b6b4a'); poly(g, [-4, -44, 12, -40, -4, -36], '#ffd23f', 1); }
   } });
-  def('camel', { w: 116, h: 94, zone: 'ground', hue: [30, 40], sat: 55, lit: 60, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('camel', { w: 116, h: 94, zone: 'ground', hue: [30, 40], sat: 55, lit: 60, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
     var i;
     for (i = 0; i < 2; i++) { rrect(g, -30 + i * 8, 14, 8, 36, 3, c(0, 0, -10)); rrect(g, 22 + i * 8, 14, 8, 36, 3, c(0, 0, -10)); }
     g.beginPath(); g.moveTo(26, -4); g.bezierCurveTo(38, -10, 40, -34, 46, -44); g.lineTo(58, -42); g.lineTo(56, -34); g.bezierCurveTo(50, -26, 48, -4, 40, 12); g.closePath(); fs(g, c(0, 0, 4));
@@ -544,12 +598,13 @@
     ell(g, 0, 4, 38, 18, c());
     if (o.v === 1) { g.beginPath(); g.moveTo(-14, -8); g.quadraticCurveTo(0, -38, 14, -8); fs(g, c(0, 0, 4)); }
     else { g.beginPath(); g.moveTo(-24, -8); g.quadraticCurveTo(-16, -34, -6, -8); fs(g, c(0, 0, 4)); g.beginPath(); g.moveTo(4, -8); g.quadraticCurveTo(14, -34, 24, -8); fs(g, c(0, 0, 4)); }
-    if (o.v === 2) { rrect(g, -18, -4, 36, 10, 3, '#d1495b', 1.4); }
+    rrect(g, -18, -4, 36, 14, 3, '#d1495b', 1.4);
+    for (i = 0; i < o.p; i++) rrect(g, -18 + (i + 1) * 36 / (o.p + 1) - 2.6, -4, 5.2, 14, 0, '#ffd23f', 0);
     line(g, -38, 0, -44, 20, 3, c(0, 0, -6));
   } });
 
   /* ===== lâu đài ===== */
-  def('castle', { w: 154, h: 150, zone: 'ground', hue: [215, 225], sat: 14, lit: 78, vmax: 3, low: true, draw: function (g, o, c) {
+  def('castle', { w: 154, h: 150, zone: 'ground', hue: [215, 225], sat: 14, lit: 78, vmax: 2, low: true, pat: [2, 4], draw: function (g, o, c) {
     var i, k;
     var tower = function (x, w, top) {
       rrect(g, x - w / 2, top, w, 64 - top + 22, 2, c(0, 0, -4));
@@ -560,182 +615,85 @@
     for (k = 0; k < 5; k++) rrect(g, -38 + k * 15.6, -42, 11, 9, 1, c(), 1.2);
     poly(g, [-60, -16, -54, -50, -48, -16], c(0, 50, -24)); poly(g, [48, -16, 54, -50, 60, -16], c(0, 50, -24));
     line(g, -54, -50, -54, -66, 2, '#5b4636'); line(g, 54, -50, 54, -66, 2, '#5b4636');
-    poly(g, [-54, -66, -40, -61, -54, -56], '#ff5252', 1); if (o.v !== 1) poly(g, [54, -66, 68, -61, 54, -56], '#ff5252', 1);
-    if (o.v === 2) { line(g, 0, -42, 0, -62, 2, '#5b4636'); poly(g, [0, -62, 14, -57, 0, -52], '#ffd23f', 1); }
-    g.beginPath(); g.moveTo(-14, 64); g.lineTo(-14, 36); g.arc(0, 36, 14, Math.PI, 0); g.lineTo(14, 64); g.closePath(); fs(g, o.v === 1 ? '#26344d' : c(30, 40, -34), 1.6);
-    if (o.v === 0) { for (i = -1; i <= 1; i++) line(g, i * 7, 28, i * 7, 64, 1.4, 'rgba(0,0,0,.35)'); }
-    rrect(g, -26, -16, 8, 14, 4, '#26344d', 1.2); rrect(g, 18, -16, 8, 14, 4, '#26344d', 1.2);
+    poly(g, [-54, -66, -40, -61, -54, -56], '#ff5252', 1); if (o.v === 0) poly(g, [54, -66, 68, -61, 54, -56], '#ff5252', 1);
+    g.beginPath(); g.moveTo(-14, 64); g.lineTo(-14, 36); g.arc(0, 36, 14, Math.PI, 0); g.lineTo(14, 64); g.closePath(); fs(g, c(30, 40, -34), 1.6);
+    for (i = -1; i <= 1; i++) line(g, i * 7, 28, i * 7, 64, 1.4, 'rgba(0,0,0,.35)');
+    for (i = 0; i < o.p; i++) rrect(g, -30 + i * (60 - 8) / (o.p - 1), -18, 8, 14, 4, '#26344d', 1.2);
     rrect(g, -58, 8, 8, 12, 4, '#26344d', 1.2); rrect(g, 50, 8, 8, 12, 4, '#26344d', 1.2);
   } });
-  def('tower', { w: 64, h: 150, zone: 'ground', hue: [215, 225], sat: 14, lit: 76, vmax: 3, low: true, draw: function (g, o, c) {
-    var i, ys = [[-8], [-22, 6], [-30, -8, 14]][o.v];
+  def('tower', { w: 64, h: 150, zone: 'ground', hue: [215, 225], sat: 14, lit: 76, low: true, pat: [1, 4], draw: function (g, o, c) {
+    var i, n = o.p;
     rrect(g, -16, -40, 32, 108, 2, c()); rrect(g, -16, -40, 9, 108, 2, c(0, 0, -8), 0);
     poly(g, [-24, -40, 0, -84, 24, -40], c(0, 55, -24)); line(g, 0, -84, 0, -100, 2, '#5b4636'); poly(g, [0, -100, 14, -95, 0, -90], '#ff5252', 1);
-    for (i = 0; i < ys.length; i++) rrect(g, -4.5, ys[i], 9, 14, 4.5, '#26344d', 1.2);
+    for (i = 0; i < n; i++) rrect(g, -4.5, -32 + i * 20, 9, 13, 4.5, '#26344d', 1.2);
     rrect(g, -7, 50, 14, 18, 7, '#7a4a2a', 1.4);
   } });
-  def('flag', { w: 40, h: 70, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 3, asym: true, draw: function (g, o, c) {
+  def('flag', { w: 40, h: 70, zone: 'ground', hue: [0, 360], sat: 75, lit: 52, vmax: 2, asym: true, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -2, -32, 4, 66, 2, '#6b4a2b'); circ(g, 0, -33, 3.5, '#ffd23f', 1);
-    poly(g, [2, -28, 32, -28, 26, -17, 32, -6, 2, -6], c());
-    if (o.v === 0) circ(g, 14, -17, 5, '#fff', 0); else if (o.v === 1) { g.save(); g.translate(14, -17); star(g, 5, 6, 2.6, '#fff', 0); g.restore(); } else rrect(g, 2, -19, 28, 4, 0, '#fff', 0);
+    var ban = function () { g.beginPath(); g.moveTo(2, -28); g.lineTo(32, -28); g.lineTo(26, -17); g.lineTo(32, -6); g.lineTo(2, -6); g.closePath(); };
+    ban(); fs(g, c());
+    clipStripes(g, ban, o.p, 2, 32, -28, -6, 3, '#fff', false);
+    if (o.v === 1) { g.save(); g.translate(13, -17); star(g, 5, 5.5, 2.4, '#ffd23f', 0); g.restore(); }
   } });
-  def('crown', { w: 56, h: 44, zone: 'any', hue: [42, 50], sat: 92, lit: 55, vmax: 3, draw: function (g, o, c) {
-    var n = [3, 5, 4][o.v], i, pts = [-24, 12, -24, -18];
+  def('crown', { w: 56, h: 44, zone: 'any', hue: [42, 50], sat: 92, lit: 55, pat: [3, 5], draw: function (g, o, c) {
+    var n = o.p, i, pts = [-24, 12, -24, -18];
     for (i = 0; i < n; i++) { pts.push(-24 + (i + .5) * (48 / n), -2); pts.push(-24 + (i + 1) * (48 / n), -18); }
     pts.push(24, 12); poly(g, pts, c(), 2);
     rrect(g, -24, 8, 48, 8, 2, c(0, 0, -8), 1.6);
-    for (i = 0; i < n; i++) circ(g, -24 + (i + 1) * (48 / n) - (i === n - 1 ? 0 : 0), -18, 3.2, ['#ff5252', '#52a7ff', '#7be07a'][i % 3], 1);
-    circ(g, -10, 12, 2, '#52a7ff', 0); circ(g, 10, 12, 2, '#ff5252', 0);
+    for (i = 0; i <= n; i++) circ(g, -24 + i * (48 / n), -18, 3, ['#ff5252', '#52a7ff', '#7be07a'][i % 3], 1);
   } });
 
   /* ===== tiệc ngọt ===== */
-  def('cupcake', { w: 52, h: 64, zone: 'any', hue: [0, 360], sat: 80, lit: 70, vmax: 3, draw: function (g, o, c, r) {
+  def('cupcake', { w: 52, h: 64, zone: 'any', hue: [0, 360], sat: 80, lit: 70, vmax: 2, pat: [2, 4], draw: function (g, o, c) {
     poly(g, [-18, 0, 18, 0, 13, 28, -13, 28], '#e9b872', 1.8); for (var i = -1; i <= 1; i++) line(g, i * 8, 2, i * 6, 26, 1.4, 'rgba(0,0,0,.2)');
-    blob(g, [[0, -4, 22, 9], [0, -14, 17, 8], [0, -23, 11, 7]], c());
-    if (o.v === 0) circ(g, 0, -33, 5, '#e5392e', 1.5);
-    else if (o.v === 1) for (i = 0; i < 7; i++) line(g, -14 + r() * 28, -20 + r() * 20, -12 + r() * 24, -18 + r() * 18, 2.4, ['#ffd23f', '#52a7ff', '#7be07a', '#fff'][i % 4]);
+    var L = [];
+    for (i = 0; i < o.p; i++) { var t = i / Math.max(1, o.p - 1); L.push([0, -4 - i * (20 / Math.max(1, o.p - 1)) * (o.p > 1 ? 1 : 0), 22 - t * 11, 8]); }
+    blob(g, L, c());
+    for (i = 1; i < o.p; i++) arc(g, 0, L[i][1] + 4, L[i][2] - 2, .2, Math.PI - .2, 1.6, c(0, 0, -14));
+    var top = L[L.length - 1][1] - 8;
+    if (o.v === 0) circ(g, 0, top - 3, 5, '#e5392e', 1.5);
   } });
-  def('icecream', { w: 46, h: 106, zone: 'any', hue: [0, 360], sat: 75, lit: 72, vmax: 3, draw: function (g, o, c) {
-    var n = o.v + 1, i;
+  def('icecream', { w: 46, h: 106, zone: 'any', hue: [0, 360], sat: 75, lit: 72, pat: [1, 3], draw: function (g, o, c) {
+    var n = o.p, i;
     g.translate(0, 13);
-    poly(g, [-14, 0, 14, 0, 0, 40], '#e6b26a', 1.8); for (i = 0; i < 3; i++) { line(g, -12 + i * 6, 2 + i * 2, 12 - i * 6, 2 + i * 2, 1.2, 'rgba(0,0,0,.25)'); }
+    poly(g, [-14, 0, 14, 0, 0, 40], '#e6b26a', 1.8); for (i = 0; i < 3; i++) line(g, -12 + i * 6, 2 + i * 2, 12 - i * 6, 2 + i * 2, 1.2, 'rgba(0,0,0,.25)');
     for (i = 0; i < n; i++) { blob(g, [[0, -4 - i * 20, 17]], c(i * 55, 0, 0)); circ(g, -6, -9 - i * 20, 4, 'rgba(255,255,255,.4)', 0); }
     circ(g, 0, -4 - (n - 1) * 20 - 18, 4.6, '#e5392e', 1.4);
   } });
-  def('lollipop', { w: 52, h: 88, zone: 'any', hue: [0, 360], sat: 85, lit: 62, vmax: 3, draw: function (g, o, c) {
+  def('lollipop', { w: 52, h: 88, zone: 'any', hue: [0, 360], sat: 85, lit: 62, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -2.5, 4, 5, 38, 2, '#f3f6fb', 1.4);
     circ(g, 0, -20, 24, c());
-    if (o.v === 0) { arc(g, 0, -20, 16, 0, TAU * .9, 4, c(150, 0, 14)); arc(g, 0, -20, 8, 0, TAU * .9, 4, c(150, 0, 14)); }
-    else if (o.v === 1) { for (var i = 0; i < 6; i++) { g.beginPath(); g.moveTo(0, -20); g.arc(0, -20, 22, i * TAU / 6, (i + .5) * TAU / 6); g.closePath(); g.fillStyle = c(150, 0, 14); g.fill(); } }
-    else { for (var j = 0; j < 3; j++) circ(g, -9 + j * 9, -22 + (j % 2) * 8, 4, c(150, 0, 16), 0); }
+    var i;
+    if (o.v === 0) for (i = 0; i < o.p; i++) arc(g, 0, -20, 19 - i * 6, 0, TAU, 3.4, c(150, 0, 14));
+    else for (i = 0; i < o.p * 2; i++) { g.beginPath(); g.moveTo(0, -20); g.arc(0, -20, 22, i * TAU / (o.p * 2), (i + .45) * TAU / (o.p * 2)); g.closePath(); if (i % 2 === 0) { g.fillStyle = c(150, 0, 14); g.fill(); } }
     circ(g, 0, -20, 24, 'rgba(0,0,0,0)', 1.8); circ(g, -9, -30, 5, 'rgba(255,255,255,.45)', 0);
   } });
-  def('donut', { w: 62, h: 62, zone: 'any', hue: [0, 360], sat: 80, lit: 70, vmax: 3, draw: function (g, o, c, r) {
-    var i;
+  def('donut', { w: 62, h: 62, zone: 'any', hue: [0, 360], sat: 80, lit: 70, pat: [3, 8], draw: function (g, o, c, r) {
+    var i, P;
     circ(g, 0, 0, 27, '#e0a35e', 1.8); circ(g, 0, 0, 21, c(), 1.4);
-    if (o.v === 1) for (i = 0; i < 8; i++) { var a = r() * TAU, d = 11 + r() * 8; line(g, Math.cos(a) * d - 2, Math.sin(a) * d - 1, Math.cos(a) * d + 2, Math.sin(a) * d + 1, 2.6, ['#ffd23f', '#52a7ff', '#fff', '#7be07a'][i % 4]); }
-    if (o.v === 2) { circ(g, 20, -12, 9, '#f2efe6', 0); }
-    circ(g, 0, 0, 8, '#f6efe0', 1.6); circ(g, 0, 0, 8, '#e8dfca', 0); ell(g, 0, 0, 8, 8, '#f2efe6', 1.4);
+    P = spots(r, o.p, -19, -19, 19, 19, 9, function (x, y) { var d = Math.sqrt(x * x + y * y); return d > 12 && d < 17; });
+    for (i = 0; i < P.length; i++) { var a = Math.atan2(P[i][1], P[i][0]) + 1.2; line(g, P[i][0] - Math.cos(a) * 4.5, P[i][1] - Math.sin(a) * 4.5, P[i][0] + Math.cos(a) * 4.5, P[i][1] + Math.sin(a) * 4.5, 4, ['#ffd23f', '#52a7ff', '#fff', '#7be07a'][i % 4]); }
+    circ(g, 0, 0, 8, '#f6efe0', 1.6);
   } });
-  def('candy', { w: 66, h: 40, zone: 'any', hue: [0, 360], sat: 85, lit: 60, vmax: 3, draw: function (g, o, c) {
+  def('candy', { w: 66, h: 40, zone: 'any', hue: [0, 360], sat: 85, lit: 60, pat: [2, 5], draw: function (g, o, c) {
     poly(g, [-18, 0, -34, -13, -34, 13], c(150, 0, 12), 1.6); poly(g, [18, 0, 34, -13, 34, 13], c(150, 0, 12), 1.6);
     ell(g, 0, 0, 22, 14, c(), 2);
-    if (o.v === 1) { g.save(); g.beginPath(); g.ellipse(0, 0, 22, 14, 0, 0, TAU); g.clip(); for (var i = -3; i < 4; i++) line(g, i * 9 - 6, -16, i * 9 + 6, 16, 4, c(150, 0, 18)); g.restore(); }
-    if (o.v === 2) { circ(g, -8, -2, 2.6, '#fff', 0); circ(g, 0, 4, 2.6, '#fff', 0); circ(g, 8, -3, 2.6, '#fff', 0); }
+    var body = function () { g.beginPath(); g.ellipse(0, 0, 22, 14, 0, 0, TAU); };
+    clipStripes(g, body, o.p, -22, 22, -14, 14, 3.6, c(150, 0, 18), true);
   } });
-  def('cookie', { w: 56, h: 56, zone: 'any', hue: [28, 36], sat: 60, lit: 60, vmax: 3, draw: function (g, o, c) {
-    var P = [[-10, -10], [8, -12], [12, 4], [-4, 6], [-14, 10], [6, 16]], i, n = o.v === 1 ? 4 : o.v === 2 ? 6 : 5;
+  def('cookie', { w: 56, h: 56, zone: 'any', hue: [28, 36], sat: 60, lit: 60, vmax: 2, pat: [3, 7], draw: function (g, o, c, r) {
     circ(g, 0, 0, 24, c());
-    for (i = 0; i < n; i++) circ(g, P[i][0], P[i][1], 3.8, '#4a2c1a', 0);
+    var P = spots(r, o.p, -18, -18, 18, 18, 11, function (x, y) { return x * x + y * y < 300 && !(o.v === 1 && x > 8 && y < -4); }), i;
+    for (i = 0; i < P.length; i++) circ(g, P[i][0], P[i][1], 5, '#4a2c1a', 0);
     if (o.v === 1) circ(g, 22, -14, 9, '#f6efe0', 0);
     circ(g, -9, -12, 6, 'rgba(255,255,255,.2)', 0);
   } });
-  def('cake', { w: 64, h: 56, zone: 'any', hue: [330, 355], sat: 70, lit: 78, vmax: 3, draw: function (g, o, c) {
-    poly(g, [-28, 20, -28, -4, 28, -20, 28, 20], '#f3dcae', 1.8); poly(g, [-28, 6, 28, -6, 28, 2, -28, 12], c(0, 0, -14), 0);
+  def('cake', { w: 64, h: 56, zone: 'any', hue: [330, 355], sat: 70, lit: 78, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
+    poly(g, [-28, 20, -28, -4, 28, -20, 28, 20], '#f3dcae', 1.8);
+    for (var i = 0; i < o.p; i++) { var y = 16 - (i + 1) * 24 / (o.p + 1); poly(g, [-28, y + 2, 28, y - 10 + 2, 28, y - 10 + 6, -28, y + 6], c(0, 0, -14), 0); }
     poly(g, [-28, -4, 28, -20, 28, -12, -28, 4], c(), 1.6);
     if (o.v === 0) circ(g, 12, -22, 5, '#e5392e', 1.4);
-    if (o.v === 2) { circ(g, -8, -10, 4.4, '#e5392e', 1.4); circ(g, 14, -18, 4.4, '#e5392e', 1.4); }
-    if (o.v === 1) { line(g, 4, -20, 4, -34, 3, '#52a7ff'); circ(g, 4, -37, 3.6, '#ffd23f', 1); }
   } });
-
-  /* Số đo thật của từng loại vật thể (đo bằng cách vẽ ra rồi so điểm ảnh, ở tỉ lệ 1):
-     e = khung bao [x0,y0,x1,y1] gồm cả viền và ánh sáng, gốc ở tâm; a = diện tích đặc;
-     f[v] = số điểm ảnh đổi khi lật ngang biến thể v; v[a][b] = số điểm ảnh đổi khi chuyển biến thể a -> b;
-     c / c2 = số điểm ảnh đổi khi đổi màu 30° / 14°; t = khi nghiêng ~11°; x = khi kéo giãn ngang 1,2 lần; d = khi đổi độ sáng ±10. Dùng để xếp vật không chồng nhau, vẽ đúng vùng "điểm khác biệt" và chỉ chọn
-     những kiểu khác biệt đủ thấy rõ. Sau khi sửa hình vẽ của một loại vật, đo lại rồi dán lại bảng này. */
-  var META = /*META-BEGIN*/{
-    alien: {"e":[-22,-40,22,35],"a":2204,"f":[9,9,9],"v":[[0,279,252],[279,0,422],[252,422,0]],"c":1757,"c2":1441,"t":1223,"x":1262,"d":1779},
-    astronaut: {"e":[-27,-42,41,53],"a":3037,"f":[1762,2165,2084],"v":[[0,415,217],[415,0,585],[217,585,0]],"c":136,"c2":133,"t":2199,"x":1709,"d":136},
-    balloon: {"e":[-29,-51,29,51],"a":3396,"f":[240,240,240],"v":[[0,1622,1584],[1622,0,1250],[1584,1250,0]],"c":3056,"c2":2298,"t":1889,"x":1386,"d":3009},
-    beachball: {"e":[-23,-23,23,23],"a":1561,"f":[1068,1506,338],"v":[[0,786,1495],[786,0,818],[1495,818,0]],"c":980,"c2":861,"t":414,"x":818,"d":973},
-    bird: {"e":[-32,-23,33,16],"a":1136,"f":[1085,921],"v":[[0,585],[585,0]],"c":994,"c2":794,"t":923,"x":898,"d":971},
-    bubbles: {"e":[-11,-39,17,29],"a":181,"f":[570,838,1010],"v":[[0,164,250],[164,0,86],[250,86,0]],"c":457,"c2":370,"t":512,"x":372,"d":0},
-    building: {"e":[-35,-87,35,81],"a":9823,"f":[7298,7181,7446],"v":[[0,2501,1790],[2501,0,2512],[1790,2512,0]],"c":5732,"c2":0,"t":8108,"x":4997,"d":6014},
-    bunny: {"e":[-29,-44,31,39],"a":2214,"f":[0,458,8],"v":[[0,229,890],[229,0,1119],[890,1119,0]],"c":1969,"c2":1904,"t":1098,"x":1102,"d":1898},
-    bush: {"e":[-40,-26,40,23],"a":2586,"f":[0,488,560],"v":[[0,304,324],[304,0,565],[324,565,0]],"c":2275,"c2":13,"t":859,"x":993,"d":2299},
-    butterfly: {"e":[-29,-22,29,21],"a":1736,"f":[16,16,16],"v":[[0,120,184],[120,0,64],[184,64,0]],"c":1316,"c2":1065,"t":1044,"x":1055,"d":1323},
-    cabin: {"e":[-55,-81,55,51],"a":7196,"f":[4871,2388,1748],"v":[[0,2070,1811],[2070,0,570],[1811,570,0]],"c":2760,"c2":1631,"t":6029,"x":4089,"d":2848},
-    cactus: {"e":[-28,-59,28,55],"a":2711,"f":[1314,1252,1252],"v":[[0,602,450],[602,0,1052],[450,1052,0]],"c":2427,"c2":172,"t":2309,"x":1788,"d":2506},
-    cake: {"e":[-29,-41,29,21],"a":1920,"f":[1606,1613,1518],"v":[[0,223,225],[223,0,287],[225,287,0]],"c":754,"c2":358,"t":1478,"x":1017,"d":827},
-    camel: {"e":[-46,-54,67,51],"a":4354,"f":[3735,3518,3735],"v":[[0,568,444],[568,0,1012],[444,1012,0]],"c":3826,"c2":2149,"t":3825,"x":3755,"d":3900},
-    candy: {"e":[-35,-15,35,15],"a":1405,"f":[0,641,44],"v":[[0,587,90],[587,0,608],[90,608,0]],"c":1304,"c2":820,"t":936,"x":1098,"d":1282},
-    car: {"e":[-49,-35,49,30],"a":3299,"f":[359,345,359],"v":[[0,446,494],[446,0,754],[494,754,0]],"c":1818,"c2":1577,"t":2406,"x":1894,"d":1726},
-    castle: {"e":[-70,-67,70,87],"a":14853,"f":[1073,916,1254],"v":[[0,1211,352],[1211,0,1329],[352,1329,0]],"c":12972,"c2":12921,"t":9348,"x":9364,"d":12897},
-    chest: {"e":[-35,-37,35,29],"a":3069,"f":[0,0],"v":[[0,2778],[2778,0]],"c":2318,"c2":354,"t":1683,"x":1018,"d":2410},
-    cloud: {"e":[-50,-30,59,42],"a":4311,"f":[1618,1930],"v":[[0,156],[156,0]],"c":4240,"c2":4220,"t":1626,"x":1561,"d":4214},
-    cookie: {"e":[-25,-25,31,25],"a":1899,"f":[542,963,652],"v":[[0,323,55],[323,0,378],[55,378,0]],"c":1515,"c2":1280,"t":365,"x":1001,"d":1529},
-    coral: {"e":[-30,-52,30,45],"a":1691,"f":[1736,2567,3056],"v":[[0,1096,1651],[1096,0,1641],[1651,1641,0]],"c":1327,"c2":1116,"t":1442,"x":1266,"d":1343},
-    crab: {"e":[-37,-25,37,24],"a":1809,"f":[0,0],"v":[[0,1187],[1187,0]],"c":1638,"c2":1514,"t":1241,"x":1217,"d":1614},
-    crescent: {"e":[-34,-34,34,34],"a":1298,"f":[2011,2021],"v":[[0,70],[70,0]],"c":1286,"c2":1146,"t":346,"x":990,"d":1284},
-    crown: {"e":[-25,-22,28,17],"a":1421,"f":[220,219,222],"v":[[0,734,697],[734,0,747],[697,747,0]],"c":1212,"c2":1158,"t":1232,"x":1013,"d":1189},
-    cupcake: {"e":[-24,-39,24,29],"a":1863,"f":[0,326,0],"v":[[0,369,113],[369,0,256],[113,256,0]],"c":867,"c2":751,"t":1065,"x":971,"d":859},
-    donut: {"e":[-28,-28,29,28],"a":2342,"f":[0,295,532],"v":[[0,160,266],[160,0,419],[266,419,0]],"c":1032,"c2":873,"t":150,"x":1479,"d":1022},
-    fence: {"e":[-55,-23,55,25],"a":3301,"f":[0,0,0],"v":[[0,2436,2808],[2436,0,2711],[2808,2711,0]],"c":2816,"c2":260,"t":3227,"x":3260,"d":2856},
-    fish: {"e":[-41,-27,29,18],"a":1817,"f":[1002,1512,1162],"v":[[0,402,108],[402,0,376],[108,376,0]],"c":1714,"c2":1179,"t":1149,"x":1291,"d":1694},
-    flag: {"e":[-4,-37,33,35],"a":904,"f":[1424,1424,1440],"v":[[0,60,124],[60,0,118],[124,118,0]],"c":498,"c2":486,"t":1196,"x":495,"d":492},
-    flower: {"e":[-23,-41,23,38],"a":1518,"f":[672,801,612],"v":[[0,787,804],[787,0,888],[804,888,0]],"c":822,"c2":737,"t":1549,"x":1006,"d":778},
-    gift: {"e":[-23,-33,23,23],"a":2198,"f":[0,0,840],"v":[[0,868,1244],[868,0,766],[1244,766,0]],"c":1556,"c2":1348,"t":1267,"x":1059,"d":1466},
-    house: {"e":[-53,-53,53,55],"a":7205,"f":[1396,604,1244],"v":[[0,600,972],[600,0,784],[972,784,0]],"c":5454,"c2":2443,"t":3992,"x":2945,"d":5816},
-    icecream: {"e":[-19,-55,19,54],"a":1936,"f":[104,158,186],"v":[[0,1204,1939],[1204,0,1203],[1939,1203,0]],"c":878,"c2":752,"t":899,"x":719,"d":886},
-    igloo: {"e":[-45,-43,45,25],"a":3240,"f":[0,181,0],"v":[[0,116,160],[116,0,276],[160,276,0]],"c":2832,"c2":2793,"t":2243,"x":2113,"d":2779},
-    jelly: {"e":[-25,-25,25,38],"a":1767,"f":[1010,1131],"v":[[0,80],[80,0]],"c":1774,"c2":1380,"t":1219,"x":1339,"d":1779},
-    kite: {"e":[-25,-43,25,46],"a":1732,"f":[1815,1836,1856],"v":[[0,97,123],[97,0,120],[123,120,0]],"c":1552,"c2":1323,"t":1341,"x":928,"d":1558},
-    lamp: {"e":[-29,-71,29,59],"a":1202,"f":[0,0],"v":[[0,1981],[1981,0]],"c":0,"c2":0,"t":1964,"x":681,"d":0},
-    lighthouse: {"e":[-25,-78,25,65],"a":3764,"f":[0,0,0],"v":[[0,1426,1476],[1426,0,1450],[1476,1450,0]],"c":1378,"c2":1270,"t":3837,"x":1683,"d":1338},
-    lollipop: {"e":[-25,-45,25,43],"a":2129,"f":[294,1539,164],"v":[[0,927,704],[927,0,878],[704,878,0]],"c":1762,"c2":972,"t":1582,"x":1154,"d":1696},
-    mushroom: {"e":[-25,-26,25,27],"a":1466,"f":[180,240,312],"v":[[0,36,72],[36,0,36],[72,36,0]],"c":946,"c2":888,"t":677,"x":711,"d":943},
-    owl: {"e":[-23,-35,23,36],"a":2153,"f":[0,18,0],"v":[[0,508,368],[508,0,778],[368,778,0]],"c":1364,"c2":0,"t":1266,"x":1411,"d":1595},
-    palm: {"e":[-22,-94,71,67],"a":3879,"f":[7005,6712,7039],"v":[[0,312,145],[312,0,402],[145,402,0]],"c":2008,"c2":801,"t":5431,"x":3631,"d":2082},
-    penguin: {"e":[-30,-43,30,41],"a":3037,"f":[148,470,148],"v":[[0,431,362],[431,0,793],[362,793,0]],"c":1404,"c2":0,"t":1881,"x":1908,"d":1530},
-    pine: {"e":[-39,-72,39,59],"a":3942,"f":[0,654,0],"v":[[0,327,169],[327,0,496],[169,496,0]],"c":3041,"c2":0,"t":2854,"x":1791,"d":3301},
-    plane: {"e":[-47,-21,49,21],"a":1895,"f":[1470,1428,1682],"v":[[0,299,121],[299,0,420],[121,420,0]],"c":445,"c2":344,"t":1842,"x":1277,"d":435},
-    planet: {"e":[-42,-35,43,29],"a":2794,"f":[2440,1373,2846],"v":[[0,864,254],[864,0,1067],[254,1067,0]],"c":2439,"c2":1528,"t":494,"x":1302,"d":2460},
-    pyramid: {"e":[-55,-57,55,41],"a":4611,"f":[3608,3608,3787],"v":[[0,297,116],[297,0,413],[116,413,0]],"c":3982,"c2":3785,"t":2731,"x":1567,"d":4036},
-    rainbow: {"e":[-77,-37,77,45],"a":8794,"f":[0,0,0],"v":[[0,5563,7412],[5563,0,6746],[7412,6746,0]],"c":8145,"c2":8019,"t":6779,"x":6671,"d":8105},
-    rock: {"e":[-35,-21,29,21],"a":1712,"f":[825,951,1200],"v":[[0,389,233],[389,0,622],[233,622,0]],"c":1462,"c2":1436,"t":664,"x":608,"d":1435},
-    rocket: {"e":[-31,-57,31,71],"a":3366,"f":[0,0,0],"v":[[0,410,284],[410,0,694],[284,694,0]],"c":796,"c2":718,"t":2579,"x":1724,"d":784},
-    sailboat: {"e":[-39,-46,39,48],"a":2895,"f":[2390,2708,2390],"v":[[0,976,176],[976,0,1152],[176,1152,0]],"c":1036,"c2":815,"t":2220,"x":1360,"d":994},
-    sandcastle: {"e":[-36,-39,36,31],"a":2739,"f":[134,134,134],"v":[[0,2946,1928],[2946,0,1978],[1928,1978,0]],"c":2142,"c2":137,"t":1780,"x":1124,"d":2164},
-    satellite: {"e":[-45,-40,45,27],"a":2165,"f":[23,10],"v":[[0,293],[293,0]],"c":766,"c2":766,"t":1836,"x":1412,"d":766},
-    seaweed: {"e":[-25,-54,23,54],"a":2241,"f":[2142,2944,4220],"v":[[0,2934,3341],[2934,0,3930],[3341,3930,0]],"c":1531,"c2":654,"t":1979,"x":774,"d":1565},
-    sheep: {"e":[-36,-30,39,29],"a":2863,"f":[1535,1565,1722],"v":[[0,75,129],[75,0,204],[129,204,0]],"c":2210,"c2":2182,"t":1260,"x":1514,"d":2171},
-    snail: {"e":[-23,-18,31,21],"a":1485,"f":[1697,1725],"v":[[0,445],[445,0]],"c":889,"c2":509,"t":993,"x":1104,"d":892},
-    snowflake: {"e":[-24,-27,24,27],"a":729,"f":[0,0,0],"v":[[0,135,150],[135,0,285],[150,285,0]],"c":825,"c2":660,"t":1143,"x":848,"d":795},
-    snowman: {"e":[-36,-63,36,53],"a":3584,"f":[646,650,646],"v":[[0,532,526],[532,0,317],[526,317,0]],"c":295,"c2":278,"t":2257,"x":1795,"d":288},
-    spine: {"e":[-39,-72,39,59],"a":3955,"f":[0,676,0],"v":[[0,338,171],[338,0,509],[171,509,0]],"c":1918,"c2":0,"t":3145,"x":2032,"d":2127},
-    star: {"e":[-25,-25,25,25],"a":773,"f":[0,0,0],"v":[[0,892,816],[892,0,884],[816,884,0]],"c":495,"c2":427,"t":673,"x":536,"d":472},
-    starfish: {"e":[-23,-25,23,20],"a":649,"f":[0,0],"v":[[0,98],[98,0]],"c":608,"c2":491,"t":757,"x":524,"d":603},
-    submarine: {"e":[-57,-32,47,24],"a":3257,"f":[1338,1370,1606],"v":[[0,332,354],[332,0,424],[354,424,0]],"c":2765,"c2":2607,"t":2034,"x":1764,"d":2709},
-    sun: {"e":[-42,-42,42,42],"a":2569,"f":[396,396,380],"v":[[0,1036,138],[1036,0,1174],[138,1174,0]],"c":2339,"c2":2161,"t":1420,"x":1814,"d":2259},
-    tent: {"e":[-51,-45,51,37],"a":3520,"f":[3090,2468,3080],"v":[[0,1536,464],[1536,0,1980],[464,1980,0]],"c":2681,"c2":1303,"t":2231,"x":1453,"d":2674},
-    tower: {"e":[-25,-101,25,69],"a":4642,"f":[2121,2121,2121],"v":[[0,400,276],[400,0,496],[276,496,0]],"c":4023,"c2":3973,"t":3865,"x":2068,"d":3954},
-    traffic: {"e":[-14,-50,14,58],"a":1753,"f":[0,0,0],"v":[[0,980,1100],[980,0,980],[1100,980,0]],"c":0,"c2":0,"t":1719,"x":1059,"d":0},
-    tree: {"e":[-48,-53,48,59],"a":6108,"f":[1110,1700,1597],"v":[[0,426,399],[426,0,778],[399,778,0]],"c":5437,"c2":5182,"t":1894,"x":2165,"d":5472},
-    turtle: {"e":[-45,-24,48,27],"a":1890,"f":[1445,1863],"v":[[0,554],[554,0]],"c":1692,"c2":1097,"t":1671,"x":1481,"d":1728},
-    ufo: {"e":[-47,-24,47,21],"a":2489,"f":[0,0,0],"v":[[0,166,172],[166,0,338],[172,338,0]],"c":1870,"c2":1796,"t":1913,"x":1342,"d":1824},
-    umbrella: {"e":[-47,-39,47,49],"a":3097,"f":[0,0,274],"v":[[0,0,305],[0,0,305],[305,305,0]],"c":2534,"c2":2464,"t":1990,"x":1763,"d":2526},
-    windmill: {"e":[-45,-67,45,67],"a":4953,"f":[4841,3021,4944],"v":[[0,4090,5259],[4090,0,4072],[5259,4072,0]],"c":1711,"c2":28,"t":5182,"x":3272,"d":1733}
-  }/*META-END*/;
-  Object.keys(T).forEach(function (n) {
-    var m = META[n] || {}, t = T[n];
-    t.ext = m.e ? m.e.slice() : [-t.w / 2, -t.h / 2, t.w / 2, t.h / 2];
-    t.area = m.a || t.w * t.h * .4; t.flipPx = m.f || []; t.varPx = m.v || []; t.colorPx = m.c == null ? 1e9 : m.c;
-    t.colorPx2 = m.c2 == null ? 1e9 : m.c2; t.tiltPx = m.t == null ? 1e9 : m.t; t.stretchPx = m.x == null ? 1e9 : m.x; t.shadePx = m.d == null ? 1e9 : m.d;
-  });
-  /* công trình/vật đứng không nghiêng được (nghiêng trông như bị đổ) */
-  ['tree', 'pine', 'spine', 'house', 'cabin', 'fence', 'windmill', 'lamp', 'palm', 'lighthouse', 'building', 'traffic', 'cactus', 'pyramid', 'castle', 'tower', 'igloo', 'umbrella', 'flag', 'seaweed', 'coral'].forEach(function (n) { T[n].notilt = true; });
-
-  /* ---------- vẽ một vật thể ---------- */
-  function drawObject(g, o) {
-    var t = T[o.t];
-    g.save();
-    g.translate(o.x, o.y);
-    if (o.r) g.rotate(o.r);
-    g.scale(o.s * (o.f || 1) * (o.sx || 1), o.s);
-    var c = function (dh, ds, dl, a) { return hsl(o.h + (dh || 0), o.sat + (ds || 0), o.l + (dl || 0), a); };
-    t.draw(g, o, c, mulberry32(o.k | 0));
-    g.restore();
-  }
 
   /* ---------- phông nền chủ đề ---------- */
   var SKIES = [
@@ -864,6 +822,42 @@
     g.restore();
   }
 
-  root.TKBArt = { W: W, H: H, TYPES: T, META: META, BG: BG, drawObject: drawObject, drawBackground: drawBackground, mulberry32: mulberry32, hsl: hsl };
+  /* ---------- vẽ một vật thể ---------- */
+  function drawObject(g, o) {
+    var t = T[o.t];
+    g.save();
+    g.translate(o.x, o.y);
+    if (o.r) g.rotate(o.r);
+    g.scale(o.s * (o.f || 1) * (o.sx || 1), o.s);
+    var c = function (dh, ds, dl, a) { return hsl(o.h + (dh || 0), o.sat + (ds || 0), o.l + (dl || 0), a); };
+    t.draw(g, o, c, mulberry32(o.k | 0));
+    g.restore();
+  }
+
+  /* Gắn số đo thật (timkhacbiet-meta.js) vào từng loại vật: e = khung bao [x0,y0,x1,y1] gồm cả viền và ánh sáng;
+     a = diện tích; f[v] = điểm ảnh đổi khi lật; v[a][b] = khi đổi kiểu dáng; p[i] = khi hoạ tiết đổi từ pat[0]+i sang pat[0]+i+1;
+     c / c2 = khi đổi màu 30° / 14°; t = khi nghiêng ~11°; x = khi kéo giãn ngang 1,2 lần; d = khi đổi độ sáng ±10.
+     Gọi lại được nhiều lần (sau khi nạp thêm loại vật mới). */
+  function finalize() {
+    var META = root.TKBArt.META || {};
+    Object.keys(T).forEach(function (n) {
+      var m = META[n] || {}, t = T[n];
+      t.ext = m.e ? m.e.slice() : [-t.w / 2, -t.h / 2, t.w / 2, t.h / 2];
+      t.area = m.a || t.w * t.h * .4; t.flipPx = m.f || []; t.varPx = m.v || []; t.patPx = m.p || [];
+      t.colorPx = m.c == null ? 1e9 : m.c; t.colorPx2 = m.c2 == null ? 1e9 : m.c2;
+      t.tiltPx = m.t == null ? 1e9 : m.t; t.stretchPx = m.x == null ? 1e9 : m.x; t.shadePx = m.d == null ? 1e9 : m.d;
+    });
+    /* công trình/vật đứng không nghiêng được (nghiêng trông như bị đổ) */
+    ['tree', 'pine', 'spine', 'house', 'cabin', 'fence', 'windmill', 'lamp', 'palm', 'lighthouse', 'building', 'traffic', 'cactus', 'pyramid',
+     'castle', 'tower', 'igloo', 'umbrella', 'flag', 'seaweed', 'coral', 'barn', 'signpost', 'roadsign', 'reeds', 'bridge', 'scarecrow',
+     'sunflower', 'tulip', 'birdhouse', 'hydrant', 'houseboat', 'bus', 'truck'].forEach(function (n) { if (T[n]) T[n].notilt = true; });
+  }
+
+  root.TKBArt = {
+    W: W, H: H, TYPES: T, BG: BG, META: (root.TKBArt && root.TKBArt.META) || {}, def: def, drawObject: drawObject, drawBackground: drawBackground,
+    finalize: finalize, mulberry32: mulberry32, hsl: hsl,
+    lib: { TAU: TAU, OL: OL, fs: fs, circ: circ, ell: ell, poly: poly, rrect: rrect, line: line, arc: arc, blob: blob, star: star, glow: glow,
+           spots: spots, inEll: inEll, clipStripes: clipStripes, hsl: hsl, vgrad: vgrad, skyFill: skyFill, hills: hills, tufts: tufts, sparkle: sparkle, SKIES: SKIES }
+  };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.TKBArt;
 })(typeof window !== 'undefined' ? window : globalThis);
