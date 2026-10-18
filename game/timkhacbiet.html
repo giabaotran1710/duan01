@@ -110,6 +110,10 @@
   #tbar { height: 6px; border-radius: 3px; background: rgba(255,255,255,.12); margin: 8px 2px 8px; flex: none; overflow: hidden; }
   #tfill { display: block; height: 100%; width: 100%; background: var(--ok); border-radius: 3px; transition: background .3s; transform-origin: left; }
   #stage { flex: 1; min-height: 0; position: relative; }
+  #loading { position: absolute; inset: 0; z-index: 4; display: none; align-items: center; justify-content: center; gap: 12px; font-weight: 700; color: var(--dim); }
+  #loading.on { display: flex; }
+  #loading::before { content: ''; width: 26px; height: 26px; border-radius: 50%; border: 3px solid var(--line); border-top-color: var(--accent2); animation: spin .8s linear infinite; }
+  @keyframes spin { to { transform: rotate(360deg); } }
   #pair { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 10px; }
   .pic { position: relative; border-radius: 10px; background: #111; box-shadow: 0 0 0 4px #fff3e3, 0 10px 28px rgba(0,0,0,.55); overflow: hidden; cursor: crosshair; flex: none; touch-action: manipulation; }
   .pic canvas { display: block; width: 100%; height: 100%; }
@@ -216,6 +220,7 @@
   </div>
   <div id="tbar"><i id="tfill"></i></div>
   <div id="stage">
+    <div id="loading">Đang tải ảnh…</div>
     <div id="pair">
       <div class="pic" id="picA"><canvas id="cA"></canvas><span class="tag">A</span></div>
       <div class="pic" id="picB"><canvas id="cB"></canvas><span class="tag">B</span></div>
@@ -230,7 +235,8 @@
 <footer>Version:D20261810-H15M27T4408 »»» developed by Tran Gia Bao</footer>
 
 <script src="timkhacbiet-art.js?v=20261018"></script>
-<script src="timkhacbiet-levels.js?v=20261018"></script>
+<script src="timkhacbiet-levels.js?v=20261018b"></script>
+<script src="timkhacbiet-photo.js?v=20261018"></script>
 <script>
 (function () {
   'use strict';
@@ -277,9 +283,13 @@
   /* ---------- menu ---------- */
   function totalStars() { var t = 0, k; for (k in prog.stars) t += prog.stars[k] | 0; return t; }
   function clearedCount() { var c = 0, k; for (k in prog.stars) if (prog.stars[k] > 0) c++; return c; }
+  /* màn n: ảnh chụp nếu đã có (tải xong ảnh), không thì tranh vẽ */
+  function getLevel(n) {
+    return (window.TKBPhoto ? TKBPhoto.get(n) : Promise.resolve(null)).then(function (p) { return p || TKB.getLevel(n); });
+  }
   function drawHero() {
-    var n = prog.next, lv = TKB.getLevel(n);
-    TKB.renderTo($('hA'), lv, 'A'); TKB.renderTo($('hB'), lv, 'B');
+    var n = prog.next;
+    getLevel(n).then(function (lv) { if (n !== prog.next) return; TKB.renderTo($('hA'), lv, 'A'); TKB.renderTo($('hB'), lv, 'B'); });
   }
   function refreshMenu() {
     $('lifeNum').innerHTML = cfg.lives + '<small>❤</small>';
@@ -359,9 +369,20 @@
   }
 
   function clearMarks() { [picA, picB].forEach(function (p) { Array.prototype.slice.call(p.querySelectorAll('.ring,.xmark')).forEach(function (e) { e.remove(); }); }); }
-  var drawn = { n: 0, w: 0 };
+  var drawn = { n: 0, w: 0 }, loadTok = 0;
   function loadLevel(n) {
-    S.n = n; S.lv = TKB.getLevel(n); S.found = {}; S.nFound = 0; S.mistakes = 0; S.hints = HINTS_PER_LEVEL;
+    var tok = ++loadTok;
+    stopClock(); S.paused = false; clearMarks(); closeOv();
+    $('loading').classList.add('on'); $('pair').style.visibility = 'hidden';
+    getLevel(n).then(function (lv) {
+      if (tok !== loadTok) return;
+      $('loading').classList.remove('on'); $('pair').style.visibility = '';
+      beginLevel(n, lv);
+      if (window.TKBPhoto && n < TOTAL) TKBPhoto.get(n + 1);
+    });
+  }
+  function beginLevel(n, lv) {
+    S.n = n; S.lv = lv; S.found = {}; S.nFound = 0; S.mistakes = 0; S.hints = HINTS_PER_LEVEL;
     S.total = S.lv.time * 1000; S.rem = S.total; S.paused = false; S.running = true; S.last = 0; S.lastTick = -1;
     clearMarks(); drawn.n = 0; layout(true); renderHud(); closeOv();
     cancelAnimationFrame(S.raf); S.raf = requestAnimationFrame(loop);
@@ -499,7 +520,7 @@
       btns: [{ t: '↺ Chơi lại màn ' + S.n + ' (đủ ' + S.run.max + ' mạng)', fn: function () { startRun(S.n); } }, { t: '👁 Xem đáp án', cls: 'ghost', peek: true }, { t: 'Về menu', cls: 'ghost', fn: toMenu }]
     });
   }
-  function toMenu() { stopClock(); closeOv(); refreshMenu(); show('menu'); }
+  function toMenu() { loadTok++; stopClock(); closeOv(); refreshMenu(); show('menu'); }
 
   /* ---------- tạm dừng ---------- */
   function pause() {

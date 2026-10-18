@@ -235,6 +235,13 @@
     g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, canvas.width, canvas.height);
     g.setTransform(sc, 0, 0, sc, 0, 0);
     g.imageSmoothingEnabled = true;
+    if (lv.photo) {
+      /* màn ảnh chụp: ảnh A, ảnh B = A + các mảnh vá */
+      g.imageSmoothingQuality = 'high';
+      g.drawImage(lv.img, 0, 0, W, H);
+      if (side === 'B') lv.patches.forEach(function (p) { g.drawImage(p.img, p.x, p.y, p.w, p.h); });
+      return;
+    }
     drawScene(g, lv, side);
   }
 
