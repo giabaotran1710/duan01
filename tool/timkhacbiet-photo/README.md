@@ -14,7 +14,7 @@ python3 tool/timkhacbiet-photo/gen.py --levels 1-100   # tất cả (màn đã c
 python3 tool/timkhacbiet-photo/gen.py --verify         # kiểm tra lại
 ```
 
-Mỗi màn: tạo ảnh A → Gemini tìm khung các vật → chọn vật theo độ khó → Gemini sửa ảnh (xoá, đổi màu, thay vật, thêm vật nhỏ, đổi chi tiết)
+Mỗi màn: tạo ảnh A → Gemini tìm khung các vật → chọn vật theo độ khó → Gemini sửa ảnh (xoá/thay/thêm vật ở màn dễ; từ màn khó chỉ đổi nhẹ màu, hình dạng, chi tiết của vật vẫn còn đó)
 → chỉ lấy phần đã đổi trong khung từng vật dán lên ảnh A thành ảnh B. Bước kiểm tra ghép lại ảnh B từ đúng các tệp WebP và bảo đảm:
 mọi điểm khác đều đủ thấy, ngoài vùng khác biệt ảnh B giống hệt ảnh A, các vùng không chồng nhau.
 
