@@ -5897,16 +5897,31 @@ function getTraySlot(index){
   Bi lọt lỗ: giữ nguyên đà lúc lọt (không dừng khựng), chạy tiếp vào lòng lỗ, chạm thành lỗ thì nảy nhẹ,
   rồi chìm xuống: thu nhỏ, tối dần và bị miệng lỗ che dần. Mọi chuyển động tính theo dt (khung 60 Hz).
 */
+// Tốc độ tối đa của bi khi chui vào lỗ (đơn vị/khung 60 Hz). Cú đánh mạnh cho bi chạy tới ~100/khung, nếu giữ nguyên thì bi
+// bay vọt qua lòng lỗ, ra khỏi vùng che của miệng lỗ và biến mất rồi mới "bật" ngược lại. Lòng lỗ/lưới hãm bi lại.
+const SINK_MAX_SPEED = 18;
+
 function startPocketSinkAnimation(ball, pocket){
+  let svx = ball.vx;
+  let svy = ball.vy;
+  const sp = Math.hypot(svx, svy);
+
+  if(sp > SINK_MAX_SPEED){
+    svx *= SINK_MAX_SPEED / sp;
+    svy *= SINK_MAX_SPEED / sp;
+  }
+
   sinkingBalls.push({
     num: ball.num,
     type: ball.type,
     x: ball.x,
     y: ball.y,
-    vx: ball.vx,
-    vy: ball.vy,
+    vx: svx,
+    vy: svy,
     pocket,
     holeR: pocket.type === "side" ? SIDE_POCKET_R : CORNER_POCKET_R,
+    // xa tâm lỗ nhất mà bi chưa vào hẳn còn được phép ở (đủ để bi lọt ở mép vẫn nhìn thấy trong vùng che của miệng lỗ)
+    maxOut: Math.max((pocket.type === "side" ? SIDE_POCKET_R : CORNER_POCKET_R) + BALL_R * 0.6, Math.hypot(ball.x - pocket.x, ball.y - pocket.y) + 2),
     // phần khung hình bi đã chạy trên bàn trước khi lọt: khung đầu của hoạt cảnh chỉ chạy phần còn lại
     skip: physFrameUsed,
     inside: false,
@@ -5930,44 +5945,69 @@ function updateSinkingBalls(frameDt = 1){
     a.skip = 0;
     a.age += dt;
 
-    // Lòng lỗ hơi trũng: kéo nhẹ về tâm; lưới/thành lỗ hãm đà
-    a.vx += ((p.x - a.x) * 0.03 - a.vx * 0.07) * dt;
-    a.vy += ((p.y - a.y) * 0.03 - a.vy * 0.07) * dt;
+    // Chia nhỏ bước (≤ 0,5 khung): bi vào lỗ nhanh không được nhảy cóc qua thành lỗ rồi biến mất khỏi vùng che
+    const steps = Math.max(1, Math.ceil(dt / 0.5));
+    const h = dt / steps;
 
-    const px = a.x;
-    const py = a.y;
+    for(let s = 0; s < steps; s++){
+      // Lòng lỗ hơi trũng: kéo nhẹ về tâm; lưới/thành lỗ hãm đà
+      a.vx += ((p.x - a.x) * 0.03 - a.vx * 0.07) * h;
+      a.vy += ((p.y - a.y) * 0.03 - a.vy * 0.07) * h;
 
-    a.x += a.vx * dt;
-    a.y += a.vy * dt;
+      // Chưa vào hẳn trong lỗ (bi lướt qua miệng lỗ hoặc lọt chậm ở mép): uốn đường đi dần về tâm lỗ, giữ nguyên tốc độ
+      if(!a.inside){
+        const ddx = p.x - a.x;
+        const ddy = p.y - a.y;
+        const dd = Math.hypot(ddx, ddy) || 0.0001;
+        const sp = Math.hypot(a.vx, a.vy);
 
-    const move = Math.hypot(a.x - px, a.y - py);
+        if(sp > 0.2){
+          const k = Math.min(1, 0.3 * h);
+          a.vx += (ddx / dd * sp - a.vx) * k;
+          a.vy += (ddy / dd * sp - a.vy) * k;
+        }
+      }
 
-    if(move > 0){
-      a.rollDir = Math.atan2(a.y - py, a.x - px);
-      a.rollPhase += move / BALL_R * 1.35;
-    }
+      const px = a.x;
+      const py = a.y;
 
-    // Thành lỗ: khi bi đã vào hẳn trong lỗ thì không chạy ra ngoài, nảy lại mất đà
-    const dx = a.x - p.x;
-    const dy = a.y - p.y;
-    const d = Math.hypot(dx, dy) || 0.0001;
-    const wall = Math.max(3, a.holeR - BALL_R * a.scale * 0.62);
+      a.x += a.vx * h;
+      a.y += a.vy * h;
 
-    if(d <= wall) a.inside = true;
+      const move = Math.hypot(a.x - px, a.y - py);
 
-    if(a.inside && d > wall){
-      const nx = dx / d;
-      const ny = dy / d;
-      const vn = a.vx * nx + a.vy * ny;
+      if(move > 0){
+        a.rollDir = Math.atan2(a.y - py, a.x - px);
+        a.rollPhase += move / BALL_R * 1.35;
+      }
 
-      a.x = p.x + nx * wall;
-      a.y = p.y + ny * wall;
+      // Thành lỗ: khi bi đã vào hẳn trong lỗ thì không chạy ra ngoài, nảy lại mất đà.
+      // Khi chưa vào hẳn thì cũng không cho văng xa khỏi miệng lỗ.
+      const dx = a.x - p.x;
+      const dy = a.y - p.y;
+      const d = Math.hypot(dx, dy) || 0.0001;
+      const wall = Math.max(3, a.holeR - BALL_R * a.scale * 0.62);
 
-      if(vn > 0){
-        a.vx -= 1.35 * vn * nx;
-        a.vy -= 1.35 * vn * ny;
+      if(d <= wall) a.inside = true;
+
+      const limit = a.inside ? wall : a.maxOut;
+
+      if(d > limit){
+        const nx = dx / d;
+        const ny = dy / d;
+        const vn = a.vx * nx + a.vy * ny;
+
+        a.x = p.x + nx * limit;
+        a.y = p.y + ny * limit;
+
+        if(vn > 0){
+          a.vx -= 1.35 * vn * nx;
+          a.vy -= 1.35 * vn * ny;
+        }
       }
     }
+
+    const d = Math.hypot(a.x - p.x, a.y - p.y) || 0.0001;
 
     // Tâm bi nằm trên lỗ thì rơi nhanh, còn trên mép thì vừa lăn vào vừa nghiêng xuống
     a.depth = Math.min(1, a.depth + dt / (d < a.holeR ? 15 : 34));
@@ -6046,8 +6086,9 @@ function startPocketAnimation(ball, pocket){
 
   // Bi sẽ xuất hiện trên cao, ngay phía trên khay
   // rồi rơi thẳng xuống vị trí cần xếp.
+  // Nhiều bi lọt lỗ cùng lúc (cú đề-pa mạnh): xếp hàng nối đuôi nhau theo chiều dọc để lần lượt rơi, không chồng khít thành một bi.
   const spawnX = slot.x;
-  const spawnY = POTTED_TRAY.y - 90;
+  const spawnY = POTTED_TRAY.y - 90 - pocketAnimations.length * BALL_R * 2.3;
 
   pocketAnimations.push({
     num: ball.num,
