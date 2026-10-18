@@ -92,6 +92,11 @@ function aiTakeShot(){
   if(turn !== "ai") return;
   if(aiCueMove) return;
 
+  if(GAME_MODE === "carom"){
+    caromAITakeShot();
+    return;
+  }
+
   if(isMoving() || shotLocked || (typeof fsPaused !== "undefined" && fsPaused)){
     scheduleAIShot(260);
     return;
