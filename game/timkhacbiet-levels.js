@@ -70,12 +70,14 @@
 
   /* thông số siêu khó (dùng chung cho mọi tranh) */
   var CFG = {
-    tierName: 'Siêu khó', count: 28, diffs: 8, sf: .86, gap: 7, time: 180,
+    /* tranh dày đặc: nhiều vật hơn, nhỏ hơn, sát nhau hơn; mỗi loại vật được xuất hiện nhiều hơn (capMul) để có nhiều "vật giống nhau" gây nhiễu */
+    tierName: 'Siêu khó', count: 34, capMul: 1.5, diffs: 8, sf: .78, gap: 5, time: 180,
     /* kiểu khác biệt, lặp lại = hay gặp hơn: hoạ tiết là nhiều nhất */
-    kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
-    dh: 18, dl: 10, sizeR: 1.13, moveD: 9, tilt: .14, stretch: 1.16, shade: 10,
-    minPx: 60,      // số điểm ảnh tối thiểu phải đổi (ở khung 800x600) để một điểm khác được dùng
-    patMin: 42      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
+    kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
+    /* chênh lệch rất nhỏ */
+    dh: 16, dl: 8, sizeR: 1.09, moveD: 6, tilt: .1, stretch: 1.11, shade: 7,
+    minPx: 40,      // số điểm ảnh tối thiểu phải đổi (ở khung 800x600) để một điểm khác được dùng
+    patMin: 34      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
   };
 
   /* ---------- hình chữ nhật ---------- */
@@ -98,6 +100,14 @@
     return { x0: cx - w / 2, y0: cy - h / 2, x1: cx + w / 2, y1: cy + h / 2 };
   }
 
+  /* màu chủ đạo của vật ra RGB, để chắc đổi màu/độ sáng thật sự nhìn ra được (màu xám/tối đổi sắc độ gần như không thấy) */
+  function rgb(h, s, l) {
+    h = ((h % 360) + 360) % 360; s = clamp(s, 0, 100) / 100; l = clamp(l, 0, 100) / 100;
+    var a = s * Math.min(l, 1 - l), f = function (n) { var k = (n + h / 30) % 12; return 255 * (l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1))); };
+    return [f(0), f(8), f(4)];
+  }
+  function colorGap(o, b) { var p = rgb(o.h, o.sat, o.l), q = rgb(b.h, b.sat, b.l); return Math.abs(p[0] - q[0]) + Math.abs(p[1] - q[1]) + Math.abs(p[2] - q[2]); }
+
   function shuffle(a, r) { for (var i = a.length - 1; i > 0; i--) { var j = Math.floor(r() * (i + 1)), t = a[i]; a[i] = a[j]; a[j] = t; } return a; }
 
   /* ---------- đặt vật thể ---------- */
@@ -109,7 +119,7 @@
         var x = r() * tot, e = null;
         for (var k = 0; k < theme.types.length; k++) { x -= theme.types[k][1]; if (x <= 0) { e = theme.types[k]; break; } }
         e = e || theme.types[0];
-        if ((counts[e[0]] || 0) < e[2]) { counts[e[0]] = (counts[e[0]] || 0) + 1; want.push(e); break; }
+        if ((counts[e[0]] || 0) < (e[2] > 1 ? Math.ceil(e[2] * (cfg.capMul || 1)) : e[2])) { counts[e[0]] = (counts[e[0]] || 0) + 1; want.push(e); break; }
       }
     }
     want.sort(function (a, b) { return TYPES[b[0]].w * TYPES[b[0]].h - TYPES[a[0]].w * TYPES[a[0]].h; });
@@ -165,6 +175,7 @@
         if (T.colorPx2 * Math.min(1, cfg.dh / 14) * s2 < mp) return null;
         b.h = o.h + sgn * cfg.dh;
         if (T.low) { b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.dl, 8, 97); }
+        if (colorGap(o, b) < 36) return null;
         rb = ra; break;
       case 'size':
         yb = o.y + T.ext[3] * o.s;
@@ -186,7 +197,9 @@
         b.sx = (o.sx || 1) * (r() < .5 ? cfg.stretch : 1 / cfg.stretch); rb = rectOf(b); break;
       case 'shade':
         if (T.shadePx * Math.min(1, cfg.shade / 10) * s2 < mp) return null;
-        b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.shade, 8, 97); rb = ra; break;
+        b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.shade, 8, 97);
+        if (colorGap(o, b) < 30) return null;
+        rb = ra; break;
       case 'flip':
         if (!T.asym || (T.flipPx[o.v] || 0) * s2 < mp) return null;
         b.f = -o.f; rb = rectOf(b); break;

@@ -75,8 +75,10 @@
      nên thêm/bớt 1 hoạ tiết (đốm, quả...) chỉ làm xuất hiện/mất đúng 1 cái */
   function spots(r, n, x0, y0, x1, y1, md, inside) {
     var out = [], tries = 0, x, y, i, ok, dx, dy;
-    while (out.length < n && tries < 600) {
-      tries++; x = x0 + r() * (x1 - x0); y = y0 + r() * (y1 - y0);
+    /* nếu chật chỗ thì nới dần khoảng cách tối thiểu: luôn đủ đúng n điểm (n điểm đầu vẫn giữ nguyên) */
+    while (out.length < n) {
+      if (++tries > 300) { tries = 0; md *= .85; if (md < 1) break; }
+      x = x0 + r() * (x1 - x0); y = y0 + r() * (y1 - y0);
       if (inside && !inside(x, y)) continue;
       ok = true;
       for (i = 0; i < out.length; i++) { dx = out[i][0] - x; dy = out[i][1] - y; if (dx * dx + dy * dy < md * md) { ok = false; break; } }
@@ -672,7 +674,7 @@
     var i, P;
     circ(g, 0, 0, 27, '#e0a35e', 1.8); circ(g, 0, 0, 21, c(), 1.4);
     P = spots(r, o.p, -19, -19, 19, 19, 9, function (x, y) { var d = Math.sqrt(x * x + y * y); return d > 12 && d < 17; });
-    for (i = 0; i < P.length; i++) { var a = Math.atan2(P[i][1], P[i][0]) + 1.2; line(g, P[i][0] - Math.cos(a) * 4.5, P[i][1] - Math.sin(a) * 4.5, P[i][0] + Math.cos(a) * 4.5, P[i][1] + Math.sin(a) * 4.5, 4, ['#ffd23f', '#52a7ff', '#fff', '#7be07a'][i % 4]); }
+    for (i = 0; i < P.length; i++) { var a = Math.atan2(P[i][1], P[i][0]) + 1.2; line(g, P[i][0] - Math.cos(a) * 5, P[i][1] - Math.sin(a) * 5, P[i][0] + Math.cos(a) * 5, P[i][1] + Math.sin(a) * 5, 4.6, ['#ffd23f', '#52a7ff', '#fff', '#7be07a'][i % 4]); }
     circ(g, 0, 0, 8, '#f6efe0', 1.6);
   } });
   def('candy', { w: 66, h: 40, zone: 'any', hue: [0, 360], sat: 85, lit: 60, pat: [2, 5], draw: function (g, o, c) {
