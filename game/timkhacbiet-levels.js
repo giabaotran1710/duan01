@@ -1,8 +1,9 @@
 /* Tìm điểm khác biệt — sinh tranh siêu khó ngẫu nhiên.
-   Mỗi tranh: chọn một chủ đề (17 chủ đề), dựng cảnh (phông + ~28 vật thể) theo hạt giống, rồi tạo ảnh B bằng cách sửa đúng
-   8 vật thể. Không còn kiểu "vật biến mất/thêm vào": vật vẫn còn đó nhưng hơi khác — nhiều nhất là khác HOẠ TIẾT
-   (hơn/kém đúng 1 sọc, 1 đốm, 1 cửa sổ, 1 cánh hoa...), ngoài ra đổi nhẹ màu, độ sáng, kiểu dáng, kích thước, độ nghiêng,
-   kéo giãn, lật ngang hoặc xê dịch vài điểm ảnh. Mọi điểm khác đều được kiểm tra đủ thấy (bảng số đo trong timkhacbiet-meta.js). */
+   Mỗi tranh: chọn một chủ đề (17 chủ đề), dựng cảnh (phông + ~34 vật thể) theo hạt giống, rồi tạo ảnh B bằng cách sửa đúng
+   8 vật thể. Có 1–2 vật chỉ tồn tại ở một trong hai ảnh (A có B không, hoặc ngược lại); các điểm còn lại là vật vẫn còn đó
+   nhưng hơi khác — nhiều nhất là khác HOẠ TIẾT (hơn/kém đúng 1 sọc, 1 đốm, 1 cửa sổ, 1 cánh hoa...), con vật đổi nét mặt
+   (cười / buồn / bình thường), ngoài ra đổi nhẹ màu, độ sáng, kiểu dáng, kích thước, độ nghiêng, kéo giãn, lật ngang hoặc xê dịch.
+   Mọi điểm khác đều được kiểm tra đủ thấy (bảng số đo trong timkhacbiet-meta.js). */
 (function (root) {
   'use strict';
   var A = root.TKBArt;
@@ -73,9 +74,12 @@
     /* tranh dày đặc: nhiều vật hơn, nhỏ hơn, sát nhau hơn; mỗi loại vật được xuất hiện nhiều hơn (capMul) để có nhiều "vật giống nhau" gây nhiễu */
     tierName: 'Siêu khó', count: 34, capMul: 1.5, diffs: 8, sf: .78, gap: 5, time: 180,
     /* kiểu khác biệt, lặp lại = hay gặp hơn: hoạ tiết là nhiều nhất */
-    kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
+    kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'mood', 'mood', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
+    existMin: 1, existMax: 2,   // số vật chỉ có ở một trong hai ảnh (A có B không, hoặc B có A không)
+    existPx: 300,               // vật phải đủ lớn (điểm ảnh) mới được chọn để biến mất/xuất hiện
+    moodPx: 40,
     /* chênh lệch rất nhỏ */
-    dh: 16, dl: 8, sizeR: 1.09, moveD: 6, tilt: .1, stretch: 1.11, shade: 7,
+    dh: 16, dl: 8, sizeR: 1.15, moveD: 9, tilt: .1, stretch: 1.11, shade: 7,
     minPx: 40,      // số điểm ảnh tối thiểu phải đổi (ở khung 800x600) để một điểm khác được dùng
     patMin: 34      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
   };
@@ -129,6 +133,7 @@
         var o = { id: 0, t: e[0], zone: zname, f: 1, v: Math.floor(r() * T.vmax), k: Math.floor(r() * 1e9) }, yb, ex = T.ext, top, bot;
         o.h = T.hue[0] + r() * (T.hue[1] - T.hue[0]); o.sat = T.sat + (r() - .5) * 12; o.l = T.lit + (r() - .5) * 8;
         if (T.pat) o.p = T.pat[0] + Math.floor(r() * (T.pat[1] - T.pat[0] + 1));
+        if (T.mood) { var mr = r(); o.m = mr < .5 ? 0 : mr < .75 ? 1 : 2; }
         if (T.asym && r() < .5) o.f = -1;
         var big = Math.max(ex[2] - ex[0], ex[3] - ex[1]);
         if (z[0] === 'f') {
@@ -163,6 +168,12 @@
   function makeMod(kind, o, list, cfg, theme, r, hits) {
     var T = TYPES[o.t], b = clone(o), ra = rectOf(o), rb, q, sgn = r() < .5 ? -1 : 1, ang, d, yb, rcU, s2 = o.s * o.s, mp = cfg.minPx, rr, tg, vv, p2;
     switch (kind) {
+      case 'missing': case 'extra':
+        if (T.area * s2 < cfg.existPx) return null;
+        rb = ra; break;
+      case 'mood':
+        if (!T.mood || !T.moodOn(o) || T.moodPx * s2 < cfg.moodPx) return null;
+        b.m = ((o.m || 0) + 1 + Math.floor(r() * 2)) % 3; rb = ra; break;
       case 'pattern':
         /* hơn/kém đúng 1 hoạ tiết */
         if (!T.pat) return null;
@@ -232,10 +243,12 @@
       var r = mulberry32((seed + att * 7919) >>> 0), list = place(theme, cfg, r);
       if (list.length < cfg.count * .75 && att < 59) continue;
       var order = shuffle(list.map(function (_, i) { return i; }), r), used = {}, hits = [], diffs = [], kinds = shuffle(cfg.kinds.slice(), r), ki = 0, okAll = true, s;
+      var nExist = cfg.existMin + (r() < .5 ? 0 : cfg.existMax - cfg.existMin), exKinds = [];
+      for (s = 0; s < nExist; s++) exKinds.push(r() < .5 ? 'missing' : 'extra');
       for (s = 0; s < cfg.diffs && okAll; s++) {
-        var done = false, tryK;
-        for (tryK = 0; tryK < kinds.length && !done; tryK++) {
-          var kind = kinds[(ki + tryK) % kinds.length];
+        var done = false, tryK, slotKinds = s < nExist ? [exKinds[s], exKinds[s] === 'missing' ? 'extra' : 'missing'] : kinds;
+        for (tryK = 0; tryK < slotKinds.length && !done; tryK++) {
+          var kind = s < nExist ? slotKinds[tryK] : slotKinds[(ki + tryK) % slotKinds.length];
           for (var c = 0; c < order.length && !done; c++) {
             var o = list[order[c]];
             if (used[o.id]) continue;
@@ -251,7 +264,12 @@
       if (!okAll) continue;
       var byId = {}; diffs.forEach(function (d) { byId[d.oid] = d; });
       var Aobjs = [], Bobjs = [];
-      list.forEach(function (o) { var d = byId[o.id]; Aobjs.push(o); Bobjs.push(d ? d.b : o); });
+      list.forEach(function (o) {
+        var d = byId[o.id];
+        if (d && d.kind === 'extra') { Bobjs.push(o); return; }        // chỉ có ở ảnh B
+        Aobjs.push(o);
+        if (!d || d.kind !== 'missing') Bobjs.push(d ? d.b : o);       // missing: chỉ có ở ảnh A
+      });
       Aobjs.sort(function (a, b) { return zOrder(theme, a) - zOrder(theme, b); }); Bobjs.sort(function (a, b) { return zOrder(theme, a) - zOrder(theme, b); });
       return {
         id: themeId + ':' + seed, theme: theme.id, themeName: theme.name, mood: (seed >>> 3) % 10, bgSeed: seed ^ 0x2c1b3c6d,

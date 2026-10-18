@@ -5,7 +5,7 @@
   'use strict';
   var A = root.TKBArt, L = A.lib, def = A.def, BG = A.BG;
   var TAU = L.TAU, OL = L.OL, W = A.W, H = A.H;
-  var fs = L.fs, circ = L.circ, ell = L.ell, poly = L.poly, rrect = L.rrect, line = L.line, arc = L.arc, blob = L.blob, star = L.star,
+  var mouth = L.mouth, fs = L.fs, circ = L.circ, ell = L.ell, poly = L.poly, rrect = L.rrect, line = L.line, arc = L.arc, blob = L.blob, star = L.star,
       glow = L.glow, spots = L.spots, clipStripes = L.clipStripes, hsl = L.hsl, vgrad = L.vgrad, skyFill = L.skyFill, hills = L.hills,
       tufts = L.tufts, sparkle = L.sparkle, SKIES = L.SKIES;
 
@@ -230,13 +230,13 @@
   } });
 
   /* ===== dòng suối ===== */
-  def('frog', { w: 48, h: 40, zone: 'water', hue: [90, 130], sat: 60, lit: 45, pat: [1, 4], draw: function (g, o, c) {
+  def('frog', { w: 48, h: 40, zone: 'water', hue: [90, 130], sat: 60, lit: 45, pat: [1, 4], mood: true, draw: function (g, o, c) {
     ell(g, -16, 12, 9, 5, c(0, 0, -8), 1.4); ell(g, 16, 12, 9, 5, c(0, 0, -8), 1.4);
     ell(g, 0, 4, 18, 13, c());
     var P = [[-9, 6], [8, 7], [0, 13], [-1, 1]];
     for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.2, c(0, 0, -20), 0);
     circ(g, -9, -8, 6, c(), 1.6); circ(g, 9, -8, 6, c(), 1.6); circ(g, -9, -9, 3, '#fff', 0); circ(g, 9, -9, 3, '#fff', 0); circ(g, -9, -9, 1.5, '#111', 0); circ(g, 9, -9, 1.5, '#111', 0);
-    arc(g, 0, 2, 8, .3, Math.PI - .3, 1.6, c(0, 0, -22));
+    mouth(g, o.m || 0, 0, 2, 13, c(0, 0, -30));
   } });
   def('lilypad', { w: 62, h: 36, zone: 'water', hue: [100, 135], sat: 50, lit: 42, vmax: 2, pat: [3, 6], draw: function (g, o, c) {
     g.beginPath(); g.moveTo(0, 0); g.ellipse(0, 0, 28, 14, 0, -1.25, 4.6); g.closePath(); fs(g, c());
@@ -358,7 +358,7 @@
     for (var i = 0; i < 9; i++) line(g, -26 + i * 6.5, 20, -22 + i * 5.5, -12 + (i % 3) * 4, 1, c(0, 0, -16));
     for (i = 0; i < o.p; i++) { var y = 18 - (i + 1) * 40 / (o.p + 1); g.beginPath(); g.moveTo(-32, y + 2); g.quadraticCurveTo(0, y + 8, 32, y + 2); g.lineWidth = 2.6; g.strokeStyle = '#8a5a30'; g.stroke(); }
   } });
-  def('cow', { w: 98, h: 66, zone: 'ground', hue: [20, 30], sat: 30, lit: 22, asym: true, pat: [1, 5], draw: function (g, o, c) {
+  def('cow', { w: 98, h: 66, zone: 'ground', hue: [20, 30], sat: 30, lit: 22, asym: true, pat: [1, 5], mood: true, draw: function (g, o, c) {
     var i;
     for (i = 0; i < 2; i++) { rrect(g, -30 + i * 9, 6, 6, 26, 2, '#f4f1ea'); rrect(g, 20 + i * 9, 6, 6, 26, 2, '#f4f1ea'); }
     ell(g, 0, 0, 36, 18, '#f4f1ea');
@@ -367,17 +367,17 @@
     for (i = 0; i < o.p; i++) ell(g, P[i][0], P[i][1], P[i][2], P[i][3], c(), 0, .3);
     g.restore();
     ell(g, 0, 0, 36, 18, 'rgba(0,0,0,0)', 2);
-    ell(g, 40, -12, 11, 13, '#f4f1ea'); ell(g, 44, -4, 8, 6, '#f2b8b8', 1.2); circ(g, 38, -16, 1.8, '#111', 0);
+    ell(g, 40, -12, 11, 13, '#f4f1ea'); ell(g, 44, -4, 8, 6, '#f2b8b8', 1.2); circ(g, 38, -16, 1.8, '#111', 0); mouth(g, o.m || 0, 44, -3, 11, '#7a2f50');
     poly(g, [32, -24, 30, -32, 36, -26], '#d9c9a8', 1); ell(g, 30, -18, 5, 3, c(), 1, -.4);
     line(g, -36, -2, -42, 14, 2.4, '#f4f1ea');
   } });
-  def('scarecrow', { w: 60, h: 98, zone: 'ground', hue: [0, 360], sat: 55, lit: 50, pat: [1, 3], draw: function (g, o, c) {
+  def('scarecrow', { w: 60, h: 98, zone: 'ground', hue: [0, 360], sat: 55, lit: 50, pat: [1, 3], mood: true, draw: function (g, o, c) {
     rrect(g, -2.5, -20, 5, 68, 1.5, '#7b4f2a'); rrect(g, -28, -14, 56, 5, 1.5, '#7b4f2a');
     poly(g, [-16, -16, 16, -16, 18, 18, -18, 18], c());
     var P = [[-8, -6], [6, 4], [-6, 10]];
     for (var i = 0; i < o.p; i++) rrect(g, P[i][0] - 4.5, P[i][1] - 4.5, 9, 9, 1, c(150, 0, 10), 1);
     for (i = 0; i < 3; i++) line(g, -28 - i, -11 + i * 3, -34, -8 + i * 4, 1.4, '#e6b84a');
-    circ(g, 0, -26, 11, '#e9d4a8'); circ(g, -4, -28, 1.6, '#333', 0); circ(g, 4, -28, 1.6, '#333', 0); arc(g, 0, -24, 4, .3, Math.PI - .3, 1.4, '#333');
+    circ(g, 0, -26, 11, '#e9d4a8'); circ(g, -4, -28, 1.6, '#333', 0); circ(g, 4, -28, 1.6, '#333', 0); mouth(g, o.m || 0, 0, -25, 12, '#222');
     ell(g, 0, -36, 18, 4, '#d9a441', 1.4); poly(g, [-9, -37, 9, -37, 6, -48, -6, -48], '#d9a441', 1.4);
   } });
   def('tractor', { w: 98, h: 66, zone: 'ground', hue: [0, 360], sat: 70, lit: 45, asym: true, pat: [3, 6], draw: function (g, o, c) {
