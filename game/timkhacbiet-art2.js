@@ -50,7 +50,7 @@
     ell(g, -2, 0, 15, 12.5, c(), 1.8);
     line(g, 11, 0, -17, 0, 1.6, '#222');
     var P = [[-4, -6], [-4, 6], [-12, -3], [-12, 4], [4, -7], [4, 7], [-9, -9]];
-    for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 2.6, '#1d1d1d', 0);
+    for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 3.4, '#1d1d1d', 0);
   } });
   def('bee', { w: 46, h: 36, zone: 'sky', hue: [42, 50], sat: 95, lit: 56, asym: true, pat: [2, 4], draw: function (g, o, c) {
     ell(g, -2, -11, 9, 6, 'rgba(220,240,255,.85)', 1.2, -.4); ell(g, 6, -11, 8, 5.5, 'rgba(220,240,255,.85)', 1.2, .3);
@@ -186,7 +186,7 @@
   def('notebook', { w: 76, h: 56, zone: 'desk', hue: [0, 360], sat: 55, lit: 55, pat: [4, 7], draw: function (g, o, c) {
     rrect(g, -32, -20, 64, 44, 3, c()); rrect(g, -32, -20, 64, 44, 3, 'rgba(0,0,0,0)', 1.8);
     rrect(g, -12, -4, 24, 12, 2, '#fff7e0', 1);
-    for (var i = 0; i < o.p; i++) { var x = -28 + i * 56 / (o.p - 1); arc(g, x, -21, 3.2, Math.PI, 0, 1.8, '#8b93a1'); }
+    for (var i = 0; i < o.p; i++) { var x = -28 + i * 56 / (o.p - 1); arc(g, x, -21, 4, Math.PI, 0, 2.8, '#59616f'); }
   } });
   def('clock', { w: 56, h: 56, zone: 'wall', hue: [0, 360], sat: 55, lit: 50, vmax: 2, pat: [3, 6], draw: function (g, o, c) {
     circ(g, 0, 0, 25, c()); circ(g, 0, 0, 20, '#fffaf0', 1.4);
@@ -211,7 +211,7 @@
     rrect(g, -16, -32, 32, 64, 6, '#22252c');
     var scr = g.createLinearGradient(0, -28, 0, 26); scr.addColorStop(0, c(0, 0, 8)); scr.addColorStop(1, c(40, 0, -10));
     rrect(g, -13, -27, 26, 54, 3, scr, 0);
-    for (var i = 0; i < o.p; i++) rrect(g, -11 + (i % 3) * 8, -23 + Math.floor(i / 3) * 9, 6.5, 6.5, 1.4, hsl(i * 47, 75, 62), 0);
+    for (var i = 0; i < o.p; i++) rrect(g, -12 + (i % 3) * 8.6, -24 + Math.floor(i / 3) * 9.4, 8, 8, 1.6, hsl(i * 47, 80, 58), 0);
     rrect(g, -4, -30, 8, 1.6, .8, '#555', 0);
   } });
   def('sticky', { w: 46, h: 46, zone: 'wall', hue: [44, 60], sat: 95, lit: 72, pat: [1, 4], draw: function (g, o, c) {
@@ -236,7 +236,7 @@
     var P = [[-9, 6], [8, 7], [0, 13], [-1, 1]];
     for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.2, c(0, 0, -20), 0);
     circ(g, -9, -8, 6, c(), 1.6); circ(g, 9, -8, 6, c(), 1.6); circ(g, -9, -9, 3, '#fff', 0); circ(g, 9, -9, 3, '#fff', 0); circ(g, -9, -9, 1.5, '#111', 0); circ(g, 9, -9, 1.5, '#111', 0);
-    mouth(g, o.m || 0, 0, 2, 13, c(0, 0, -30));
+    mouth(g, o.m || 0, 0, 2, 17, c(0, 0, -34));
   } });
   def('lilypad', { w: 62, h: 36, zone: 'water', hue: [100, 135], sat: 50, lit: 42, vmax: 2, pat: [3, 6], draw: function (g, o, c) {
     g.beginPath(); g.moveTo(0, 0); g.ellipse(0, 0, 28, 14, 0, -1.25, 4.6); g.closePath(); fs(g, c());
@@ -367,7 +367,7 @@
     for (i = 0; i < o.p; i++) ell(g, P[i][0], P[i][1], P[i][2], P[i][3], c(), 0, .3);
     g.restore();
     ell(g, 0, 0, 36, 18, 'rgba(0,0,0,0)', 2);
-    ell(g, 40, -12, 11, 13, '#f4f1ea'); ell(g, 44, -4, 8, 6, '#f2b8b8', 1.2); circ(g, 38, -16, 1.8, '#111', 0); mouth(g, o.m || 0, 44, -3, 11, '#7a2f50');
+    ell(g, 40, -12, 11, 13, '#f4f1ea'); ell(g, 44, -4, 8, 6, '#f2b8b8', 1.2); circ(g, 38, -16, 1.8, '#111', 0); mouth(g, o.m || 0, 44, -3, 14, '#6a1f40');
     poly(g, [32, -24, 30, -32, 36, -26], '#d9c9a8', 1); ell(g, 30, -18, 5, 3, c(), 1, -.4);
     line(g, -36, -2, -42, 14, 2.4, '#f4f1ea');
   } });

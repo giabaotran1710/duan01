@@ -77,11 +77,11 @@
     kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'mood', 'mood', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
     existMin: 1, existMax: 2,   // số vật chỉ có ở một trong hai ảnh (A có B không, hoặc B có A không)
     existPx: 300,               // vật phải đủ lớn (điểm ảnh) mới được chọn để biến mất/xuất hiện
-    moodPx: 40,
+    moodPx: 45,
     /* chênh lệch rất nhỏ */
-    dh: 16, dl: 8, sizeR: 1.15, moveD: 9, tilt: .1, stretch: 1.11, shade: 7,
+    dh: 36, dl: 18, sizeR: 1.15, moveD: 9, tilt: .12, stretch: 1.13, shade: 14,
     minPx: 40,      // số điểm ảnh tối thiểu phải đổi (ở khung 800x600) để một điểm khác được dùng
-    patMin: 34      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
+    patMin: 60      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
   };
 
   /* ---------- hình chữ nhật ---------- */
@@ -183,10 +183,10 @@
         if ((T.patPx[Math.min(o.p, p2) - T.pat[0]] || 0) * s2 < cfg.patMin) return null;
         b.p = p2; rb = ra; break;
       case 'color':
-        if (T.colorPx2 * Math.min(1, cfg.dh / 14) * s2 < mp) return null;
+        if (T.colorPx * Math.min(1, cfg.dh / 36) * s2 < mp) return null;
         b.h = o.h + sgn * cfg.dh;
         if (T.low) { b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.dl, 8, 97); }
-        if (colorGap(o, b) < 36) return null;
+        if (colorGap(o, b) < 70) return null;
         rb = ra; break;
       case 'size':
         yb = o.y + T.ext[3] * o.s;
@@ -201,15 +201,15 @@
         b.x = o.x + Math.cos(ang) * d; b.y = o.y + Math.sin(ang) * d * (isFoot(o, theme) ? .5 : 1);
         rb = rectOf(b); break;
       case 'tilt':
-        if (T.notilt || T.tiltPx * Math.min(1, cfg.tilt / .2) * s2 < mp) return null;
+        if (T.notilt || T.tiltPx * Math.min(1, cfg.tilt / .2) * s2 < mp * 1.7) return null;
         b.r = (o.r || 0) + sgn * cfg.tilt; rb = rectOf(b); break;
       case 'stretch':
-        if (T.stretchPx * Math.min(1, (cfg.stretch - 1) / .2) * s2 < mp) return null;
+        if (T.stretchPx * Math.min(1, (cfg.stretch - 1) / .2) * s2 < mp * 2) return null;
         b.sx = (o.sx || 1) * (r() < .5 ? cfg.stretch : 1 / cfg.stretch); rb = rectOf(b); break;
       case 'shade':
-        if (T.shadePx * Math.min(1, cfg.shade / 10) * s2 < mp) return null;
+        if (T.shadePx * Math.min(1, cfg.shade / 14) * s2 < mp) return null;
         b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.shade, 8, 97);
-        if (colorGap(o, b) < 30) return null;
+        if (colorGap(o, b) < 45) return null;
         rb = ra; break;
       case 'flip':
         if (!T.asym || (T.flipPx[o.v] || 0) * s2 < mp) return null;

@@ -403,7 +403,7 @@
   } });
   def('bubbles', { w: 38, h: 58, zone: 'water', hue: [190, 200], sat: 80, lit: 80, low: true, pat: [2, 4], draw: function (g, o, c) {
     var P = [[0, 18, 10], [8, -2, 8], [-4, -22, 6], [6, -34, 4]], i;
-    for (i = 0; i < o.p; i++) { circ(g, P[i][0], P[i][1], P[i][2], c(0, 0, 0, .35), 2); circ(g, P[i][0] - P[i][2] * .35, P[i][1] - P[i][2] * .35, P[i][2] * .28, 'rgba(255,255,255,.8)', 0); }
+    for (i = 0; i < o.p; i++) { circ(g, P[i][0], P[i][1], P[i][2], 'rgba(255,255,255,.28)', 0); g.beginPath(); g.arc(P[i][0], P[i][1], P[i][2], 0, TAU); g.lineWidth = 2.6; g.strokeStyle = 'rgba(255,255,255,.95)'; g.stroke(); g.beginPath(); g.arc(P[i][0], P[i][1], P[i][2] + 1.8, 0, TAU); g.lineWidth = 1.2; g.strokeStyle = 'rgba(20,60,110,.55)'; g.stroke(); circ(g, P[i][0] - P[i][2] * .35, P[i][1] - P[i][2] * .35, Math.max(2, P[i][2] * .3), '#fff', 0); }
   } });
   def('chest', { w: 74, h: 58, zone: 'floor', hue: [20, 30], sat: 55, lit: 40, vmax: 2, pat: [1, 3], draw: function (g, o, c) {
     rrect(g, -32, -2, 64, 30, 3, c());
@@ -423,7 +423,7 @@
   def('turtle', { w: 86, h: 58, zone: 'water', hue: [95, 135], sat: 55, lit: 42, asym: true, pat: [3, 6], mood: true, draw: function (g, o, c) {
     ell(g, -28, 8, 10, 5, c(0, 0, -6), 1.5, .6); ell(g, 14, 20, 10, 5, c(0, 0, -6), 1.5, -.4); ell(g, -12, -16, 10, 5, c(0, 0, -6), 1.5, -.6);
     poly(g, [-34, 6, -44, 2, -36, 12], c(0, 0, -6), 1.2);
-    ell(g, 36, -2, 11, 9, c(0, 0, 10)); circ(g, 40, -4, 2, '#222', 0); mouth(g, o.m || 0, 41, 2, 11, '#111');
+    ell(g, 36, -2, 11, 9, c(0, 0, 10)); circ(g, 40, -4, 2, '#222', 0); mouth(g, o.m || 0, 41, 2, 14, '#111');
     g.beginPath(); g.ellipse(0, 0, 32, 22, 0, Math.PI, 0); g.closePath(); fs(g, c(30, 0, 6));
     var P = [[-15, -6], [0, -13], [15, -6], [-6, -3], [8, -3], [-24, -3]];
     for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.6, c(30, 0, 22), 1);
@@ -557,7 +557,7 @@
     circ(g, -7, -16, 4.4, '#fff', 1); circ(g, 7, -16, 4.4, '#fff', 1); circ(g, -6, -16, 1.8, '#111', 0); circ(g, 8, -16, 1.8, '#111', 0);
     poly(g, [-4, -10, 12, -9, -4, -4], '#ff9d2e', 1.2);
     rrect(g, -17, -2, 34, 7, 3, c(), 1.4); rrect(g, 8, 2, 8, 18, 2, c(), 1.4);
-    for (var i = 0; i < o.p; i++) rrect(g, 8, 4 + i * 5, 8, 3.2, 0, '#fff', 0);
+    for (var i = 0; i < o.p; i++) rrect(g, 7, 3 + i * 5.2, 10, 4.4, 0, '#fff', 0);
     if (o.v === 1) { g.beginPath(); g.arc(0, -26, 13, Math.PI, 0); g.closePath(); fs(g, c()); circ(g, 0, -39, 3.4, '#fff', 1); }
   } });
   def('gift', { w: 52, h: 52, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
@@ -862,6 +862,10 @@
       t.moodPx = m.mo || 0; t.moodOn = t.moodOn || function () { return true; };
     });
     /* vật trong suốt/nhạt: đổi màu hay độ sáng gần như không thấy → không dùng */
+    /* vài kiểu khác biệt của vài vật quá mờ trong tranh thật (đo kiểm bằng so điểm ảnh) → không dùng */
+    if (T.reeds) T.reeds.stretchPx = 0;
+    if (T.log) T.log.patPx = [0, 0, 0];
+    if (T.eagle) T.eagle.patPx = [0, 0, 0];
     ['bubbles'].forEach(function (n) { if (T[n]) { T[n].colorPx = 0; T[n].colorPx2 = 0; T[n].shadePx = 0; } });
     /* công trình/vật đứng không nghiêng được (nghiêng trông như bị đổ) */
     ['tree', 'pine', 'spine', 'house', 'cabin', 'fence', 'windmill', 'lamp', 'palm', 'lighthouse', 'building', 'traffic', 'cactus', 'pyramid',
