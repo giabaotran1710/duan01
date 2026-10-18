@@ -46,12 +46,14 @@ def cfg_for(n):
         'amin': lerp(0.012, 0.0012, t), 'amax': lerp(0.14, 0.016, t),
         # số điểm ảnh tối thiểu phải đổi trong một điểm khác (ở 1024x768)
         'minpx': int(lerp(2500, 260, t)),
+        # Dễ: còn vật biến mất/thêm vào; càng khó càng bỏ dần, thay bằng "vẫn còn đó nhưng hơi khác" (màu, hình dạng, chi tiết).
+        # Bậc Rất khó/Siêu khó: không còn xoá/thêm vật.
         'kinds': [
-            ['remove', 'recolor', 'remove', 'recolor', 'replace'],
             ['remove', 'recolor', 'replace', 'add', 'recolor'],
-            ['remove', 'recolor', 'replace', 'add', 'detail'],
-            ['recolor', 'detail', 'remove', 'replace', 'add', 'subtle'],
-            ['subtle', 'detail', 'recolor', 'remove', 'subtle', 'replace'],
+            ['recolor', 'detail', 'remove', 'replace', 'subtle', 'shape'],
+            ['subtle', 'shape', 'detail', 'recolor', 'shape', 'remove'],
+            ['subtle', 'shape', 'detail', 'recolor', 'subtle', 'shape'],
+            ['subtle', 'shape', 'detail', 'subtle', 'shape', 'subtle'],
         ][tier],
     }
 
@@ -74,6 +76,9 @@ def edit_text(kind, label, box, rnd):
         return f'Change the main color of {loc} to {rnd.choice(STRONG_COLORS)}. Keep its shape, texture and lighting.'
     if kind == 'subtle':
         return f'Change the color of {loc} to a clearly different but similar shade (for example a different tone of the same color family). Keep its shape and texture.'
+    if kind == 'shape':
+        return (f'Slightly change the shape of {loc}: make it a little wider or narrower, or tilt it slightly, or alter its outline a bit. '
+                'It must stay the same object with the same color, in the same place.')
     if kind == 'replace':
         return f'Replace {loc} with a different everyday object of about the same size that fits the scene.'
     if kind == 'add':

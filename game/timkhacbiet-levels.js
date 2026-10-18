@@ -39,12 +39,14 @@
 
   function cfgFor(n) {
     var t = (n - 1) / 99, tier = Math.min(4, Math.floor((n - 1) / 20));
+    /* Dễ: còn có vật biến mất/thêm vào; càng khó càng bỏ dần, thay bằng điểm khác "vẫn còn đó nhưng hơi khác"
+       (màu, hình dạng, kích thước, vị trí, độ nghiêng, chi tiết). Bậc Rất khó/Siêu khó: không còn vật biến mất. */
     var kinds = [
-      ['missing', 'extra', 'color'],
-      ['missing', 'extra', 'color', 'size', 'variant'],
-      ['missing', 'extra', 'color', 'size', 'move', 'variant'],
-      ['color', 'size', 'move', 'variant', 'flip', 'missing', 'extra'],
-      ['color', 'size', 'move', 'variant', 'flip', 'color', 'variant', 'missing']
+      ['missing', 'extra', 'color', 'color', 'size'],
+      ['color', 'size', 'variant', 'move', 'shade', 'missing', 'extra'],
+      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'missing'],
+      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'color', 'variant'],
+      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'color', 'variant']
     ][tier];
     var diffs = 3 + Math.floor((n - 1) / 12);
     return {
@@ -53,20 +55,25 @@
       diffs: diffs,
       sf: 1.38 - t * 0.6,
       gap: Math.round(16 - t * 9),
-      dh: Math.round(150 - t * 122), dl: Math.round(34 - t * 16),
-      sizeR: 1.55 - t * 0.33,
-      moveD: Math.round(52 - t * 34),
-      minPx: Math.round(300 - t * 190),
+      maxExist: [99, Math.floor(diffs * .34), 1, 0, 0][tier],
+      dh: Math.round(lerp(150, 16, t)), dl: Math.round(lerp(34, 9, t)),
+      sizeR: lerp(1.55, 1.1, t), moveD: Math.round(lerp(52, 7, t)),
+      tilt: lerp(.38, .11, t), stretch: lerp(1.4, 1.12, t), shade: Math.round(lerp(22, 8, t)),
+      minPx: Math.round(lerp(300, 70, t)),
       time: 5 * Math.round((40 + diffs * 15) / 5)
     };
   }
 
   /* ---------- hình chữ nhật ---------- */
-  /* khung bao thật (đã đo) của vật, có tính lật ngang và tỉ lệ, nới 1,5 px cho nét viền */
+  /* khung bao thật (đã đo) của vật, có tính lật ngang, kéo giãn, xoay và tỉ lệ, nới 1,5 px cho nét viền */
   function rectOf(o) {
-    var e = TYPES[o.t].ext, s = o.s, x0 = e[0], x1 = e[2], t;
-    if (o.f < 0) { t = x0; x0 = -x1; x1 = -t; }
-    return { x0: o.x + x0 * s - 1.5, y0: o.y + e[1] * s - 1.5, x1: o.x + x1 * s + 1.5, y1: o.y + e[3] * s + 1.5 };
+    var e = TYPES[o.t].ext, sx = o.s * (o.f < 0 ? -1 : 1) * (o.sx || 1), sy = o.s, c = Math.cos(o.r || 0), sn = Math.sin(o.r || 0);
+    var xs = [e[0], e[2], e[2], e[0]], ys = [e[1], e[1], e[3], e[3]], mnx = 1e9, mny = 1e9, mxx = -1e9, mxy = -1e9, i, px, py, rx, ry;
+    for (i = 0; i < 4; i++) {
+      px = xs[i] * sx; py = ys[i] * sy; rx = px * c - py * sn; ry = px * sn + py * c;
+      if (rx < mnx) mnx = rx; if (rx > mxx) mxx = rx; if (ry < mny) mny = ry; if (ry > mxy) mxy = ry;
+    }
+    return { x0: o.x + mnx - 1.5, y0: o.y + mny - 1.5, x1: o.x + mxx + 1.5, y1: o.y + mxy + 1.5 };
   }
   function touch(a, b, gap) { return a.x0 < b.x1 + gap && a.x1 > b.x0 - gap && a.y0 < b.y1 + gap && a.y1 > b.y0 - gap; }
   function unite(a, b) { return { x0: Math.min(a.x0, b.x0), y0: Math.min(a.y0, b.y0), x1: Math.max(a.x1, b.x1), y1: Math.max(a.y1, b.y1) }; }
@@ -135,7 +142,7 @@
         if (T.area * s2 < mp) return null;
         rb = ra; break;
       case 'color':
-        if (T.colorPx * s2 < mp) return null;
+        if ((cfg.dh >= 30 ? T.colorPx : T.colorPx2 * Math.min(1, cfg.dh / 14)) * s2 < mp) return null;
         b.h = o.h + sgn * cfg.dh;
         if (T.low) { b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.dl, 8, 97); }
         rb = ra; break;
@@ -152,6 +159,15 @@
         ang = Math.floor(r() * 8) * Math.PI / 4 + (r() - .5) * .3; d = cfg.moveD * (.85 + r() * .3);
         b.x = o.x + Math.cos(ang) * d; b.y = o.y + Math.sin(ang) * d * (isFoot(o, theme) ? .5 : 1);
         rb = rectOf(b); break;
+      case 'tilt':
+        if (T.notilt || T.tiltPx * Math.min(1, cfg.tilt / .2) * s2 < mp) return null;
+        b.r = (o.r || 0) + sgn * cfg.tilt; rb = rectOf(b); break;
+      case 'stretch':
+        if (T.stretchPx * Math.min(1, (cfg.stretch - 1) / .2) * s2 < mp) return null;
+        b.sx = (o.sx || 1) * (r() < .5 ? cfg.stretch : 1 / cfg.stretch); rb = rectOf(b); break;
+      case 'shade':
+        if (T.shadePx * Math.min(1, cfg.shade / 10) * s2 < mp) return null;
+        b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.shade, 8, 97); rb = ra; break;
       case 'flip':
         if (!T.asym || (T.flipPx[o.v] || 0) * s2 < mp) return null;
         b.f = -o.f; rb = rectOf(b); break;
@@ -166,7 +182,7 @@
     if (!inside(rb, 2)) return null;
     for (q = 0; q < list.length; q++) {
       if (list[q] === o) continue;
-      if (kind === 'size' || kind === 'move') { if (touch(rb, rectOf(list[q]), Math.max(3, cfg.gap * .4))) return null; }
+      if (kind === 'size' || kind === 'move' || kind === 'tilt' || kind === 'stretch') { if (touch(rb, rectOf(list[q]), Math.max(3, cfg.gap * .4))) return null; }
     }
     rcU = hitRect(unite(ra, rb));
     for (q = 0; q < hits.length; q++) if (touch(rcU, hits[q], 3)) return null;
@@ -182,17 +198,19 @@
     for (att = 0; att < 80; att++) {
       var r = mulberry32(hashSeed(n, att)), list = place(theme, cfg, r);
       if (list.length < Math.min(cfg.count, 8) || list.length < cfg.count * .8 && att < 79) continue;
-      var order = shuffle(list.map(function (_, i) { return i; }), r), used = {}, hits = [], diffs = [], kinds = shuffle(cfg.kinds.slice(), r), ki = 0, okAll = true, s;
+      var order = shuffle(list.map(function (_, i) { return i; }), r), used = {}, hits = [], diffs = [], kinds = shuffle(cfg.kinds.slice(), r), ki = 0, okAll = true, s, exist = 0;
       for (s = 0; s < cfg.diffs && okAll; s++) {
         var done = false, tryK;
         for (tryK = 0; tryK < kinds.length && !done; tryK++) {
           var kind = kinds[(ki + tryK) % kinds.length];
+          if ((kind === 'missing' || kind === 'extra') && exist >= cfg.maxExist) continue;
           for (var c = 0; c < order.length && !done; c++) {
             var o = list[order[c]];
             if (used[o.id]) continue;
             var mod = makeMod(kind, o, list, cfg, theme, r, hits);
             if (!mod) continue;
             used[o.id] = 1; hits.push(mod.hit); done = true;
+            if (kind === 'missing' || kind === 'extra') exist++;
             diffs.push({ id: s, kind: kind, oid: o.id, b: mod.b, hit: mod.hit });
           }
         }
