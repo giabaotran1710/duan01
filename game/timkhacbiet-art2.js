@@ -34,7 +34,7 @@
     g.beginPath(); g.moveTo(-13, -30); g.lineTo(-7, -22); g.lineTo(0, -32); g.lineTo(7, -22); g.lineTo(13, -30); g.quadraticCurveTo(14, -6, 0, -6); g.quadraticCurveTo(-14, -6, -13, -30); fs(g, c());
     line(g, 0, -28, 0, -10, 1.4, c(0, 0, -14));
   } });
-  def('fern', { w: 84, h: 72, zone: 'ground', hue: [100, 140], sat: 55, lit: 38, pat: [3, 6], draw: function (g, o, c) {
+  def('fern', { w: 84, h: 72, zone: 'ground', hue: [80, 105], sat: 55, lit: 50, pat: [3, 6], draw: function (g, o, c) {
     var n = o.p, i, k;
     for (i = 0; i < n; i++) {
       var a = -Math.PI / 2 + (i - (n - 1) / 2) * (1.9 / Math.max(1, n - 1));

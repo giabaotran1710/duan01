@@ -1,5 +1,5 @@
 /* Tìm điểm khác biệt — sinh tranh siêu khó ngẫu nhiên.
-   Mỗi tranh: chọn một chủ đề (17 chủ đề), dựng cảnh (phông + ~34 vật thể) theo hạt giống, rồi tạo ảnh B bằng cách sửa đúng
+   Mỗi tranh: chọn một chủ đề (27 chủ đề: 17 cảnh ngoài trời và 10 chủ đề trong nhà, đồ vật, con vật), dựng cảnh (phông + ~34 vật thể) theo hạt giống, rồi tạo ảnh B bằng cách sửa đúng
    8 vật thể. Có 1–2 vật chỉ tồn tại ở một trong hai ảnh (A có B không, hoặc ngược lại); các điểm còn lại là vật vẫn còn đó
    nhưng hơi khác — nhiều nhất là khác HOẠ TIẾT (hơn/kém đúng 1 sọc, 1 đốm, 1 cửa sổ, 1 cánh hoa...), con vật đổi nét mặt
    (cười / buồn / bình thường), ngoài ra đổi nhẹ màu, độ sáng, kiểu dáng, kích thước, độ nghiêng, kéo giãn, lật ngang hoặc xê dịch.
@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   var A = root.TKBArt;
-  if (!A && typeof require !== 'undefined') { require('./timkhacbiet-art.js'); require('./timkhacbiet-art2.js'); require('./timkhacbiet-meta.js'); A = root.TKBArt; }
+  if (!A && typeof require !== 'undefined') { require('./timkhacbiet-art.js'); require('./timkhacbiet-art2.js'); require('./timkhacbiet-art3.js'); require('./timkhacbiet-meta.js'); A = root.TKBArt; }
   A.finalize();
   var W = A.W, H = A.H, TYPES = A.TYPES, mulberry32 = A.mulberry32;
 
@@ -61,7 +61,38 @@
       types: [['sun', 1, 1], ['cloud', 3, 3], ['rainbow', 1, 1], ['bird', 2, 2], ['balloon', 2, 2], ['kite', 1, 1], ['castle', 2, 1], ['tower', 3, 3], ['flag', 3, 3], ['tree', 3, 4],
         ['bush', 2, 3], ['flower', 3, 4], ['crown', 1, 1, 'ground']] },
     { id: 'party', name: 'Tiệc ngọt', zones: { sky: ['c', 46, 215], ground: ['c', 355, 572], any: ['c', 355, 572] },
-      types: [['balloon', 4, 4], ['star', 3, 4], ['gift', 3, 3, 'any'], ['cupcake', 3, 4], ['icecream', 2, 2], ['lollipop', 3, 3], ['donut', 3, 4], ['candy', 4, 4], ['cookie', 3, 4], ['cake', 2, 3]] }
+      types: [['balloon', 4, 4], ['star', 3, 4], ['gift', 3, 3, 'any'], ['cupcake', 3, 4], ['icecream', 2, 2], ['lollipop', 3, 3], ['donut', 3, 4], ['candy', 4, 4], ['cookie', 3, 4], ['cake', 2, 3]] },
+    /* ----- trong nhà, đồ vật, con vật ----- */
+    { id: 'kitchen', name: 'Nhà bếp', back: ['wall'], zones: { shelf: ['f', 106, 119, 1.2], wall: ['c', 138, 290, 1.05], table: ['f', 332, 586, 1.35], ground: ['f', 332, 586, 1.35] },
+      types: [['clock', 1, 1, 'wall'], ['utensils', 2, 2], ['mitt', 2, 3], ['jar', 3, 4], ['plates', 2, 2], ['teapot', 2, 2], ['potplant', 1, 2, 'shelf'], ['pot', 3, 3], ['pan', 2, 3],
+        ['kettle', 2, 2], ['toaster', 1, 1], ['board', 2, 2], ['eggbox', 2, 2], ['mug', 3, 3, 'table'], ['cupcake', 2, 2, 'table'], ['donut', 2, 3, 'table'], ['apple', 2, 3], ['cookie', 1, 2, 'table']] },
+    { id: 'toyroom', name: 'Phòng đồ chơi', back: ['wall'], zones: { wall: ['c', 14, 160, 1.1], shelf: ['f', 166, 179, 1.15], floor: ['f', 385, 586, 1.3], ground: ['f', 385, 586, 1.3] },
+      types: [['star', 3, 4, 'wall'], ['balloon', 2, 2, 'wall'], ['kite', 1, 1, 'wall'], ['spintop', 2, 3, 'shelf'], ['robot', 2, 2, 'shelf'], ['rocket', 1, 2, 'shelf'], ['books', 1, 1, 'shelf'],
+        ['teddy', 3, 3], ['blocks', 3, 3], ['toytrain', 2, 2], ['drum', 2, 2], ['dino', 3, 3], ['rockhorse', 1, 1], ['beachball', 2, 3, 'floor'], ['car', 2, 2, 'floor'], ['gift', 1, 2, 'floor'], ['xylophone', 1, 1]] },
+    { id: 'classroom', name: 'Lớp học', back: ['wall'], zones: { wall: ['c', 16, 300, 1.1], table: ['f', 362, 586, 1.35], floor: ['f', 362, 586, 1.35], ground: ['f', 362, 586, 1.35] },
+      types: [['clock', 1, 1, 'wall'], ['chart', 2, 3], ['sticky', 3, 4, 'wall'], ['pennant', 1, 1], ['globe', 2, 2, 'table'], ['backpack', 2, 2], ['crayons', 2, 3], ['apple', 2, 3], ['abacus', 2, 2],
+        ['palette', 2, 2], ['scissors', 2, 2], ['books', 2, 2, 'table'], ['notebook', 2, 2, 'table'], ['ruler', 1, 2, 'table'], ['pencup', 2, 2, 'table'], ['calculator', 1, 1, 'table'], ['potplant', 1, 1, 'table']] },
+    { id: 'music', name: 'Phòng nhạc', back: ['wall'], zones: { wall: ['c', 14, 330, 1.2], floor: ['f', 400, 586, 1.25], table: ['f', 400, 586, 1.25], ground: ['f', 400, 586, 1.25] },
+      types: [['musicnote', 4, 5], ['tambourine', 2, 2], ['clock', 1, 1, 'wall'], ['guitar', 2, 2], ['keyboard', 1, 1], ['drum', 2, 3], ['trumpet', 2, 2], ['maracas', 2, 2], ['metronome', 2, 2],
+        ['xylophone', 2, 2], ['speaker', 2, 2], ['accordion', 1, 2], ['mic', 1, 2], ['headphones', 2, 2, 'wall'], ['potplant', 1, 1, 'floor']] },
+    { id: 'sports', name: 'Dụng cụ thể thao', back: ['wall'], zones: { wall: ['c', 14, 250, 1.15], shelf: ['f', 285, 297, 1.2], floor: ['f', 390, 586, 1.3], table: ['f', 390, 586, 1.3], ground: ['f', 390, 586, 1.3] },
+      types: [['pennant', 3, 4], ['medal', 3, 3], ['clock', 1, 1, 'wall'], ['trophy', 2, 3], ['cap', 2, 2], ['shuttle', 2, 2, 'shelf'], ['sneaker', 3, 3], ['soccer', 3, 3], ['basketball', 2, 3],
+        ['racket', 2, 2], ['dumbbell', 2, 2], ['skateboard', 2, 2], ['bowlingpin', 3, 4], ['beachball', 1, 1, 'floor']] },
+    { id: 'fruit', name: 'Sạp trái cây', zones: { shelf: ['f', 236, 249, 1.3], table: ['f', 336, 586, 1.45], floor: ['f', 336, 586, 1.45], ground: ['f', 336, 586, 1.45] },
+      types: [['pineapple', 2, 2, 'shelf'], ['corn', 2, 2, 'shelf'], ['jar', 2, 2, 'shelf'], ['bananas', 3, 3], ['apple', 3, 4], ['grapes', 3, 3], ['watermelon', 2, 3], ['berries', 2, 2],
+        ['orange', 3, 3], ['carrots', 2, 2], ['cherries', 3, 3], ['pear', 2, 3]] },
+    { id: 'petshop', name: 'Cửa hàng thú cưng', back: ['wall'], zones: { wall: ['c', 14, 180, 1.15], shelf: ['f', 186, 199, 1.3], floor: ['f', 385, 586, 1.2], table: ['f', 385, 586, 1.2], ground: ['f', 385, 586, 1.2] },
+      types: [['birdcage', 2, 2], ['fishbowl', 3, 3], ['yarn', 2, 3, 'shelf'], ['bone', 1, 2, 'shelf'], ['petbowl', 2, 2], ['parrot', 2, 2], ['cat', 3, 3], ['dog', 3, 3], ['hamster', 3, 3],
+        ['mouse', 2, 3], ['doghouse', 1, 1], ['scratchpost', 1, 1], ['bunny', 1, 2, 'floor'], ['turtle', 1, 1, 'floor']] },
+    { id: 'closet', name: 'Tủ quần áo', back: ['wall'], zones: { wall: ['c', 16, 345, 1.05], shelf: ['f', 366, 379, 1.25], floor: ['f', 425, 586, 1.3], table: ['f', 425, 586, 1.3], ground: ['f', 425, 586, 1.3] },
+      types: [['shirt', 3, 3], ['dress', 3, 3], ['sweater', 2, 2], ['socks', 2, 2], ['scarf', 2, 2], ['tie', 2, 3], ['hat', 2, 2], ['handbag', 2, 2], ['sunglasses', 2, 2], ['cap', 1, 2, 'shelf'],
+        ['gift', 1, 1, 'shelf'], ['boots', 2, 2], ['sneaker', 3, 3], ['slippers', 2, 2]] },
+    { id: 'bathroom', name: 'Phòng tắm', back: ['wall'], zones: { wall: ['c', 14, 190, 1.1], shelf: ['f', 193, 205, 1.25], floor: ['f', 420, 586, 1.35], table: ['f', 420, 586, 1.35], ground: ['f', 420, 586, 1.35] },
+      types: [['towel', 3, 3], ['mirror', 1, 1], ['bubbles', 2, 3, 'wall'], ['toothcup', 2, 2], ['shampoo', 3, 4], ['soap', 2, 2], ['sponge', 2, 2], ['comb', 1, 2], ['hairdryer', 1, 1],
+        ['toiletroll', 2, 2, 'floor'], ['rubberduck', 3, 4], ['slippers', 2, 2], ['laundry', 1, 1], ['bucket', 2, 2], ['potplant', 1, 1, 'floor']] },
+    { id: 'workshop', name: 'Xưởng đồ nghề', back: ['wall'], zones: { wall: ['c', 14, 314, 1.2], table: ['f', 372, 586, 1.35], floor: ['f', 372, 586, 1.35], ground: ['f', 372, 586, 1.35] },
+      types: [['hammer', 2, 2], ['wrench', 2, 3], ['screwdriver', 3, 3], ['saw', 1, 2], ['pliers', 2, 2], ['gear', 2, 3], ['toolbox', 2, 2], ['paintcan', 3, 3], ['drill', 2, 2], ['nuts', 2, 3],
+        ['bulb', 2, 2], ['cone', 1, 2, 'table'], ['ruler', 1, 1, 'table'], ['desklamp', 1, 1, 'table'], ['mug', 1, 1, 'table']] }
   ];
   var THEME_BY_ID = {};
   THEMES.forEach(function (t) { THEME_BY_ID[t.id] = t; });

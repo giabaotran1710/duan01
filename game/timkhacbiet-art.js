@@ -1,5 +1,5 @@
 /* Tìm điểm khác biệt — phần vẽ: các loại vật thể (vẽ bằng canvas 2D) và phông nền các chủ đề cũ
-   (thêm chủ đề mới ở timkhacbiet-art2.js, số đo ở timkhacbiet-meta.js).
+   (thêm chủ đề mới ở timkhacbiet-art2.js và timkhacbiet-art3.js, số đo ở timkhacbiet-meta.js).
    Mọi chi tiết "ngẫu nhiên" của vật thể đều lấy từ hạt giống riêng của vật đó (o.k) nên ảnh A và ảnh B luôn vẽ giống hệt nhau,
    trừ đúng những chỗ khác biệt. Toạ độ vật thể: gốc (0,0) ở giữa vật, kích thước w × h ở tỉ lệ 1. */
 (function (root) {
@@ -866,11 +866,12 @@
     if (T.reeds) T.reeds.stretchPx = 0;
     if (T.log) T.log.patPx = [0, 0, 0];
     if (T.eagle) T.eagle.patPx = [0, 0, 0];
-    ['bubbles'].forEach(function (n) { if (T[n]) { T[n].colorPx = 0; T[n].colorPx2 = 0; T[n].shadePx = 0; } });
+    ['bubbles', 'bowlingpin'].forEach(function (n) { if (T[n]) { T[n].colorPx = 0; T[n].colorPx2 = 0; T[n].shadePx = 0; } });
     /* công trình/vật đứng không nghiêng được (nghiêng trông như bị đổ) */
     ['tree', 'pine', 'spine', 'house', 'cabin', 'fence', 'windmill', 'lamp', 'palm', 'lighthouse', 'building', 'traffic', 'cactus', 'pyramid',
      'castle', 'tower', 'igloo', 'umbrella', 'flag', 'seaweed', 'coral', 'barn', 'signpost', 'roadsign', 'reeds', 'bridge', 'scarecrow',
-     'sunflower', 'tulip', 'birdhouse', 'hydrant', 'houseboat', 'bus', 'truck'].forEach(function (n) { if (T[n]) T[n].notilt = true; });
+     'sunflower', 'tulip', 'birdhouse', 'hydrant', 'houseboat', 'bus', 'truck',
+     'doghouse', 'scratchpost', 'keyboard', 'speaker', 'parrot', 'mic', 'globe', 'birdcage', 'bowlingpin'].forEach(function (n) { if (T[n]) T[n].notilt = true; });
   }
 
   root.TKBArt = {
