@@ -2,7 +2,6 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<script src="../maintenance.js" data-game="colorSweeper"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff" color-scheme="light">
 <title>COLOR SWEEPER</title>
@@ -9212,7 +9211,9 @@ function createPolyPuzzle(d){
     let best=null;
     while(performance.now()-t0<budget){
       const clue=clueIn.slice();
-      const visible=()=>clue.map((c,i)=>c?i:-1).filter(i=>i>=0);
+      // Neutral clues are never "shown with their color": the player sees only
+      // their number, so the solver must not know their color either.
+      const visible=()=>clue.map((c,i)=>c&&!neutralClues?.has(i)?i:-1).filter(i=>i>=0);
       let r=solve(clue,visible());
       if(!r?.ok)return best;
       const tryDrop=i=>{
@@ -9245,17 +9246,23 @@ function createPolyPuzzle(d){
       // hard step before it, not an easy way in.
       const firstHard=level(steps[0])>=4;
       const easy=steps.filter(st=>level(st)===1).length/steps.length;
+      // 7×7 and up: a small easy foothold (at most n easy steps before the
+      // first hard one) is unavoidable on a big board; accept it when the
+      // rest of the solve is hard.
+      let openRun=0;for(const st of steps){if(level(st)===1)openRun++;else break;}
+      const goodStart=firstHard||(n>=7&&(pal>3?(openRun<=Math.round(total/5)&&easy<=0.5):(openRun<=n&&easy<=0.45)));
       // every chosen special rule should still be needed (only checked when
       // this layout could beat the best one so far — it costs extra solves)
       let idle=0;
-      const pre=(firstHard?0:1)+easy;
+      const pre=(firstHard?0:goodStart?0.3:1)+easy;
       if(!best||pre<best.rank)for(const k of Object.keys(baseCount)){
         if(k==='basic'||!clue.some(c=>kindOf(c)===k))continue;
         const stripped=clue.map(c=>kindOf(c)===k?null:c);
-        if(solve(stripped,stripped.map((c,i)=>c?i:-1).filter(i=>i>=0))?.ok)idle++;
+        if(solve(stripped,stripped.map((c,i)=>c&&!neutralClues?.has(i)?i:-1).filter(i=>i>=0))?.ok)idle++;
       }
-      const rank=(firstHard?0:1)+easy+idle*0.5;
-      if(!best||rank<best.rank)best={clue:clue.slice(),visible:visible(),easyShare:easy,firstHard,rank};
+      const rank=(firstHard?0:goodStart?0.3:1)+easy+idle*0.5;
+      if(!best||rank<best.rank)best={clue:clue.slice(),visible:visible(),easyShare:easy,firstHard,goodStart,openRun,rank};
+      if(n>=7&&best.goodStart&&idle===0)break;
       if(best.firstHard&&best.easyShare<=0.6+0.1*Math.max(0,specialKinds-1))break;
       if(specialKinds>=2&&best.easyShare<=0.5&&performance.now()-t0>budget*0.6)break;
     }
@@ -9563,7 +9570,11 @@ function createPolyPuzzle(d){
         const tough=makeToughBoard(n,sol,clue,data,neutralClues);
         // Alone (or with one rule) hóc búa needs a hard way in; with several
         // rules it is softened instead of dropped.
-        if(!tough||(!tough.firstHard&&[...rules].filter(r=>r!=='tough').length<2))continue;
+        // 7×7 and up: a layout that is hard overall (≤ 50% easy steps) is kept
+        // rather than thrown away after a whole time budget.
+        // (Neutral clues hide their color, which already makes the board hard.)
+        const hardEnough=tough&&(tough.goodStart||((n>=7||neutralClues?.size>0)&&tough.easyShare<=0.5));
+        if(!tough||(!hardEnough&&[...rules].filter(r=>r!=='tough').length<2))continue;
         return {
           d:{name:`${n}×${n}`,n,palette:pal},
           colors:shuffle([...COLORS]).slice(0,pal),
@@ -16246,7 +16257,10 @@ function cancelNewGameIntro(){
     // QUY TẮC HÓC BÚA
     {n:4,easy:false,tough:true},
     {n:5,easy:false,tough:true},
-    {n:6,easy:false,tough:true}
+    {n:6,easy:false,tough:true},
+    {n:7,easy:false,tough:true},
+    {n:8,easy:false,tough:true},
+    {n:9,easy:false,tough:true}
   ];
 
   // ---------------------------------------------------------------
@@ -16977,7 +16991,7 @@ function cancelNewGameIntro(){
     const dropped=[];
     if(rsColorUnavailable(rsDraft.colors)){rsDraft.colors=3;dropped.push('4 màu');}
     rsDraft.rules=rsDraft.rules.filter(r=>{if(rsUnavailable(r)){dropped.push(RS_NAMES(r));return false;}return true;});
-    if(rsDraft.n>6&&rsDraft.tough){rsDraft.tough=false;dropped.push('Quy tắc hóc búa');}
+
     rsDraft.droppedList=dropped;
   }
   // Icons of the extra rules, drawn on canvas (crisp on any screen density).
@@ -17033,9 +17047,8 @@ function cancelNewGameIntro(){
     document.getElementById('rsNoMark').checked=!!rsDraft.noMark;
     document.getElementById('rsChaos').checked=!!rsDraft.chaos;
     const tb=document.getElementById('rsTough');
-    if(rsDraft.n>6)rsDraft.tough=false;
-    tb.checked=!!rsDraft.tough;tb.disabled=rsDraft.n>6;
-    document.getElementById('rsToughNote').textContent=rsDraft.n>6?'— Không khả dụng':'';
+    tb.checked=!!rsDraft.tough;tb.disabled=false;
+    document.getElementById('rsToughNote').textContent='';
     document.querySelectorAll('#researchOverlay canvas.rs-ico').forEach(drawExtraRuleIcon);
     document.getElementById('rsCount').textContent=`(${k}/${hi}${lo?` · tối thiểu ${lo}`:''})`;
     const ok=k>=lo && k<=hi;
@@ -17043,7 +17056,7 @@ function cancelNewGameIntro(){
     const droppedMsg=rsDraft.droppedList?.length ? ` Đã bỏ ${rsDraft.droppedList.join(', ')} (không khả dụng).` : '';
     note.classList.toggle('bad',!ok);
     note.textContent=ok
-      ? `Màn ${rsDraft.n}×${rsDraft.n}, ${rsDraft.colors} màu: quy tắc cơ bản${k?' + '+rsDraft.rules.map(r=>[...RS_CLUE,...RS_SIDE].find(x=>x[0]===r)[1]).join(' + '):''}${rsDraft.noMark?' · cấm đánh dấu':''}${rsDraft.tough&&rsDraft.n<=6?' · hóc búa':''}${rsDraft.chaos?' · rối loạn':''}.`
+      ? `Màn ${rsDraft.n}×${rsDraft.n}, ${rsDraft.colors} màu: quy tắc cơ bản${k?' + '+rsDraft.rules.map(r=>[...RS_CLUE,...RS_SIDE].find(x=>x[0]===r)[1]).join(' + '):''}${rsDraft.noMark?' · cấm đánh dấu':''}${rsDraft.tough?' · hóc búa':''}${rsDraft.chaos?' · rối loạn':''}.`
       : (k<lo ? `Màn ${rsDraft.n}×${rsDraft.n} cần chọn thêm ${lo-k} quy tắc.` : `Màn ${rsDraft.n}×${rsDraft.n} chỉ cho phép tối đa ${hi} quy tắc — hãy bỏ bớt ${k-hi}.`);
     if(droppedMsg)note.textContent+=droppedMsg;
     document.getElementById('rsStart').disabled=!ok;
@@ -17078,7 +17091,7 @@ function cancelNewGameIntro(){
     for(const id of clueIds){if(rules.length>=k)break;rules.push(id);}
     rsDraft.rules=rules;
     rsDraft.noMark=Math.random()<0.25;
-    rsDraft.tough=rsDraft.n<=6&&Math.random()<0.25;
+    rsDraft.tough=Math.random()<0.25;
     rsDraft.chaos=Math.random()<0.2;
     rsDraft.droppedList=[];
     rsRender();
@@ -17109,11 +17122,11 @@ function cancelNewGameIntro(){
   document.getElementById('rsSide').addEventListener('click',rsToggle);
   document.getElementById('rsNoMark').addEventListener('change',e=>{rsDraft.noMark=e.target.checked;rsRender();});
   document.getElementById('rsChaos').addEventListener('change',e=>{rsDraft.chaos=e.target.checked;rsRender();});
-  document.getElementById('rsTough').addEventListener('change',e=>{rsDraft.tough=e.target.checked && rsDraft.n<=6;rsRender();});
+  document.getElementById('rsTough').addEventListener('change',e=>{rsDraft.tough=e.target.checked;rsRender();});
   document.getElementById('rsStart').addEventListener('click',()=>{
     const [lo,hi]=RS_LIMITS[rsDraft.n];
     if(rsDraft.rules.length<lo||rsDraft.rules.length>hi)return;
-    researchCfg={n:rsDraft.n,colors:rsDraft.colors||3,rules:rsDraft.rules.slice(),noMark:!!rsDraft.noMark,tough:!!rsDraft.tough&&rsDraft.n<=6,chaos:!!rsDraft.chaos};
+    researchCfg={n:rsDraft.n,colors:rsDraft.colors||3,rules:rsDraft.rules.slice(),noMark:!!rsDraft.noMark,tough:!!rsDraft.tough,chaos:!!rsDraft.chaos};
     csStore.set('cs.research',JSON.stringify(researchCfg));
     selectedTier='research';
     csStore.set('cs.tier',selectedTier);
@@ -17230,7 +17243,7 @@ function cancelNewGameIntro(){
     if(options.override){
       boardSpec={n:options.override.d.n,easy:false};
     }else if(selectedTier==='research' && researchCfg){
-      boardSpec={n:researchCfg.n,easy:false,colors:researchCfg.colors||3,custom:researchCfg.rules.concat(researchCfg.tough&&researchCfg.n<=6?['tough']:[])};
+      boardSpec={n:researchCfg.n,easy:false,colors:researchCfg.colors||3,custom:researchCfg.rules.concat(researchCfg.tough?['tough']:[])};
     }else if(selectedTier!=='random'){
       plan=planForTier(selectedTier);
       boardSpec=plan ? plan.spec : (isInitialLoad ? {n:4,easy:false} : nextBoardSpec());
@@ -17860,7 +17873,7 @@ function cancelNewGameIntro(){
     {
       id: 'tough', icon: '<i class="fa-solid fa-skull"></i>', tint: '#5b1a8f', title: 'Quy tắc hóc búa',
       short: 'Ít clue, không có điểm vào dễ',
-      desc: 'Màn chỉ có một ít clue hiện sẵn; các ô còn lại là ô trơn — tô xong không mở thêm clue. Không clue nào tự cho kết quả ngay: phải <b>ghép nhiều clue</b>, đôi khi phải thử giả định rồi tìm mâu thuẫn.',
+      desc: 'Màn chỉ có một ít clue hiện sẵn; các ô còn lại là ô trơn — tô xong không mở thêm clue. Không clue nào tự cho kết quả ngay: phải <b>ghép nhiều clue</b>, đôi khi phải thử giả định rồi tìm mâu thuẫn. Trên bàn 7×7 trở lên có thể có một điểm khởi đầu nhỏ, nhưng phần lớn lời giải vẫn cần suy luận khó.',
       demo: {
         cols: 4, rows: 4, size: 44,
         cells: {1: {c: 'Y', n: '1'}, 6: {c: 'B', n: '2'}, 9: {c: 'R', n: '3'}, 11: {c: 'Y', n: '2'}, 15: {c: 'R', n: '1'}},
