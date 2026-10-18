@@ -65,7 +65,8 @@
     gheptranh: ['tiles', '#312e81', '#4f46e5', '#e0e7ff'],
     covua: ['curtain', '#0b1220', '#1e3a5f', '#5cc8ff'],
     stickman: ['diagonal', '#101114', '#2378ff', '#ef3f54'],
-    thamtubayes: ['iris', '#0f2a47', '#1e4a7a', '#ffd45e']
+    thamtubayes: ['iris', '#0f2a47', '#1e4a7a', '#ffd45e'],
+    timkhacbiet: ['iris', '#1c1530', '#3a2a5e', '#ffb454']
   };
   var t = THEMES[gameId] || ['iris', '#0f172a', '#1e293b', '#93c5fd'];
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
