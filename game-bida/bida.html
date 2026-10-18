@@ -691,7 +691,7 @@ canvas{
 
 #targetBoard{
   position:absolute;
-  left:20px;
+  left:8px;
   top:44px;
 
   display:flex;
@@ -1213,7 +1213,7 @@ canvas{
 
 /* Thanh lực có vùng chạm lớn hơn, nhưng hình nhìn vẫn nhỏ */
 #powerWrap{
-  right:6px !important;
+  right:0 !important;
   top:50% !important;
   width:74px !important;
   height:165px !important;
@@ -1298,7 +1298,7 @@ canvas{
 
 /* Đẩy thước ngắm ra xa thanh lực */
 #aimRuler{
-  right:92px !important;
+  right:86px !important;
   z-index:20 !important;
 }
 </style>
@@ -2763,6 +2763,41 @@ function getSafeInsets(){
   };
 }
 
+/*
+  Phần nhìn thấy của bàn theo toạ độ ảo (VW × VH): khay bi lọt lỗ nhô ra bên trái, khung gỗ bên phải (xem drawTable / POTTED_TRAY).
+  Bảng thông tin + áp phê nằm sát mép trái, thước ngắm + thanh lực nằm sát mép phải: bàn được đặt gọn vào khoảng giữa các cột
+  này (đo bằng kích thước thật của chúng) nên không bao giờ đè lên bàn, kể cả khi bật toàn màn hình.
+*/
+const VIS_X0 = POTTED_TRAY.x;
+const VIS_X1 = table.x + table.w + 68;
+const HUD_GAP = 8;
+const POWER_BAR_W = 24; // bề rộng thanh lực nhìn thấy (vùng chạm rộng hơn, xem #powerWrap::before)
+
+function hudRect(id){
+  const el = document.getElementById(id);
+  if(!el) return null;
+  const r = el.getBoundingClientRect();
+  return r.width > 0 && r.height > 0 ? r : null;
+}
+
+function getHudEdges(){
+  let left = -Infinity;
+  let right = Infinity;
+
+  ["targetBoard", "spinPanel"].forEach(id => {
+    const r = hudRect(id);
+    if(r) left = Math.max(left, r.right);
+  });
+
+  const ruler = hudRect("aimRuler");
+  if(ruler) right = Math.min(right, ruler.left);
+
+  const power = hudRect("powerWrap");
+  if(power) right = Math.min(right, power.left + (power.width - POWER_BAR_W) / 2);
+
+  return { left, right };
+}
+
 function resize(){
   dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
 
@@ -2777,11 +2812,22 @@ function resize(){
   canvas.style.height = cssH + "px";
 
   const inset = getSafeInsets();
-  const availW = Math.max(1, cssW - inset.left - inset.right);
   const availH = Math.max(1, cssH - inset.top - inset.bottom);
+  const hud = getHudEdges();
+  const gl = Math.max(inset.left, hud.left + HUD_GAP);
+  const gr = Math.min(cssW - inset.right, hud.right - HUD_GAP);
+  const visW = VIS_X1 - VIS_X0;
 
-  scale = Math.min(availW / VW, availH / VH);
-  ox = inset.left + (availW - VW * scale) / 2;
+  if(gr - gl > visW * 0.25){
+    scale = Math.min((gr - gl) / visW, availH / VH);
+    ox = gl + ((gr - gl) - visW * scale) / 2 - VIS_X0 * scale;
+  }else{
+    // Màn hình quá hẹp để chừa lề (chưa xoay ngang): căn giữa như cũ
+    const availW = Math.max(1, cssW - inset.left - inset.right);
+    scale = Math.min(availW / VW, availH / VH);
+    ox = inset.left + (availW - VW * scale) / 2;
+  }
+
   oy = inset.top + (availH - VH * scale) / 2;
 }
 
