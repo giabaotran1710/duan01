@@ -1,5 +1,5 @@
 /* Tìm điểm khác biệt — màn dùng ảnh chụp như thật (tạo bằng tool/timkhacbiet-photo/gen.py).
-   Đọc timkhacbiet-photos/manifest.json; màn nào có ảnh thì dùng ảnh, chưa có thì game dùng tranh vẽ như cũ.
+   Đọc timkhacbiet-photos/manifest.json; nếu có ảnh, game xen ngẫu nhiên tranh ảnh chụp với tranh vẽ.
    Ảnh B = ảnh A + các mảnh vá (WebP có kênh trong suốt) đặt đúng chỗ khác biệt. */
 (function (root) {
   'use strict';
@@ -35,7 +35,7 @@
         .then(function (imgs) {
           return {
             n: n, photo: true, theme: 'photo', themeName: L.name, tier: L.tier,
-            tierName: (root.TKB && root.TKB.TIER_NAMES[L.tier]) || '', time: L.time, img: imgs[0],
+            tierName: 'Siêu khó', time: L.time, img: imgs[0],
             patches: L.diffs.map(function (d, i) { var p = d.patch; return { img: imgs[i + 1], x: p.x * sx, y: p.y * sy, w: p.w * sx, h: p.h * sy }; }),
             diffs: L.diffs.map(function (d, i) {
               var h = { x0: d.hit[0] * sx, y0: d.hit[1] * sy, x1: d.hit[2] * sx, y1: d.hit[3] * sy };
@@ -47,5 +47,8 @@
     return cache[n];
   }
 
-  root.TKBPhoto = { get: get, manifest: manifest };
+  /* danh sách số hiệu các tranh ảnh chụp đang có */
+  function list() { return manifest().then(function (m) { return (m && m.levels || []).map(function (l) { return l.n; }); }); }
+
+  root.TKBPhoto = { get: get, list: list, manifest: manifest };
 })(window);

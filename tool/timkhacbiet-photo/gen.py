@@ -35,26 +35,15 @@ def lerp(a, b, t):
     return a + (b - a) * t
 
 def cfg_for(n):
-    t = (n - 1) / 99
-    tier = min(4, (n - 1) // 20)
-    diffs = 3 + (n - 1) // 12
+    """Game chỉ còn tranh siêu khó: mọi tranh ảnh chụp dùng chung thông số siêu khó, 8 điểm khác, 3 phút."""
     return {
-        'n': n, 't': t, 'tier': tier, 'diffs': diffs,
-        # ảnh thật khó dò hơn tranh vẽ nên cho thêm chút thời gian
-        'time': 5 * round((55 + diffs * 17) / 5),
-        # diện tích khung vật được chọn (tỉ lệ so với cả ảnh)
-        'amin': lerp(0.012, 0.0012, t), 'amax': lerp(0.14, 0.016, t),
+        'n': n, 't': 1.0, 'tier': 4, 'diffs': 8, 'time': 180,
+        # diện tích khung vật được chọn (tỉ lệ so với cả ảnh): vật nhỏ
+        'amin': 0.0012, 'amax': 0.02,
         # số điểm ảnh tối thiểu phải đổi trong một điểm khác (ở 1024x768)
-        'minpx': int(lerp(2500, 260, t)),
-        # Dễ: còn vật biến mất/thêm vào; càng khó càng bỏ dần, thay bằng "vẫn còn đó nhưng hơi khác" (màu, hình dạng, chi tiết).
-        # Bậc Rất khó/Siêu khó: không còn xoá/thêm vật.
-        'kinds': [
-            ['remove', 'recolor', 'replace', 'add', 'recolor'],
-            ['recolor', 'detail', 'remove', 'replace', 'subtle', 'shape'],
-            ['subtle', 'shape', 'detail', 'recolor', 'shape', 'remove'],
-            ['subtle', 'shape', 'detail', 'recolor', 'subtle', 'shape'],
-            ['subtle', 'shape', 'detail', 'subtle', 'shape', 'subtle'],
-        ][tier],
+        'minpx': 200,
+        # không xoá/thêm vật: vật vẫn còn đó nhưng hơi khác, nhiều nhất là khác số hoạ tiết (sọc, đốm, cửa sổ...)
+        'kinds': ['count', 'count', 'count', 'subtle', 'shape', 'detail', 'count', 'subtle'],
     }
 
 STRONG_COLORS = ['bright red', 'royal blue', 'bright yellow', 'emerald green', 'purple', 'orange', 'hot pink', 'pure white', 'black']
@@ -74,6 +63,9 @@ def edit_text(kind, label, box, rnd):
         return f'Remove {loc} completely; fill its place naturally with what would be behind it.'
     if kind == 'recolor':
         return f'Change the main color of {loc} to {rnd.choice(STRONG_COLORS)}. Keep its shape, texture and lighting.'
+    if kind == 'count':
+        return (f'On {loc}, change the NUMBER of one repeated detail by exactly one (for example one more or one fewer stripe, spot, '
+                'button, window, petal, ring or line). Keep the object, its colors and its position otherwise identical.')
     if kind == 'subtle':
         return f'Change the color of {loc} to a clearly different but similar shade (for example a different tone of the same color family). Keep its shape and texture.'
     if kind == 'shape':
@@ -391,7 +383,7 @@ def save_level(n, name, cfg, A_img, B, diffs):
         out.append({'kind': d['kind'], 'label': d['label'], 'hit': list(hit_of((x0, y0, x1, y1))),
                     'patch': {'file': fp, 'x': x0, 'y': y0, 'w': x1 - x0, 'h': y1 - y0}})
     nd = len(out)
-    return {'n': n, 'name': name, 'tier': cfg['tier'], 'time': 5 * round((55 + nd * 17) / 5), 'a': fa, 'diffs': out}
+    return {'n': n, 'name': name, 'tier': cfg['tier'], 'time': cfg['time'], 'a': fa, 'diffs': out}
 
 def load_manifest():
     p = os.path.join(OUT, 'manifest.json')

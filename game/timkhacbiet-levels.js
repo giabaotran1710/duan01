@@ -1,68 +1,82 @@
-/* Tìm điểm khác biệt — 100 màn.
-   Mỗi màn là một bức tranh (phông chủ đề + các vật thể) được dựng theo hạt giống cố định, rồi tạo ra ảnh B bằng cách sửa
-   đúng N vật thể (biến mất, thêm vào, đổi màu, to/nhỏ, xê dịch, lật, đổi chi tiết). Độ khó tăng dần theo số màn:
-   nhiều vật thể hơn, nhỏ hơn, nhiều điểm khác hơn, và chênh lệch nhỏ dần. */
+/* Tìm điểm khác biệt — sinh tranh siêu khó ngẫu nhiên.
+   Mỗi tranh: chọn một chủ đề (17 chủ đề), dựng cảnh (phông + ~28 vật thể) theo hạt giống, rồi tạo ảnh B bằng cách sửa đúng
+   8 vật thể. Không còn kiểu "vật biến mất/thêm vào": vật vẫn còn đó nhưng hơi khác — nhiều nhất là khác HOẠ TIẾT
+   (hơn/kém đúng 1 sọc, 1 đốm, 1 cửa sổ, 1 cánh hoa...), ngoài ra đổi nhẹ màu, độ sáng, kiểu dáng, kích thước, độ nghiêng,
+   kéo giãn, lật ngang hoặc xê dịch vài điểm ảnh. Mọi điểm khác đều được kiểm tra đủ thấy (bảng số đo trong timkhacbiet-meta.js). */
 (function (root) {
   'use strict';
-  var A = root.TKBArt || (typeof require !== 'undefined' ? require('./timkhacbiet-art.js') : null);
+  var A = root.TKBArt;
+  if (!A && typeof require !== 'undefined') { require('./timkhacbiet-art.js'); require('./timkhacbiet-art2.js'); require('./timkhacbiet-meta.js'); A = root.TKBArt; }
+  A.finalize();
   var W = A.W, H = A.H, TYPES = A.TYPES, mulberry32 = A.mulberry32;
 
-  var TIER_NAMES = ['Dễ', 'Vừa', 'Khó', 'Rất khó', 'Siêu khó'];
-
-  /* types: [loại, trọng số, tối đa mỗi ảnh, (vùng thay thế)];  zones: tên vùng -> ['c'|'f', y0, y1]
-     'c' = tâm vật nằm trong [y0,y1]; 'f' = chân vật (đáy) nằm trong [y0,y1] và vật xa/gần theo độ sâu */
+  /* types: [loại, trọng số, tối đa mỗi ảnh, (vùng thay thế)];  zones: tên vùng -> ['c'|'f', y0, y1, (hệ số cỡ)]
+     'c' = tâm vật nằm trong [y0,y1]; 'f' = chân vật (đáy) nằm trong [y0,y1] và vật xa/gần theo độ sâu.
+     back: các vùng vẽ trước (nền xa: trời, tường) */
   var THEMES = [
-    { id: 'village', name: 'Làng quê', zones: { sky: ['c', 45, 250], ground: ['f', 335, 575] },
-      types: [['sun', 1, 1], ['cloud', 3, 3], ['bird', 2, 2], ['kite', 1, 1], ['butterfly', 1, 1], ['house', 4, 3], ['tree', 4, 5], ['bush', 2, 3], ['flower', 4, 6], ['fence', 2, 2], ['sheep', 3, 3], ['windmill', 1, 1], ['mushroom', 2, 2], ['rock', 1, 2]] },
-    { id: 'beach', name: 'Bãi biển', zones: { sky: ['c', 40, 240], sea: ['f', 385, 462], ground: ['f', 480, 578] },
-      types: [['sun', 1, 1], ['cloud', 3, 3], ['bird', 2, 3], ['balloon', 1, 1], ['sailboat', 3, 3], ['umbrella', 3, 3], ['palm', 3, 3], ['crab', 2, 3], ['starfish', 2, 3], ['beachball', 2, 2], ['lighthouse', 1, 1], ['sandcastle', 1, 1]] },
-    { id: 'sea', name: 'Đại dương', zones: { water: ['c', 40, 490], floor: ['f', 520, 582], ground: ['f', 520, 582], sky: ['c', 40, 490] },
+    { id: 'garden', name: 'Vườn cây', zones: { sky: ['c', 24, 215], shelf: ['f', 238, 250, 1], ground: ['f', 365, 585] },
+      types: [['bee', 2, 3], ['butterfly', 2, 3], ['dragonfly', 1, 1], ['potplant', 4, 5, 'shelf'], ['cactuspot', 2, 3, 'shelf'], ['sunflower', 3, 3], ['tulip', 4, 5], ['fern', 2, 3],
+        ['flower', 3, 4], ['ladybug', 3, 4], ['wateringcan', 1, 2], ['birdhouse', 1, 1], ['snail', 2, 2], ['mushroom', 2, 2], ['bush', 2, 2]] },
+    { id: 'road', name: 'Đường xá', zones: { sky: ['c', 24, 140], side: ['f', 228, 262], road: ['f', 330, 586], ground: ['f', 330, 586] },
+      types: [['cloud', 2, 2], ['bird', 1, 2], ['plane', 1, 1], ['car', 5, 5, 'road'], ['truck', 2, 2, 'road'], ['bus', 2, 2, 'road'], ['moto', 2, 3, 'road'], ['cone', 3, 4, 'road'],
+        ['barrier', 2, 2, 'road'], ['bicycle', 2, 2, 'road'], ['roadsign', 3, 3, 'side'], ['lamp', 2, 2, 'side'], ['hydrant', 2, 2, 'side'], ['bench', 1, 2, 'side'], ['traffic', 1, 2, 'side']] },
+    { id: 'desk', name: 'Bàn làm việc', back: ['wall'], zones: { wall: ['c', 18, 222, 1.15], desk: ['f', 300, 586, 1.3], ground: ['f', 300, 586, 1.3] },
+      types: [['clock', 1, 1, 'wall'], ['sticky', 4, 5, 'wall'], ['laptop', 1, 1], ['mug', 2, 2], ['pencup', 1, 2], ['books', 2, 2], ['notebook', 2, 2], ['desklamp', 1, 1],
+        ['clips', 2, 3], ['phone', 1, 2], ['calculator', 1, 1], ['ruler', 1, 2], ['potplant', 1, 2, 'desk'], ['cactuspot', 1, 1, 'desk'], ['cookie', 1, 2, 'desk'], ['gift', 1, 1, 'desk'], ['candy', 1, 2, 'desk']] },
+    { id: 'stream', name: 'Dòng suối', zones: { sky: ['c', 20, 118], bank: ['f', 178, 296, .85], water: ['c', 316, 404], bridgez: ['c', 318, 402], ground: ['f', 446, 586] },
+      types: [['bird', 1, 2], ['dragonfly', 3, 3], ['butterfly', 2, 2], ['frog', 3, 4, 'water'], ['lilypad', 4, 5, 'water'], ['fish', 2, 3, 'water'], ['duck', 1, 2, 'water'],
+        ['reeds', 4, 5, 'bank'], ['stones', 2, 3, 'ground'], ['log', 1, 2, 'ground'], ['flower', 3, 4, 'ground'], ['mushroom', 2, 2, 'ground'], ['tree', 2, 2, 'bank'],
+        ['bush', 2, 2, 'bank'], ['rock', 2, 2, 'ground'], ['snail', 1, 2, 'ground'], ['bridge', 1, 1, 'bridgez']] },
+    { id: 'river', name: 'Dòng sông', zones: { sky: ['c', 20, 175], far: ['f', 214, 268, .62], water: ['c', 288, 472], near: ['f', 500, 586], ground: ['f', 500, 586] },
+      types: [['cloud', 2, 3], ['bird', 2, 3], ['house', 2, 2, 'far'], ['tree', 3, 3, 'far'], ['pine', 2, 2, 'far'], ['rowboat', 3, 3], ['houseboat', 1, 1], ['duck', 4, 5],
+        ['buoy', 3, 3], ['lotus', 3, 4], ['lilypad', 2, 3], ['reeds', 3, 3, 'near'], ['stones', 1, 2, 'near'], ['flower', 2, 3, 'near'], ['frog', 1, 1, 'near']] },
+    { id: 'mountain', name: 'Rừng núi', zones: { sky: ['c', 20, 215], ground: ['f', 372, 586] },
+      types: [['eagle', 2, 2], ['bird', 1, 2], ['cloud', 2, 2], ['sun', 1, 1], ['pine', 5, 6], ['deer', 2, 3], ['cabin', 1, 1], ['tent', 1, 2], ['campfire', 1, 1], ['signpost', 1, 2],
+        ['rock', 2, 3], ['stones', 1, 2], ['mushroom', 2, 3], ['bunny', 1, 1], ['owl', 1, 1], ['log', 1, 1], ['fern', 2, 2]] },
+    { id: 'landscape', name: 'Cảnh quan', zones: { sky: ['c', 20, 230], ground: ['f', 348, 586] },
+      types: [['sun', 1, 1], ['cloud', 3, 3], ['balloon', 2, 3], ['bird', 2, 2], ['barn', 1, 1], ['windmill', 1, 1], ['haystack', 2, 3], ['cow', 3, 3], ['sheep', 2, 3],
+        ['scarecrow', 1, 1], ['tractor', 1, 1], ['fence', 2, 2], ['tree', 2, 3], ['flower', 2, 3], ['house', 1, 1]] },
+    { id: 'space', name: 'Vũ trụ', zones: { any: ['c', 30, 570], sky: ['c', 30, 570], ground: ['c', 30, 570] },
+      types: [['planet', 3, 4], ['moon', 1, 1], ['comet', 2, 2], ['rocket', 2, 3], ['crescent', 1, 1], ['ufo', 2, 2], ['satellite', 2, 2], ['astronaut', 2, 2], ['alien', 2, 3], ['star', 5, 7]] },
+    { id: 'city', name: 'Thành phố', zones: { sky: ['c', 30, 235], skyline: ['f', 462, 505], street: ['f', 525, 586], ground: ['f', 525, 586] },
+      types: [['sun', 1, 1], ['cloud', 3, 3], ['plane', 1, 2], ['balloon', 1, 1], ['bird', 2, 2], ['building', 4, 5, 'skyline'], ['car', 3, 4, 'street'], ['bus', 1, 1, 'street'],
+        ['moto', 1, 2, 'street'], ['bicycle', 1, 2, 'street'], ['traffic', 2, 2, 'street'], ['lamp', 2, 3, 'street'], ['hydrant', 1, 2, 'street'], ['bench', 1, 1, 'street'], ['tree', 2, 3, 'street']] },
+    { id: 'village', name: 'Làng quê', zones: { sky: ['c', 40, 250], ground: ['f', 335, 586] },
+      types: [['sun', 1, 1], ['cloud', 3, 3], ['bird', 2, 2], ['kite', 1, 1], ['butterfly', 1, 1], ['house', 4, 3], ['tree', 4, 5], ['bush', 2, 3], ['flower', 4, 6], ['fence', 2, 2],
+        ['sheep', 3, 3], ['windmill', 1, 1], ['mushroom', 2, 2], ['rock', 1, 2]] },
+    { id: 'beach', name: 'Bãi biển', zones: { sky: ['c', 36, 240], sea: ['f', 385, 462], ground: ['f', 480, 586] },
+      types: [['sun', 1, 1], ['cloud', 3, 3], ['bird', 2, 3], ['balloon', 1, 1], ['sailboat', 3, 3], ['umbrella', 3, 3], ['palm', 3, 3], ['crab', 2, 3], ['starfish', 2, 3],
+        ['beachball', 2, 2], ['lighthouse', 1, 1], ['sandcastle', 1, 1]] },
+    { id: 'sea', name: 'Đại dương', zones: { water: ['c', 36, 490], floor: ['f', 520, 586], ground: ['f', 520, 586], sky: ['c', 36, 490] },
       types: [['fish', 6, 7], ['jelly', 2, 3], ['bubbles', 3, 4], ['submarine', 1, 1], ['turtle', 2, 2], ['seaweed', 3, 4], ['coral', 3, 4], ['chest', 1, 1], ['starfish', 1, 2], ['crab', 1, 2]] },
-    { id: 'space', name: 'Vũ trụ', zones: { any: ['c', 40, 560], sky: ['c', 40, 560], ground: ['c', 40, 560] },
-      types: [['planet', 3, 4], ['rocket', 2, 2], ['crescent', 1, 1], ['ufo', 2, 2], ['satellite', 1, 2], ['astronaut', 2, 2], ['alien', 2, 3], ['star', 5, 7]] },
-    { id: 'forest', name: 'Rừng xanh', zones: { sky: ['c', 40, 200], ground: ['f', 365, 578] },
-      types: [['sun', 1, 1], ['cloud', 2, 2], ['bird', 1, 2], ['butterfly', 2, 2], ['tree', 5, 6], ['pine', 4, 5], ['bush', 3, 3], ['flower', 4, 5], ['mushroom', 4, 5], ['owl', 2, 2], ['bunny', 2, 2], ['snail', 2, 2], ['rock', 2, 2]] },
-    { id: 'city', name: 'Thành phố', zones: { sky: ['c', 40, 235], skyline: ['f', 462, 505], street: ['f', 525, 582], ground: ['f', 525, 582] },
-      types: [['sun', 1, 1], ['cloud', 3, 3], ['plane', 1, 2], ['balloon', 1, 1], ['bird', 2, 2], ['building', 4, 5, 'skyline'], ['car', 3, 4, 'street'], ['traffic', 2, 2, 'street'], ['lamp', 2, 3, 'street'], ['tree', 2, 3, 'street']] },
-    { id: 'winter', name: 'Xứ tuyết', zones: { sky: ['c', 40, 230], ground: ['f', 350, 578] },
+    { id: 'forest', name: 'Rừng xanh', zones: { sky: ['c', 36, 200], ground: ['f', 365, 586] },
+      types: [['sun', 1, 1], ['cloud', 2, 2], ['bird', 1, 2], ['butterfly', 2, 2], ['tree', 5, 6], ['pine', 4, 5], ['bush', 3, 3], ['flower', 4, 5], ['mushroom', 4, 5], ['owl', 2, 2],
+        ['bunny', 2, 2], ['snail', 2, 2], ['rock', 2, 2], ['ladybug', 1, 2]] },
+    { id: 'winter', name: 'Xứ tuyết', zones: { sky: ['c', 36, 230], ground: ['f', 350, 586] },
       types: [['snowflake', 4, 5], ['cloud', 2, 2], ['snowman', 2, 2], ['spine', 5, 6], ['igloo', 1, 1], ['penguin', 3, 4], ['gift', 2, 3], ['cabin', 2, 2], ['bunny', 1, 1]] },
-    { id: 'desert', name: 'Sa mạc', zones: { sky: ['c', 40, 230], ground: ['f', 385, 578] },
-      types: [['sun', 1, 1], ['cloud', 1, 1], ['bird', 2, 2], ['cactus', 5, 6], ['pyramid', 2, 2], ['palm', 2, 3], ['tent', 2, 2], ['camel', 3, 3], ['rock', 3, 3]] },
-    { id: 'castle', name: 'Lâu đài', zones: { sky: ['c', 40, 235], ground: ['f', 355, 578] },
-      types: [['sun', 1, 1], ['cloud', 3, 3], ['rainbow', 1, 1], ['bird', 2, 2], ['balloon', 2, 2], ['kite', 1, 1], ['castle', 2, 1], ['tower', 3, 3], ['flag', 3, 3], ['tree', 3, 4], ['bush', 2, 3], ['flower', 3, 4], ['crown', 1, 1, 'ground']] },
-    { id: 'party', name: 'Tiệc ngọt', zones: { sky: ['c', 50, 215], ground: ['c', 355, 572], any: ['c', 355, 572] },
+    { id: 'desert', name: 'Sa mạc', zones: { sky: ['c', 36, 230], ground: ['f', 385, 586] },
+      types: [['sun', 1, 1], ['cloud', 1, 1], ['bird', 2, 2], ['eagle', 1, 1], ['cactus', 5, 6], ['pyramid', 2, 2], ['palm', 2, 3], ['tent', 2, 2], ['camel', 3, 3], ['rock', 3, 3]] },
+    { id: 'castle', name: 'Lâu đài', zones: { sky: ['c', 36, 235], ground: ['f', 355, 586] },
+      types: [['sun', 1, 1], ['cloud', 3, 3], ['rainbow', 1, 1], ['bird', 2, 2], ['balloon', 2, 2], ['kite', 1, 1], ['castle', 2, 1], ['tower', 3, 3], ['flag', 3, 3], ['tree', 3, 4],
+        ['bush', 2, 3], ['flower', 3, 4], ['crown', 1, 1, 'ground']] },
+    { id: 'party', name: 'Tiệc ngọt', zones: { sky: ['c', 46, 215], ground: ['c', 355, 572], any: ['c', 355, 572] },
       types: [['balloon', 4, 4], ['star', 3, 4], ['gift', 3, 3, 'any'], ['cupcake', 3, 4], ['icecream', 2, 2], ['lollipop', 3, 3], ['donut', 3, 4], ['candy', 4, 4], ['cookie', 3, 4], ['cake', 2, 3]] }
   ];
+  var THEME_BY_ID = {};
+  THEMES.forEach(function (t) { THEME_BY_ID[t.id] = t; });
 
   function lerp(a, b, t) { return a + (b - a) * t; }
   function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
 
-  function cfgFor(n) {
-    var t = (n - 1) / 99, tier = Math.min(4, Math.floor((n - 1) / 20));
-    /* Dễ: còn có vật biến mất/thêm vào; càng khó càng bỏ dần, thay bằng điểm khác "vẫn còn đó nhưng hơi khác"
-       (màu, hình dạng, kích thước, vị trí, độ nghiêng, chi tiết). Bậc Rất khó/Siêu khó: không còn vật biến mất. */
-    var kinds = [
-      ['missing', 'extra', 'color', 'color', 'size'],
-      ['color', 'size', 'variant', 'move', 'shade', 'missing', 'extra'],
-      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'missing'],
-      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'color', 'variant'],
-      ['color', 'variant', 'size', 'move', 'tilt', 'stretch', 'flip', 'shade', 'color', 'variant']
-    ][tier];
-    var diffs = 3 + Math.floor((n - 1) / 12);
-    return {
-      n: n, t: t, tier: tier, tierName: TIER_NAMES[tier], kinds: kinds,
-      count: Math.round(11 + t * 19),
-      diffs: diffs,
-      sf: 1.38 - t * 0.6,
-      gap: Math.round(16 - t * 9),
-      maxExist: [99, Math.floor(diffs * .34), 1, 0, 0][tier],
-      dh: Math.round(lerp(150, 16, t)), dl: Math.round(lerp(34, 9, t)),
-      sizeR: lerp(1.55, 1.1, t), moveD: Math.round(lerp(52, 7, t)),
-      tilt: lerp(.38, .11, t), stretch: lerp(1.4, 1.12, t), shade: Math.round(lerp(22, 8, t)),
-      minPx: Math.round(lerp(300, 70, t)),
-      time: 5 * Math.round((40 + diffs * 15) / 5)
-    };
-  }
+  /* thông số siêu khó (dùng chung cho mọi tranh) */
+  var CFG = {
+    tierName: 'Siêu khó', count: 28, diffs: 8, sf: .86, gap: 7, time: 180,
+    /* kiểu khác biệt, lặp lại = hay gặp hơn: hoạ tiết là nhiều nhất */
+    kinds: ['pattern', 'pattern', 'pattern', 'pattern', 'pattern', 'variant', 'variant', 'color', 'shade', 'size', 'stretch', 'tilt', 'flip', 'move'],
+    dh: 18, dl: 10, sizeR: 1.13, moveD: 9, tilt: .14, stretch: 1.16, shade: 10,
+    minPx: 60,      // số điểm ảnh tối thiểu phải đổi (ở khung 800x600) để một điểm khác được dùng
+    patMin: 42      // riêng hoạ tiết (1 đốm/1 sọc nhỏ) được phép nhỏ hơn một chút
+  };
 
   /* ---------- hình chữ nhật ---------- */
   /* khung bao thật (đã đo) của vật, có tính lật ngang, kéo giãn, xoay và tỉ lệ, nới 1,5 px cho nét viền */
@@ -100,22 +114,23 @@
     }
     want.sort(function (a, b) { return TYPES[b[0]].w * TYPES[b[0]].h - TYPES[a[0]].w * TYPES[a[0]].h; });
     want.forEach(function (e) {
-      var T = TYPES[e[0]], zname = e[3] || T.zone, z = theme.zones[zname] || theme.zones.ground || theme.zones.any, att;
+      var T = TYPES[e[0]], zname = e[3] || T.zone, z = theme.zones[zname] || theme.zones.ground || theme.zones.any, att, zs = z[3] || 1;
       for (att = 0; att < 90; att++) {
         var o = { id: 0, t: e[0], zone: zname, f: 1, v: Math.floor(r() * T.vmax), k: Math.floor(r() * 1e9) }, yb, ex = T.ext, top, bot;
         o.h = T.hue[0] + r() * (T.hue[1] - T.hue[0]); o.sat = T.sat + (r() - .5) * 12; o.l = T.lit + (r() - .5) * 8;
+        if (T.pat) o.p = T.pat[0] + Math.floor(r() * (T.pat[1] - T.pat[0] + 1));
         if (T.asym && r() < .5) o.f = -1;
         var big = Math.max(ex[2] - ex[0], ex[3] - ex[1]);
         if (z[0] === 'f') {
           yb = z[1] + r() * (z[2] - z[1]);
-          o.s = cfg.sf * lerp(.76, 1.12, (yb - z[1]) / Math.max(1, z[2] - z[1])) * (.92 + r() * .16);
-          if (big * o.s > 270) o.s = 270 / big;
+          o.s = cfg.sf * zs * lerp(.76, 1.12, (yb - z[1]) / Math.max(1, z[2] - z[1])) * (.92 + r() * .16);
+          if (big * o.s > 250) o.s = 250 / big;
           o.y = yb - ex[3] * o.s;
         } else {
-          o.s = cfg.sf * (.9 + r() * .2);
-          if (big * o.s > 270) o.s = 270 / big;
+          o.s = cfg.sf * zs * (.9 + r() * .2);
+          if (big * o.s > 250) o.s = 250 / big;
           top = z[1] - ex[1] * o.s; bot = z[2] - ex[3] * o.s;
-          if (bot < top) continue;
+          if (bot < top) { top = bot = (z[1] + z[2]) / 2 - (ex[1] + ex[3]) / 2 * o.s; }
           o.y = top + r() * (bot - top);
         }
         o.x = 8 + r() * (W - 16);
@@ -136,20 +151,24 @@
   function isFoot(o, theme) { var z = theme.zones[o.zone]; return !!z && z[0] === 'f'; }
 
   function makeMod(kind, o, list, cfg, theme, r, hits) {
-    var T = TYPES[o.t], b = clone(o), ra = rectOf(o), rb, q, sgn = r() < .5 ? -1 : 1, ang, d, yb, rcU, s2 = o.s * o.s, mp = cfg.minPx, rr, tg, vv;
+    var T = TYPES[o.t], b = clone(o), ra = rectOf(o), rb, q, sgn = r() < .5 ? -1 : 1, ang, d, yb, rcU, s2 = o.s * o.s, mp = cfg.minPx, rr, tg, vv, p2;
     switch (kind) {
-      case 'missing': case 'extra':
-        if (T.area * s2 < mp) return null;
-        rb = ra; break;
+      case 'pattern':
+        /* hơn/kém đúng 1 hoạ tiết */
+        if (!T.pat) return null;
+        p2 = o.p + sgn;
+        if (p2 < T.pat[0] || p2 > T.pat[1]) p2 = o.p - sgn;
+        if (p2 < T.pat[0] || p2 > T.pat[1]) return null;
+        if ((T.patPx[Math.min(o.p, p2) - T.pat[0]] || 0) * s2 < cfg.patMin) return null;
+        b.p = p2; rb = ra; break;
       case 'color':
-        if ((cfg.dh >= 30 ? T.colorPx : T.colorPx2 * Math.min(1, cfg.dh / 14)) * s2 < mp) return null;
+        if (T.colorPx2 * Math.min(1, cfg.dh / 14) * s2 < mp) return null;
         b.h = o.h + sgn * cfg.dh;
         if (T.low) { b.l = clamp(o.l + (o.l > 55 ? -1 : 1) * cfg.dl, 8, 97); }
         rb = ra; break;
       case 'size':
         yb = o.y + T.ext[3] * o.s;
         rr = r() < .5 ? cfg.sizeR : 1 / cfg.sizeR;
-        if (Math.max(T.ext[2] - T.ext[0], T.ext[3] - T.ext[1]) * o.s * rr > 280) rr = 1 / cfg.sizeR;
         if (T.area * s2 * Math.abs(1 - rr * rr) < mp) { rr = cfg.sizeR; if (T.area * s2 * (rr * rr - 1) < mp) return null; }
         b.s = o.s * rr;
         b.y = isFoot(o, theme) ? yb - T.ext[3] * b.s : o.y;
@@ -180,37 +199,36 @@
       default: return null;
     }
     if (!inside(rb, 2)) return null;
-    for (q = 0; q < list.length; q++) {
-      if (list[q] === o) continue;
-      if (kind === 'size' || kind === 'move' || kind === 'tilt' || kind === 'stretch') { if (touch(rb, rectOf(list[q]), Math.max(3, cfg.gap * .4))) return null; }
+    if (kind === 'size' || kind === 'move' || kind === 'tilt' || kind === 'stretch') {
+      for (q = 0; q < list.length; q++) if (list[q] !== o && touch(rb, rectOf(list[q]), 3)) return null;
     }
     rcU = hitRect(unite(ra, rb));
     for (q = 0; q < hits.length; q++) if (touch(rcU, hits[q], 3)) return null;
     return { b: b, hit: rcU, kind: kind };
   }
 
-  function hashSeed(n, att) { return (Math.imul(n + 17, 2654435761) ^ Math.imul(att + 3, 40503) ^ 0x9E3779B1) >>> 0; }
+  function zOrder(theme, o) {
+    var back = o.zone === 'sky' || (theme.back && theme.back.indexOf(o.zone) >= 0);
+    return (back ? -10000 : 0) + o.y + (back ? 0 : TYPES[o.t].ext[3] * o.s);
+  }
 
-  function zOrder(o) { return (o.zone === 'sky' ? -10000 : 0) + o.y + (o.zone === 'sky' ? 0 : TYPES[o.t].ext[3] * o.s); }
-
-  function buildLevel(n) {
-    var cfg = cfgFor(n), theme = THEMES[(n - 1) % 10], mood = Math.floor((n - 1) / 10), att;
-    for (att = 0; att < 80; att++) {
-      var r = mulberry32(hashSeed(n, att)), list = place(theme, cfg, r);
-      if (list.length < Math.min(cfg.count, 8) || list.length < cfg.count * .8 && att < 79) continue;
-      var order = shuffle(list.map(function (_, i) { return i; }), r), used = {}, hits = [], diffs = [], kinds = shuffle(cfg.kinds.slice(), r), ki = 0, okAll = true, s, exist = 0;
+  /* dựng một tranh siêu khó từ chủ đề + hạt giống (cùng hạt giống luôn ra cùng một tranh) */
+  function buildPicture(themeId, seed) {
+    var theme = THEME_BY_ID[themeId] || THEMES[0], cfg = CFG, att;
+    for (att = 0; att < 60; att++) {
+      var r = mulberry32((seed + att * 7919) >>> 0), list = place(theme, cfg, r);
+      if (list.length < cfg.count * .75 && att < 59) continue;
+      var order = shuffle(list.map(function (_, i) { return i; }), r), used = {}, hits = [], diffs = [], kinds = shuffle(cfg.kinds.slice(), r), ki = 0, okAll = true, s;
       for (s = 0; s < cfg.diffs && okAll; s++) {
         var done = false, tryK;
         for (tryK = 0; tryK < kinds.length && !done; tryK++) {
           var kind = kinds[(ki + tryK) % kinds.length];
-          if ((kind === 'missing' || kind === 'extra') && exist >= cfg.maxExist) continue;
           for (var c = 0; c < order.length && !done; c++) {
             var o = list[order[c]];
             if (used[o.id]) continue;
             var mod = makeMod(kind, o, list, cfg, theme, r, hits);
             if (!mod) continue;
             used[o.id] = 1; hits.push(mod.hit); done = true;
-            if (kind === 'missing' || kind === 'extra') exist++;
             diffs.push({ id: s, kind: kind, oid: o.id, b: mod.b, hit: mod.hit });
           }
         }
@@ -220,26 +238,34 @@
       if (!okAll) continue;
       var byId = {}; diffs.forEach(function (d) { byId[d.oid] = d; });
       var Aobjs = [], Bobjs = [];
-      list.forEach(function (o) {
-        var d = byId[o.id];
-        if (!d) { Aobjs.push(o); Bobjs.push(o); return; }
-        if (d.kind === 'extra') { Bobjs.push(o); return; }
-        Aobjs.push(o);
-        if (d.kind !== 'missing') Bobjs.push(d.b);
-      });
-      Aobjs.sort(function (a, b) { return zOrder(a) - zOrder(b); }); Bobjs.sort(function (a, b) { return zOrder(a) - zOrder(b); });
+      list.forEach(function (o) { var d = byId[o.id]; Aobjs.push(o); Bobjs.push(d ? d.b : o); });
+      Aobjs.sort(function (a, b) { return zOrder(theme, a) - zOrder(theme, b); }); Bobjs.sort(function (a, b) { return zOrder(theme, a) - zOrder(theme, b); });
       return {
-        n: n, theme: theme.id, themeName: theme.name, mood: mood, bgSeed: hashSeed(n, 777), tier: cfg.tier, tierName: cfg.tierName,
-        time: cfg.time, cfg: cfg,
+        id: themeId + ':' + seed, theme: theme.id, themeName: theme.name, mood: (seed >>> 3) % 10, bgSeed: seed ^ 0x2c1b3c6d,
+        tierName: cfg.tierName, time: cfg.time,
         diffs: diffs.map(function (d) { return { id: d.id, kind: d.kind, hit: d.hit, cx: (d.hit.x0 + d.hit.x1) / 2, cy: (d.hit.y0 + d.hit.y1) / 2, oid: d.oid }; }),
         A: Aobjs, B: Bobjs, objCount: list.length
       };
     }
-    throw new Error('Không dựng được màn ' + n);
+    throw new Error('Không dựng được tranh ' + themeId + ' ' + seed);
   }
 
-  var cache = {};
-  function getLevel(n) { return cache[n] || (cache[n] = buildLevel(n)); }
+  /* Bộ chọn ngẫu nhiên: lần lượt đi hết các chủ đề theo thứ tự xáo trộn (không lặp chủ đề vừa chơi),
+     mỗi tranh một hạt giống ngẫu nhiên mới */
+  function Picker(rand) {
+    rand = rand || Math.random;
+    var bag = [], last = null;
+    this.next = function () {
+      if (!bag.length) {
+        bag = THEMES.map(function (t) { return t.id; });
+        for (var i = bag.length - 1; i > 0; i--) { var j = Math.floor(rand() * (i + 1)), t = bag[i]; bag[i] = bag[j]; bag[j] = t; }
+        if (bag[bag.length - 1] === last && bag.length > 1) { var tmp = bag[0]; bag[0] = bag[bag.length - 1]; bag[bag.length - 1] = tmp; }
+      }
+      last = bag.pop();
+      var seed = Math.floor(rand() * 4294967296) >>> 0;
+      return buildPicture(last, seed);
+    };
+  }
 
   function drawScene(g, lv, side) {
     A.drawBackground(g, lv.theme, lv.mood, lv.bgSeed);
@@ -254,7 +280,7 @@
     g.setTransform(sc, 0, 0, sc, 0, 0);
     g.imageSmoothingEnabled = true;
     if (lv.photo) {
-      /* màn ảnh chụp: ảnh A, ảnh B = A + các mảnh vá */
+      /* tranh ảnh chụp: ảnh A, ảnh B = A + các mảnh vá */
       g.imageSmoothingQuality = 'high';
       g.drawImage(lv.img, 0, 0, W, H);
       if (side === 'B') lv.patches.forEach(function (p) { g.drawImage(p.img, p.x, p.y, p.w, p.h); });
@@ -263,6 +289,6 @@
     drawScene(g, lv, side);
   }
 
-  root.TKB = { W: W, H: H, THEMES: THEMES, TIER_NAMES: TIER_NAMES, TOTAL: 100, cfgFor: cfgFor, buildLevel: buildLevel, getLevel: getLevel, drawScene: drawScene, renderTo: renderTo, rectOf: rectOf };
+  root.TKB = { W: W, H: H, THEMES: THEMES, CFG: CFG, buildPicture: buildPicture, Picker: Picker, drawScene: drawScene, renderTo: renderTo, rectOf: rectOf };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.TKB;
 })(typeof window !== 'undefined' ? window : globalThis);
