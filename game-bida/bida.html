@@ -4,7 +4,12 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js" data-game="bidaBtn"></script>
 <script src="../scene.js" data-game="bidaBtn"></script>
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Bida">
+<meta name="theme-color" content="#07130b">
 <title>BIDA GAME</title>
 
 <style>
@@ -18,6 +23,8 @@
   -webkit-tap-highlight-color:transparent;
 }
 
+/* Không dùng 100vh: trên iOS Safari 100vh cao hơn vùng nhìn thấy nên đáy màn hình bị thanh công cụ che mất.
+   Khung bám theo vùng nhìn thấy bằng position:fixed + inset:0 (kích thước chính xác do JS đặt theo innerWidth/innerHeight). */
 html,body{
   width:100%;
   height:100%;
@@ -25,20 +32,33 @@ html,body{
   background:#07130b;
   font-family:Arial, sans-serif;
   touch-action:none;
+  overscroll-behavior:none;
+  -webkit-touch-callout:none;
+}
+
+body{
+  position:fixed;
+  inset:0;
 }
 
 canvas{
   display:block;
-  width:100vw;
-  height:100vh;
+  position:fixed;
+  inset:0;
+  width:100%;
+  height:100%;
   background:radial-gradient(circle at center,#1c3f25,#061009 78%);
 }
 
 /* ================= UI ================= */
 
+/* Các nút/HUD nằm trong vùng an toàn: không bị tai thỏ, góc bo tròn hay thanh Home của iPhone che mất */
 #ui{
   position:fixed;
-  inset:0;
+  top:env(safe-area-inset-top, 0px);
+  right:env(safe-area-inset-right, 0px);
+  bottom:env(safe-area-inset-bottom, 0px);
+  left:env(safe-area-inset-left, 0px);
   z-index:5;
   pointer-events:none;
   color:white;
@@ -350,6 +370,87 @@ canvas{
 @media (orientation:portrait){
   #rotateOverlay{display:flex}
 }
+
+/* ================= BẮT BUỘC TOÀN MÀN HÌNH ================= */
+
+#fsGate{
+  position:fixed;
+  inset:0;
+  z-index:120;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  text-align:center;
+  padding:calc(18px + env(safe-area-inset-top, 0px)) calc(18px + env(safe-area-inset-right, 0px)) calc(18px + env(safe-area-inset-bottom, 0px)) calc(18px + env(safe-area-inset-left, 0px));
+  background:radial-gradient(circle,#173522,#050806 80%);
+  color:white;
+  overflow-y:auto;
+  touch-action:manipulation;
+}
+
+#fsGate.hide{display:none}
+
+#fsGate .box{
+  max-width:420px;
+  margin:auto;
+  padding:22px;
+  border-radius:24px;
+  background:rgba(0,0,0,.4);
+  border:1px solid rgba(255,255,255,.18);
+  box-shadow:0 0 30px rgba(0,0,0,.45);
+}
+
+#fsGate h1{
+  font-size:26px;
+  margin-bottom:10px;
+  color:#ffe27a;
+  -webkit-text-stroke:1px rgba(0,0,0,.55);
+}
+
+#fsGate p{
+  line-height:1.5;
+  opacity:.92;
+  font-size:14px;
+  margin-bottom:12px;
+}
+
+#fsGate button{
+  display:block;
+  width:100%;
+  margin-top:10px;
+  padding:14px 18px;
+  border:none;
+  border-radius:14px;
+  font-size:16px;
+  font-weight:900;
+  letter-spacing:.5px;
+  cursor:pointer;
+  color:#1a1200;
+  background:linear-gradient(#ffe27a,#f2b705);
+  box-shadow:0 6px 0 #9a7000, 0 10px 22px rgba(0,0,0,.4);
+}
+
+#fsGate button:active{transform:translateY(3px);box-shadow:0 3px 0 #9a7000, 0 6px 14px rgba(0,0,0,.4)}
+
+#fsGate button.ghost{
+  font-size:13px;
+  color:#fff;
+  background:rgba(255,255,255,.12);
+  border:1px solid rgba(255,255,255,.3);
+  box-shadow:none;
+}
+
+#fsGate .steps{
+  text-align:left;
+  font-size:13px;
+  line-height:1.6;
+  padding:10px 14px;
+  margin-bottom:6px;
+  border-radius:12px;
+  background:rgba(255,255,255,.08);
+}
+
+#fsGate [hidden]{display:none !important}
   
 /* =================================================
    CLEAN GAME UI - GIẢM CHỮ, TẬP TRUNG VÀO BÀN BIDA
@@ -1282,6 +1383,21 @@ canvas{
   <div class="box">
     <h1>🔄 XOAY MÀN HÌNH</h1>
     <p>Game bida chỉ hỗ trợ <b>màn hình ngang</b> để đủ không gian ngắm, đánh lực và điều bi.</p>
+  </div>
+</div>
+
+<div id="fsGate">
+  <div class="box">
+    <h1>🎱 BIDA</h1>
+    <p id="fsText">Game phải chơi ở <b>chế độ toàn màn hình</b> để thấy trọn bàn và đủ chỗ ngắm, đánh lực, điều bi.</p>
+    <div class="steps" id="fsIosHelp" hidden>
+      <b>Trên iPhone/iPad</b> Safari không cho trang web tự vào toàn màn hình. Cách bật toàn màn hình:<br>
+      1. Bấm nút <b>Chia sẻ</b> (ô vuông có mũi tên ↑) ở thanh Safari.<br>
+      2. Chọn <b>Thêm vào Màn hình chính</b>.<br>
+      3. Mở game từ biểu tượng mới trên màn hình chính: game sẽ chạy toàn màn hình.
+    </div>
+    <button id="fsEnterBtn" type="button">⛶ VÀO TOÀN MÀN HÌNH</button>
+    <button id="fsWindowedBtn" class="ghost" type="button" hidden>Chơi tạm trong trình duyệt (không toàn màn hình)</button>
   </div>
 </div>
 
@@ -2625,21 +2741,54 @@ function handlePlayerShotTimeout(){
   scheduleAIShot(650);
 }
   
+/*
+  Vùng an toàn (tai thỏ, góc bo tròn, thanh Home của iPhone): đo bằng một phần tử ẩn dùng env(safe-area-inset-*).
+  Bàn được căn vào vùng này nên không bao giờ bị cắt mất ở mép màn hình.
+*/
+const safeProbe = document.createElement("div");
+safeProbe.style.cssText =
+  "position:fixed;left:0;top:0;width:0;height:0;visibility:hidden;pointer-events:none;" +
+  "padding:env(safe-area-inset-top,0px) env(safe-area-inset-right,0px) env(safe-area-inset-bottom,0px) env(safe-area-inset-left,0px)";
+document.body.appendChild(safeProbe);
+
+function getSafeInsets(){
+  const cs = getComputedStyle(safeProbe);
+
+  return {
+    top: parseFloat(cs.paddingTop) || 0,
+    right: parseFloat(cs.paddingRight) || 0,
+    bottom: parseFloat(cs.paddingBottom) || 0,
+    left: parseFloat(cs.paddingLeft) || 0
+  };
+}
+
 function resize(){
   dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-  canvas.width = Math.floor(innerWidth * dpr);
-  canvas.height = Math.floor(innerHeight * dpr);
-  canvas.style.width = innerWidth + "px";
-  canvas.style.height = innerHeight + "px";
 
-  const cssW = innerWidth;
-  const cssH = innerHeight;
-  scale = Math.min(cssW / VW, cssH / VH);
-  ox = (cssW - VW * scale) / 2;
-  oy = (cssH - VH * scale) / 2;
+  // Kích thước thật của vùng nhìn thấy (iOS: innerHeight đổi khi thanh địa chỉ co/giãn)
+  const vv = window.visualViewport;
+  const cssW = Math.round(vv && vv.width ? Math.min(vv.width, innerWidth) : innerWidth);
+  const cssH = Math.round(vv && vv.height ? Math.min(vv.height, innerHeight) : innerHeight);
+
+  canvas.width = Math.floor(cssW * dpr);
+  canvas.height = Math.floor(cssH * dpr);
+  canvas.style.width = cssW + "px";
+  canvas.style.height = cssH + "px";
+
+  const inset = getSafeInsets();
+  const availW = Math.max(1, cssW - inset.left - inset.right);
+  const availH = Math.max(1, cssH - inset.top - inset.bottom);
+
+  scale = Math.min(availW / VW, availH / VH);
+  ox = inset.left + (availW - VW * scale) / 2;
+  oy = inset.top + (availH - VH * scale) / 2;
 }
 
 window.addEventListener("resize", resize);
+window.addEventListener("orientationchange", () => { resize(); setTimeout(resize, 250); setTimeout(resize, 700); });
+if(window.visualViewport) window.visualViewport.addEventListener("resize", resize);
+document.addEventListener("fullscreenchange", () => setTimeout(resize, 60));
+document.addEventListener("webkitfullscreenchange", () => setTimeout(resize, 60));
 resize();
 
 /* =========================
@@ -3996,8 +4145,8 @@ powerWrap.addEventListener("pointercancel", e => {
 function shoot(side, dir, power, shotSpin){
   if(gameOver) return;
 
-  if(isMoving() || aiCueMove){
-    // AI chưa đánh được (bi còn chạy / đang kéo bi cái): hẹn lại thay vì bỏ lượt và đứng im
+  if(isMoving() || aiCueMove || fsPaused){
+    // AI chưa đánh được (bi còn chạy / đang kéo bi cái / đang tạm dừng): hẹn lại thay vì bỏ lượt và đứng im
     if(side === "ai" && !aiCueMove) scheduleAIShot(300);
     return;
   }
@@ -7549,6 +7698,146 @@ function hexToRgb(hex){
 
 let lastLoopTime = null;
 
+/* =========================
+   BẮT BUỘC TOÀN MÀN HÌNH
+   Chỉ chơi được khi đang toàn màn hình (hoặc đã cài lên Màn hình chính). Thoát toàn màn hình thì game tạm dừng
+   và hiện lại màn chắn. iPhone Safari không có API toàn màn hình nên hướng dẫn cài lên Màn hình chính.
+   ========================= */
+
+const fsGate = document.getElementById("fsGate");
+const fsEnterBtn = document.getElementById("fsEnterBtn");
+const fsWindowedBtn = document.getElementById("fsWindowedBtn");
+const fsIosHelp = document.getElementById("fsIosHelp");
+const fsText = document.getElementById("fsText");
+
+let fsPaused = true;
+let fsPauseStart = performance.now();
+let fsWindowedOk = false;
+
+function fsElement(){
+  return document.fullscreenElement || document.webkitFullscreenElement || null;
+}
+
+function fsApiAvailable(){
+  const el = document.documentElement;
+
+  return !!(
+    (document.fullscreenEnabled || document.webkitFullscreenEnabled) &&
+    (el.requestFullscreen || el.webkitRequestFullscreen)
+  );
+}
+
+// Đã chạy như ứng dụng (Thêm vào Màn hình chính / PWA): luôn là toàn màn hình
+function fsStandalone(){
+  return window.navigator.standalone === true ||
+    (window.matchMedia && (
+      window.matchMedia("(display-mode: standalone)").matches ||
+      window.matchMedia("(display-mode: fullscreen)").matches
+    ));
+}
+
+function fsPlayable(){
+  return !!fsElement() || fsStandalone() || fsWindowedOk;
+}
+
+// Thời gian đã dừng không được tính vào đồng hồ lượt đánh, cú ngắm của AI...
+function fsShiftTimers(d){
+  if(typeof playerShotTimerStart === "number" && playerShotTimerStart) playerShotTimerStart += d;
+  if(aiCueMove) aiCueMove.start += d;
+  if(aiCueVisual) aiCueVisual.start += d;
+  if(aiCueAim) aiCueAim.start += d;
+  if(aiThinkingCue){
+    aiThinkingCue.start += d;
+    aiThinkingCue.lastRetarget += d;
+  }
+}
+
+function fsSetPaused(on){
+  if(on === fsPaused) return;
+
+  fsPaused = on;
+
+  if(on){
+    fsPauseStart = performance.now();
+    // Đang kéo/ngắm dở thì huỷ để không "kẹt" thao tác khi quay lại
+    isAiming = false;
+    powerDragging = false;
+    rulerDragging = false;
+  }else{
+    fsShiftTimers(performance.now() - fsPauseStart);
+    lastLoopTime = null;
+    aiIdleSince = performance.now();   // thời gian tạm dừng không tính là AI bị treo
+  }
+}
+
+function fsRefresh(){
+  const ok = fsPlayable();
+
+  fsGate.classList.toggle("hide", ok);
+  fsSetPaused(!ok);
+
+  if(ok) return;
+
+  const apiOk = fsApiAvailable();
+
+  fsEnterBtn.hidden = !apiOk;
+  fsIosHelp.hidden = apiOk;
+  fsWindowedBtn.hidden = apiOk;   // chỉ cho chơi tạm khi thiết bị không hỗ trợ toàn màn hình
+  fsText.innerHTML = apiOk
+    ? "Game phải chơi ở <b>chế độ toàn màn hình</b> để thấy trọn bàn và đủ chỗ ngắm, đánh lực, điều bi."
+    : "Game cần <b>toàn màn hình</b> để thấy trọn bàn.";
+}
+
+function fsEnter(){
+  const el = document.documentElement;
+  const req = el.requestFullscreen || el.webkitRequestFullscreen;
+
+  if(!req){
+    fsRefresh();
+    return;
+  }
+
+  let p;
+
+  try{
+    p = req.call(el, { navigationUI:"hide" });
+  }catch(e){
+    p = null;
+  }
+
+  // Bàn nằm ngang: khoá hướng ngang nếu trình duyệt cho phép (Android)
+  const lockLandscape = () => {
+    try{
+      if(screen.orientation && screen.orientation.lock){
+        const q = screen.orientation.lock("landscape");
+        if(q && q.catch) q.catch(() => {});
+      }
+    }catch(e){}
+  };
+
+  if(p && p.then){
+    p.then(lockLandscape).catch(() => {
+      // Trình duyệt từ chối: cho thử lại; nếu vẫn không được thì cho chơi tạm
+      fsText.innerHTML = "Trình duyệt không cho vào toàn màn hình. Bấm lại để thử, hoặc chơi tạm.";
+      fsWindowedBtn.hidden = false;
+    });
+  }else{
+    lockLandscape();
+  }
+
+  setTimeout(fsRefresh, 120);
+}
+
+fsEnterBtn.addEventListener("click", fsEnter);
+
+fsWindowedBtn.addEventListener("click", () => {
+  fsWindowedOk = true;
+  fsRefresh();
+});
+
+document.addEventListener("fullscreenchange", fsRefresh);
+document.addEventListener("webkitfullscreenchange", fsRefresh);
+
 /*
   Chốt an toàn cho lượt AI: nếu tới lượt AI, bi đã dừng mà AI không suy nghĩ, không ngắm, không kéo bi
   quá 4 giây (ví dụ một bộ hẹn giờ bị huỷ ngang) thì huỷ lượt tính cũ và cho AI đánh lại.
@@ -7581,6 +7870,13 @@ function loop(){
   const dt = lastLoopTime === null ? 1 : clamp((now - lastLoopTime) / (1000 / 60), 0, 3);
   lastLoopTime = now;
 
+  // Chưa toàn màn hình: chỉ vẽ lại bàn, mọi thứ khác đứng yên
+  if(fsPaused){
+    draw();
+    requestAnimationFrame(loop);
+    return;
+  }
+
   updateAICueBallMove();
   aiWatchdog();
   updateAimRulerSmooth();
@@ -7601,6 +7897,7 @@ draw();
   requestAnimationFrame(loop);
 }
 
+fsRefresh();
 loop();
 </script>
 <script src="aiengine.js"></script>

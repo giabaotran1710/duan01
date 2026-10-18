@@ -91,7 +91,7 @@ function aiTakeShot(){
   if(turn !== "ai") return;
   if(aiCueMove) return;
 
-  if(isMoving() || shotLocked){
+  if(isMoving() || shotLocked || (typeof fsPaused !== "undefined" && fsPaused)){
     scheduleAIShot(260);
     return;
   }
