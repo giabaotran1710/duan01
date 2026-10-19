@@ -9,6 +9,8 @@
    3. Các cú ghi điểm được chấm: độ chắc (lệch nhẹ góc/lực/xoáy vẫn ghi điểm), thế bi sau cú đánh
       (hai bi mục tiêu gần nhau, bi cái gần, không dính băng/dính bi), và số cú ghi điểm ở thế bi đó (nhìn trước 1 cú).
    4. Không có cú ghi điểm: đánh phòng thủ — chạm một bi và để đối thủ ở thế khó nhất.
+   Gài bi: 60% số lượt AI ưu tiên cú "gài" — để bi của đối thủ ở thế gần như không có cú ghi điểm
+   (đếm thật bằng mô phỏng các cú của đối thủ ở thế bi đó). Không gài được mới đánh cú ghi điểm chuẩn nhất.
    Tính theo từng lát nhỏ (AI_ENGINE.sliceMs/gapMs) để màn hình vẫn mượt.
    ========================================================= */
 
@@ -23,13 +25,17 @@ const CAROM_AI = {
   refine: 10,              // số cú tốt nhất được kiểm tra kỹ
   maxFrames: 1500,
   /* Sai số tay khi thực hiện cú đánh. AI tính cực chuẩn và luôn chọn cú "chắc" nên sai số nhỏ gần như không làm trượt:
-     không có sai số thì AI ghi điểm liên tục mãi. Vì vậy thỉnh thoảng (lapseChance) AI đánh lệch hẳn 1,3–2,8°.
-     Đo tự đấu: ghi điểm ~80% số cú, chuỗi trung bình ~4 điểm — rất giỏi nhưng vẫn có thể thắng được. */
-  aimNoiseDeg: 0.3,
-  powerNoise: 0.03,
-  lapseChance: 0.18,
+     không có sai số thì AI ghi điểm liên tục mãi. Vì vậy khá thường xuyên (lapseChance) AI đánh lệch hẳn 1,3–2,8°. */
+  aimNoiseDeg: 0.45,
+  powerNoise: 0.05,
+  lapseChance: 0.32,
   lapseMinDeg: 1.3,
-  lapseMaxDeg: 2.8
+  lapseMaxDeg: 2.8,
+
+  // Gài bi: tỉ lệ lượt ưu tiên gài; thế gài chỉ nhận khi đối thủ còn ≤ trapMaxOpp tỉ lệ cú ghi điểm dễ
+  trapChance: 0.6,
+  trapCands: 12,
+  trapMaxOpp: 0.05
 };
 
 // Số ngẫu nhiên phân bố chuẩn
@@ -162,6 +168,10 @@ function* caromPlanShot(started){
   const rule = { opening: caromOpening, zoneLock: caromZoneLock };
   const elapsed = () => performance.now() - started;
   const budget = CAROM_AI.budgetMs;
+  // Lượt gài bi (không áp dụng cho cú khai cuộc): bớt thời gian dò để còn thời gian chấm thế gài
+  const trapTurn = !rule.opening && Math.random() < CAROM_AI.trapChance;
+  const directEnd = trapTurn ? 0.42 : 0.55;
+  const bankEnd = trapTurn ? 0.56 : 0.75;
 
   const scorers = [];
   const misses = [];
@@ -193,7 +203,7 @@ function* caromPlanShot(started){
       }
     }
 
-    if(elapsed() > budget * 0.55) break;
+    if(elapsed() > budget * directEnd) break;
   }
 
   // 2. Cú băng trước nếu ít cú ghi điểm
@@ -201,7 +211,7 @@ function* caromPlanShot(started){
     const cue = state[cueIdx];
     const n = CAROM_AI.bankAngles;
 
-    for(let i = 0; i < n && elapsed() < budget * 0.75; i++){
+    for(let i = 0; i < n && elapsed() < budget * bankEnd; i++){
       const ang = (i + 0.5) * Math.PI * 2 / n;
       for(const p of CAROM_AI.bankPowers){
         for(const [sx, sy] of CAROM_AI.bankSpins){
@@ -212,9 +222,19 @@ function* caromPlanShot(started){
     }
   }
 
+  // Gài bi trước; không có cú ghi điểm nào thì cũng chọn cú phòng thủ theo cách chấm thế gài
+  if(trapTurn || !scorers.length){
+    const trap = yield* caromFindTrap(scorers, misses, state, cueIdx, rule, elapsed, budget * (scorers.length ? 0.95 : 1.2));
+
+    if(trap && (trap.ok || !scorers.length)) return caromFinal(trap, !trap.res.point, true);
+  }
+
   if(!scorers.length){
     return caromSafetyShot(misses, state, cueIdx, rule);
   }
+
+  // Lượt gài không thành: phần chấm kỹ cú ghi điểm được thêm thời gian
+  const refineBudget = trapTurn ? budget * 1.3 : budget;
 
   // 3. Chấm kỹ các cú tốt nhất: độ chắc + thế bi + nhìn trước 1 cú
   scorers.sort((a, b) => b.ease - a.ease);
@@ -248,10 +268,65 @@ function* caromPlanShot(started){
     s.score = s.robust * 3 + s.ease * 1.2 + s.next * 1.4 + (s.kind === "direct" ? 0.15 : 0);
 
     if(!best || s.score > best.score) best = s;
-    if(elapsed() > budget) break;
+    if(elapsed() > refineBudget) break;
   }
 
   return caromFinal(best || scorers[0]);
+}
+
+/* Cú gài: bi của đối thủ còn ít cú ghi điểm nhất ở thế bi để lại (đếm thật bằng mô phỏng),
+   cú vẫn ghi điểm được thì càng tốt. Kiểm tra thêm hai cú lệch nhẹ để thế gài không phải ăn may.
+   Trả về cú tốt nhất kèm ok = thế gài đủ khó. */
+function* caromFindTrap(scorers, misses, state, cueIdx, rule, elapsed, limit){
+  const oppIdx = state.findIndex((b, i) => i !== cueIdx && b.num !== CAROM.RED);
+  const cands = [];
+
+  for(const s of scorers.concat(misses)){
+    if(rule.opening && s.t.first && s.t.first.num !== CAROM.RED) continue;
+    if(s.oppEase === undefined) s.oppEase = caromOpponentEase(s.list, cueIdx);
+    s.pre = (1 - s.oppEase) + (s.res.point ? 0.25 : 0) + (s.t.hits.length ? 0.1 : 0);
+    cands.push(s);
+  }
+
+  if(!cands.length) return null;
+
+  cands.sort((a, b) => b.pre - a.pre);
+  const pool = caromPickDiverse(cands, CAROM_AI.trapCands);
+
+  for(const s of pool){
+    if(s !== pool[0] && elapsed() > limit * 0.8) break;
+    s.oppNext = caromCountNextScores(s.list, oppIdx);
+    s.trapScore = (1 - s.oppNext) * 2 + (1 - s.oppEase) * 0.5 + (s.res.point ? 0.4 : 0);
+    yield;
+  }
+
+  const scored = pool.filter(s => s.trapScore !== undefined).sort((a, b) => b.trapScore - a.trapScore);
+  let best = null;
+
+  for(const s of scored.slice(0, 3)){
+    if(best && elapsed() > limit) break;
+
+    let sum = s.oppNext;
+    let n = 1;
+
+    for(const [da, dp] of [[0.004, 0.05], [-0.004, -0.05]]){
+      const ang = s.ang + da;
+      const r = caromSimShot(state, cueIdx, { x: Math.cos(ang), y: Math.sin(ang) }, clamp(s.power * (1 + dp), 0.05, 1), s.spinX, s.spinY, rule);
+      yield;
+      sum += r.res.foul ? 1 : caromCountNextScores(r.list, oppIdx);
+      n++;
+      yield;
+    }
+
+    s.oppAvg = sum / n;
+    s.trapFinal = (1 - s.oppAvg) * 2 + (1 - s.oppEase) * 0.5 + (s.res.point ? 0.4 : 0);
+    if(!best || s.trapFinal > best.trapFinal) best = s;
+  }
+
+  if(!best) return null;
+
+  best.ok = best.oppAvg <= CAROM_AI.trapMaxOpp;
+  return best;
 }
 
 // Thứ tự "bit đảo": phủ đều cả dải trước rồi mới dày dần
@@ -330,13 +405,15 @@ function caromSafetyShot(misses, state, cueIdx, rule){
   return caromFinal({ ang, dir: { x: Math.cos(ang), y: Math.sin(ang) }, power: 0.35, spinX: 0, spinY: 0.2 }, true);
 }
 
-function caromFinal(s, safety = false){
+function caromFinal(s, safety = false, trap = false){
   return {
     dir: s.dir,
     power: s.power,
     spinX: s.spinX,
     spinY: s.spinY,
     safety,
+    trap,
+    oppNext: s.oppAvg,
     robust: s.robust,
     kind: s.kind
   };

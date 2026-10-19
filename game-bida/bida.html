@@ -283,6 +283,40 @@ canvas{
   box-shadow:0 3px 8px rgba(0,0,0,.55);
 }
 
+/* Tâm bi trên bảng áp phê: luôn nổi trên núm để thấy điểm đặt cơ lệch tâm bao nhiêu */
+#spinCenter{
+  position:absolute;
+  left:50%;
+  top:50%;
+  width:16px;
+  height:16px;
+  transform:translate(-50%,-50%);
+  pointer-events:none;
+  z-index:2;
+}
+
+#spinCenter::before,
+#spinCenter::after{
+  content:"";
+  position:absolute;
+  background:rgba(120,10,20,.75);
+}
+
+#spinCenter::before{ left:7px; top:0; width:2px; height:16px; }
+#spinCenter::after{ top:7px; left:0; width:16px; height:2px; }
+
+#spinCenter i{
+  position:absolute;
+  left:4px;
+  top:4px;
+  width:8px;
+  height:8px;
+  border-radius:50%;
+  background:#e0182c;
+  box-shadow:0 0 0 1.5px #fff,0 0 0 3px rgba(0,0,0,.4);
+  z-index:1;
+}
+
 .spinLabel{
   position:absolute;
   font-size:10px;
@@ -1570,7 +1604,7 @@ canvas{
     <div id="spinTitle">ÁP PHÊ</div>
     <div id="spinPad">
       <div id="spinKnob"></div>
-      
+      <div id="spinCenter"><i></i></div>
     </div>
     <div id="spinValue">Trái/Phải: 0 · Thuận/Nghịch: 0</div>
   </div>
@@ -4186,8 +4220,11 @@ function drawAICueStick(){
   if(isMoving()) return;
 
   const dir = aiCueAim.dir;
-  const startX = cueBall.x;
-  const startY = cueBall.y;
+  const side = clamp(spin.x, -1, 1) * CUE_SIDE_SHIFT;
+  const startX = cueBall.x - dir.y * side;
+  const startY = cueBall.y + dir.x * side;
+
+  cueMarkDir = dir;
 
   const now = performance.now();
   const t = clamp((now - aiCueAim.start) / aiCueAim.duration, 0, 1);
@@ -7716,12 +7753,30 @@ kind: "object"
     "rgba(255,255,255,.82)"
   );
 }
+// Điểm đặt đầu cơ theo bảng áp phê: áp phê dịch cả cây cơ sang ngang (vuông góc đường cơ),
+// culê/retro làm đầu cơ chồm sát tâm bi — culê nằm trên bi, retro luồn xuống dưới bi.
+const CUE_SIDE_SHIFT = BALL_R * 0.62;
+
+// Hướng cây cơ vẽ gần nhất trên bàn chính (để dấu điểm chạm trên bi cái nằm đúng chỗ đầu cơ)
+let cueMarkDir = null;
+
 function drawCueStick(cueX, cueY, dir, options = {}){
   const isAI = options.isAI || false;
   const pullBack = options.pullBack || 0;
 
+  const ballX = cueX;
+  const ballY = cueY;
+  const lift = clamp(spin.y, -1, 1);
+  const reach = Math.abs(lift);
+  const side = clamp(spin.x, -1, 1) * CUE_SIDE_SHIFT;
+
+  if(ctx.canvas === canvas) cueMarkDir = dir;
+
+  cueX += -dir.y * side;
+  cueY += dir.x * side;
+
   const cueLength = BALL_R * 24;
-  const tipGap = BALL_R + 10 + pullBack;
+  const tipGap = BALL_R * (1 - 0.55 * reach) + 10 * (1 - reach) + pullBack;
 
   const tipX = cueX - dir.x * tipGap;
   const tipY = cueY - dir.y * tipGap;
@@ -7738,11 +7793,14 @@ function drawCueStick(cueX, cueY, dir, options = {}){
   const px = -dir.y;
   const py = dir.x;
 
-  // Độ dày tăng dần: đầu nhỏ -> thân vừa -> đuôi lớn
-  const tipW = 3.2;
-  const frontW = 5.4;
-  const midW = 8.6;
-  const buttW = 14;
+  // Độ dày tăng dần: đầu nhỏ -> thân vừa -> đuôi lớn.
+  // Phối cảnh: cơ nâng cao (culê) to hơn, bóng đổ xa hơn; cơ hạ thấp (retro) nhỏ hơn, bóng sát mặt bàn.
+  const wk = 1 + lift * 0.12;
+  const tipW = 3.2 * wk;
+  const frontW = 5.4 * wk;
+  const midW = 8.6 * wk;
+  const buttW = 14 * wk;
+  const shadowOff = 5 + lift * 4;
 
   const cueGrad = ctx.createLinearGradient(tipX, tipY, endX, endY);
 
@@ -7760,24 +7818,41 @@ function drawCueStick(cueX, cueY, dir, options = {}){
 
   ctx.save();
 
+  // Retro: cây cơ luồn dưới bi cái — không vẽ phần nằm trong hình bi
+  if(lift < -0.05){
+    ctx.beginPath();
+    ctx.rect(ballX - VW * 2, ballY - VW * 2, VW * 4, VW * 4);
+    ctx.arc(ballX, ballY, BALL_R, 0, Math.PI * 2);
+    ctx.clip("evenodd");
+  }
+
+  const shaft = (ox, oy) => {
+    ctx.beginPath();
+
+    ctx.moveTo(tipX + px * tipW / 2 + ox, tipY + py * tipW / 2 + oy);
+    ctx.lineTo(frontX + px * frontW / 2 + ox, frontY + py * frontW / 2 + oy);
+    ctx.lineTo(midX + px * midW / 2 + ox, midY + py * midW / 2 + oy);
+    ctx.lineTo(endX + px * buttW / 2 + ox, endY + py * buttW / 2 + oy);
+
+    ctx.lineTo(endX - px * buttW / 2 + ox, endY - py * buttW / 2 + oy);
+    ctx.lineTo(midX - px * midW / 2 + ox, midY - py * midW / 2 + oy);
+    ctx.lineTo(frontX - px * frontW / 2 + ox, frontY - py * frontW / 2 + oy);
+    ctx.lineTo(tipX - px * tipW / 2 + ox, tipY - py * tipW / 2 + oy);
+
+    ctx.closePath();
+  };
+
+  // Bóng cây cơ trên mặt bàn
+  ctx.fillStyle = "rgba(0,0,0,.24)";
+  shaft(shadowOff * 0.7, shadowOff);
+  ctx.fill();
+
   ctx.shadowColor = "rgba(0,0,0,.45)";
   ctx.shadowBlur = 5;
 
   // Thân cơ thuôn dài
   ctx.fillStyle = cueGrad;
-  ctx.beginPath();
-
-  ctx.moveTo(tipX + px * tipW / 2, tipY + py * tipW / 2);
-  ctx.lineTo(frontX + px * frontW / 2, frontY + py * frontW / 2);
-  ctx.lineTo(midX + px * midW / 2, midY + py * midW / 2);
-  ctx.lineTo(endX + px * buttW / 2, endY + py * buttW / 2);
-
-  ctx.lineTo(endX - px * buttW / 2, endY - py * buttW / 2);
-  ctx.lineTo(midX - px * midW / 2, midY - py * midW / 2);
-  ctx.lineTo(frontX - px * frontW / 2, frontY - py * frontW / 2);
-  ctx.lineTo(tipX - px * tipW / 2, tipY - py * tipW / 2);
-
-  ctx.closePath();
+  shaft(0, 0);
   ctx.fill();
 
   // Viền mỏng giúp cây cơ sắc hơn
@@ -7949,7 +8024,7 @@ stopAIThinkingCueMotion();
     duration
   };
 
-  setMessage("AI.GiaBao đang ngắm...");
+  setMessage(shot.trap ? "AI.GiaBao ngắm cú gài bi..." : "AI.GiaBao đang ngắm...");
 
   aiTimer = setTimeout(() => {
     if(gameOver || turn !== "ai"){
@@ -8121,10 +8196,24 @@ function drawBalls(){
 
 // Dấu điểm chạm cơ (áp phê) trên bi cái đang đánh
 function drawSpinMark(b, face){
+  let mx = spin.x * 8;
+  let my = -spin.y * 8;
+  const d = cueMarkDir;
+
+  // Đã có hướng cơ: chấm nằm đúng chỗ đầu cơ chạm trên mặt bi (nhìn từ trên xuống), thẳng hàng với đầu cơ
+  if(d){
+    const L = clamp(spin.x, -1, 1) * CUE_SIDE_SHIFT;
+    const H = clamp(spin.y, -1, 1) * CUE_SIDE_SHIFT;
+    const depth = Math.sqrt(Math.max(0, BALL_R * BALL_R - L * L - H * H)) * 0.78;
+
+    mx = -d.x * depth - d.y * L;
+    my = -d.y * depth + d.x * L;
+  }
+
   ctx.save();
   ctx.translate(
-    b.x + spin.x * 8 + face.x * 0.65,
-    b.y - spin.y * 8 + face.y * 0.65
+    b.x + mx + face.x * 0.65,
+    b.y + my + face.y * 0.65
   );
   ctx.scale(face.scale, face.scale * face.squash);
   ctx.globalAlpha = face.alpha * 0.75;
@@ -8605,8 +8694,8 @@ fsRefresh();
 loop();
 </script>
 <script src="carom.js?v=20261020"></script>
-<script src="aiengine.js?v=20261020"></script>
-<script src="aicarom.js?v=20261020"></script>
+<script src="aiengine.js?v=20261021"></script>
+<script src="aicarom.js?v=20261021"></script>
 <script src="menu.js?v=20261020"></script>
 </body>
 </html>

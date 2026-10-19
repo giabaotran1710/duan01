@@ -68,7 +68,23 @@ randomPowerMinPct: 30,
 randomPowerMaxPct: 99,
 
   // Nếu true: AI ưu tiên cú trực tiếp trước, rồi mới A băng.
-  preferDirect: true
+  preferDirect: true,
+
+  /* Gài bi: trapChance số lượt AI ưu tiên cú gài — chạm đúng bi, hợp lệ, để bi cái đối thủ không có cú ăn thẳng
+     (tốt nhất là bị che hẳn). Không gài được mới đánh cú ăn chuẩn. Không có cú ăn thì cũng chọn cú gài làm cú an toàn. */
+  trapChance: 0.6,
+  trapBudgetMs: 1500,
+  trapThick: [-0.85, -0.6, -0.35, -0.12, 0, 0.12, 0.35, 0.6, 0.85],
+  trapPowers: [0.2, 0.3, 0.42, 0.56],
+  trapSpins: [{x:0, y:0}, {x:0, y:-0.55}, {x:0, y:0.5}],
+
+  /* Sai số tay: AI ngắm vào giữa khoảng góc vẫn vào lỗ nên sai số nhỏ hiếm khi làm trượt;
+     thỉnh thoảng (lapseChance) AI đánh lệch hẳn lapseMin–lapseMaxDeg độ. */
+  aimNoiseDeg: 0.18,
+  powerNoise: 0.035,
+  lapseChance: 0.2,
+  lapseMinDeg: 0.6,
+  lapseMaxDeg: 1.4
 };
 
 const AI_THINKER = {
@@ -128,7 +144,30 @@ function aiTakeShot(){
       return;
     }
 
-    showAICueAndShoot(bestShot, AI_ENGINE.previewMs);
+    showAICueAndShoot(AI_applyExecutionNoise(bestShot), AI_ENGINE.previewMs);
+  });
+}
+
+function AI_gauss(){
+  let u = 0;
+  let v = 0;
+  while(u === 0) u = Math.random();
+  while(v === 0) v = Math.random();
+  return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+}
+
+// Sai số tay khi thực hiện cú đánh (cú phá bi không đi qua đây)
+function AI_applyExecutionNoise(shot){
+  if(!shot || !shot.dir) return shot;
+
+  const E = AI_ENGINE;
+  const deg = Math.random() < E.lapseChance
+    ? (Math.random() < 0.5 ? -1 : 1) * (E.lapseMinDeg + Math.random() * (E.lapseMaxDeg - E.lapseMinDeg))
+    : E.aimNoiseDeg * AI_gauss();
+
+  return Object.assign({}, shot, {
+    dir: AI_rotate(shot.dir, deg * AI_DEG),
+    power: AI_clamp(shot.power * (1 + E.powerNoise * AI_gauss()), 0.05, 1)
   });
 }
 
@@ -193,7 +232,8 @@ function startAIThinkSearch(done){
       rồi tìm hai mép của khoảng góc vẫn vào lỗ và ngắm vào giữa (chắc chắn nhất).
    3. Kỹ thuật điều bi: thử culê / retro / bi dừng / áp phê với vài mức lực; giữ cú vẫn vào lỗ
       và bi cái dừng ở chỗ có cú tiếp theo tốt nhất.
-   4. Không có cú ăn trực tiếp: dò quét (chạm bi khác, A băng); vẫn không có thì A băng an toàn chạm đúng bi.
+   4. Không có cú ăn trực tiếp: dò quét (chạm bi khác, A băng); vẫn không có thì đánh gài (cú an toàn để đối thủ khó nhất).
+   Trước tất cả: trapChance số lượt AI thử gài bi trước (xem GÀI BI), gài được thì không đánh ăn.
    ========================= */
 
 const AI_DEG = Math.PI / 180;
@@ -208,6 +248,15 @@ function* AI_planShot(started){
   const targets = getAITargetBalls();
 
   if(!targets.length) return findAISafeFallbackShot();
+
+  // Lượt gài bi: có thế gài đủ khó thì đánh gài; không thì đánh cú ăn chuẩn với đủ thời gian như thường
+  let trap = null;
+
+  if(Math.random() < AI_ENGINE.trapChance){
+    trap = yield* AI_findTrapShot(started, AI_ENGINE.trapBudgetMs);
+    if(trap && trap.ok) return AI_finalizeTrap(trap);
+    started = performance.now();
+  }
 
   const nowTarget = getCurrentTarget("ai");
   const cands = AI_potCandidates({ x: cueBall.x, y: cueBall.y }, balls, targets)
@@ -236,6 +285,10 @@ function* AI_planShot(started){
 
   const scan = yield* AI_scanForPot(targets, started);
   if(scan) return scan;
+
+  // Không có cú ăn: chọn cú an toàn để đối thủ khó nhất (cú gài) thay vì cú chạm bất kỳ
+  if(!trap) trap = yield* AI_findTrapShot(performance.now(), AI_ENGINE.trapBudgetMs);
+  if(trap) return AI_finalizeTrap(trap);
 
   setMessage("AI không thấy cú ăn bi · chuyển sang A băng chạm bi", true);
 
@@ -528,6 +581,292 @@ function* AI_scanSafeContact(targets, started){
   }
 
   return null;
+}
+
+/* =========================
+   GÀI BI
+   Cú chạm hợp lệ (đúng bi trước, sau va chạm có bi chạm băng hoặc vào lỗ, bi cái không rơi)
+   để bi cái của đối thủ không còn cú ăn thẳng nào — tốt nhất là bị che hẳn (phải đánh băng, dễ phạm lỗi).
+   ========================= */
+
+// Mô phỏng giống bàn thật (như simulateDeveloperPhysicsPrediction) và ghi lại những gì luật cần xét
+function AI_simTrap(dir, power, spin){
+  const list = balls.map(b => ({
+    num: b.num,
+    type: b.type,
+    x: b.x,
+    y: b.y,
+    vx: 0, vy: 0, rx: 0, ry: 0, sz: 0,
+    active: b.active,
+    potted: b.potted
+  }));
+  const cue = list.find(b => b.num === 0);
+  const out = { list, firstHit: null, railAfter: false, potted: [], scratch: false };
+
+  if(!cue || !cue.active){
+    out.scratch = true;
+    return out;
+  }
+
+  strikeCueBall(cue, dir, power, spin);
+
+  const onContact = (a, b) => {
+    if(out.firstHit) return;
+    const hit = a.num === 0 && b.num !== 0 ? b : b.num === 0 && a.num !== 0 ? a : null;
+    if(hit) out.firstHit = hit;
+  };
+
+  const edge = b => {
+    const pocket = handleDeveloperSimPocket(b);
+
+    if(pocket){
+      if(b.num === 0) out.scratch = true;
+      else out.potted.push(b);
+      return;
+    }
+
+    const jaw = applyCornerPocketJaws(b, false) | applySidePocketMiddleJaws(b);
+    const rail = handleDeveloperSimRail(b);
+
+    if(out.firstHit && (jaw || rail)) out.railAfter = true;
+  };
+
+  for(let frame = 0; frame < 900 && !out.scratch; frame++){
+    let maxSpeed = 0;
+
+    for(const b of list){
+      if(!b.active) continue;
+      limitDeveloperSimBallSpeed(b);
+      maxSpeed = Math.max(maxSpeed, Math.hypot(b.vx, b.vy), Math.hypot(b.rx, b.ry));
+    }
+
+    if(frame > 0 && !list.some(isBallMoving)) break;
+
+    const steps = AI_clamp(Math.ceil(maxSpeed / (BALL_R * 0.22)), 2, 24);
+
+    for(let s = 0; s < steps; s++){
+      for(const b of list){
+        if(!b.active || ballIsResting(b)) continue;
+
+        clothStep(b, 1 / steps);
+        limitDeveloperSimBallSpeed(b);
+        if(ballNearEdge(b)) edge(b);
+      }
+
+      resolveBallContacts(list, onContact);
+
+      for(const b of list){
+        if(!b.active || ballIsResting(b) || !ballNearEdge(b)) continue;
+
+        edge(b);
+        if(b.active) limitDeveloperSimBallSpeed(b);
+      }
+    }
+  }
+
+  return out;
+}
+
+// Bi mục tiêu của một bên trên thế bi list
+function AI_targetsOn(list, side){
+  const g = groups[side];
+
+  if(!g) return list.filter(b => b.active && (b.type === "solid" || b.type === "stripe"));
+
+  const own = list.filter(b => b.active && b.type === g);
+  return own.length ? own : list.filter(b => b.active && b.num === 8);
+}
+
+// Cú gài có hợp lệ theo đúng luật finishShot không (bi số 8 không được rơi)
+function AI_trapLegal(r, target){
+  if(r.scratch || !r.firstHit) return false;
+
+  const f = r.firstHit;
+
+  if(target === "black"){
+    if(f.num !== 8) return false;
+  }else if(target === "open"){
+    if(f.num === 8) return false;
+  }else if(f.type !== target){
+    return false;
+  }
+
+  if(r.potted.some(b => b.num === 8)) return false;
+
+  return r.potted.length > 0 || r.railAfter;
+}
+
+// Thế bi để lại cho đối thủ: càng khó càng cao
+function AI_trapLeave(list){
+  const cue = list.find(b => b.num === 0);
+  const targets = AI_targetsOn(list, "player");
+
+  if(!cue || !cue.active || !targets.length) return { s: -5000, visible: 9, pots: 9 };
+
+  let visible = 0;
+  let nearest = Infinity;
+
+  for(const t of targets){
+    const d = AI_dist(cue.x, cue.y, t.x, t.y);
+    nearest = Math.min(nearest, d);
+    if(d < BALL_R * 2.2){ visible++; continue; }
+
+    // Nhìn thấy được một phần bi (chạm dày, chạm mỏng hai bên) là đánh thẳng được
+    const px = -(t.y - cue.y) / d;
+    const py = (t.x - cue.x) / d;
+
+    for(const o of [0, -1.2, 1.2]){
+      const ex = t.x + px * o * BALL_R;
+      const ey = t.y + py * o * BALL_R;
+
+      if(AI_segmentClear(list, cue.x, cue.y, ex, ey, [0, t.num], BALL_R * 2)){
+        visible++;
+        break;
+      }
+    }
+  }
+
+  const pots = AI_potCandidates(cue, list, targets);
+  let s = 0;
+
+  s += visible ? -Math.min(visible, 4) * 140 : 2600;
+  s += pots.length ? -(Math.max(0, pots[0].score - 7600) * 0.9 + Math.min(pots.length, 5) * 160) : 1600;
+
+  const m = CUSHION_THICKNESS + BALL_R * 1.3;
+  if(cue.x < table.x + m || cue.x > table.x + table.w - m || cue.y < table.y + m || cue.y > table.y + table.h - m){
+    s += 260;
+  }
+
+  s += Math.min(nearest, 700) * 0.5;
+
+  return { s, visible, pots: pots.length };
+}
+
+function AI_trapOwnPotted(r, target){
+  if(target === "open") return r.potted.some(b => b.type === "solid" || b.type === "stripe");
+  return r.potted.some(b => b.type === target);
+}
+
+function* AI_findTrapShot(started, limit){
+  const target = getCurrentTarget("ai");
+  const targets = getAITargetBalls();
+  const E = AI_ENGINE;
+  const elapsed = () => performance.now() - started;
+
+  if(!targets.length || !cueBall || !cueBall.active) return null;
+
+  const shuffle = a => {
+    for(let i = a.length - 1; i > 0; i--){
+      const j = Math.floor(Math.random() * (i + 1));
+      [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+  };
+
+  // Chạm thẳng: mỗi bi mục tiêu × độ dày × lực × xoáy; bi bị che thì thêm vài cú A băng
+  const direct = [];
+  const kicks = [];
+
+  for(const t of targets){
+    const d = AI_dist(cueBall.x, cueBall.y, t.x, t.y);
+    if(d < BALL_R * 2.2) continue;
+
+    const base = Math.atan2(t.y - cueBall.y, t.x - cueBall.x);
+
+    for(const b of E.trapThick){
+      const ang = base + Math.asin(AI_clamp(b * BALL_R * 2 / d, -1, 1));
+      for(const p of E.trapPowers){
+        for(const sp of E.trapSpins) direct.push({ ang, power: p, spin: sp, t });
+      }
+    }
+
+    if(!AI_segmentClear(balls, cueBall.x, cueBall.y, t.x, t.y, [0, t.num], BALL_R * 2)){
+      for(const a of AI_buildKickAnglesToTarget(t, 13)){
+        for(const p of [0.4, 0.56]) kicks.push({ ang: a, power: p, spin: { x: 0, y: 0 }, t });
+      }
+    }
+  }
+
+  const tries = shuffle(direct).concat(shuffle(kicks));
+  const found = [];
+
+  for(const tr of tries){
+    if(elapsed() > limit) break;
+
+    const dir = { x: Math.cos(tr.ang), y: Math.sin(tr.ang) };
+    const r = AI_simTrap(dir, tr.power, tr.spin);
+    yield;
+
+    if(!AI_trapLegal(r, target)) continue;
+
+    const leave = AI_trapLeave(r.list);
+    const own = AI_trapOwnPotted(r, target);
+
+    found.push(Object.assign({}, tr, { dir, leave, own, score: leave.s + (own ? 900 : 0) }));
+  }
+
+  if(!found.length) return null;
+
+  found.sort((a, b) => b.score - a.score);
+
+  // Kiểm tra lệch nhẹ góc/lực: vẫn hợp lệ và vẫn để đối thủ khó (không phải thế gài ăn may)
+  let best = null;
+
+  for(const f of found.slice(0, 4)){
+    if(best && elapsed() > limit * 1.3) break;
+
+    let legal = true;
+    let zero = 0;
+    let sum = f.leave.s;
+
+    for(const [da, dp] of [[0.35, 0.05], [-0.35, -0.05]]){
+      const a = f.ang + da * AI_DEG;
+      const r = AI_simTrap({ x: Math.cos(a), y: Math.sin(a) }, AI_clamp(f.power * (1 + dp), 0.08, 1), f.spin);
+      yield;
+
+      if(!AI_trapLegal(r, target)){
+        legal = false;
+        break;
+      }
+
+      const lv = AI_trapLeave(r.list);
+      sum += lv.s;
+      if(!lv.pots) zero++;
+    }
+
+    if(!legal) continue;
+
+    f.ok = f.leave.pots === 0 && zero >= 1;
+    f.final = sum / 3 + (f.own ? 900 : 0) + (f.ok ? 100000 : 0);
+
+    if(!best || f.final > best.final) best = f;
+  }
+
+  return best || Object.assign(found[0], { ok: false });
+}
+
+function AI_finalizeTrap(f){
+  setMessage(
+    f.leave.visible === 0
+      ? `AI gài bi: chạm bi ${f.t.num}, giấu bi cái sau bi khác · lực ${Math.round(f.power * 100)}%`
+      : `AI gài bi: chạm bi ${f.t.num}, để đối thủ không có cú ăn · lực ${Math.round(f.power * 100)}%`,
+    true
+  );
+
+  return {
+    dir: f.dir,
+    power: f.power,
+    spinX: f.spin.x,
+    spinY: f.spin.y,
+    trap: true,
+    meta: {
+      mode: "trap",
+      targetNum: f.t.num,
+      leave: f.leave,
+      ok: !!f.ok,
+      technique: AI_describeSpin(f.spin)
+    }
+  };
 }
 
 function AI_describeSpin(sp){
