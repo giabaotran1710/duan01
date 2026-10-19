@@ -1,17 +1,20 @@
 /* =========================================================
    REPLAY 3D (three.js) — dựng lại bàn bida và phát lại cú đánh đã ghi như truyền hình:
    1. Góc nhìn thứ nhất: mắt người đánh sau cây cơ; cơ ngắm, thụt rồi đánh đúng điểm đặt đầu cơ (áp phê, culê, retro).
-   2. Bám bi: camera bay theo bi quan trọng khi đường đi dài.
-   3. Cận cảnh, quay chậm: camera sau miệng lỗ nhìn bi lăn vào (bida lỗ) / sát điểm ghi điểm (bida phăng).
-   4. Toàn cảnh: máy quay chính nhìn chéo từ cạnh bàn, lia nhẹ tới khi bi dừng.
+   2. Bám bi: camera bay theo bi quan trọng (bi rơi lỗ / bi cái ghi điểm), quay chậm lúc bi vào lỗ hay ghi điểm.
+   3. Toàn cảnh: máy quay chính nhìn chéo từ cạnh bàn, lia nhẹ tới khi bi dừng.
+   Cả replay phát chậm hơn thật một chút để dễ xem.
    Toạ độ: x của bàn → X, y của bàn → Z, chiều cao → Y (đơn vị: điểm ảnh ảo của bàn, tâm bàn ở gốc).
    ========================================================= */
 
 import * as THREE from "./vendor/three.module.min.js";
 
-const PRELUDE = 1.25;   // giây: cơ ngắm, thụt, đánh
-const HOLD = 0.6;       // giây giữ khung cuối
-const SLOW = 0.32;      // tốc độ quay chậm
+const PRELUDE = 1.8;    // giây: cơ ngắm (3 nhịp thụt), lấy đà, đánh
+const HOLD = 1.2;       // giây giữ khung cuối
+const BASE = 0.8;       // tốc độ phát thường (chậm hơn thật một chút)
+const SLOW = 0.3;       // tốc độ quay chậm lúc bi vào lỗ / ghi điểm
+const TAIL = 0.9;       // tốc độ đoạn cuối (bi chạy nốt rồi dừng)
+const MAX_LEN = 16;     // giây: replay dài nhất
 const UP = new THREE.Vector3(0, 1, 0);
 
 export function createReplayPlayer(canvas, env){
@@ -711,14 +714,17 @@ class ReplayPlayer{
     let gap;
     const back = 40 + c.power * 110;
 
+    const aim = PRELUDE - 0.45;   // hết các nhịp thụt ngắm
+    const swing = PRELUDE - 0.2;  // lấy đà xong, bắt đầu đẩy cơ
+
     if(tau < PRELUDE){
-      if(tau < 0.8){
-        gap = 30 + 14 * (1 - Math.cos(tau / 0.4 * Math.PI * 2)) / 2;
-      }else if(tau < 1.05){
-        const u = (tau - 0.8) / 0.25;
+      if(tau < aim){
+        gap = 30 + 14 * (1 - Math.cos(tau / 0.45 * Math.PI * 2)) / 2;
+      }else if(tau < swing){
+        const u = (tau - aim) / (swing - aim);
         gap = 30 + (back - 30) * (1 - (1 - u) * (1 - u));
       }else{
-        const u = clamp01((tau - 1.05) / (PRELUDE - 1.05));
+        const u = clamp01((tau - swing) / (PRELUDE - swing));
         gap = back * (1 - u * u);
       }
     }else{
@@ -737,31 +743,50 @@ class ReplayPlayer{
     const T = t[t.length - 1];
     const tFirst = clip.tFirst >= 0 ? clip.tFirst : Math.min(T, 20);
     const tKey = clip.tKey >= 0 ? Math.max(clip.tKey, tFirst) : tFirst;
-    const tStop = Math.max(Math.min(T, tKey + 150), Math.min(T, tFirst + 30));
+    // Phát tới khi bi dừng hẳn (tối đa 5 giây sau thời điểm then chốt)
+    const tStop = Math.max(Math.min(T, tKey + 300), Math.min(T, tFirst + 40));
 
-    let slow0 = Math.max(tFirst + 3, tKey - 26);
-    let slow1 = Math.min(tStop, tKey + 16);
-    if(slow1 - slow0 < 8){
-      slow0 = Math.max(0, tKey - 12);
-      slow1 = Math.min(tStop, tKey + 12);
+    // Quay chậm bắt đầu trước thời điểm then chốt (cú ăn quá gần thì chậm ngay từ lúc chạm)
+    let slow0 = Math.max(0, Math.min(Math.max(tFirst + 3, tKey - 32), tKey - 6));
+    let slow1 = Math.min(tStop, tKey + 22);
+    if(slow1 - slow0 < 10){
+      slow0 = Math.max(0, tKey - 14);
+      slow1 = Math.min(tStop, tKey + 14);
     }
 
+    // Đoạn cuối phát chậm vừa phải, nhưng cả replay không dài quá MAX_LEN giây
+    const head = PRELUDE + slow0 / (60 * BASE) + (slow1 - slow0) / (60 * SLOW) + HOLD;
+    const tail = Math.max(TAIL, (tStop - slow1) / (60 * Math.max(1.5, MAX_LEN - head)));
+
     this.segs = [];
-    const add = (a, b, sp) => {
-      if(b > a) this.segs.push({ a, b, sp, d: (b - a) / (60 * sp) });
+    const add = (a, b, sp, slow = false) => {
+      if(b > a) this.segs.push({ a, b, sp, slow, d: (b - a) / (60 * sp) });
     };
-    add(0, slow0, 1);
-    add(slow0, slow1, SLOW);
-    add(slow1, tStop, tStop - slow1 > 110 ? 1.6 : 1);
+    add(0, slow0, BASE);
+    add(slow0, slow1, SLOW, true);
+    add(slow1, tStop, tail);
 
     this.tStop = tStop;
     this.total = PRELUDE + this.segs.reduce((n, g) => n + g.d, 0) + HOLD;
 
-    const aEnd = Math.min(Math.max(tFirst + 16, 22), slow0);
+    // Góc thứ nhất tới ngay sau cú chạm đầu → bám bi (qua cả đoạn quay chậm) → toàn cảnh
+    const aEnd = Math.max(tFirst + 24, 30);
+    const wideFrom = Math.min(slow1 + 36, tStop);
     this.cuts = [{ from: -1, cam: "fpv" }];
-    if(slow0 - aEnd > 45) this.cuts.push({ from: aEnd, cam: "chase" });
-    this.cuts.push({ from: slow0, cam: "close" });
-    this.cuts.push({ from: Math.min(slow1 + 24, tStop), cam: "wide" });
+    if(wideFrom - aEnd > 20) this.cuts.push({ from: aEnd, cam: "chase" });
+    this.cuts.push({ from: wideFrom, cam: "wide" });
+
+    // Bida lỗ: bám bi cái tới khi bi sẽ rơi lỗ bắt đầu chạy, rồi bám bi đó
+    this.keyMove = Infinity;
+    if(clip.mode !== "carom" && clip.keyIdx >= 0){
+      const k = clip.keyIdx;
+      for(let f = 1; f < t.length; f++){
+        if(Math.hypot(clip.xs[f][k] - clip.xs[0][k], clip.ys[f][k] - clip.ys[0][k]) > 1){
+          this.keyMove = t[f - 1];
+          break;
+        }
+      }
+    }
 
     this.tFirst = tFirst;
     this.tKey = tKey;
@@ -772,7 +797,7 @@ class ReplayPlayer{
 
     let x = tau - PRELUDE;
     for(const g of this.segs){
-      if(x < g.d) return { s: g.a + x * 60 * g.sp, slow: g.sp < 1 };
+      if(x < g.d) return { s: g.a + x * 60 * g.sp, slow: g.slow };
       x -= g.d;
     }
 
@@ -802,7 +827,7 @@ class ReplayPlayer{
       const x0 = c.xs[0][i];
       const y0 = c.ys[0][i];
       const D = c.dir;
-      const push = tau < PRELUDE ? tau * 8 : 10 + Math.min(1, s / 50) * 70;
+      const push = tau < PRELUDE ? tau / PRELUDE * 10 : 10 + Math.min(1, s / 50) * 70;
       const eye = this.v3(x0 - D.x * (205 - push), y0 - D.y * (205 - push), 64 - push * 0.15);
       let look = this.v3(x0 + D.x * 330, y0 + D.y * 330, R * 0.5);
 
@@ -815,7 +840,9 @@ class ReplayPlayer{
       cm.position.copy(eye);
       cm.lookAt(this.follow("look", look, dt, 6));
     }else if(cam === "chase"){
-      const i = c.mode === "carom" || c.keyIdx < 0 ? c.cueIdx : c.keyIdx;
+      const i = s >= this.keyMove ? c.keyIdx : c.cueIdx;
+      const pot = this.pots[i];
+      const potted = pot && s > pot.t;
       const p = this.posAt(i, s);
       const v = this.velAt(i, s);
       const sp = Math.hypot(v.x, v.y);
@@ -823,65 +850,12 @@ class ReplayPlayer{
       const d = st.dir;
 
       const eye = this.v3(p.x - d.x * 210, p.y - d.y * 210, 125);
-      const look = this.v3(p.x + d.x * 150, p.y + d.y * 150, R);
+      // Bi đã lọt lỗ: nhìn xuống miệng lỗ
+      const look = potted ? this.v3(pot.px, pot.py, 0) : this.v3(p.x + d.x * 110, p.y + d.y * 110, R);
 
       cm.fov = 44;
-      cm.position.copy(this.follow("eye", eye, dt, 3.5));
-      cm.lookAt(this.follow("look", look, dt, 5));
-    }else if(cam === "close"){
-      if(c.mode !== "carom" && c.keyPocket){
-        // Camera sau miệng lỗ, nhìn bi lăn tới rồi rơi xuống
-        const P = c.keyPocket;
-        let nx = this.cx - P.x;
-        let ny = this.cz - P.y;
-        if(P.type === "side") nx = 0;
-        const nl = Math.hypot(nx, ny) || 1;
-        nx /= nl;
-        ny /= nl;
-
-        const eye = this.v3(P.x - nx * 170, P.y - ny * 170, 50);
-        const kp = this.posAt(c.keyIdx, Math.min(s, this.tKey));
-        const dropped = s > this.tKey + 4;
-        const look = dropped ? this.v3(P.x + nx * 90, P.y + ny * 90, 0) : this.v3(kp.x, kp.y, R * 0.8);
-
-        cm.fov = 32;
-        cm.position.copy(eye);
-        cm.lookAt(this.follow("look", look, dt, 7));
-      }else{
-        // Bida phăng: đặt máy sát điểm ghi điểm, nhìn ngang bi
-        if(!st.close){
-          const k = Math.max(0, c.keyIdx);
-          const C = this.posAt(k, this.tKey);
-          const a = this.posAt(c.cueIdx, Math.max(0, this.tKey - 6));
-          const b = this.posAt(c.cueIdx, this.tKey);
-          let ux = b.x - a.x;
-          let uy = b.y - a.y;
-          const ul = Math.hypot(ux, uy) || 1;
-          ux /= ul;
-          uy /= ul;
-
-          let px = -uy;
-          let py = ux;
-          const T = this.env.table;
-          const ex = C.x + px * 200;
-          const ey = C.y + py * 200;
-          if(ex < T.x + 40 || ex > T.x + T.w - 40 || ey < T.y + 40 || ey > T.y + T.h - 40){
-            px = -px;
-            py = -py;
-          }
-          st.close = { C, ux, uy, px, py };
-        }
-
-        const k = st.close;
-        const dolly = smooth(this.cutStart, this.cutStart + 50, s) * 30;
-        const eye = this.v3(k.C.x + k.px * (200 - dolly) - k.ux * 70, k.C.y + k.py * (200 - dolly) - k.uy * 70, 58);
-        const cp = this.posAt(c.cueIdx, s);
-        const look = this.v3((k.C.x * 2 + cp.x) / 3, (k.C.y * 2 + cp.y) / 3, R);
-
-        cm.fov = 40;
-        cm.position.copy(eye);
-        cm.lookAt(this.follow("look", look, dt, 6));
-      }
+      cm.position.copy(this.follow("eye", eye, dt, 2.5));
+      cm.lookAt(this.follow("look", look, dt, 4));
     }else{
       // Máy quay chính: chéo từ cạnh dài, lia nhẹ; lùi xa vừa đủ để thấy trọn bàn ở mọi tỉ lệ màn hình
       const span = Math.max(1, this.tStop - this.cutStart);

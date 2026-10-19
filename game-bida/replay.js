@@ -38,7 +38,6 @@ const rpLoading = document.getElementById("rpLoading");
 const RP_CAM_NAMES = {
   fpv: "GÓC NHÌN THỨ NHẤT",
   chase: "CAMERA BÁM BI",
-  close: "CẬN CẢNH",
   wide: "TOÀN CẢNH"
 };
 
@@ -486,7 +485,7 @@ function replayEnv(){
 // import() viết qua Function để trình duyệt quá cũ không lỗi cú pháp cả file (khi đó replay chỉ tự tắt)
 function replayLoadModule(){
   if(!REPLAY.module){
-    REPLAY.module = new Function("u", "return import(u)")("./replay3d.js?v=20261021");
+    REPLAY.module = new Function("u", "return import(u)")("./replay3d.js?v=20261022");
   }
   return REPLAY.module;
 }
