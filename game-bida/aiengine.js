@@ -845,14 +845,8 @@ function* AI_findTrapShot(started, limit){
   return best || Object.assign(found[0], { ok: false });
 }
 
+// Cú gài không có thông báo riêng: người chơi chỉ thấy "AI đang suy nghĩ" như mọi lượt
 function AI_finalizeTrap(f){
-  setMessage(
-    f.leave.visible === 0
-      ? `AI gài bi: chạm bi ${f.t.num}, giấu bi cái sau bi khác · lực ${Math.round(f.power * 100)}%`
-      : `AI gài bi: chạm bi ${f.t.num}, để đối thủ không có cú ăn · lực ${Math.round(f.power * 100)}%`,
-    true
-  );
-
   return {
     dir: f.dir,
     power: f.power,
