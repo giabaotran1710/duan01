@@ -9171,7 +9171,7 @@ function createPolyPuzzle(d){
   // Builds a "hóc búa" clue layout from a full clue grid.
   function makeToughBoard(n,sol,clueIn,data,neutralClues){
     const total=n*n, pal=Math.max(2,...sol)+1>4?3:Math.max(2,Math.max(...sol)+1);
-    const budget={4:600,5:900,6:1200,7:5500,8:6500,9:7500}[n]||5000;
+    const budget={4:1500,5:2000,6:2500,7:5500,8:6500,9:7500}[n]||5000;
     const t0=performance.now();
     const solve=(clue,vis)=>{
       try{
@@ -9183,8 +9183,8 @@ function createPolyPuzzle(d){
       }catch(_){return null;}
     };
     const isBasic=c=>c&&typeof c.count==='number'&&!c.knight&&!c.direction&&!c.self&&!c.combo&&!c.poly&&!c.pattern&&!c.symmetry;
-    // Kind of a clue; special clues may become plain cells too (the player
-    // never "uncovers" a clue in hóc búa, so a clue that is not shown is gone).
+    // Kind of a clue; special clues may become plain cells too (a clue may
+    // also stay hidden under its cell and appear once that cell is painted).
     const kindOf=c=>!c?null:c.code?'code':Array.isArray(c.sides)?'edge':(c.sun||c.moon)?'sunmoon':c.knight?'knight':c.direction?'direction':c.self?'self':c.combo?'combo':c.poly?'poly':c.pattern?'pattern':c.symmetry?'symmetry':'basic';
     const baseCount={};clueIn.forEach((c,i)=>{const k=kindOf(c);if(k&&!(neutralClues?.has(i)))baseCount[k]=(baseCount[k]||0)+1;});
     const specialKinds=Object.keys(baseCount).filter(k=>k!=='basic').length+(neutralClues?.size?1:0)+
@@ -9203,19 +9203,30 @@ function createPolyPuzzle(d){
     const easyAtStart=(clue,i)=>{
       const c=clue[i];if(!c||typeof c.count!=='number'||neutralClues?.has(i))return false;
       const ns=clueCells(i,n,c).filter(j=>j!==i);
-      const def=ns.filter(j=>clue[j]&&sol[j]===c.color).length;
-      const unk=ns.filter(j=>!clue[j]).length;
+      const def=ns.filter(j=>openNow?.has(j)&&sol[j]===c.color).length;
+      const unk=ns.filter(j=>!openNow?.has(j)).length;
       return unk===0||c.count===def||c.count===def+unk;
     };
     const level=st=>stepLevel(st);
-    let best=null;
+    let best=null,openNow=null;
     while(performance.now()-t0<budget){
       const clue=clueIn.slice();
+      // Shown at the start = `open`. Every other clue is hidden under its
+      // cell and only appears once the player has PROVEN that cell's color
+      // (painting it), so the board can start from very few numbers.
       // Neutral clues are never "shown with their color": the player sees only
       // their number, so the solver must not know their color either.
-      const visible=()=>clue.map((c,i)=>c&&!neutralClues?.has(i)?i:-1).filter(i=>i>=0);
+      const open=new Set(clue.map((c,i)=>c&&!neutralClues?.has(i)?i:-1).filter(i=>i>=0));
+      const visible=()=>[...open].filter(i=>clue[i]);
       let r=solve(clue,visible());
       if(!r?.ok)return best;
+      const tryHide=i=>{
+        if(!open.has(i))return false;
+        open.delete(i);
+        const r2=solve(clue,visible());
+        if(r2?.ok){r=r2;return true;}
+        open.add(i);return false;
+      };
       const tryDrop=i=>{
         const k=kindOf(clue[i]);
         if(!k||k==='code'||neutralClues?.has(i))return false;
@@ -9227,16 +9238,23 @@ function createPolyPuzzle(d){
         if(r2?.ok){r=r2;return true;}
         group.forEach((j,x)=>{clue[j]=saved[x];});return false;
       };
-      // 1) remove clues that give an easy way in
+      openNow=open;
+      // 1) hide clues that give an easy way in
       for(let pass=0;pass<3;pass++){
         let changed=false;
-        for(const i of shuffle(visible()))if(easyAtStart(clue,i)&&tryDrop(i))changed=true;
+        for(const i of shuffle(visible()))if(easyAtStart(clue,i)&&tryHide(i))changed=true;
         if(!changed||performance.now()-t0>budget)break;
       }
-      // 2) thin out clues of every kind while still solvable
+      // 2) hide every other clue the solve can do without
       for(const i of shuffle(visible())){
         if(performance.now()-t0>budget)break;
-        if(clue[i])tryDrop(i);
+        tryHide(i);
+      }
+      // 3) remove some hidden clues entirely (plain cells), so the middle of
+      // the solve stays hard too
+      for(const i of shuffle(clue.map((c,k)=>c&&!open.has(k)?k:-1).filter(k=>k>=0))){
+        if(performance.now()-t0>budget)break;
+        if(Math.random()<0.5)tryDrop(i);
       }
       if(!r?.ok)continue;
       const steps=r.trace.filter(st=>st.kind==='paint'||st.kind==='mark');
@@ -9250,20 +9268,26 @@ function createPolyPuzzle(d){
       // first hard one) is unavoidable on a big board; accept it when the
       // rest of the solve is hard.
       let openRun=0;for(const st of steps){if(level(st)===1)openRun++;else break;}
-      const goodStart=firstHard||(n>=7&&(pal>3?(openRun<=Math.round(total/5)&&easy<=0.5):(openRun<=n&&easy<=0.45)));
+      // 4 colors on a small board: a first step that is hard is very rare, so a
+      // small foothold (a few easy steps) is accepted there as well.
+      const goodStart=firstHard||(n>=7&&(pal>3?(openRun<=Math.round(total/5)&&easy<=0.5):(openRun<=n&&easy<=0.45)))||
+        (n<7&&pal>3&&openRun<=Math.max(3,Math.round(total/8))&&easy<=0.5);
       // every chosen special rule should still be needed (only checked when
       // this layout could beat the best one so far — it costs extra solves)
       let idle=0;
-      const pre=(firstHard?0:goodStart?0.3:1)+easy;
+      const pre=(firstHard?0:goodStart?0.3:1)+easy+visible().length/total*2.5;
       if(!best||pre<best.rank)for(const k of Object.keys(baseCount)){
         if(k==='basic'||!clue.some(c=>kindOf(c)===k))continue;
         const stripped=clue.map(c=>kindOf(c)===k?null:c);
-        if(solve(stripped,stripped.map((c,i)=>c&&!neutralClues?.has(i)?i:-1).filter(i=>i>=0))?.ok)idle++;
+        if(solve(stripped,visible().filter(i=>stripped[i]))?.ok)idle++;
       }
-      const rank=(firstHard?0:goodStart?0.3:1)+easy+idle*0.5;
+      // Fewer shown clues = a harder board (the player has less to start
+      // from); the search keeps the sparsest hard layout it finds.
+      const density=visible().length/total;
+      const rank=(firstHard?0:goodStart?0.3:1)+easy+idle*0.5+density*2.5;
       if(!best||rank<best.rank)best={clue:clue.slice(),visible:visible(),easyShare:easy,firstHard,goodStart,openRun,rank};
       if(n>=7&&best.goodStart&&idle===0)break;
-      if(best.firstHard&&best.easyShare<=0.6+0.1*Math.max(0,specialKinds-1))break;
+      if(n>=7&&best.firstHard&&best.easyShare<=0.6+0.1*Math.max(0,specialKinds-1))break;
       if(specialKinds>=2&&best.easyShare<=0.5&&performance.now()-t0>budget*0.6)break;
     }
     return best;
@@ -17873,7 +17897,7 @@ function cancelNewGameIntro(){
     {
       id: 'tough', icon: '<i class="fa-solid fa-skull"></i>', tint: '#5b1a8f', title: 'Quy tắc hóc búa',
       short: 'Ít clue, không có điểm vào dễ',
-      desc: 'Màn chỉ có một ít clue hiện sẵn; các ô còn lại là ô trơn — tô xong không mở thêm clue. Không clue nào tự cho kết quả ngay: phải <b>ghép nhiều clue</b>, đôi khi phải thử giả định rồi tìm mâu thuẫn. Trên bàn 7×7 trở lên có thể có một điểm khởi đầu nhỏ, nhưng phần lớn lời giải vẫn cần suy luận khó.',
+      desc: 'Màn chỉ có rất ít clue hiện sẵn. Nhiều ô trống vẫn giấu clue bên dưới — tô đúng ô đó thì clue mới hiện ra; có ô là ô trơn, không có clue. Không clue nào tự cho kết quả ngay: phải <b>ghép nhiều clue</b>, đôi khi phải thử giả định rồi tìm mâu thuẫn. Trên bàn 7×7 trở lên có thể có một điểm khởi đầu nhỏ, nhưng phần lớn lời giải vẫn cần suy luận khó.',
       demo: {
         cols: 4, rows: 4, size: 44,
         cells: {1: {c: 'Y', n: '1'}, 6: {c: 'B', n: '2'}, 9: {c: 'R', n: '3'}, 11: {c: 'Y', n: '2'}, 15: {c: 'R', n: '1'}},
