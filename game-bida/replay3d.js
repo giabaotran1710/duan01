@@ -769,11 +769,25 @@ class ReplayPlayer{
     this.tStop = tStop;
     this.total = PRELUDE + this.segs.reduce((n, g) => n + g.d, 0) + HOLD;
 
-    // Góc thứ nhất tới ngay sau cú chạm đầu → bám bi (qua cả đoạn quay chậm) → toàn cảnh
-    const aEnd = Math.max(tFirst + 24, 30);
-    const wideFrom = Math.min(slow1 + 36, tStop);
+    // Lúc bi cái dừng hẳn (cú điều bi: bám bi cái tới gần lúc đó)
+    this.cueStop = 0;
+    for(let f = t.length - 1; f > 0; f--){
+      const i = clip.cueIdx;
+      if(Math.hypot(clip.xs[f][i] - clip.xs[f - 1][i], clip.ys[f][i] - clip.ys[f - 1][i]) > 0.3){
+        this.cueStop = t[f];
+        break;
+      }
+    }
+
+    // Góc thứ nhất → bám bi (bắt đầu trước thời điểm then chốt để luôn thấy bi lăn tới) → toàn cảnh.
+    // Bida lỗ: sang toàn cảnh ngay sau khi bi rơi, không đứng nhìn miệng lỗ trống.
+    const chaseFrom = Math.max(18, Math.min(tFirst + 24, tKey - 30));
+    let wideFrom = clip.mode !== "carom" && clip.keyPocket ? tKey + 24 : slow1 + 36;
+    if(clip.focusCue) wideFrom = Math.max(wideFrom, this.cueStop - 30);
+    wideFrom = Math.min(wideFrom, tStop);
+
     this.cuts = [{ from: -1, cam: "fpv" }];
-    if(wideFrom - aEnd > 20) this.cuts.push({ from: aEnd, cam: "chase" });
+    if(wideFrom - chaseFrom > 20) this.cuts.push({ from: chaseFrom, cam: "chase" });
     this.cuts.push({ from: wideFrom, cam: "wide" });
 
     // Bida lỗ: bám bi cái tới khi bi sẽ rơi lỗ bắt đầu chạy, rồi bám bi đó
@@ -840,22 +854,35 @@ class ReplayPlayer{
       cm.position.copy(eye);
       cm.lookAt(this.follow("look", look, dt, 6));
     }else if(cam === "chase"){
-      const i = s >= this.keyMove ? c.keyIdx : c.cueIdx;
+      // Máy bám đúng vị trí bi (không trễ, bi chạy nhanh cỡ nào cũng nằm trong khung);
+      // chỉ hướng máy được làm mượt để khi bi dội băng máy lượn vòng chứ không giật
+      const i = this.chaseTarget(s);
       const pot = this.pots[i];
       const potted = pot && s > pot.t;
-      const p = this.posAt(i, s);
-      const v = this.velAt(i, s);
-      const sp = Math.hypot(v.x, v.y);
-      if(sp > 0.5 || !st.dir) st.dir = sp > 0.5 ? { x: v.x / sp, y: v.y / sp } : c.dir;
+      const sAt = potted ? pot.t : s;
+      const p = this.posAt(i, sAt);
+      const v = this.velAt(i, sAt);
+      const vl = Math.hypot(v.x, v.y);
+      const sp = vl / 3;
+
+      if(!st.dir) st.dir = vl > 0.5 ? { x: v.x / vl, y: v.y / vl } : { x: c.dir.x, y: c.dir.y };
+      if(vl > 0.5){
+        const k = 1 - Math.exp(-dt * 5);
+        const nx = st.dir.x + (v.x / vl - st.dir.x) * k;
+        const ny = st.dir.y + (v.y / vl - st.dir.y) * k;
+        const nl = Math.hypot(nx, ny);
+        if(nl > 0.2) st.dir = { x: nx / nl, y: ny / nl };
+      }
       const d = st.dir;
 
-      const eye = this.v3(p.x - d.x * 210, p.y - d.y * 210, 125);
-      // Bi đã lọt lỗ: nhìn xuống miệng lỗ
-      const look = potted ? this.v3(pot.px, pot.py, 0) : this.v3(p.x + d.x * 110, p.y + d.y * 110, R);
+      const back = 200 + Math.min(150, sp * 5);
+      const eye = this.v3(p.x - d.x * back, p.y - d.y * back, 120 + Math.min(70, sp * 3));
+      // Bi đang rơi lỗ: nhìn vào miệng lỗ (máy vẫn đứng sau bi nên thấy bi rơi xuống)
+      const look = potted ? this.v3(pot.px, pot.py, -6) : this.v3(p.x + d.x * 80, p.y + d.y * 80, R);
 
-      cm.fov = 44;
-      cm.position.copy(this.follow("eye", eye, dt, 2.5));
-      cm.lookAt(this.follow("look", look, dt, 4));
+      cm.fov = 46;
+      cm.position.copy(eye);
+      cm.lookAt(look);
     }else{
       // Máy quay chính: chéo từ cạnh dài, lia nhẹ; lùi xa vừa đủ để thấy trọn bàn ở mọi tỉ lệ màn hình
       const span = Math.max(1, this.tStop - this.cutStart);
@@ -873,6 +900,17 @@ class ReplayPlayer{
     }
 
     cm.updateProjectionMatrix();
+  }
+
+  // Bi camera bám: bida phăng bám bi cái; bida lỗ bám bi cái tới khi bi sẽ rơi lỗ bắt đầu chạy,
+  // bám bi đó tới lúc rơi xong, sau đó (cú điều bi) quay lại bám bi cái
+  chaseTarget(s){
+    const c = this.clip;
+    if(c.mode === "carom" || c.keyIdx < 0 || s < this.keyMove) return c.cueIdx;
+
+    const pot = this.pots[c.keyIdx];
+    if(pot && s > pot.t + 20) return c.cueIdx;
+    return c.keyIdx;
   }
 
   // Khoảng cách nhỏ nhất để bốn góc khung bàn đều nằm trong khung hình (trừ dải đen và chữ)

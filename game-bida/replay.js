@@ -315,6 +315,78 @@ function rpFirstMove(r, i){
   return Infinity;
 }
 
+// Bi nào đẩy bi i lăn: bi đang chạm nó ngay lúc nó bắt đầu chạy (−1 nếu không rõ)
+function rpHitter(r, i){
+  const x0 = r.xs[0][i];
+  const y0 = r.ys[0][i];
+  let k = -1;
+
+  for(let f = 1; f < r.xs.length; f++){
+    if(Math.hypot(r.xs[f][i] - x0, r.ys[f][i] - y0) > 0.5){
+      k = f;
+      break;
+    }
+  }
+  if(k < 1) return -1;
+
+  const px = r.xs[k - 1][i];
+  const py = r.ys[k - 1][i];
+  const kb = Math.max(0, k - 2);
+  let best = -1;
+  let bd = Infinity;
+
+  for(let j = 0; j < r.n; j++){
+    if(j === i || !r.act[k - 1][j]) continue;
+    // bi đứng yên sát bên (vd. trong cụm bi) không phải bi đẩy
+    if(Math.hypot(r.xs[k][j] - r.xs[kb][j], r.ys[k][j] - r.ys[kb][j]) < 0.3) continue;
+
+    for(let u = 0; u <= 1.001; u += 0.125){
+      const x = r.xs[k - 1][j] + (r.xs[k][j] - r.xs[k - 1][j]) * u;
+      const y = r.ys[k - 1][j] + (r.ys[k][j] - r.ys[k - 1][j]) * u;
+      const d = Math.hypot(x - px, y - py);
+      if(d < bd){
+        bd = d;
+        best = j;
+      }
+    }
+  }
+
+  return bd < BALL_R * 2 + 12 ? best : -1;
+}
+
+// Thế bi ở khung f: danh sách bi + các bi mục tiêu của người đánh
+function rpLayout(r, f, target){
+  const list = r.meta.map((m, i) => ({ num: m.num, type: m.type, x: r.xs[f][i], y: r.ys[f][i], active: !!r.act[f][i] }));
+  const targets = list.filter(b => b.active && (
+    target === "black" ? b.num === 8 :
+    target === "open" ? (b.type === "solid" || b.type === "stripe") :
+    b.type === target
+  ));
+  return { list, targets, cue: list[r.cueIdx] };
+}
+
+// Bi cái nhìn thấy (đánh thẳng chạm được) bao nhiêu bi mục tiêu
+function rpVisibleCount(list, cue, targets){
+  let n = 0;
+
+  for(const t of targets){
+    const d = Math.hypot(t.x - cue.x, t.y - cue.y);
+    if(d < BALL_R * 2.2){ n++; continue; }
+
+    const px = -(t.y - cue.y) / d;
+    const py = (t.x - cue.x) / d;
+
+    for(const o of [0, -1.2, 1.2]){
+      if(AI_segmentClear(list, cue.x, cue.y, t.x + px * o * BALL_R, t.y + py * o * BALL_R, [0, t.num], BALL_R * 2)){
+        n++;
+        break;
+      }
+    }
+  }
+
+  return n;
+}
+
 function replayJudgePool(r, info){
   const side = r.side;
   const foul = turn !== side && ballInHand && ballInHandOwner === turn;
@@ -344,15 +416,32 @@ function replayJudgePool(r, info){
     return m.type === target;
   });
 
-  if(!own.length) return null;
-
   let score = 0;
   let best = null;
-  let keyIdx = own.slice().sort((a, b) => potT(a) - potT(b))[0];
   const add = (pts, title) => {
     score += pts;
     if(!best || pts > best.pts) best = { pts, title };
   };
+
+  const fh = info.firstHit;
+  const tFirst = r.firstHitT >= 0 ? r.firstHitT : Infinity;
+
+  // Phá thế khó: trước cú đánh bị che hết bi (bị gài) mà vẫn chạm đúng bi, không phạm lỗi;
+  // hoặc không có cú ăn thẳng nào mà vẫn ăn được bi
+  const before = rpLayout(r, 0, target);
+  const snookered = before.targets.length > 0 && rpVisibleCount(before.list, before.cue, before.targets) === 0;
+  const noDirectPot = before.targets.length > 0 && !AI_potCandidates(before.cue, before.list, before.targets).length;
+
+  if(snookered) add(3, "PHÁ THẾ GÀI");
+
+  if(!own.length){
+    if(!snookered || fh < 0) return null;
+    return { score, title: best.title, keyIdx: fh, keyT: tFirst, keyPocket: null };
+  }
+
+  if(!snookered && noDirectPot) add(3, "GỠ THẾ KHÓ");
+
+  let keyIdx = own.slice().sort((a, b) => potT(a) - potT(b))[0];
 
   if(won) add(3, "CÚ ĐÁNH KẾT THÚC VÁN");
   if(own.length >= 2) add(2 * (own.length - 1), `ĂN ${own.length} BI MỘT CÚ`);
@@ -376,11 +465,21 @@ function replayJudgePool(r, info){
     }
   }
 
-  const tFirst = r.firstHitT >= 0 ? r.firstHitT : Infinity;
   if(rpRails(r, r.cueIdx, 0, tFirst) >= 1) add(3, "A BĂNG ĂN BI");
 
-  const fh = info.firstHit;
-  if(fh >= 0 && !own.includes(fh)) add(2, "ĐÁNH CHUYỀN");
+  // Đánh chuyền (đôn bi): bi rơi lỗ bị một bi khác (không phải bi cái) đẩy vào
+  for(const i of own){
+    const h = rpHitter(r, i);
+    if(h >= 0 && h !== r.cueIdx){
+      add(3.5, "ĐÁNH CHUYỀN – ĐÔN BI");
+      keyIdx = i;
+      break;
+    }
+    if(h === r.cueIdx && fh >= 0 && fh !== i){
+      add(1.5, "BI CÁI CHẠM 2 BI");
+      break;
+    }
+  }
 
   if(fh >= 0 && own.includes(fh)){
     const dep = rpDeparture(r, fh);
@@ -401,8 +500,29 @@ function replayJudgePool(r, info){
     if((b.x - a.x) * r.dir.x + (b.y - a.y) * r.dir.y < -230) add(1, "RETRO ĐẸP");
   }
 
+  // Điều bi: ăn bi xong, bi cái chủ ý chạy tới chỗ cú sau dễ ăn (gần, gần như thẳng, lỗ không xa)
+  let positional = false;
+  if(!gameOver && turn === side && tFirst < Infinity && !info.scratch && cueBall && cueBall.active){
+    const tg = getCurrentTarget(side);
+    const next = balls.filter(b => b.active && (
+      tg === "black" ? b.num === 8 :
+      tg === "open" ? (b.type === "solid" || b.type === "stripe") :
+      b.type === tg
+    ));
+    const c0 = AI_potCandidates(cueBall, balls, next)[0];
+    const travel = rpPathLen(r, r.cueIdx, tFirst, r.t);
+    const railsAfter = rpRails(r, r.cueIdx, tFirst, r.t);
+    const easy = c0 && c0.cut < 0.3 && c0.cueDist < 420 && c0.pocketDist < 650;
+    const meant = travel > 340 || (Math.abs(r.spin.y) >= 0.4 && travel > 170) || (railsAfter >= 1 && travel > 260);
+
+    if(easy && meant){
+      add(3 + (travel > 700 ? 0.5 : 0), "ĐIỀU BI ĐẸP");
+      positional = best.title === "ĐIỀU BI ĐẸP";
+    }
+  }
+
   const ke = pots.find(e => e.i === keyIdx);
-  return { score, title: best ? best.title : "ĂN BI", keyIdx, keyT: ke.t, keyPocket: ke };
+  return { score, title: best ? best.title : "ĂN BI", keyIdx, keyT: ke.t, keyPocket: ke, focusCue: positional };
 }
 
 function replayJudgeCarom(r, info){
@@ -434,8 +554,26 @@ function replayJudgeCarom(r, info){
   if(rpPathLen(r, r.cueIdx, 0, key.t) > 2600) add(1, "ĐƯỜNG BI DÀI");
   if(gameOver && REPLAY.endArgs) add(3, "ĐIỂM KẾT THÚC VÁN");
 
+  // Phá thế khó: thế bi trước cú đánh không có cú ghi điểm thẳng dễ nào (vd. vừa bị gài)
+  // mà vẫn ghi điểm bằng đường bi qua băng
+  if(c >= 1){
+    const state0 = r.meta.map((m, i) => ({ num: m.num, type: m.type, x: r.xs[0][i], y: r.ys[0][i] }));
+    if(caromCountNextScores(state0, r.cueIdx) === 0) add(3, "PHÁ THẾ KHÓ");
+  }
+
+  // Điều bi (gom bi): trước cú đánh ba bi còn xa nhau, ghi điểm xong ba bi nằm gần nhau, cú sau rất dễ
+  let positional = false;
+  if(!gameOver){
+    const last = r.xs.length - 1;
+    const stateAt = f => r.meta.map((m, i) => ({ num: m.num, type: m.type, x: r.xs[f][i], y: r.ys[f][i] }));
+    if(caromLayoutEase(stateAt(last), r.cueIdx) >= 0.72 && caromLayoutEase(stateAt(0), r.cueIdx) < 0.6){
+      add(3, "ĐIỀU BI – GOM BI ĐẸP");
+      positional = best.title === "ĐIỀU BI – GOM BI ĐẸP";
+    }
+  }
+
   if(!best) best = { title: "GHI ĐIỂM" };
-  return { score, title: best.title, keyIdx: key.i, keyT: key.t, keyPocket: null, firstT: first.t };
+  return { score, title: best.title, keyIdx: key.i, keyT: key.t, keyPocket: null, firstT: first.t, focusCue: positional };
 }
 
 function replayAfterShot(r, info){
@@ -462,6 +600,7 @@ function replayAfterShot(r, info){
     tKey: j.keyT,
     keyIdx: j.keyIdx,
     keyPocket: j.keyPocket ? { x: j.keyPocket.px, y: j.keyPocket.py, type: j.keyPocket.ptype } : null,
+    focusCue: !!j.focusCue,
     title: j.title,
     score: j.score,
     who: r.side === "player" ? "BẠN" : "AI.GiaBao",
@@ -485,7 +624,7 @@ function replayEnv(){
 // import() viết qua Function để trình duyệt quá cũ không lỗi cú pháp cả file (khi đó replay chỉ tự tắt)
 function replayLoadModule(){
   if(!REPLAY.module){
-    REPLAY.module = new Function("u", "return import(u)")("./replay3d.js?v=20261022");
+    REPLAY.module = new Function("u", "return import(u)")("./replay3d.js?v=20261023");
   }
   return REPLAY.module;
 }
