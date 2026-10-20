@@ -441,7 +441,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
       <li><b>Nhập thành</b>: Vua đi 2 ô về phía Xe, Xe nhảy qua đứng cạnh Vua. Chỉ được khi Vua và Xe đó chưa đi, giữa chúng trống, Vua không đang bị chiếu và không đi qua ô bị tấn công.</li>
       <li>Không được đi nước làm Vua mình bị chiếu. Bị chiếu mà không thoát được là <b>chiếu hết</b> (thua).</li>
       <li><b>Hòa</b> khi: hết nước đi mà Vua không bị chiếu (pat), thế cờ lặp lại 3 lần, 50 nước liền không ăn quân và không đi Tốt, hoặc không bên nào đủ quân để chiếu hết.</li>
-      <li><b>Phân tích</b>: Stockfish 19 chấm từng nước của cả hai bên — <b>!!</b> thiên tài (hy sinh quân mà vẫn là nước tốt nhất), <b>!</b> tuyệt vời (gần như nước duy nhất giữ được thế cờ), ★ tốt nhất, rất tốt, tốt, khai cuộc (theo sách), <b>?!</b> thiếu chính xác, <b>?</b> sai lầm, <b>X</b> bỏ lỡ (không tận dụng sai lầm của đối thủ), <b>??</b> ngớ ngẩn — kèm độ chính xác của mỗi bên. Mỗi nước có lời giải thích cụ thể: quân nào đi hay ăn, hy sinh gì, đối thủ đáp ra sao, chuỗi nước chính xác của Stockfish và kết quả (chiếu hết, hơn/kém bao nhiêu điểm quân).</li>
+      <li><b>Phân tích</b>: Stockfish 19 chấm từng nước của cả hai bên — <b>!!</b> thiên tài (hy sinh quân mà vẫn là nước tốt nhất), <b>!</b> tuyệt vời (gần như nước duy nhất giữ được thế cờ), ★ tốt nhất, rất tốt, tốt, khai cuộc (theo sách), <b>?!</b> thiếu chính xác, <b>?</b> sai lầm, <b>X</b> bỏ lỡ (không tận dụng sai lầm của đối thủ), <b>??</b> ngớ ngẩn — kèm độ chính xác của mỗi bên. Mỗi nước có lời bình như thầy giảng: quân nào đi hay ăn quân nào, đối thủ đáp ra sao, vì sao nước đó hay hoặc dở và nên đi gì; kèm chuỗi nước "Nếu đi như vậy" và "Chuỗi tốt hơn".</li>
       <li><b>Khai cuộc</b>: tên khai cuộc và mã ECO của ván hiện ngay dưới tiêu đề Biên bản (cả bạn lẫn Stockfish đi). Nhận theo thế cờ nên cả khi đi đảo nước vẫn đúng; bấm vào một nước cũ để xem khai cuộc lúc đó. Có 3.864 tên.</li>
       <li>Biên bản ghi theo ký hiệu quốc tế rút gọn: <b>x</b> là ăn quân, <b>+</b> chiếu, <b>#</b> chiếu hết, <b>O-O</b> nhập thành gần, <b>O-O-O</b> nhập thành xa. Nút <b>VN/EN</b> đổi chữ cái quân giữa Việt (V H X T M) và quốc tế (K Q R B N).</li>
     </ul>
@@ -451,7 +451,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
 </div>
 
 <div class="toast" id="toast"></div>
-<footer>Version:D20261310-H14M34T3337 »»» developed by Tran Gia Bao</footer>
+<footer>Version:D20262010-H07M10T7643 »»» developed by Tran Gia Bao</footer>
 
 <script>
 function ChessCore(){
@@ -903,6 +903,48 @@ function ReviewCore(){
     return (kind==='inaccuracy' || kind==='mistake' || kind==='blunder' || rf.cap || rf.check || rf.mate) ? rf : null;
   }
 
+  // Cùng thế cờ nhưng đổi lượt đi (để xem bên kia đang đe doạ ăn những gì)
+  function flipTurn(fen){
+    const parts = fen.split(' ');
+    parts[1] = parts[1]==='w' ? 'b' : 'w';
+    parts[3] = '-';
+    return parts.join(' ');
+  }
+
+  // Trước nước đi, đối thủ đã ăn được quân ở ô sq chưa: bằng quân nào, ăn xong có bị ăn lại không
+  function threatenedBefore(fen, sq){
+    const A = board();
+    try { A.load(flipTurn(fen)); } catch(e) { return null; }
+    const caps = A.moves().filter(x => x.cap && A.sqName(x.to)===sq);
+    if(!caps.length) return null;
+    caps.sort((x,y) => VAL[x.piece&7]-VAL[y.piece&7]);
+    const by = caps[0].piece&7;
+    A.play(caps[0]);
+    return { by, defended:A.moves().some(x => A.sqName(x.to)===sq) };
+  }
+
+  // Sau chuỗi nước ucis (lượt cuối là của đối thủ), quân đối thủ ở ô from đang tấn công những quân nào (quân lớn trước)
+  function attacksAfter(fen, ucis, from){
+    const A = board(); A.load(fen);
+    for(const u of ucis){ const mv = A.findUci(u); if(!mv) return []; A.play(mv); }
+    if(A.inCheck()) return [];
+    try { A.load(flipTurn(A.fen())); } catch(e) { return []; }
+    const out = [];
+    for(const x of A.moves()){
+      if(!x.cap || A.sqName(x.from)!==from || x.flag===2) continue;
+      const sq = A.sqName(x.to);
+      if(!out.some(o => o.sq===sq)) out.push({ piece:x.cap&7, sq });
+    }
+    return out.sort((x,y) => VAL[y.piece]-VAL[x.piece]).slice(0, 2);
+  }
+
+  // Sau chuỗi nước ucis, bên vừa bị ăn ở ô sq có ăn lại được không
+  function canRecapture(fen, ucis, sq){
+    const A = board(); A.load(fen);
+    for(const u of ucis){ const mv = A.findUci(u); if(!mv) return false; A.play(mv); }
+    return A.moves().some(x => A.sqName(x.to)===sq);
+  }
+
   // So sánh nước đã đi với nước tốt nhất (chỉ dữ kiện):
   // target: quân đối thủ mà nước tốt nhất ăn được (cheap: ăn bằng quân rẻ hơn; free: không bị ăn lại);
   // same: nước đã đi cũng ăn ở ô đó (chỉ khác quân ăn); escaped: lời đáp đưa quân đó chạy khỏi ô;
@@ -945,6 +987,13 @@ function ReviewCore(){
     f.line = lineInfo(fen, [moves[i]].concat(b.term ? [] : (b.pv||[])), 8, lang);
     f.reply = (!b.term && b.pv && b.pv.length) ? moveFacts(meta[i+1].fen, b.pv[0], lang) : null;
     f.threat = threat(meta, P, i, f.kind, lang);
+    // Quân bị lời đáp ăn (không phải quân vừa đi): đã bị đe doạ từ trước chưa, còn ăn lại được không
+    if(f.reply && f.reply.cap && f.reply.to!==mv.to && !f.inCheckBefore){
+      f.replyPre = threatenedBefore(fen, f.reply.to);
+      f.replyRecap = canRecapture(fen, [moves[i], f.reply.uci], f.reply.to);
+    }
+    // Lời đáp êm (không ăn, không chiếu): quân vừa đi của đối thủ tấn công những quân nào
+    if(f.reply && !f.reply.cap && !f.reply.check) f.replyHits = attacksAfter(fen, [moves[i], f.reply.uci], f.reply.to);
     if(a.best && a.best!==moves[i]){
       f.best = moveFacts(fen, a.best, lang);
       const pv = a.pv && a.pv[0]===a.best ? a.pv : [a.best].concat((a.pv||[]).slice(1));
@@ -1006,29 +1055,57 @@ function ReviewCore(){
   }
   return { BOOK_LINES, winPct, cpOfLine, prepare, terminalResult, engineResult, isSacrifice, sacrificeMoves, pickSacrifice, lineInfo, moveFacts, threat, explain, classify, moveAccuracy, gameAccuracy };
 }
-// Lời giải thích cụ thể bằng tiếng Việt cho từng nước (dựa trên dữ kiện của ReviewCore.explain)
+// Lời bình bằng tiếng Việt cho từng nước, giọng như thầy giảng (dựa trên dữ kiện của ReviewCore.explain).
+// Gọi quân theo màu (Tượng trắng, Hậu đen...), nói nước đi làm gì, đối thủ đáp ra sao và vì sao đó là ý hay/dở.
 function ExplainVi(){
   const PN = ['', 'Tốt','Mã','Tượng','Xe','Hậu','Vua'];
+  const VAL = [0,1,3,3,5,9,0];
   const B = t => `<b>${t}</b>`;
-  const lc = s => s.charAt(0).toLowerCase() + s.slice(1);
-  const list = arr => {
-    const c = {}; for(const t of arr) c[t] = (c[t]||0) + 1;
-    const out = Object.keys(c).sort((x,y) => y-x).map(t => c[t]>1 ? `${c[t]} ${PN[t]}` : PN[t]);
-    return out.length>1 ? out.slice(0,-1).join(', ') + ' và ' + out[out.length-1] : out[0] || '';
-  };
-  const cpStr = cp => (cp>0 ? '+' : cp<0 ? '−' : '') + (Math.abs(cp)/100).toFixed(1).replace('.', ',');
-  const evStr = e => {
-    if(!e) return '';
-    if(e.mate!==null && e.mate!==undefined) return e.mate>0 ? `chiếu hết sau ${e.mate}` : `bị chiếu hết sau ${-e.mate}`;
-    return cpStr(e.cp);
-  };
-  // "Tượng ăn tốt ở f7 và chiếu Vua", "Mã đi tới f3", "Nhập thành ngắn"...
-  function moveDesc(m){
-    if(m.castle) return m.castle==='short' ? 'Nhập thành ngắn' : 'Nhập thành dài';
-    const s = m.promo ? `Tốt lên hàng cuối và phong ${PN[m.promo]}${m.cap ? ' (ăn ' + PN[m.cap] + ')' : ''}`
-            : m.ep ? `Tốt ăn tốt qua đường ở ${m.to}`
-            : m.cap ? `${PN[m.piece]} ăn ${PN[m.cap]} ở ${m.to}` : `${PN[m.piece]} đi tới ${m.to}`;
-    return s + (m.mate ? ' và chiếu hết' : m.check ? ' và chiếu Vua' : '');
+  const up = s => s.charAt(0).toUpperCase() + s.slice(1);
+  const col = side => side===0 ? 'trắng' : 'đen';
+  const N = (p, side) => `${PN[p]} ${col(side)}`;
+  const matWord = n => ({ 1:'một Tốt', 2:'hai Tốt', 3:'một quân (cỡ Mã hoặc Tượng)', 4:'một quân và một Tốt', 5:'cỡ một Xe', 9:'cỡ một Hậu' })[n] || `${n} điểm quân`;
+
+  // Nước đi kể theo người đi (không chủ ngữ): "dùng Tốt trắng ăn Mã đen ở e4", "đưa Tượng trắng tới f4"
+  function act(m, side){
+    const o = side^1;
+    let s;
+    if(m.castle) s = m.castle==='short' ? 'nhập thành cánh Vua' : 'nhập thành cánh Hậu';
+    else if(m.promo) s = `đưa Tốt ${col(side)} lên hàng cuối và phong thành ${PN[m.promo]}${m.cap ? `, ăn luôn ${N(m.cap, o)}` : ''}`;
+    else if(m.ep) s = `dùng Tốt ${col(side)} ăn Tốt ${col(o)} qua đường ở ${m.to}`;
+    else if(m.cap) s = `dùng ${N(m.piece, side)} ăn ${N(m.cap, o)} ở ${m.to}`;
+    else if(m.piece===1) s = `đẩy Tốt ${col(side)} lên ${m.to}`;
+    else s = `đưa ${N(m.piece, side)} tới ${m.to}`;
+    return s + (m.mate ? `, chiếu hết Vua ${col(o)}` : m.check ? `, chiếu Vua ${col(o)}` : '');
+  }
+  // Nước đi kể theo quân: "Hậu đen ăn Tượng trắng ở f4"
+  function pieceAct(m, side){
+    const o = side^1;
+    let s;
+    if(m.castle) s = `Vua ${col(side)} nhập thành`;
+    else if(m.promo) s = `Tốt ${col(side)} phong thành ${PN[m.promo]}`;
+    else if(m.ep) s = `Tốt ${col(side)} ăn Tốt ${col(o)} qua đường`;
+    else if(m.cap) s = `${N(m.piece, side)} ăn ${N(m.cap, o)} ở ${m.to}`;
+    else s = `${N(m.piece, side)} đi tới ${m.to}`;
+    return s + (m.mate ? ' và chiếu hết' : m.check ? ` và chiếu Vua ${col(o)}` : '');
+  }
+  // Ý đồ của một nước tốt (nếu nói được chắc chắn)
+  function purpose(f, side){
+    const m = f.mv;
+    if(m.mate || m.promo) return null;
+    if(m.castle) return 'đưa Vua vào nơi an toàn và đưa Xe ra trận';
+    if(m.cap){
+      if(f.prev && f.prev.cap && f.prev.to===m.to) return 'ăn lại quân vừa mất';
+      if(f.prev && f.prev.cap && VAL[m.cap]<=VAL[f.prev.cap]) return 'gỡ lại quân vừa mất';
+      const net = f.line && !f.line.mate ? f.line.net : 0;
+      if(net>0) return `lời ${matWord(net)}`;
+      if(m.piece===m.cap) return `đổi ${PN[m.piece]}`;
+      return null;
+    }
+    if(m.check) return 'chiếu Vua, buộc đối thủ phải đối phó';
+    if((m.piece===2 || m.piece===3) && m.from[1]===(side===0 ? '1' : '8') && f.index<24) return 'phát triển quân ra trận';
+    if(m.piece===1 && f.index<12 && ['d4','e4','d5','e5','c4','c5'].includes(m.to)) return 'tranh giành trung tâm';
+    return null;
   }
   // "1.e4 e5 2.Nf3 …" bắt đầu từ nửa nước thứ k của ván
   function numLine(k, ln){
@@ -1036,143 +1113,155 @@ function ExplainVi(){
     ln.sans.forEach((s, j) => { out += (ply%2===0 ? `${Math.floor(ply/2)+1}.` : (j===0 ? `${Math.floor(ply/2)+1}…` : '')) + s + ' '; ply++; });
     return out.trim() + (ln.more ? ' …' : '');
   }
-  const VAL = [0,1,3,3,5,9,0];
-  const pts = t => `${VAL[t]} điểm`;
-  // "Bạn: Tốt ăn Hậu (cxd6) → Stockfish: Tốt ăn Tốt (cxd6) → Bạn: Tượng ăn Tốt (Bxd6+); Bạn lời 9 điểm quân"
-  function material(ln, who, opp, comp){
-    if(!ln.caps || !ln.caps.length) return null;
-    const steps = ln.caps.slice(0,4).map(c => `${c.me ? who : opp}: ${PN[c.piece]} ăn ${PN[c.cap]} (${c.san})`).join(' → ') + (ln.caps.length>4 ? ' → …' : '');
-    const net = ln.net>0 ? `${who} lời ${ln.net} điểm quân` : ln.net<0 ? `${who} thiệt ${-ln.net} điểm quân${comp ? ', bù lại bằng thế trận' : ''}` : 'hai bên ngang quân';
-    return `${steps}; ${net}`;
-  }
 
-  // ctx: { human: 0|1, opening: {eco,name}|null }  →  { paras:[html], lines:[{label,text}] }
+  // ctx: { human: 0|1, opening: {eco,name}|null }  →  { paras:[html], lines:[{label,text}], keys:[...] }
   function build(f, ctx){
-    const mine = f.mover===ctx.human, who = mine ? 'Bạn' : 'Stockfish', opp = mine ? 'Stockfish' : 'Bạn';
+    const mine = f.mover===ctx.human;
+    const me = f.mover, them = f.mover^1;
+    const who = mine ? 'Bạn' : 'Stockfish';
+    const opp = mine ? 'đối thủ' : 'Bạn';
+    const replies = mine ? 'đáp' : 'có thể đáp';
     const m = f.mv, k = f.index, P = [], L = [];
-    const mat = (ln, comp) => material(ln, who, opp, comp);
-    const shift = `${evStr(f.before)} → ${f.after.mated ? 'chiếu hết' : f.after.draw ? 'hòa' : evStr(f.after)}`;
-    const gain = f.after.mated ? null : `Đánh giá thế cờ (tính cho ${who}): ${shift}.`;
-    const mated = !f.after.mated && f.after.mate!==null && f.after.mate!==undefined && f.after.mate<0;
-    const bestOutcome = () => {
-      if(f.before.mate>0) return `chiếu hết sau ${f.before.mate} nước`;
-      const bm = f.bestLine && mat(f.bestLine);
-      return f.bestLine && f.bestLine.mate ? 'dẫn tới chiếu hết' : bm ? `theo chuỗi chính xác, ${bm}` : `giữ lợi thế ${evStr(f.before)}`;
-    };
-    const bestSeq = () => { const bl = f.bestLine; return bl && bl.mate ? 'dẫn tới chiếu hết' : (bl && mat(bl)) || `giữ lợi thế ${evStr(f.before)}`; };
-    // Nước đã đi so với nước tốt nhất: bỏ lỡ ăn quân gì, quân đó chạy thoát thế nào, quân vừa ăn có ăn sau được không.
-    // Trả về true nếu đã nêu tên nước tốt nhất.
-    function compareParas(){
-      const c = f.cmp, b = f.best; if(!c || !b) return false;
+    const r = f.reply, c = f.cmp || {}, b = f.best;
+    const doing = (suffix = '') => `${who} ${act(m, me)}${suffix}.`;
+    const why = () => { const p = purpose(f, me); return p ? ` để ${p}` : ''; };
+
+    // Nước tốt hơn, nói như lời khuyên
+    function advice(lead){
+      if(!b) return;
       const t = c.target;
-      if(t && c.same){
-        P.push(`Nên ăn ${PN[t.cap]} ở ${t.to} bằng ${PN[t.piece]} (${B(b.san)}) thay vì bằng ${PN[m.piece]}.`);
-        return true;
-      }
-      if(t){
-        if(t.cheap || t.free){
-          const bl = f.bestLine, profit = !bl || bl.mate || bl.net>0;
-          const why = t.cheap ? `${PN[t.cap]} của ${opp} ở ${t.to} đang bị ${PN[t.piece]} ${t.from} tấn công${profit ? `: dùng quân ${pts(t.piece)} ăn quân ${pts(t.cap)} là lời ngay` : ''}`
-                              : `${PN[t.cap]} của ${opp} ở ${t.to} không được bảo vệ, ăn mà không bị ăn lại`;
-          P.push(`${B('Bỏ lỡ')}: ${why}. Nước đúng là ${B(b.san)} (${PN[t.piece]} ăn ${PN[t.cap]}, ${pts(t.cap)})${m.cap ? `, thay vì ${PN[m.piece]} ăn ${PN[m.cap]} (${pts(m.cap)})` : ''}.`);
-        } else {
-          // ăn rồi bị ăn lại: không phải "lời ngay", chỉ là đổi quân hoặc mở đầu một chuỗi đòn
-          P.push(`${B('Nước tốt hơn')}: ${B(b.san)}, ${PN[t.piece]} ${t.from} ăn ${PN[t.cap]} của ${opp} ở ${t.to}${t.piece===t.cap ? ` (đổi ${PN[t.cap]})` : ''}${m.cap ? `, thay vì ${PN[m.piece]} ăn ${PN[m.cap]}` : ''}.`);
-        }
-        if(c.escaped) P.push(`Sau ${m.san}, ${opp} đáp ${B(c.escaped.san)}: ${PN[t.cap]} chạy khỏi ${t.to}, cơ hội ăn ${PN[t.cap]} không còn nữa.`);
-        if(c.later) P.push(`${PN[m.cap]} ở ${m.to} cũng không chạy thoát: sau ${c.after.join(' ')}, ${who} vẫn ăn được nó bằng ${B(c.later.san)}. Nên ăn quân lớn trước, quân nhỏ sau.`);
-        return true;
-      }
-      if(c.saved){
-        P.push(`${PN[c.saved.piece]} của ${who} ở ${c.saved.from} đang bị đe doạ. Lẽ ra phải cứu nó: ${B(b.san)} đưa ${PN[c.saved.piece]} tới ${c.saved.to}.`);
-        return true;
-      }
-      return false;
+      if(t && c.same) P.push(`Lẽ ra nên ăn ${N(t.cap, them)} ở ${t.to} bằng ${N(t.piece, me)} (${B(b.san)}) thay vì bằng ${PN[m.piece]}.`);
+      else if(c.saved) P.push(`Lẽ ra nên cứu ${N(c.saved.piece, me)} trước: ${B(b.san)} đưa nó về ${c.saved.to}.`);
+      else if(t && (t.cheap || t.free)) P.push(`${lead} ${B(b.san)}: ${N(t.piece, me)} ăn ${N(t.cap, them)} ở ${t.to}${t.free ? ' mà không bị ăn lại' : ', dùng quân nhỏ ăn quân lớn'}.`);
+      else if(t) P.push(`${lead} ${B(b.san)}: ${t.piece===t.cap ? `đổi ${N(t.piece, me)} lấy ${N(t.cap, them)} ở ${t.to}` : `${N(t.piece, me)} ăn ${N(t.cap, them)} ở ${t.to}`}.`);
+      else P.push(`${lead} ${B(b.san)}: ${act(b, me)}.`);
+      if(f.bestLine && f.bestLine.mate && !b.mate) P.push('Nước đó còn mở ra đòn chiếu hết.');
+      if(t && c.escaped) P.push(`Sau nước đã đi, ${N(t.cap, them)} kịp chạy khỏi ${t.to} và cơ hội ăn nó không còn nữa.`);
+      if(c.later) P.push(`${N(m.cap, them)} ở ${m.to} cũng không chạy đi đâu được: sau ${c.after.join(' ')}, ${mine ? 'bạn' : 'Stockfish'} vẫn ăn được nó bằng ${B(c.later.san)}.${t ? ' Nên ăn quân lớn trước, quân nhỏ sau.' : ''}`);
     }
-    P.push(moveDesc(m) + '.');
+
+    // Vấn đề của một nước kém: đối thủ đáp gì, mất gì, vì sao không hay
+    function problem(){
+      const mated = !f.after.mated && f.after.mate!==null && f.after.mate!==undefined && f.after.mate<0;
+      if(f.prev && f.prev.cap) P.push(`${up(opp)} vừa ${act(f.prev, them)}.`);
+
+      if(mated){
+        P.push(doing());
+        P.push(-f.after.mate===1 && r
+          ? `Nước này để Vua ${col(me)} bị chiếu hết: ${opp} ${mine ? '' : 'có thể '}chiếu hết ngay bằng ${B(r.san)}.`
+          : `Nước này để Vua ${col(me)} rơi vào thế bị chiếu hết: ${opp} có đòn chiếu hết sau ${-f.after.mate} nước${r ? `, bắt đầu bằng ${B(r.san)}` : ''}.`);
+        return;
+      }
+      if(!r){ P.push(doing()); P.push('Nước này làm thế cờ xấu đi.'); return; }
+
+      if(r.cap && r.to===m.to){
+        P.push(doing());
+        if(m.cap){
+          P.push(`${up(opp)} ${replies} ${B(r.san)}, ăn lại ngay: ${pieceAct(r, them)}.`);
+          P.push(VAL[m.piece]>VAL[m.cap] ? `Dùng ${PN[m.piece]} để đổi lấy ${PN[m.cap]} là thiệt.` : `Cuộc đổi quân này không có lợi cho ${who === 'Bạn' ? 'bạn' : who}.`);
+        }else{
+          P.push(`${N(m.piece, me)} ở ${m.to} ${m.hang && m.hang.recapture ? 'không được bảo vệ đủ' : 'không có quân nào bảo vệ'}: ${opp} ${replies} ${B(r.san)}, ${pieceAct(r, them)}.`);
+        }
+        return;
+      }
+
+      if(r.cap){
+        const pre = f.replyPre, victim = r.cap;
+        if(pre && m.cap){
+          // Ăn quân trong khi một quân khác của mình đang bị đe doạ: thành ra đổi quân
+          P.push(doing(` — một cuộc trao đổi, trong khi ${N(victim, me)} ở ${r.to} đang bị ${N(pre.by, them)} đe doạ`));
+          P.push(`Khi đó ${pieceAct(r, them)} (${B(r.san)}).`);
+          P.push(VAL[victim]>VAL[m.cap] ? `Mất ${PN[victim]} để đổi lấy ${PN[m.cap]} là thiệt.`
+               : VAL[victim]===VAL[m.cap] ? `Dùng ${PN[victim]} để đổi lấy ${PN[m.cap]} không phải là một ý kiến hay.`
+               : `Dù ăn được ${PN[m.cap]}, mất ${PN[victim]} vẫn làm thế cờ xấu đi.`);
+        }else if(pre && !pre.defended){
+          P.push(doing());
+          P.push(`Nước đi này bỏ quên ${N(victim, me)} ở ${r.to} đang bị ${N(pre.by, them)} tấn công mà không có quân nào bảo vệ: ${opp} chỉ cần ${B(r.san)} là ăn được ${PN[victim]}.`);
+        }else if(pre && !f.replyRecap){
+          P.push(doing());
+          P.push(`Nước đi này làm ${N(victim, me)} ở ${r.to} mất quân bảo vệ: ${opp} ${replies} ${B(r.san)}, ${pieceAct(r, them)}.`);
+        }else if(f.replyRecap && VAL[victim]>VAL[r.piece]){
+          P.push(doing());
+          P.push(`${up(opp)} ${replies} ${B(r.san)}: ${pieceAct(r, them)}. Ăn lại được, nhưng mất ${PN[victim]} để lấy ${PN[r.piece]} vẫn là thiệt.`);
+        }else{
+          P.push(doing());
+          P.push(`Nước đi này mở đường cho ${opp}: ${B(r.san)}, ${pieceAct(r, them)}.`);
+        }
+        return;
+      }
+
+      P.push(doing());
+      if(r.check) P.push(`${up(opp)} ${replies} ${B(r.san)}: ${pieceAct(r, them)}, thế cờ trở nên khó khăn.`);
+      else {
+        const hits = (f.replyHits || []).map(h => `${N(h.piece, me)} ở ${h.sq}`);
+        if(hits.length) P.push(`Nước này chưa mất quân ngay, nhưng tạo cơ hội cho ${opp}: ${B(r.san)} — ${pieceAct(r, them)}, tấn công ${hits.join(' và ')}.`);
+        else if(f.kind==='inaccuracy') P.push('Nước này không mất quân, nhưng chưa phải cách chơi tốt nhất.');
+        else P.push(`Nước này chưa mất quân ngay, nhưng sau ${B(r.san)} (${pieceAct(r, them)}) thế cờ của ${mine ? 'bạn' : 'Stockfish'} trở nên khó khăn.`);
+      }
+    }
+
     switch(f.kind){
       case 'brilliant': {
-        if(m.hang) P.push(`${B('Đây là đòn hy sinh')}: ${PN[m.piece]} ở ${m.to} có thể bị ${PN[m.hang.by]} của ${opp} ăn${m.hang.recapture ? ' (dù ăn lại được thì vẫn thiệt quân)' : ' mà không có quân nào ăn lại được'}.`);
-        const ln = f.line;
-        if(ln.mate) P.push(`Nhưng chuỗi chính xác của Stockfish kết thúc bằng ${B('chiếu hết')}${ln.lost.length ? `, dù ${who} có thể mất ${list(ln.lost)}` : ''}.`);
-        else { const x = mat(ln, true); P.push(`Nhưng đó vẫn là nước mạnh nhất${x ? `: theo chuỗi chính xác, ${x}` : ''}.`); }
-        if(gain) P.push(gain);
-        L.push({ label:'Chuỗi chính xác', text:numLine(k, ln) });
+        P.push(doing());
+        const sac = m.hang ? `${N(m.piece, me)} ở ${m.to} có thể bị ${N(m.hang.by, them)} ăn${m.hang.recapture ? '' : ' mà không ăn lại được'}` : `${who} chấp nhận mất quân`;
+        P.push(`${B('Một đòn hy sinh đẹp!')} ${up(sac)}, nhưng đổi lại ${f.line.mate ? 'là đòn chiếu hết' : 'thế cờ vẫn rất mạnh'}.`);
+        L.push({ label:'Chuỗi chính xác', text:numLine(k, f.line) });
         break;
       }
       case 'great': {
-        const sec = f.second ? `nước tốt thứ hai (${f.second.san}) chỉ còn ${Math.abs(f.secondCp)>=9000 ? 'thua hoặc bị chiếu hết' : cpStr(f.secondCp)}` : 'mọi nước khác đều kém hẳn';
-        P.push(`${B('Gần như nước duy nhất')}: ${sec}${f.secondGap ? `, kém ${f.secondGap}% cơ hội thắng` : ''}.`);
-        if(f.line.mate) P.push(`Chuỗi chính xác kết thúc bằng ${B('chiếu hết')}.`);
-        else { const x = mat(f.line); if(x) P.push(`Theo chuỗi chính xác: ${x}.`); }
-        if(gain) P.push(gain);
+        P.push(doing(why()));
+        P.push(`Đây gần như là ${B('nước duy nhất')} giữ được thế cờ${f.second ? ` — nước tốt thứ hai (${f.second.san}) đã kém hẳn` : ''}.`);
         L.push({ label:'Chuỗi chính xác', text:numLine(k, f.line) });
         break;
       }
       case 'best': {
-        if(f.best) P.push(`Gần ngang nước Stockfish chọn (${f.best.san}).`);
-        if(!f.after.mated){
-          if(f.line.mate) P.push(`Dẫn tới ${B('chiếu hết')} theo chuỗi chính xác.`);
-          else { const x = mat(f.line); P.push(x ? `Theo chuỗi chính xác: ${x}.` : `Không bên nào mất quân trong ${f.line.plies} nước đầu của chuỗi chính xác.`); }
-          if(gain) P.push(gain);
+        P.push(doing(why()));
+        if(!m.mate){
+          P.push(b ? `Nước này tốt ngang nước Stockfish chọn (${b.san}).` : 'Đây là nước tốt nhất.');
+          if(f.line.mate) P.push('Từ đây có đường dẫn tới chiếu hết.');
           if(f.line.sans.length>1) L.push({ label:'Chuỗi chính xác', text:numLine(k, f.line) });
         }
         break;
       }
       case 'excellent': case 'good': {
-        const pct = Math.max(1, Math.round(f.loss*100));
-        if(f.best) P.push(f.kind==='excellent'
-          ? `Gần ngang nước tốt nhất ${B(f.best.san)} (${lc(moveDesc(f.best))}): chỉ kém khoảng ${pct}% cơ hội thắng.`
-          : `Nước tốt nhất là ${B(f.best.san)} (${lc(moveDesc(f.best))}); nước này kém khoảng ${pct}% cơ hội thắng (${shift}).`);
+        P.push(doing(why()));
+        if(b) P.push(f.kind==='excellent'
+          ? `Nước đi rất tốt, chỉ kém nước tốt nhất ${B(b.san)} một chút.`
+          : `Nước đi được, nhưng ${B(b.san)} (${act(b, me)}) tốt hơn.`);
         if(f.bestLine) L.push({ label:'Chuỗi tốt nhất', text:numLine(k, f.bestLine) });
         break;
       }
       case 'inaccuracy': case 'mistake': case 'blunder': {
-        const r = f.reply, c = f.cmp || {};
-        if(f.prev && f.prev.cap) P.push(`${opp} vừa đi ${B(f.prev.san)}: ${PN[f.prev.piece]} ăn ${PN[f.prev.cap]} của ${who} ở ${f.prev.to}.`);
-        const named = compareParas();
-        let prob;
-        if(mated) prob = `${m.cap ? `Ăn ${PN[m.cap]} là mắc bẫy. ` : ''}Hậu quả: ${who} bị ${B('chiếu hết')} sau ${-f.after.mate} nước${r ? ` (${opp} đáp ${B(r.san)})` : ''}`;
-        else if(c.escaped) prob = null;
-        else if(r && r.cap) prob = `${m.hang && r.to===m.to ? `${PN[m.piece]} ở ${m.to} ${m.cap ? 'bị ăn lại' : 'bị bỏ hở'}: ` : ''}${opp} đáp ${B(r.san)}, ${PN[r.piece]} ăn ${PN[r.cap]} của ${who} ở ${r.to}${r.check ? ' và chiếu' : ''}`;
-        else if(r) prob = `${opp} có thể đáp ${B(r.san)} (${lc(moveDesc(r))})`;
-        else prob = 'Nước này làm thế cờ xấu đi';
-        if(prob) P.push(prob + '.');
-        const x = !mated && mat(f.line), bl = f.bestLine;
-        const gap = bl && !bl.mate && f.best && bl.net>f.line.net ? bl.net-f.line.net : 0;
-        const tail = gap ? `, ít hơn ${gap} điểm quân so với ${f.best.san}` : x && f.line.net>=0 ? ' — quân số không thiệt nhưng thế trận xấu đi' : '';
-        const sum = `${x ? `Theo chuỗi chính xác sau ${m.san}: ${x}${tail}. ` : ''}${gain || ''}`.trim();
-        if(sum) P.push(sum);
-        if(f.best) P.push(named ? `Chuỗi tốt hơn sau ${B(f.best.san)}: ${bestSeq()}.`
-                                : `Nên đi ${B(f.best.san)} (${lc(moveDesc(f.best))}): ${bestOutcome()}.`);
+        problem();
+        advice('Nước tốt hơn là');
         L.push({ label:'Nếu đi như vậy', text:numLine(k, f.line) });
         if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
         break;
       }
       case 'miss': {
-        P.push(`${opp} vừa đi ${B(f.prev ? f.prev.san : '…')} — một sai lầm — nhưng ${who} không tận dụng.`);
-        if(!compareParas() && f.best) P.push(`Lẽ ra ${B(f.best.san)} (${lc(moveDesc(f.best))}): ${bestOutcome()}.`);
-        else if(f.best) P.push(`Chuỗi tốt hơn sau ${B(f.best.san)}: ${bestSeq()}.`);
-        if(gain) P.push(gain);
+        P.push(doing());
+        P.push(`${up(opp)} vừa đi hỏng${f.prev ? ` (${B(f.prev.san)})` : ''}, nhưng ${mine ? 'bạn' : 'Stockfish'} chưa tận dụng được cơ hội.`);
+        advice('Lẽ ra nên đi');
         if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
         break;
       }
       case 'book':
-        P.push(ctx.opening ? `Khai cuộc quen thuộc: ${B(ctx.opening.eco + ' ' + ctx.opening.name)}.` : 'Nước khai cuộc quen thuộc trong sách.');
+        P.push(doing() + ' ' + (ctx.opening ? `Đây là nước đi theo lý thuyết khai cuộc ${B(ctx.opening.eco + ' ' + ctx.opening.name)}.` : 'Đây là nước khai cuộc quen thuộc trong sách.'));
         break;
       case 'forced':
-        P.push(f.inCheckBefore ? `Vua của ${mine ? 'bạn' : 'Stockfish'} đang bị chiếu và đây là nước ${B('duy nhất')} thoát chiếu.` : `Thế cờ chỉ có ${B('một nước hợp lệ')} duy nhất.`);
+        P.push(f.inCheckBefore ? `Vua ${col(me)} đang bị chiếu và đây là nước ${B('duy nhất')} thoát chiếu.` : `Thế cờ chỉ có ${B('một nước hợp lệ')} duy nhất.`);
         break;
       default:
-        if(gain) P.push(gain);
+        P.push(doing());
     }
+
     // Chú giải mũi tên trên bàn cờ
     const K = [];
     if(f.threat){
       const t = f.threat;
-      K.push({ color:'red', text:`Mũi tên đỏ — mối đe doạ của ${opp}: ${lc(moveDesc(t))} (${t.san}).` });
+      K.push({ color:'red', text:`Mũi tên đỏ — nước đe doạ của ${opp}: ${pieceAct(t, them)}${t.san===t.to ? '' : ` (${t.san})`}.` });
     }
-    if(f.best && (f.kind==='inaccuracy' || f.kind==='mistake' || f.kind==='miss' || f.kind==='blunder')) K.push({ color:'green', text:`Mũi tên xanh — nước tốt hơn: ${f.best.san}.` });
+    if(b && (f.kind==='inaccuracy' || f.kind==='mistake' || f.kind==='miss' || f.kind==='blunder')) K.push({ color:'green', text:`Mũi tên xanh — nước tốt hơn: ${b.san}.` });
     return { paras:P, lines:L, keys:K };
   }
   return { build, PN };
