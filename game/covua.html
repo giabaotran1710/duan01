@@ -451,7 +451,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
 </div>
 
 <div class="toast" id="toast"></div>
-<footer>Version:D20262010-H07M10T7643 »»» developed by Tran Gia Bao</footer>
+<footer>Version:D20262010-H07M36T6759 »»» developed by Tran Gia Bao</footer>
 
 <script>
 function ChessCore(){
@@ -1140,6 +1140,34 @@ function ExplainVi(){
       if(c.later) P.push(`${N(m.cap, them)} ở ${m.to} cũng không chạy đi đâu được: sau ${c.after.join(' ')}, ${mine ? 'bạn' : 'Stockfish'} vẫn ăn được nó bằng ${B(c.later.san)}.${t ? ' Nên ăn quân lớn trước, quân nhỏ sau.' : ''}`);
     }
 
+    // Có quân đối thủ ăn được ngay (nhất là ăn lại quân vừa bị mất) mà nước đã đi lại bỏ qua: chê thẳng điều đó.
+    // Trả về true nếu đã nói (khi đó không cần nêu lại nước tốt hơn).
+    function missedCapture(){
+      const t = c.target;
+      if(!b || !t || c.same || !(t.cheap || t.free)) return false;
+      const recap = !!(f.prev && f.prev.cap && f.prev.to===t.to);
+      if(!recap && VAL[t.cap]<3) return false;
+      if(m.cap && VAL[m.cap]>=VAL[t.cap]) return false;
+      const you = mine ? 'bạn' : 'Stockfish';
+
+      // Ăn bằng quân nào, có bị ăn lại không
+      const grab = `${N(t.piece, me)} ăn ${N(t.cap, them)} ở ${t.to}`;
+      const safe = t.free ? ', mà không bị ăn lại' : '';
+
+      if(recap){
+        const lost = f.prev;
+        P.push(`${up(opp)} vừa dùng ${N(lost.piece, them)} ăn ${N(lost.cap, me)} của ${you} ở ${lost.to}.`);
+        P.push(`${who} ${act(m, me)} trong khi có thể ăn lại ngay: ${grab} (${B(b.san)})${safe}. Thế là mất ${N(lost.cap, me)} mà chưa lấy lại được gì.`);
+      }else{
+        P.push(`${who} ${act(m, me)} trong khi có thể ăn ${N(t.cap, them)} ở ${t.to} ngay bằng ${N(t.piece, me)} (${B(b.san)})${safe}.`);
+      }
+
+      if(c.escaped) P.push(`Sau nước đã đi, ${N(t.cap, them)} kịp chạy khỏi ${t.to}, cơ hội ăn không còn nữa.`);
+      else if(f.after.mate!==null && f.after.mate!==undefined && f.after.mate<0 && r) P.push(`Nặng hơn, ${opp} còn có thể chiếu hết bằng ${B(r.san)}.`);
+      else if(r && r.cap && r.to!==t.to) P.push(`Đã vậy, ${opp} còn có thể đáp ${B(r.san)}: ${pieceAct(r, them)}.`);
+      return true;
+    }
+
     // Vấn đề của một nước kém: đối thủ đáp gì, mất gì, vì sao không hay
     function problem(){
       const mated = !f.after.mated && f.after.mate!==null && f.after.mate!==undefined && f.after.mate<0;
@@ -1232,16 +1260,20 @@ function ExplainVi(){
         break;
       }
       case 'inaccuracy': case 'mistake': case 'blunder': {
-        problem();
-        advice('Nước tốt hơn là');
+        if(!missedCapture()){
+          problem();
+          advice('Nước tốt hơn là');
+        }
         L.push({ label:'Nếu đi như vậy', text:numLine(k, f.line) });
         if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
         break;
       }
       case 'miss': {
-        P.push(doing());
-        P.push(`${up(opp)} vừa đi hỏng${f.prev ? ` (${B(f.prev.san)})` : ''}, nhưng ${mine ? 'bạn' : 'Stockfish'} chưa tận dụng được cơ hội.`);
-        advice('Lẽ ra nên đi');
+        P.push(`${up(opp)} vừa đi hỏng${f.prev ? ` (${B(f.prev.san)})` : ''}.`);
+        if(!missedCapture()){
+          P.push(`${who} ${act(m, me)}, nhưng chưa tận dụng được cơ hội đó.`);
+          advice('Lẽ ra nên đi');
+        }
         if(f.bestLine) L.push({ label:'Chuỗi tốt hơn', text:numLine(k, f.bestLine) });
         break;
       }
