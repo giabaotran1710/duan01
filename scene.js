@@ -40,6 +40,7 @@
     bidaBtn: ['curtain', '#052e16', '#15803d', '#fef3c7'],
     khinhkhi: ['iris', '#0369a1', '#38bdf8', '#fff7ed'],
     xepbonggai: ['tiles', '#1e3a8a', '#0ea5e9', '#e0f2fe'],
+    xepnuoc: ['iris', '#0b2a4a', '#0891b2', '#cffafe'],
     truottuyet: ['diagonal', '#0c4a6e', '#38bdf8', '#ffffff'],
     demsao: ['iris', '#020617', '#312e81', '#fde68a'],
     bongnay: ['iris', '#7c2d12', '#ea580c', '#fed7aa'],
