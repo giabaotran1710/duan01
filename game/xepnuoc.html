@@ -78,11 +78,12 @@ const CFG={
   COLORS:['#e53935','#1e88e5','#43a047','#fdd835','#fb8c00','#8e24aa','#ec407a','#00acc1','#c0ca33','#6d4c41','#eceff1','#78909c']
 };
 /* Độ khó: colors = số lọ màu (mỗi lọ 5 nấc), recipes = số công thức pha màu trong ván,
-   minSteps = độ xáo trộn tối thiểu. Tổng lọ = colors + EMPTY, tối đa 12 (2 hàng x 6). */
+   minSteps = độ xáo trộn tối thiểu, frag = tỉ lệ nấc nằm cạnh nấc khác màu tối thiểu (càng cao càng rối).
+   Tổng lọ = colors + EMPTY, tối đa 12 (2 hàng x 6). */
 const DIFFS={
-  normal:{colors:8,recipes:0,minSteps:120},
-  hard:{colors:10,recipes:1,minSteps:200},
-  expert:{colors:9,recipes:2,minSteps:300}
+  normal:{colors:10,recipes:0,minSteps:250,frag:.7},
+  hard:{colors:9,recipes:2,minSteps:400,frag:.75},
+  expert:{colors:9,recipes:3,minSteps:600,frag:.8}
 };
 /* [màu A, màu B, màu tạo ra, tên]: chỉ số trỏ vào COLORS. Rót A lên B hoặc B lên A đều ra màu tạo ra. */
 const RECIPES=[
@@ -222,18 +223,22 @@ function revStep(b,mix,recs){
   for(let i=0;i<k;i++)A.push(col);
   return true;
 }
-function goodStart(b,mix,recs){
-  if(b.some(x=>isFull(x)&&uniform(x)))return false;
+const runsOf=b=>b.reduce((n,x)=>n+x.filter((v,i)=>!i||v!==x[i-1]).length,0);
+function goodStart(b,mix,recs,frag){
+  if(b.some(x=>!x.length||(isFull(x)&&uniform(x))))return false; // không có lọ rỗng sẵn hay lọ đã xong
+  if(frag&&runsOf(b)<frag*b.reduce((n,x)=>n+x.length,0))return false;
   if(!mix)return true;
   const cn=countsOf(b);
   return recs.every(r=>cn[r[0]]>0&&cn[r[1]]>0&&cn[r[2]]<=3);
 }
 function pickRecipes(k){
-  for(let t=0;t<50;t++){
-    const r=shuffle(RECIPES.slice()).slice(0,k);
-    if(new Set(r.flatMap(x=>[x[0],x[1]])).size<=3)return r; // 2 công thức phải chung 1 màu gốc để đủ màu cho các lọ
-  }
-  return RECIPES.slice(0,k);
+  // các công thức chỉ được dùng tối đa 3 màu gốc để còn đủ màu cho các lọ (3 công thức = tam giác 3 màu gốc)
+  const sets=[],go=(i,cur)=>{
+    if(cur.length===k){if(new Set(cur.flatMap(x=>[x[0],x[1]])).size<=3)sets.push(cur);return}
+    for(let j=i;j<RECIPES.length;j++)go(j+1,cur.concat([RECIPES[j]]));
+  };
+  go(0,[]);
+  return shuffle(sets[Math.floor(Math.random()*sets.length)].slice());
 }
 function makeGame(d){
   const mix=d.recipes>0,all=COLORS_IDX();
@@ -251,7 +256,7 @@ function makeGame(d){
     for(let i=0;i<CFG.EMPTY;i++)b.push([]);
     let applied=0,ok=false;
     for(let i=0;i<CFG.SCRAMBLE_TRIES&&!ok;i++){
-      if(revStep(b,mix,recs)){applied++;if(applied>=d.minSteps&&applied%10===0&&goodStart(b,mix,recs))ok=true}
+      if(revStep(b,mix,recs)){applied++;if(applied>=d.minSteps&&applied%10===0&&goodStart(b,mix,recs,d.frag))ok=true}
     }
     last=b;
     if(ok)break;
