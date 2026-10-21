@@ -16,7 +16,9 @@ body{background:radial-gradient(ellipse at 50% 15%,#34207a,#150f3d 55%,#0a0720);
 .pill{background:linear-gradient(#ffb02e,#f07a12);border-radius:20px;padding:6px 18px;font-weight:900;font-size:18px;letter-spacing:.5px;box-shadow:0 3px 0 #9a4a08,0 6px 12px #0006;text-shadow:0 2px 0 #9a4a08}
 .top .pill{font-size:15px;padding:6px 12px}
 .seg{display:flex;background:#0006;border-radius:16px;padding:3px;gap:2px}
-.seg button{border:0;background:none;color:#fff9;font:800 12px "Trebuchet MS",system-ui,sans-serif;padding:7px 9px;border-radius:13px}
+.seg button{border:0;background:none;color:#fff9;font:800 12px "Trebuchet MS",system-ui,sans-serif;padding:7px 7px;border-radius:13px}
+.seg button,.top .pill{white-space:nowrap}
+@media(max-width:380px){.top{padding:12px 10px}.seg button{font-size:11px;padding:7px 6px}.top .pill{font-size:14px;padding:6px 9px}}
 .seg button.on{background:linear-gradient(#ffb02e,#f07a12);color:#fff;text-shadow:0 1px 0 #9a4a08;box-shadow:0 2px 0 #9a4a08}
 .pill.b{background:linear-gradient(#6c4bd6,#472a9e);box-shadow:0 3px 0 #2a1668,0 6px 12px #0006;text-shadow:0 2px 0 #2a1668}
 #rec{display:none;justify-content:center;gap:6px;flex-wrap:wrap;padding:0 10px 4px}
@@ -31,6 +33,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#34207a,#150f3d 55%,#0a0720);
 .gl{position:absolute;top:7%;left:0;right:0;bottom:0;border:2px solid #9bb3ffaa;border-radius:calc(var(--w)*.42) calc(var(--w)*.42) calc(var(--w)*.3) calc(var(--w)*.3);background:linear-gradient(90deg,#ffffff22,#ffffff0a 40%,#0004);overflow:hidden;display:flex;flex-direction:column-reverse;padding:3px;box-shadow:inset 0 0 10px #9bb3ff44,0 4px 10px #0006}
 .gl::after{content:"";position:absolute;left:16%;top:8%;width:11%;bottom:22%;border-radius:8px;background:linear-gradient(#fff9,#fff2);pointer-events:none}
 .ly{height:calc(100% / var(--cap));flex:none;background-image:linear-gradient(90deg,#ffffff55,#ffffff00 35%,#00000033);border-top:1px solid #ffffff44}
+.ly.fog{background:linear-gradient(#3b3f73,#23264d);color:#ffffff66;font-weight:900;font-size:calc(var(--w)*.34);line-height:1;display:flex;align-items:center;justify-content:center}
 .ly:first-child{border-radius:0 0 calc(var(--w)*.26) calc(var(--w)*.26)}
 .bt.done .lip{background:linear-gradient(90deg,#c97a10,#ffe08a 45%,#d98a18);border-color:#ffd86b}
 .bt.done .gl{box-shadow:inset 0 0 10px #ffd86b66,0 0 14px #ffd86b66}
@@ -58,7 +61,7 @@ body{background:radial-gradient(ellipse at 50% 15%,#34207a,#150f3d 55%,#0a0720);
 </head>
 <body>
 <div class="stars"></div>
-<div class="top"><div class="seg"><button data-d="normal">THƯỜNG</button><button data-d="hard">KHÓ</button><button data-d="expert">RẤT KHÓ</button></div><div class="pill b" id="mv">Lượt 0</div></div>
+<div class="top"><div class="seg"><button data-d="normal">THƯỜNG</button><button data-d="hard">KHÓ</button><button data-d="expert">RẤT KHÓ</button><button data-d="super">SIÊU KHÓ</button></div><div class="pill b" id="mv">Lượt 0</div></div>
 <div id="rec"></div>
 <div id="board"><div id="bw"></div></div>
 <div class="bar">
@@ -85,7 +88,8 @@ const CFG={
 const DIFFS={
   normal:{colors:10,recipes:0,minSteps:250,frag:.7},
   hard:{colors:9,recipes:2,minSteps:400,frag:.75},
-  expert:{colors:9,recipes:3,minSteps:600,frag:.8}
+  expert:{colors:9,recipes:3,minSteps:600,frag:.8},
+  super:{colors:9,recipes:3,minSteps:1000,frag:.85,fog:true} // fog: sương mù, chỉ thấy dãy màu trên cùng và 1 lớp ngay dưới nó
 };
 /* [màu A, màu B, màu tạo ra, tên]: chỉ số trỏ vào COLORS. Rót A lên B hoặc B lên A đều ra màu tạo ra. */
 const RECIPES=[
@@ -100,7 +104,7 @@ function setRecipes(recs){
 }
 
 /* ===== STATE ===== */
-const S={bottles:[],init:[],sel:-1,moves:0,hist:[],busy:false,sound:true,won:false,mix:false,diff:'normal',recs:[]};
+const S={bottles:[],init:[],sel:-1,moves:0,hist:[],busy:false,sound:true,won:false,mix:false,fog:false,diff:'normal',recs:[]};
 const $=id=>document.getElementById(id);
 const wait=ms=>new Promise(r=>setTimeout(r,ms));
 const clone=o=>JSON.parse(JSON.stringify(o));
@@ -270,7 +274,9 @@ const COLORS_IDX=()=>CFG.COLORS.map((_,i)=>i);
 /* ===== RENDER ===== */
 function paint(i){
   const el=$('bw').children[i],B=S.bottles[i];
-  el.querySelector('.gl').innerHTML=B.map(c=>'<div class="ly" style="background-color:'+CFG.COLORS[c]+'"></div>').join('');
+  let hide=-1; // các lớp có chỉ số < hide bị sương mù che
+  if(S.fog&&B.length){let n=1;while(n<B.length&&B[B.length-1-n]===B[B.length-1])n++;hide=B.length-n-1}
+  el.querySelector('.gl').innerHTML=B.map((c,k)=>k<hide?'<div class="ly fog">?</div>':'<div class="ly" style="background-color:'+CFG.COLORS[c]+'"></div>').join('');
   el.classList.toggle('done',isFull(B)&&uniform(B));
 }
 function render(){
@@ -379,12 +385,13 @@ function restart(){
 let firstGame=true;
 function newGame(){
   const g=makeGame(DIFFS[S.diff]);
-  S.mix=g.mix;S.init=clone(g.b);
+  S.mix=g.mix;S.fog=!!DIFFS[S.diff].fog;S.init=clone(g.b);
   const rec=$('rec');
   rec.classList.toggle('on',S.mix);
   rec.innerHTML=S.mix?S.recs.map(r=>'<span><b style="background:'+CFG.COLORS[r[0]]+'"></b>+<b style="background:'+CFG.COLORS[r[1]]+'"></b>=<b style="background:'+CFG.COLORS[r[2]]+'"></b>'+r[3]+'</span>').join(''):'';
   restart();
-  if(S.mix)toast('Ván pha màu: rót khác màu có thể tạo màu mới');
+  if(S.fog)toast('Siêu khó: sương mù che màu bên dưới, chỉ thấy dãy trên cùng và 1 lớp dưới nó');
+  else if(S.mix)toast('Ván pha màu: rót khác màu có thể tạo màu mới');
   else if(firstGame)toast('Chạm bình để chọn, chạm bình khác để rót');
   firstGame=false;
 }
