@@ -250,7 +250,7 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
   </div>
 </div>
 
-    <footer> Version:D20262210-H15M50T0925 »»» developed by Tran Gia Bao</footer>
+    <footer> Version:D20262210-H16M02T1259 »»» developed by Tran Gia Bao</footer>
 <script>
 const N=6;
 const REGION_COLORS=['#ff5c6c','#ffd93d','#4fd07a','#4fa8f7','#c084f5','#ff9d4d'];
@@ -479,13 +479,16 @@ function makeSol(){
 
 
 /* =========================================================
-   SINH BẢNG: mỗi bảng có ĐÚNG MỘT lời giải và giải được hoàn toàn bằng suy luận (không phải đoán).
+   SINH BẢNG: mỗi bảng có ĐÚNG MỘT lời giải và giải được hoàn toàn bằng suy luận (không phải đoán),
+   nhưng đủ hóc búa: phải dùng phép "giả sử".
    - Chọn lời giải ngẫu nhiên, chia vùng, rồi chỉnh biên vùng cho tới khi chỉ còn một lời giải (đếm đủ).
-   - pzLogicSolve giải theo kiểu người chơi: ô đơn (hàng/cột/vùng chỉ còn một ô), k vùng nằm trong k hàng/cột
-     (và ngược lại), phản chứng một bước. Không giải hết từ bảng trống thì loại bảng đó.
-   Mỗi bảng mất khoảng 1–3 ms; nếu hết số lần thử thì dùng bảng dự phòng đã kiểm chứng.
+   - pzRate giải theo kiểu người chơi: ô đơn (hàng/cột/vùng chỉ còn một ô), k vùng nằm trong k hàng/cột (và ngược lại).
+     Khi kẹt thì "giả sử" một ô có chó; nếu suy luận cơ bản dẫn tới mâu thuẫn thì loại ô đó. Mỗi lần phải giả sử tính là 1 bước khó.
+   - Chỉ nhận bảng giải được hết và cần PZ_MIN_ASSUME..PZ_MAX_ASSUME lần giả sử (đổi hai số này để chỉnh độ khó).
+   Mỗi lần thử ~1 ms; nếu hết số lần thử thì dùng bảng dự phòng đã kiểm chứng.
    ========================================================= */
 const pzRnd=n=>Math.random()*n|0;
+const PZ_MIN_ASSUME = 3, PZ_MAX_ASSUME = 9;
 // tất cả lời giải của một bảng vùng (reg: mảng 36 số) — dừng khi quá cap
 function pzSolutions(reg,cap=2){
   const out=[],cols=[];
@@ -502,60 +505,79 @@ function pzSolutions(reg,cap=2){
   })(0,0);
   return out;
 }
-// Bộ giải bằng suy luận (không đoán): trả true nếu tự giải hết bảng
-function pzLogicSolve(reg){
-  const cand=new Array(N*N).fill(true); const dog=[];
-  const cells=(kind,k)=>{const l=[];for(let r=0;r<N;r++)for(let c=0;c<N;c++){const i=r*N+c;if((kind==='r'&&r===k)||(kind==='c'&&c===k)||(kind==='g'&&reg[i]===k))l.push(i);}return l;};
-  const units=[];for(const kd of ['r','c','g'])for(let k=0;k<N;k++)units.push({kd,k,cells:cells(kd,k)});
-  function place(i){
-    const r=i/N|0,c=i%N,g=reg[i];dog.push(i);
-    for(let j=0;j<N*N;j++){const rr=j/N|0,cc=j%N;
-      if(rr===r||cc===c||reg[j]===g||(Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1)) cand[j]=false;}
-    cand[i]=false; // đã có chó
-  }
-  const placedIn=u=>u.cells.some(i=>dog.includes(i));
-  let changed=true;
-  while(changed&&dog.length<N){
-    changed=false;
-    // 1) đơn: đơn vị chưa có chó mà chỉ còn một ô ứng viên
-    for(const u of units){ if(placedIn(u))continue; const cs=u.cells.filter(i=>cand[i]); if(cs.length===1){place(cs[0]);changed=true;break;} if(cs.length===0)return false;}
-    if(changed) continue;
-    // 2) tập: k vùng chỉ nằm trong đúng k hàng (hoặc cột) → loại các ô khác của hàng/cột đó, và ngược lại
-    const rowsOf=[],colsOf=[];
-    for(let g=0;g<N;g++){let rs=0,cs=0;for(let i=0;i<N*N;i++)if(reg[i]===g&&cand[i]){rs|=1<<(i/N|0);cs|=1<<(i%N);}rowsOf.push(rs);colsOf.push(cs);}
-    const pc=m=>{let n=0;while(m){n+=m&1;m>>=1;}return n;};
-    const regsDone=[];for(let g=0;g<N;g++)regsDone.push(placedIn({cells:cells('g',g)}));
-    for(let sub=1;sub<(1<<N)&&!changed;sub++){
+const pzPc=m=>{let n=0;while(m){n+=m&1;m>>=1;}return n;};
+function pzUnits(reg){
+  const units=[];
+  for(const kd of ['r','c','g'])for(let k=0;k<N;k++){const l=[];for(let r=0;r<N;r++)for(let c=0;c<N;c++){const i=r*N+c;if((kd==='r'&&r===k)||(kd==='c'&&c===k)||(kd==='g'&&reg[i]===k))l.push(i);}units.push(l);}
+  return units;
+}
+function pzPlace(reg,st,i){
+  const r=i/N|0,c=i%N,g=reg[i];st.dog.push(i);
+  for(let j=0;j<N*N;j++){const rr=j/N|0,cc=j%N;if(rr===r||cc===c||reg[j]===g||(Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1))st.cand[j]=false;}
+  st.cand[i]=false;
+}
+// suy luận cơ bản: ô đơn + k vùng trong k đường (và ngược lại). Trả 'contra' | 'ok'
+function pzPropagate(reg,units,st){
+  for(;;){
+    if(st.dog.length===N)return 'ok';
+    let ch=false;
+    for(const u of units){
+      if(u.some(i=>st.dog.includes(i)))continue;
+      const cs=u.filter(i=>st.cand[i]);
+      if(cs.length===0)return 'contra';
+      if(cs.length===1){pzPlace(reg,st,cs[0]);ch=true;break;}
+    }
+    if(ch)continue;
+    // chỉ xét vùng / hàng / cột CHƯA có chó
+    const hasDog=(kd,k)=>st.dog.some(i=>kd==='g'?reg[i]===k:kd==='r'?(i/N|0)===k:i%N===k);
+    const actG=[],actR=[],actC=[];
+    for(let k=0;k<N;k++){if(!hasDog('g',k))actG.push(k);if(!hasDog('r',k))actR.push(k);if(!hasDog('c',k))actC.push(k);}
+    const rowsOf={},colsOf={};
+    for(const g of actG){let rs=0,cs=0;for(let i=0;i<N*N;i++)if(reg[i]===g&&st.cand[i]){rs|=1<<(i/N|0);cs|=1<<(i%N);}rowsOf[g]=rs;colsOf[g]=cs;}
+    const subsets=arr=>{const out=[];for(let m=1;m<(1<<arr.length);m++){const s=[];for(let j=0;j<arr.length;j++)if(m&(1<<j))s.push(arr[j]);out.push(s);}return out;};
+    for(const sub of subsets(actG)){
+      if(ch)break;
       for(const [lines,kind] of [[rowsOf,'r'],[colsOf,'c']]){
-        let uni=0,k=0;for(let g=0;g<N;g++)if(sub&(1<<g)){uni|=lines[g];k++;}
-        if(pc(uni)===k){ // k vùng nằm trong k đường
-          for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;
-            if((uni>>ln)&1&&cand[i]&&!(sub&(1<<reg[i]))){cand[i]=false;changed=true;}}
-        }
+        let uni=0;for(const g of sub)uni|=lines[g];
+        const k=sub.length,m=pzPc(uni);
+        if(m<k)return 'contra';
+        if(m===k){for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;if((uni>>ln)&1&&st.cand[i]&&!sub.includes(reg[i])){st.cand[i]=false;ch=true;}}}
       }
     }
-    if(changed) continue;
-    // đảo lại: k hàng (cột) mà ứng viên chỉ thuộc k vùng → loại các ô khác của các vùng đó
-    for(let sub=1;sub<(1<<N)&&!changed;sub++){
-      for(const kind of ['r','c']){
-        let regs=0,k=0;
-        for(let l=0;l<N;l++)if(sub&(1<<l)){k++;for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;if(ln===l&&cand[i])regs|=1<<reg[i];}}
-        if(pc(regs)===k){for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;
-          if((regs>>reg[i])&1&&cand[i]&&!(sub&(1<<ln))){cand[i]=false;changed=true;}}}
+    if(ch)continue;
+    for(const kind of ['r','c']){
+      const act=kind==='r'?actR:actC;
+      for(const sub of subsets(act)){
+        if(ch)break;
+        let regs=0;
+        for(const l of sub)for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;if(ln===l&&st.cand[i])regs|=1<<reg[i];}
+        const k=sub.length,m=pzPc(regs);
+        if(m<k)return 'contra';
+        if(m===k){for(let i=0;i<N*N;i++){const ln=kind==='r'?(i/N|0):i%N;if((regs>>reg[i])&1&&st.cand[i]&&!sub.includes(ln)){st.cand[i]=false;ch=true;}}}
       }
     }
-    if(changed) continue;
-    // 3) phản chứng một bước: đặt thử vào ô → có đơn vị nào hết ô ứng viên thì ô đó chắc chắn không có chó
-    for(let i=0;i<N*N&&!changed;i++){
-      if(!cand[i]) continue;
-      const r=i/N|0,c=i%N,g=reg[i];
-      const alive=j=>{const rr=j/N|0,cc=j%N;return cand[j]&&!(rr===r||cc===c||reg[j]===g||(Math.abs(rr-r)<=1&&Math.abs(cc-c)<=1));};
-      for(const u of units){ if(placedIn(u))continue;
-        if(u.cells.includes(i))continue;
-        if(!u.cells.some(alive)){cand[i]=false;changed=true;break;}}
-    }
+    if(!ch)return 'ok';
   }
-  return dog.length===N?dog.slice():null;
+}
+// giải: suy luận cơ bản; kẹt thì "giả sử" một ô có chó, nếu suy luận cơ bản dẫn tới mâu thuẫn thì loại ô đó
+function pzRate(reg){
+  const units=pzUnits(reg);const st={cand:new Array(N*N).fill(true),dog:[]};
+  let assumes=0,maxDepthNeeded=0;
+  if(pzPropagate(reg,units,st)==='contra')return null;
+  const basicDone=st.dog.length===N;
+  if(basicDone)return {solved:true,assumes:0,basic:true};
+  for(;;){
+    let found=false;
+    for(let i=0;i<N*N&&!found;i++){
+      if(!st.cand[i])continue;
+      const t={cand:st.cand.slice(),dog:st.dog.slice()};
+      pzPlace(reg,t,i);
+      if(pzPropagate(reg,units,t)==='contra'){st.cand[i]=false;assumes++;found=true;}
+    }
+    if(!found)return {solved:false,assumes};
+    if(pzPropagate(reg,units,st)==='contra')return null;
+    if(st.dog.length===N)return {solved:true,assumes,basic:false};
+  }
 }
 // Sinh vùng: giữ vùng liên thông, chứa ô chó; leo đồi theo số lời giải
 function pzGrowRegions(sol){
@@ -590,13 +612,15 @@ function pzMake(maxSteps=400){
   return {reg,sol};
 }
 
-const PZ_FALLBACK = ["100024102224135224335224355444555444", "000001020011221111422113424333444555", "111100311222333222353322353542355555", "111110111211222222342555544555555555", "000000110020111220412253442553222255", "331120311220331222332242355545335555", "200000222301424333444353454553455555", "222000122220132200332222532242555442", "001111334441332241354441355141355111", "000000002011002212032222335442335222", "005333555113522333555344554444555544", "001111500011555241535241554441555551"];
+const PZ_FALLBACK = ["000011011111213141233341235344235344", "110000111110241300241330441133455533", "000000001002031322033322443332445555", "000011211113211133223334223434253444", "311000331110533112534422535444555555", "000000204011224011224331244431544433", "000044100024111224131114333144355444", "222000221113221133422335422355555555", "111002111102113122133224133334533344", "111120111120113124133334333434555444", "000011332001322441354441555544555554", "223310233110233314233334335344355444"];
 
 function pzBuild(){
     const t0 = performance.now();
-    for(let k=0; k<600 && performance.now()-t0 < 400; k++){
+    for(let k=0; k<3000 && performance.now()-t0 < 500; k++){
         const p = pzMake();
-        if(p && pzLogicSolve(p.reg)) return p;
+        if(!p) continue;
+        const r = pzRate(p.reg);
+        if(r && r.solved && r.assumes >= PZ_MIN_ASSUME && r.assumes <= PZ_MAX_ASSUME) return p;
     }
     const reg = PZ_FALLBACK[pzRnd(PZ_FALLBACK.length)].split('').map(Number);
     return {reg, sol: pzSolutions(reg,1)[0]};
