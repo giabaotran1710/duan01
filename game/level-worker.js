@@ -825,6 +825,7 @@ function scoreStart(sp, k, pdistIdx) {
   const D = depth.get(k);
   let traps = 0, subtle = 0, switches = 0, choiceSum = 0, lastBox = -1, steps = 0;
   let curK = k;
+  const path = [];   // các lần đẩy [ô hộp, ô tới] theo chỉ số ô trống
   // đi theo một đường tối ưu (ưu tiên đẩy tiếp hộp vừa đẩy → số lần đổi hộp là ít nhất có thể theo đường này)
   while (depth.get(curK) > 0) {
     const cd = depth.get(curK);
@@ -834,7 +835,7 @@ function scoreStart(sp, k, pdistIdx) {
     const st = sp.getStamp();
     const reach = new Uint8Array(sp.F);
     for (let i = 0; i < sp.F; i++) reach[i] = mark[i] === st ? 1 : 0;
-    let bestK = -1, bestTo = -1, bestSame = false, good = 0, legal = 0;
+    let bestK = -1, bestTo = -1, bestFrom = -1, bestSame = false, good = 0, legal = 0;
     for (let i = 0; i < n; i++) {
       const b = bx[i];
       for (let dd = 0; dd < 4; dd++) {
@@ -857,7 +858,7 @@ function scoreStart(sp, k, pdistIdx) {
           if (nd < cd) good++;
           if (nd === cd - 1) {
             const same = b === lastBox;
-            if (bestK < 0 || (same && !bestSame)) { bestK = nk; bestTo = t; bestSame = same; }
+            if (bestK < 0 || (same && !bestSame)) { bestK = nk; bestTo = t; bestFrom = b; bestSame = same; }
           }
         }
       }
@@ -867,6 +868,7 @@ function scoreStart(sp, k, pdistIdx) {
     if (lastBox >= 0 && !bestSame) switches++;
     choiceSum += legal ? good / legal : 1;
     lastBox = bestTo;
+    path.push([bestFrom, bestTo]);
     curK = bestK;
     steps++;
   }
@@ -892,7 +894,7 @@ function scoreStart(sp, k, pdistIdx) {
   const forced = steps ? 1 - choiceSum / steps : 0;        // tỉ lệ nước "không tiến bộ" → phải tính toán
   const score = D * 1.0 + (traps - subtle) * 0.25 + subtle * 1.1 + switches * 2.2 + adj * 1.5
     - nearT * 3 + far * 0.4 + cramped * 4 + forced * 10;
-  return { score, pushes: D, traps, subtle, switches, adj, nearT, cramped, forced };
+  return { score, pushes: D, traps, subtle, switches, adj, nearT, cramped, forced, path };
 }
 
 // cấu hình theo loại màn: (khối ngang, khối dọc, số hộp, số ô trống tối thiểu/tối đa)

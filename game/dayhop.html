@@ -94,7 +94,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
       font-weight: 600;
       font-size: 0.95rem;
       gap: 10px;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
     }
 
     .info-item {
@@ -135,7 +135,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
       display: grid;
       --cell-size: 42px;
       gap: 2px;
-      background: #1a2740;
+      background: transparent;
       padding: 3px;
       border-radius: 12px;
       transition: all 0.15s ease;
@@ -154,6 +154,11 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
   background: #1a2740;
   overflow: hidden;
 }
+    .cell-void {
+      background: transparent;
+      box-shadow: none;
+    }
+
     .cell-wall {
       background: #3b4a6b;
       border-radius: 4px;
@@ -568,6 +573,36 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     }
 
 }
+  #btnChallenge{
+    flex-direction:column;
+    gap:1px;
+    padding:5px 6px;
+    line-height:1.05;
+}
+#btnChallenge .ch-label{
+    font-size:.78rem;
+    white-space:nowrap;
+}
+#btnChallenge .ch-stars{
+    font-size:.82rem;
+    letter-spacing:1px;
+    color:rgba(255,255,255,.75);
+}
+#btnChallenge .ch-stars .on{
+    color:#FFD54A;
+    text-shadow:0 0 6px rgba(255,213,74,.8);
+}
+#levelSelector{
+    min-width:0;
+    overflow:hidden;
+}
+#levelSelector.daily{
+    font-size:.8rem;
+    gap:4px;
+}
+#movesSelector{
+    flex:0 0 auto;
+}
   .title.challenge{
     background:linear-gradient(135deg,#ff5050,#b60000);
     -webkit-background-clip:text;
@@ -737,7 +772,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
 
     <div class="info-bar">
       <div class="info-item level-selector" id="levelSelector">
-    <span>Màn chơi</span>
+    <span id="levelLabel">Màn chơi</span>
     <span class="info-value" id="levelDisplay">1 ▼</span>
 </div>
     <div class="info-item level-selector" id="movesSelector">
@@ -782,7 +817,7 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     <div class="btn-row">
       <button class="btn" id="btnUndo">HOÀN TÁC</button>
       <button class="btn" id="btnReset">CHƠI LẠI</button>
-      <button class="btn btn-challenge" id="btnChallenge">THỬ THÁCH</button>
+      <button class="btn btn-challenge" id="btnChallenge"><span class="ch-label" id="chLabel">THỬ THÁCH</span><span class="ch-stars" id="chStars">☆☆☆</span></button>
 <button class="btn" id="btnShare" title="Chia sẻ">
   <i class="fa-solid fa-share-nodes"></i>
 </button>
@@ -1038,6 +1073,11 @@ let bestStars = [];
 let devHintEl = null;
 let devPressTimer = null;
       let isSharedLevel = false;
+      // Thử thách hằng ngày: màn có sẵn trong daily-levels.json, ai cũng chơi cùng một màn trong ngày (giờ Việt Nam)
+      let dailyMode = false;
+      let dailyDay = null;          // { key, label, index } của ngày đang chơi
+      let dailyLevels = null;
+      let normalLevelIndex = 0;     // màn thường để quay về
 
       const boardEl = document.getElementById('board');
       const levelDisplay = document.getElementById('levelDisplay');
@@ -1396,7 +1436,7 @@ function analyzeParWithWorker(map) {
 }
 
 async function loadLevel(levelIndex, forceNew = false) {
-    if (isSharedLevel) {
+    if (isSharedLevel || dailyMode) {
         const parsed = parseMap(currentLevel.map);
 
         boardData = parsed.grid;
@@ -1411,7 +1451,7 @@ async function loadLevel(levelIndex, forceNew = false) {
         currentDifficulty = currentLevel.difficulty || "";
 
         // số bước ít nhất của màn chia sẻ được tính trong worker (không làm đứng trang)
-        if (currentLevel.parOpt !== true && !currentLevel.parTried2) {
+        if (isSharedLevel && currentLevel.parOpt !== true && !currentLevel.parTried2) {
             showLoading();
             const mv = await analyzeParWithWorker(currentLevel.map);
             currentLevel.parTried2 = true;
@@ -1509,16 +1549,31 @@ async function loadLevel(levelIndex, forceNew = false) {
     });
   }
 }
+      // 2 sao: màn thường dư tối đa 5 bước; thử thách ngày (175–250 bước) dư tối đa 10%
+      function star2Limit() {
+    return dailyMode ? parMoves + Math.ceil(parMoves * 0.1) : parMoves + 5;
+}
+
       function getStars() {
 
     if (movesCount <= parMoves)
         return 3;
 
-    if (movesCount <= parMoves + 5)
+    if (movesCount <= star2Limit())
         return 2;
 
     return 1;
 }
+      // tường không giáp ô đi được nào (kể cả chéo) → để trống cho bàn chơi gọn
+      function isOuterWall(r, c) {
+        for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+          const row = boardData[r + dr];
+          const ch = row && row[c + dc];
+          if (ch !== undefined && ch !== '#') return false;
+        }
+        return true;
+      }
+
       function render() {
         boardEl.innerHTML = '';
         const rows = boardData.length;
@@ -1552,7 +1607,7 @@ boardEl.style.setProperty("--cell-size", `${Math.max(14, cellSize)}px`);
             let onTarget = false;
 
             switch (ch) {
-              case '#': cellClass = 'cell-wall'; break;
+              case '#': cellClass = isOuterWall(r, c) ? 'cell-void' : 'cell-wall'; break;
               case ' ': cellClass = 'cell-floor'; break;
               case '.': cellClass = 'cell-target'; break;
               case '$': cellClass = 'cell-floor'; entityType = 'box'; break;
@@ -1578,15 +1633,27 @@ boardEl.style.setProperty("--cell-size", `${Math.max(14, cellSize)}px`);
       }
 
 function updateInfo() {
+  const levelLabel = document.getElementById("levelLabel");
+  const levelSel = document.getElementById("levelSelector");
+  levelSel.classList.toggle("daily", dailyMode);
   if (isSharedLevel) {
 
+    levelLabel.textContent = "Màn chơi";
     levelDisplay.textContent = "được chia sẻ";
+
+} else if (dailyMode) {
+
+    levelLabel.textContent = "Thử thách ngày";
+    levelDisplay.textContent = dailyDay ? dailyDay.label : "";
 
 } else {
 
+    levelLabel.textContent = "Màn chơi";
     levelDisplay.textContent = currentLevelIndex + 1;
 
 }
+document.getElementById("btnShare").style.display = (isSharedLevel || dailyMode) ? "none" : "";
+updateChallengeButton();
 movesDisplay.textContent = movesCount;
     const starPanel = document.getElementById("starTargets");
 const challengePanel = document.getElementById("challengePanel");
@@ -1620,7 +1687,7 @@ else
     challengePanel.style.display = "none";
 
     document.getElementById("star3Moves").textContent = parMoves;
-    document.getElementById("star2Moves").textContent = parMoves + 5;
+    document.getElementById("star2Moves").textContent = star2Limit();
 }
 }
 
@@ -1695,11 +1762,13 @@ beep(170, 0.08, "square");
         if (movesCount < parMoves && currentLevel && currentLevel.parOpt !== true) {
             parMoves = movesCount;
             currentLevel.par = movesCount;
-            if (!isSharedLevel && unlockedLevels[currentLevelIndex]) { unlockedLevels[currentLevelIndex].par = movesCount; saveUnlockedLevels(); }
+            if (!isSharedLevel && !dailyMode && unlockedLevels[currentLevelIndex]) { unlockedLevels[currentLevelIndex].par = movesCount; saveUnlockedLevels(); }
         }
         const stars = getStars();
 
-        if (!isSharedLevel) {
+        if (dailyMode) {
+            saveDailyStars(stars);
+        } else if (!isSharedLevel) {
             if ((bestStars[currentLevelIndex] || 0) < stars) {
                 bestStars[currentLevelIndex] = stars;
                 saveStars();
@@ -1708,7 +1777,7 @@ beep(170, 0.08, "square");
 
         gameWon = true;
         updateInfo();
-        if (!challengeMode || stars === 3) pregenerateNext();
+        if (!dailyMode && !isSharedLevel) pregenerateNext();
 
         setTimeout(() => showWinOverlay(), 300);
     }
@@ -1751,12 +1820,9 @@ function pregenerateNext() {
 }
 
 async function nextLevel() {
-    if (isSharedLevel) return;
+    if (isSharedLevel) { location.href = location.pathname; return; }   // rời màn chia sẻ, về màn chơi thường
     if (!gameWon) return;
-
-    if (challengeMode && getStars() < 3) {
-        return;
-    }
+    if (dailyMode) { exitDaily(); return; }
 
     currentLevel = null;
 
@@ -1773,7 +1839,7 @@ function showWinOverlay() {
     overlay.className = "win-overlay";
 
     const starCount = getStars();
-    const canNext = isSharedLevel || (!challengeMode || starCount === 3);
+    const canNext = true;
     const highestUnlocked = unlockedLevels.length - 1;
 
     const nextLevelNumber = nextFrontierIndex() + 1;
@@ -1794,7 +1860,9 @@ function showWinOverlay() {
             : "";
 
     const noteHtml =
-        challengeMode
+        dailyMode
+            ? `<div class="win-stats">Thử thách ngày ${dailyDay ? dailyDay.label : ""}: tối thiểu <b>${parMoves}</b> bước. Ngày mai sẽ có màn mới!</div>`
+            : challengeMode
             ? (
                 starCount === 3
                     ? (
@@ -1817,7 +1885,7 @@ function showWinOverlay() {
                 ${
                     canNext
                         ? `<button class="btn btn-challenge" id="btnWinNext">
-                              ${isSharedLevel ? "TRỞ VỀ" : `MÀN ${nextLevelNumber}`}
+                              ${isSharedLevel || dailyMode ? "TRỞ VỀ" : `MÀN ${nextLevelNumber}`}
                            </button>`
                         : ``
                 }
@@ -1862,12 +1930,11 @@ if (btnWinNext) {
       }
 
 function saveProgress() {
-  if (isSharedLevel) return;
+  if (isSharedLevel || dailyMode) return;
     try {
         localStorage.setItem("sokoban_progress", JSON.stringify({
             level: Math.max(currentLevelIndex, unlockedLevels.length - 1),
             levelData: currentLevel,
-            challengeMode,
             timestamp: Date.now()
         }));
     } catch(e){}
@@ -1970,39 +2037,114 @@ if (btnShare) {
         }
     };
 }
-btnChallenge.addEventListener("click", () => {
-  if (isSharedLevel) {
-    showToast("Không thể thay đổi cài đặt do đây là màn chơi được chia sẻ.");
-    return;
+// ============ THỬ THÁCH HẰNG NGÀY ============
+function pad2(n) { return String(n).padStart(2, "0"); }
+
+// Ngày theo giờ Việt Nam (UTC+7) để mọi máy đều cùng một màn
+function vnToday() {
+    const d = new Date(Date.now() + 7 * 3600 * 1000);
+    const y = d.getUTCFullYear(), m = d.getUTCMonth(), day = d.getUTCDate();
+    const doy = Math.round((Date.UTC(y, m, day) - Date.UTC(y, 0, 1)) / 86400000);
+    return {
+        key: `${y}-${pad2(m + 1)}-${pad2(day)}`,
+        label: `${pad2(day)}/${pad2(m + 1)}/${y}`,
+        index: (doy + y * 37) % 365      // 365 màn, mỗi năm xoay vòng thứ tự
+    };
 }
 
-if (challengeMode) {
+function getDailyStars() {
+    try {
+        const d = JSON.parse(localStorage.getItem("sokoban_daily") || "null");
+        if (d && d.key === vnToday().key) return d.stars || 0;
+    } catch (e) {}
+    return 0;   // qua ngày mới: mất hết sao thử thách
+}
 
-    // Chỉ được tắt khi chưa đi bước nào
-    if (movesCount > 0) {
-        showToast("Không thể tắt chế độ thử thách sau khi đã di chuyển.");
+function saveDailyStars(stars) {
+    if (!dailyDay) return;
+    try {
+        const d = JSON.parse(localStorage.getItem("sokoban_daily") || "null");
+        const old = d && d.key === dailyDay.key ? (d.stars || 0) : 0;
+        localStorage.setItem("sokoban_daily", JSON.stringify({ key: dailyDay.key, stars: Math.max(old, stars) }));
+    } catch (e) {}
+    updateChallengeButton();
+}
+
+function updateChallengeButton() {
+    const n = getDailyStars();
+    let html = "";
+    for (let i = 1; i <= 3; i++) html += i <= n ? '<span class="on">★</span>' : "☆";
+    document.getElementById("chStars").innerHTML = html;
+    document.getElementById("chLabel").textContent = dailyMode ? "TRỞ VỀ" : "THỬ THÁCH";
+    btnChallenge.classList.toggle("active", dailyMode);
+    btnChallenge.title = dailyMode ? "Trở về màn chơi bình thường" : "Thử thách hằng ngày";
+}
+
+async function loadDailyLevels() {
+    if (dailyLevels) return dailyLevels;
+    const res = await fetch("daily-levels.json", { cache: "no-cache" });
+    dailyLevels = await res.json();
+    return dailyLevels;
+}
+
+async function enterDaily() {
+    showLoading();
+    let list;
+    try { list = await loadDailyLevels(); } catch (e) { list = null; }
+    const day = vnToday();
+    const lv = list && list[day.index % list.length];
+    if (!lv) {
+        hideLoading();
+        showToast("Không tải được thử thách hôm nay. Hãy thử lại sau.");
         return;
     }
+    normalLevelIndex = currentLevelIndex;
+    dailyDay = day;
+    dailyMode = true;
+    titleEl.classList.add("challenge");
+    currentLevelIndex = -1;
+    currentLevel = {
+        name: "Thử thách ngày " + day.label,
+        map: lv.map,
+        par: lv.par,
+        parOpt: true,
+        difficulty: "THỬ THÁCH NGÀY",
+        stageDifficulty: "extreme"
+    };
+    const stars = document.getElementById("starTargets");
+    stars.classList.remove("stage-normal", "stage-hard", "stage-extreme");
+    stars.classList.add("stage-extreme");
+    await loadLevel(-1, false);
+}
 
-    challengeMode = false;
+// Rời thử thách (không tải màn); dùng trước khi vào một màn thường
+function leaveDailyState() {
+    if (!dailyMode) return;
+    dailyMode = false;
+    titleEl.classList.remove("challenge");
+    currentLevelIndex = normalLevelIndex;
+}
 
-btnChallenge.classList.remove("active");
-titleEl.classList.remove("challenge");
+function exitDaily() {
+    if (!dailyMode) return;
+    leaveDailyState();
+    removeWinOverlay();
+    currentLevel = unlockedLevels[normalLevelIndex] || null;
+    loadLevel(normalLevelIndex, !unlockedLevels[normalLevelIndex]);
+}
 
-updateInfo();
-return;
+btnChallenge.addEventListener("click", () => {
+    if (isSharedLevel) {
+        showToast("Đang chơi màn được chia sẻ: hãy giải với số bước ít nhất.");
+        return;
     }
-
-    // Bật Challenge
-    challengeMode = true;
-
-btnChallenge.classList.add("active");
-titleEl.classList.add("challenge");
-
-updateInfo();
-resetLevel();
-
+    if (dailyMode) exitDaily();
+    else enterDaily();
 });
+
+// qua ngày mới thì sao thử thách trên nút trở về rỗng
+setInterval(updateChallengeButton, 60000);
+
       let touchStartX = 0;
 let touchStartY = 0;
 
@@ -2104,9 +2246,8 @@ const sharedLoaded = loadSharedLevelFromUrl();
 
 if (sharedLoaded) {
 
-    challengeMode = true;
+    challengeMode = true;   // màn chia sẻ: bắt buộc giải với số bước ít nhất
 
-    btnChallenge.classList.add("active");
     titleEl.classList.add("challenge");
 
     loadLevel(currentLevelIndex, false);
@@ -2117,12 +2258,6 @@ if (sharedLoaded) {
     if (saved) {
         currentLevelIndex = saved.level;
         currentLevel = saved.levelData;
-        challengeMode = !!saved.challengeMode;
-
-        if (challengeMode) {
-            btnChallenge.classList.add("active");
-            titleEl.classList.add("challenge");
-        }
 
         loadLevel(currentLevelIndex, false);
     } else {
@@ -2184,6 +2319,8 @@ btn.innerHTML = `
 `;
         btn.onclick=()=>{
 
+            leaveDailyState();
+
             currentLevel=unlockedLevels[i];
 
             loadLevel(i,false);
@@ -2204,7 +2341,7 @@ btn.innerHTML = `
         nb.style.display = "flex";
         nb.style.justifyContent = "space-between";
         nb.innerHTML = `<span>Màn ${ni + 1}</span><span>MỚI ▶</span>`;
-        nb.onclick = () => { hideLevelPopup(); loadLevel(ni, true); };
+        nb.onclick = () => { hideLevelPopup(); leaveDailyState(); loadLevel(ni, true); };
         list.appendChild(nb);
       }
       const totalStars = getTotalStars();
