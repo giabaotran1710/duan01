@@ -2404,16 +2404,17 @@ body.solution-detail-active .target-controls-top{
   display:flex;align-items:center;justify-content:center;gap:6px;padding:0 10px;font-size:12px;font-weight:800;cursor:pointer}
 .target-pill[hidden]{display:none}
 .target-modesel{flex-direction:column;gap:1px;line-height:1.05;padding:0 10px}
-.target-modesel .pill-k{font-size:9.5px;color:#7a8191;letter-spacing:.04em}
-.target-modesel .pill-v{font-size:12px;color:#172033}
+.target-modesel .pill-k{font-size:9.5px;color:#7a8191;letter-spacing:.04em;white-space:nowrap}
+.target-modesel .pill-v{font-size:12px;color:#172033;white-space:nowrap}
 @media(max-width:400px){.target-pill{padding:0 8px;font-size:11px}#tutorialBtn span{display:none}.target-sound,.target-gear{width:48px}}
-.mode-list{display:grid;gap:8px;margin:6px 0 12px}
-.mode-opt{display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:14px;border:2px solid transparent;
-  background:#f1f4f9;font-weight:800;font-size:15px;color:#172033;cursor:pointer}
-.mode-opt small{font-weight:600;color:#6b7590;font-size:11.5px}
+.mode-list{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin:10px 0 12px}
+.mode-opt{display:flex;align-items:center;justify-content:center;text-align:center;min-height:64px;padding:8px 4px;border-radius:14px;border:2px solid transparent;
+  background:#f1f4f9;font-weight:800;font-size:13px;line-height:1.15;color:#172033;cursor:pointer;word-break:keep-all}
 .mode-opt.active{border-color:#172033;background:#fff}
 .mode-opt[data-tier="DỄ"]{color:#2e9d52}.mode-opt[data-tier="THƯỜNG"]{color:#1e88e5}.mode-opt[data-tier="TRUNG BÌNH"]{color:#ef8f00}
 .mode-opt[data-tier="KHÓ"]{color:#e53935}.mode-opt[data-tier="RẤT KHÓ"]{color:#8e1d1d}
+.mode-opt[data-tier="CHUYÊN GIA"]{color:#5b1a8f}.mode-opt[data-tier="HUYỀN THOẠI"]{color:#a8650a}
+@media(max-width:340px){.mode-opt{font-size:11.5px}}
 /* ---------- Tutorial ---------- */
 .tut-coach{position:fixed;left:8px;right:8px;top:max(8px,env(safe-area-inset-top));z-index:30;max-width:560px;margin:0 auto;
   background:#fff;border-radius:16px;padding:10px 13px 11px;box-shadow:0 8px 30px rgba(23,32,51,.25);border:2px solid #172033;
@@ -2440,6 +2441,7 @@ body.tutorial-active.tut-show-hearts .target-hero .target-hearts{visibility:visi
 @keyframes tutModeGlow{0%,100%{background-color:rgba(255,179,0,.14)}50%{background-color:rgba(255,179,0,.46)}}
 @keyframes tutPulse{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
 .submode-label[data-tier="CHUYÊN GIA"]{color:#5b1a8f}
+.submode-label[data-tier="HUYỀN THOẠI"]{color:#a8650a}
 .nonogram-line-clue.block-chip{border-radius:5px}
 .target-research i{font-size:17px;color:#6d4c9f}
 .research-modal{max-height:88vh;overflow-y:auto}
@@ -3630,10 +3632,27 @@ function clueCells(i,n,clue){
   // Quy tắc trung tính: every count clue (thường, chỉ hướng, quân mã, chính
   // nó, cạnh) may hide its color; the target set stays that of its own kind.
   function neutralable(c){
-    return !!c&&typeof c.count==='number'&&!c.combo&&!c.symmetry&&!c.pattern&&!c.poly&&!c.sun&&!c.moon&&!c.code;
+    return !!c&&!c.symmetry&&!c.pattern&&!c.code&&(typeof c.count==='number'||isShapeClue(c));
+  }
+  // combo / polyomino / nhật nguyệt: no count, the color is a hidden variable
+  // of a shape constraint instead (see the neutral shape block in propagate).
+  function isShapeClue(c){return !!c&&!!(c.combo||c.poly||c.sun||c.moon);}
+  // Variety key for a neutral clue (counts for count clues, kind+size otherwise).
+  function neutralKey(c){
+    return typeof c.count==='number'?c.count:c.combo?'c'+c.run:c.poly?'p'+c.poly.length:'nm';
+  }
+  // What a neutral clue demands, with its (hidden) color = the color of its own cell.
+  function neutralRuleText(c){
+    if(typeof c.count==='number')return `có đúng ${c.count} ô trong phạm vi cùng màu với chính ô này`;
+    if(c.combo)return `ô này nằm trong khối đúng ${c.run} ô cùng màu theo chiều ${c.combo==='v'?'dọc':'ngang'} (màu chưa lộ)`;
+    if(c.poly)return 'cụm ô cùng màu chứa ô này có đúng hình dạng này (màu chưa lộ)';
+    return 'khối cùng màu chứa ô này có số ô bằng khối chứa clue đối diện, hai màu khác nhau (màu chưa lộ)';
+  }
+  function neutralLabel(c){
+    return typeof c.count==='number'?`số ${numLabel(c.count)}`:c.combo?`khối ${c.run}`:c.poly?'hình polyomino':'nhật nguyệt';
   }
   function neutralKindName(c){
-    return !c?'':c.knight?' quân mã':c.direction?' chỉ hướng':c.self?' chính nó':Array.isArray(c.sides)?' cạnh':'';
+    return !c?'':c.combo?' combo':c.poly?' polyomino':c.sun?' mặt trời':c.moon?' mặt trăng':c.knight?' quân mã':c.direction?' chỉ hướng':c.self?' chính nó':Array.isArray(c.sides)?' cạnh':'';
   }
   // Neutral candidates: plain and special count clues interleaved, so the
   // neutral set mixes kinds; zero counts go last.
@@ -3892,6 +3911,31 @@ function clueCells(i,n,clue){
     const baseDomains=domains.slice();
     const globalClue=data.globalClue || null;
 
+    // Neutral combo / polyomino / nhật nguyệt: the clue color is the (hidden)
+    // color of its own cell. Until that cell is down to one color the clue
+    // only prunes its own domain; afterwards it acts as a normal clue.
+    const shapeNeutral=[];
+    if(data.neutralClues)for(const i of data.neutralClues){
+      if(clue[i] && isShapeClue(clue[i]) && !revealed.has(i) && data.val[i]===-1)shapeNeutral.push(i);
+    }
+    const shapeNeutralSet=new Set(shapeNeutral);
+    // [index,color] of every combo/poly/sun/moon clue whose color is known.
+    const shapeActive=(kind)=>{
+      const out=[];
+      for(const i of revealed){const c=clue[i];if(c&&c[kind])out.push([i,c.color]);}
+      for(const i of shapeNeutral){
+        if(!clue[i][kind])continue;
+        const col=singleColor(domains[i]);
+        if(col>=0)out.push([i,col]);
+      }
+      return out;
+    };
+    const colorOfClue=i=>{
+      if(revealed.has(i)&&clue[i])return clue[i].color;
+      if(shapeNeutralSet.has(i))return singleColor(domains[i]);
+      return -1;
+    };
+
     let changed=true;
     let passes=0;
     const maxPasses=total*palette*5;
@@ -3983,21 +4027,52 @@ function clueCells(i,n,clue){
         }
       }
 
-      // Nhật Nguyệt pairs (active once both colors are visible).
-      for(const i of revealed){
+      // Neutral combo / polyomino / nhật nguyệt: drop the colors the shape
+      // constraint cannot satisfy for the clue's own cell.
+      for(const i of shapeNeutral){
         const c=clue[i];
-        if(!c||!c.sun||!revealed.has(c.nmPair))continue;
-        const r=nmDeduce(i,c.nmPair,c.color,clue[c.nmPair].color,domains,n);
+        let own=domains[i];
+        for(let col=0;col<palette;col++){
+          const bit=1<<col;
+          if(!(own&bit))continue;
+          let ok=true;
+          if(c.combo){
+            ok=comboPlacements(i,n,c,j=>!!(domains[j]&bit),j=>(domains[j]&~bit)!==0).placements.length>0;
+          }else if(c.poly){
+            ok=polyPlacements(i,n,c,j=>!!(domains[j]&bit),j=>(domains[j]&~bit)!==0).length>0;
+          }else{
+            // ☀ / ☾: the pair must have different colors and equal block sizes.
+            const other=c.nmPair;
+            const a=c.sun?i:other,b=c.sun?other:i;
+            const ocols=[];
+            if(other===i)ok=false;
+            else{
+              const od=colorOfClue(other)>=0?(1<<colorOfClue(other)):domains[other];
+              for(let o=0;o<palette;o++)if((od&(1<<o))&&o!==col)ocols.push(o);
+              ok=ocols.some(o=>nmDeduce(a,b,c.sun?col:o,c.sun?o:col,domains,n));
+            }
+          }
+          if(!ok)own&=~bit;
+        }
+        if(own===0)return {domains,contradiction:true,steps:[],reduced:0};
+        if(own!==domains[i]){domains[i]=own;changed=true;}
+      }
+
+      // Nhật Nguyệt pairs (active once both colors are visible).
+      for(const [i,ca] of shapeActive('sun')){
+        const c=clue[i];
+        const cb=colorOfClue(c.nmPair);
+        if(cb<0)continue;
+        const r=nmDeduce(i,c.nmPair,ca,cb,domains,n);
         if(!r)return {domains,contradiction:true,steps:[],reduced:0};
         for(const [j,col] of r.fill){if(domains[j]!==(1<<col)){domains[j]&=(1<<col);if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
         for(const [j,col] of r.close){if(domains[j]&(1<<col)){domains[j]&=~(1<<col);if(!domains[j])return {domains,contradiction:true,steps:[],reduced:0};changed=true;}}
       }
 
       // Clue polyomino (active once its color is visible).
-      for(const i of revealed){
+      for(const [i,col] of shapeActive('poly')){
         const c=clue[i];
-        if(!c || !c.poly)continue;
-        const bit=1<<c.color;
+        const bit=1<<col;
         const P=polyPlacements(i,n,c,j=>!!(domains[j]&bit),j=>(domains[j]&~bit)!==0);
         if(!P.length)return {domains,contradiction:true,steps:[],reduced:0};
         const inCnt=new Map(),bdCnt=new Map();
@@ -4013,10 +4088,9 @@ function clueCells(i,n,clue){
       }
 
       // Clue combo (active once its color is visible).
-      for(const i of revealed){
+      for(const [i,col] of shapeActive('combo')){
         const c=clue[i];
-        if(!c || !c.combo)continue;
-        const bit=1<<c.color;
+        const bit=1<<col;
         const {cells,placements}=comboPlacements(i,n,c,
           j=>!!(domains[j]&bit), j=>(domains[j]&~bit)!==0);
         if(!placements.length)return {domains,contradiction:true,steps:[],reduced:0};
@@ -8062,7 +8136,7 @@ function createMixedPuzzle(d){
       const valueUse=new Map();
       for(const i of plain){
         if(neutralClues.size>=neutralTarget)break;
-        const v=clue[i].count;
+        const v=neutralKey(clue[i]);
         const used=valueUse.get(v)||0;
         if(v===0 ? used>=1 : used>=2)continue;
         if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
@@ -8496,7 +8570,7 @@ function createRulePuzzle(d){
         const want=(big?6:4)+Math.floor(Math.random()*3);
         for(const i of plain){
           if(neutralClues.size>=want)break;
-          const v=clue[i].count,u=valueUse.get(v)||0;
+          const v=neutralKey(clue[i]),u=valueUse.get(v)||0;
           if(v===0?u>=1:u>=2)continue;
           if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
           neutralClues.add(i);valueUse.set(v,u+1);
@@ -8749,7 +8823,7 @@ function createComboPuzzle(d){
         const cand=neutralCandidates(clue);
         for(const i of cand){
           if(neutralClues.size>=want)break;
-          const v=clue[i].count,u=use.get(v)||0;
+          const v=neutralKey(clue[i]),u=use.get(v)||0;
           if(v===0?u>=1:u>=2)continue;
           if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
           neutralClues.add(i);use.set(v,u+1);
@@ -8948,7 +9022,7 @@ function createBlockPuzzle(d){
         const cand=neutralCandidates(clue);
         for(const i of cand){
           if(neutralClues.size>=want)break;
-          const v=clue[i].count,u=use.get(v)||0;
+          const v=neutralKey(clue[i]),u=use.get(v)||0;
           if(v===0?u>=1:u>=2)continue;
           if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
           neutralClues.add(i);use.set(v,u+1);
@@ -9126,7 +9200,7 @@ function createPolyPuzzle(d){
         neutralClues=new Set();const use=new Map();
         for(const i of neutralCandidates(clue)){
           if(neutralClues.size>=3+Math.floor(n/3))break;
-          const v=clue[i].count,u=use.get(v)||0;
+          const v=neutralKey(clue[i]),u=use.get(v)||0;
           if(v===0?u>=1:u>=2)continue;
           if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
           neutralClues.add(i);use.set(v,u+1);
@@ -9515,7 +9589,7 @@ function createPolyPuzzle(d){
         neutralClues=new Set();const use=new Map();
         for(const i of neutralCandidates(clue)){
           if(neutralClues.size>=scale(4))break;
-          const v=clue[i].count,u=use.get(v)||0;
+          const v=neutralKey(clue[i]),u=use.get(v)||0;
           if(v===0?u>=1:u>=2)continue;
           if(neigh(i,n).some(j=>neutralClues.has(j)))continue;
           neutralClues.add(i);use.set(v,u+1);
@@ -10391,7 +10465,9 @@ function createSolvablePuzzle(d){
   }
 
   // Score → tier (thresholds from the score distribution of all board types).
-  const TIER_SCORE_CUTS=[12,23,38,58,90];
+  // Last cut: HUYỀN THOẠI starts above the CHUYÊN GIA band.
+  const LEGEND_CUT=130;
+  const TIER_SCORE_CUTS=[12,23,38,58,90,LEGEND_CUT];
   function tierFromScore(x){
     let k=0;while(k<TIER_SCORE_CUTS.length && x>=TIER_SCORE_CUTS[k])k++;
     return TIER_ORDER[k];
@@ -10996,7 +11072,13 @@ function render(){
         game.previewClues?.has(i) &&
         (game.neutralClues?.has(i) || (!clue.knight && !clue.direction && !clue.self && !clue.pattern))
       ){
-        if(clue.knight){
+        if(clue.sun||clue.moon){
+          // Neutral nhật nguyệt clue: gray sun / moon, color still hidden.
+          const ic=document.createElement('i');
+          ic.className=(clue.sun?'fa-regular fa-sun':'fa-regular fa-moon')+' nm-icon';
+          ic.style.color='#8a93a6';
+          b.append(ic);
+        }else if(clue.knight){
           // Neutral knight clue: gray knight, color still hidden.
           const icon=document.createElement('span');
           icon.className='knight-icon';
@@ -11040,9 +11122,9 @@ function render(){
         if(game.mixedMode && game.neutralClues?.has(i)){
           b.setAttribute(
             'aria-label',
-            `Clue trung tính${neutralKindName(clue)}: có đúng ${clue.count} ô trong phạm vi cùng màu với chính ô này`
+            `Clue trung tính${neutralKindName(clue)}: ${neutralRuleText(clue)}`
           );
-          b.title=`Clue trung tính${neutralKindName(clue)} · có đúng ${clue.count} ô trong phạm vi cùng màu với chính ô này`;
+          b.title=`Clue trung tính${neutralKindName(clue)} · ${neutralRuleText(clue)}`;
         }else{
           b.setAttribute(
             'aria-label',
@@ -14805,7 +14887,7 @@ function buildDetailedSolutionSteps(){
       !!game.neutralClues?.has(i) && !detailPainted.has(i) &&
       !(game.initialRevealed||new Set()).has(i);
     const detailSourceLabel=i=>isNeutralAtStep(i)
-      ? `Clue trung tính${neutralKindName(game.clue[i])} (số ${numLabel(game.clue[i].count)})`
+      ? `Clue trung tính${neutralKindName(game.clue[i])} (${neutralLabel(game.clue[i])})`
       : getClueTypeLabel(game.clue[i]);
 
     const lineText=(line)=>{
@@ -15082,8 +15164,11 @@ function buildDetailedSolutionSteps(){
           const others=sources.filter(i=>i!==step.index);
           reasonTitle='⚪ Clue trung tính xác định màu';
           reasonText=
-            `<b>${target}</b> là Clue trung tính${neutralKindName(game.clue[step.index])} <b>${numLabel(game.clue[step.index].count)}</b>: chỉ khi là ${chip} `+
-            `thì phạm vi của clue mới có đúng ${game.clue[step.index].count} ô cùng màu → <b>${target}</b> là ${chip}.`;
+            (typeof game.clue[step.index].count==='number'
+              ? `<b>${target}</b> là Clue trung tính${neutralKindName(game.clue[step.index])} <b>${numLabel(game.clue[step.index].count)}</b>: chỉ khi là ${chip} `+
+                `thì phạm vi của clue mới có đúng ${game.clue[step.index].count} ô cùng màu → <b>${target}</b> là ${chip}.`
+              : `<b>${target}</b> là Clue trung tính${neutralKindName(game.clue[step.index])} (${neutralLabel(game.clue[step.index])}): chỉ khi là ${chip} `+
+                `thì điều kiện của clue mới thỏa được → <b>${target}</b> là ${chip}.`);
         }else if(step.rule==='directional-single'){
           const source=sources[0];
           const clue=game.clue[source];
@@ -15466,6 +15551,7 @@ function showDetailedStep(step,pointer,phase='reason'){
         const nb=clueCells(idx,n,cl);
         const def=nb.filter(j=>j===idx||colorAt(j,inferred)===c).length;
         const pos=nb.filter(j=>j===idx||canBe(j,c,inferred)).length;
+        if(typeof cl.count!=='number')return `nếu ô là ${chipOf(c)} thì Clue trung tính${neutralKindName(cl)} tại đây không thể thỏa mãn${tag(inferred)}`;
         const nm=`Clue trung tính${neutralKindName(cl)} số ${numLabel(cl.count)}`;
         if(def>cl.count)return `nếu ô là ${chipOf(c)} thì ${nm} tại đây có ${def} ô ${chipOf(c)} trong phạm vi — bị thừa${tag(inferred)}`;
         if(pos<cl.count)return `nếu ô là ${chipOf(c)} thì ${nm} tại đây chỉ có tối đa ${pos} ô ${chipOf(c)} trong phạm vi — bị thiếu${tag(inferred)}`;
@@ -16339,8 +16425,8 @@ function cancelNewGameIntro(){
     get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(_){return d;}},
     set(k,v){try{localStorage.setItem(k,v);}catch(_){}}
   };
-  const TIER_ORDER=['DỄ','THƯỜNG','TRUNG BÌNH','KHÓ','RẤT KHÓ','CHUYÊN GIA'];
-  const TIER_LABEL={random:'Ngẫu nhiên','DỄ':'Dễ','THƯỜNG':'Thường','TRUNG BÌNH':'Trung bình','KHÓ':'Khó','RẤT KHÓ':'Rất khó','CHUYÊN GIA':'Chuyên gia',research:'Nghiên cứu'};
+  const TIER_ORDER=['DỄ','THƯỜNG','TRUNG BÌNH','KHÓ','RẤT KHÓ','CHUYÊN GIA','HUYỀN THOẠI'];
+  const TIER_LABEL={random:'Ngẫu nhiên','DỄ':'Dễ','THƯỜNG':'Thường','TRUNG BÌNH':'Trung bình','KHÓ':'Khó','RẤT KHÓ':'Rất khó','CHUYÊN GIA':'Chuyên gia','HUYỀN THOẠI':'Huyền thoại',research:'Nghiên cứu'};
   let selectedTier=csStore.get('cs.tier','random');
   // NGHIÊN CỨU: {n, rules:[...], noMark}
   let researchCfg=null;
@@ -16359,6 +16445,16 @@ function cancelNewGameIntro(){
   }
   function planForTier(tier){
     const opts=[];
+    if(tier==='HUYỀN THOẠI'){
+      // Beyond CHUYÊN GIA: Quy tắc hóc búa on 7×7–9×9 (and 9×9 khối) with no
+      // X tool, always with Quy tắc rối loạn. Measured: only these reach the
+      // legend score; the hidden score must still clear the cut.
+      for(const spec of BOARD_SPECS){
+        if((spec.tough && spec.n>=7) || (spec.block && spec.n>=9))
+          opts.push({spec:{...spec},colors:3,noMark:true,legend:true});
+      }
+      return opts.length ? opts[Math.floor(Math.random()*opts.length)] : null;
+    }
     for(const spec of BOARD_SPECS){
       const b=baseTierOf(spec), up=TIER_ORDER[TIER_ORDER.indexOf(b)+1];
       if(b===tier)opts.push({spec:{...spec},colors:3,noMark:false});
@@ -17020,9 +17116,8 @@ function cancelNewGameIntro(){
   // ---- Chọn chế độ ----
   function openModeSelect(){
     const list=tutEl('modeList');
-    const hints={random:'Mọi loại màn','DỄ':'4×4, màn DỄ','THƯỜNG':'5×5','TRUNG BÌNH':'6×6','KHÓ':'7×7, 8×8 và màn có thêm quy tắc','RẤT KHÓ':'Màn khó + cấm đánh dấu hoặc 4 màu'};
     list.innerHTML=['random',...TIER_ORDER].map(t=>
-      `<button class="mode-opt${t===selectedTier?' active':''}" data-tier="${t}"><span>${TIER_LABEL[t]}</span><small>${hints[t]}</small></button>`
+      `<button class="mode-opt${t===selectedTier?' active':''}" data-tier="${t}">${TIER_LABEL[t]}</button>`
     ).join('');
     tutEl('modeOverlay').classList.add('show');
   }
@@ -17038,7 +17133,7 @@ function cancelNewGameIntro(){
   tutEl('modeSelectBtn').addEventListener('click',openModeSelect);
 
   // ---------------- NGHIÊN CỨU ----------------
-  const RS_LIMITS={4:[0,2],5:[0,3],6:[1,3],7:[2,4],8:[2,4],9:[2,5]};
+  const RS_LIMITS={4:[0,2],5:[0,3],6:[0,3],7:[0,4],8:[0,4],9:[0,5]};
   const RS_CLUE=[
     ['knight','Quy tắc quân mã','♞'],['direction','Quy tắc chỉ hướng','→'],['self','Quy tắc chính nó','◯'],
     ['neutral','Quy tắc trung tính','⚪'],['pattern','Quy tắc hình mẫu',patternGlyphSVG(1,'#fff','rs-glyph')],['symmetry','Quy tắc đối xứng','◁'],
@@ -17331,7 +17426,8 @@ function cancelNewGameIntro(){
       let t0i=tierIdx(generated,usedPlan);
       let best={g:generated,p:usedPlan,spec:boardSpec,t:t0i,d:Math.abs(t0i-target)};
       const t0=performance.now();
-      for(let a=0;a<10 && best.d>0 && performance.now()-t0<7000;a++){
+      const legendRun=selectedTier==='HUYỀN THOẠI';
+      for(let a=0;a<(legendRun?24:10) && best.d>0 && performance.now()-t0<(legendRun?16000:7000);a++){
         // Mostly the chosen tier's board types; sometimes a neighbouring tier's
         // types, in the direction the score needs to move.
         const shift=best.t<target?1:-1;
@@ -17501,7 +17597,7 @@ function cancelNewGameIntro(){
     // 15% of ordinary boards). It makes a board harder to read, so it counts
     // like a difficulty rule for the label.
     game.chaos=!game.tutorial && !options.override &&
-      ((selectedTier==='research'&&researchCfg) ? !!researchCfg.chaos : Math.random()<0.15);
+      ((selectedTier==='research'&&researchCfg) ? !!researchCfg.chaos : usedPlan?.legend ? true : Math.random()<0.15);
     if(game.chaos)game.scoreTier=tierFromScore(effectiveScore(generatedOverride,game.noMark)*1.15);
     markMode.classList.toggle('no-mark',game.noMark);
     document.getElementById('bulkPaintBtn')?.classList.toggle('no-mark',!!game.noMark);
@@ -17795,7 +17891,7 @@ function cancelNewGameIntro(){
     {
       id: 'neutral', icon: '2', tint: '#8a93a6', title: 'Quy tắc trung tính',
       short: 'Chỉ có số, không có màu',
-      desc: 'Clue không màu, chỉ có số: số ô trong phạm vi cùng màu với chính ô đó. Mọi loại clue đếm số (thường, chỉ hướng, quân mã, chính nó, cạnh) đều có thể trung tính, phạm vi vẫn theo loại của nó.',
+      desc: 'Clue không màu: màu của clue là màu của chính ô đó. Mọi loại clue (thường, chỉ hướng, quân mã, chính nó, cạnh, combo, polyomino, nhật nguyệt) đều có thể trung tính, luật của clue vẫn giữ nguyên.',
       demo: {
         cols: 3, rows: 3,
         cells: {
