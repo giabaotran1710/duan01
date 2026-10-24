@@ -1385,7 +1385,7 @@ function analyzeParWithWorker(map) {
         try { w = new Worker("level-worker.js"); } catch (e) { resolve(null); return; }
         let done = false;
         const finish = (v) => { if (done) return; done = true; clearTimeout(t); try { w.terminate(); } catch (e) {} resolve(v); };
-        const t = setTimeout(() => finish(null), 11000);
+        const t = setTimeout(() => finish(null), 27000);
         w.onmessage = (e) => { if (e.data && e.data.type === "analyzed") finish(e.data.moves); };
         w.onerror = () => finish(null);
         w.postMessage({ type: "analyze", id: 1, map });
@@ -1406,6 +1406,14 @@ async function loadLevel(levelIndex, forceNew = false) {
         gameWon = false;
 
         currentDifficulty = currentLevel.difficulty || "";
+
+        // số bước ít nhất của màn chia sẻ được tính trong worker (không làm đứng trang)
+        if (currentLevel.parOpt !== true && !currentLevel.parTried2) {
+            showLoading();
+            const mv = await analyzeParWithWorker(currentLevel.map);
+            currentLevel.parTried2 = true;
+            if (mv !== null) { currentLevel.par = mv; currentLevel.parOpt = true; }
+        }
         parMoves = currentLevel.par || 0;
 
         render();
@@ -1438,7 +1446,7 @@ async function loadLevel(levelIndex, forceNew = false) {
     }
 
     // Màn lưu từ bản cũ có số bước 3 sao chưa tối ưu: tính lại một lần rồi lưu
-    if (level.parOpt !== true && !level.parTried) {
+    if (level.parOpt !== true && !level.parTried2) {
         const mv = await analyzeParWithWorker(level.map);
         if (mv !== null) {
             level.par = mv;
@@ -1449,7 +1457,7 @@ async function loadLevel(levelIndex, forceNew = false) {
         } else {
             level.parOpt = false;
         }
-        level.parTried = true;   // chỉ thử một lần để không bắt người chơi chờ lại mỗi lần mở màn
+        level.parTried2 = true;   // chỉ thử một lần (bộ giải mới) để không bắt người chơi chờ lại mỗi lần mở màn
         if (unlockedLevels[levelIndex]) { unlockedLevels[levelIndex] = level; saveUnlockedLevels(); }
     }
 
@@ -1678,6 +1686,13 @@ beep(170, 0.08, "square");
 
      function checkWin() {
     if (boxesOnTarget === totalBoxes) {
+        // Phòng hờ: nếu số bước 3 sao chưa phải tối thiểu (màn lưu từ bản cũ, chưa tính xong) mà người chơi thắng sớm hơn,
+        // lấy số bước thực tế làm mốc mới để 3 sao luôn là số bước ít nhất đã biết
+        if (movesCount < parMoves && currentLevel && currentLevel.parOpt !== true) {
+            parMoves = movesCount;
+            currentLevel.par = movesCount;
+            if (!isSharedLevel && unlockedLevels[currentLevelIndex]) { unlockedLevels[currentLevelIndex].par = movesCount; saveUnlockedLevels(); }
+        }
         const stars = getStars();
 
         if (!isSharedLevel) {
@@ -2047,42 +2062,14 @@ function loadSharedLevelFromUrl() {
 
         const parsed = parseMap(map);
 
-        const walkGrid = parsed.grid.map(row =>
-            row.map(ch => ch === "#" ? "#" : " ")
-        );
-
-        const boxesSet = new Set();
-        const targetsSet = new Set();
-
-        for (let r = 0; r < parsed.grid.length; r++) {
-            for (let c = 0; c < parsed.grid[r].length; c++) {
-                const ch = parsed.grid[r][c];
-
-                if (ch === "$") {
-                    boxesSet.add(`${r},${c}`);
-                } else if (ch === "*") {
-                    boxesSet.add(`${r},${c}`);
-                    targetsSet.add(`${r},${c}`);
-                } else if (ch === ".") {
-                    targetsSet.add(`${r},${c}`);
-                } else if (ch === "+") {
-                    targetsSet.add(`${r},${c}`);
-                }
-            }
-        }
-
-        const analysis = analyzeLevel(
-            walkGrid,
-            parsed.pPos,
-            boxesSet,
-            targetsSet
-        );
+        if (!parsed.pPos || !parsed.boxes) return false;
 
         currentLevelIndex = -1;
         currentLevel = {
             name: "Màn chia sẻ",
             map,
-            par: analysis.solvable ? analysis.moves : 0,
+            par: 0,
+            parOpt: false,
             difficulty: "CHIA SẺ",
             stageDifficulty: "normal"
         };
