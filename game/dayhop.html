@@ -1255,6 +1255,20 @@ function loadUnlockedLevels() {
         if (history.length > 200) history.shift();
       }
 
+// Tính lại số bước ít nhất (3 sao) bằng worker riêng, không phải chờ hàng đợi sinh màn; null nếu quá thời gian
+function analyzeParWithWorker(map) {
+    return new Promise((resolve) => {
+        let w = null;
+        try { w = new Worker("level-worker.js"); } catch (e) { resolve(null); return; }
+        let done = false;
+        const finish = (v) => { if (done) return; done = true; clearTimeout(t); try { w.terminate(); } catch (e) {} resolve(v); };
+        const t = setTimeout(() => finish(null), 11000);
+        w.onmessage = (e) => { if (e.data && e.data.type === "analyzed") finish(e.data.moves); };
+        w.onerror = () => finish(null);
+        w.postMessage({ type: "analyze", id: 1, map });
+    });
+}
+
 async function loadLevel(levelIndex, forceNew = false) {
     if (isSharedLevel) {
         const parsed = parseMap(currentLevel.map);
@@ -1298,6 +1312,21 @@ async function loadLevel(levelIndex, forceNew = false) {
             unlockedLevels[levelIndex] = level;
             saveUnlockedLevels();
         }
+    }
+
+    // Màn lưu từ bản cũ có số bước 3 sao chưa tối ưu: tính lại một lần rồi lưu
+    if (level.parOpt === undefined) {
+        const mv = await analyzeParWithWorker(level.map);
+        if (mv !== null) {
+            level.par = mv;
+            level.parOpt = true;
+            if (typeof level.difficulty === "string") {
+                level.difficulty = level.difficulty.replace(/•\s*\d+\s*bước/, `• ${mv} bước`);
+            }
+        } else {
+            level.parOpt = false;
+        }
+        if (unlockedLevels[levelIndex]) { unlockedLevels[levelIndex] = level; saveUnlockedLevels(); }
     }
 
     currentLevel = level;

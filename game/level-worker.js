@@ -520,15 +520,129 @@ function solvePushes(grid, player, boxesSet, targetsSet, opts) {
 
 // Phân tích một màn có sẵn (màn chia sẻ): giải được không và số bước theo lời giải ít lần đẩy nhất
 function analyzeLevel(grid, player, boxesSet, targetsSet) {
+  const opt = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 2000000, deadline: Date.now() + 8000 });
+  if (opt && opt.solvable === true) return { solvable: true, moves: opt.moves, pushes: opt.pushes };
+  // không tìm được lời giải ít bước nhất trong thời gian cho phép: dùng lời giải ít lần đẩy (số bước chỉ là ước lượng trên)
   const sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
   if (!sol || sol.solvable !== true) return { solvable: false, moves: 0 };
   const m = measureSolution(grid, player, boxesSet, sol);
   return { solvable: true, moves: m.moves, pushes: m.pushes };
 }
 
+/* =========================================================
+   BỘ GIẢI TỐI ƯU THEO SỐ BƯỚC ĐI (dùng cho số bước 3 sao và gợi ý Developer)
+   - Mỗi "cạnh" là một lần đẩy, chi phí = quãng đường người chơi đi tới chỗ đẩy + 1 bước đẩy
+   - Trạng thái gồm vị trí chính xác của người chơi (sau khi đẩy người đứng ở ô hộp cũ)
+   - h = tổng số lần đẩy tối thiểu của các hộp (mỗi lần đẩy tốn ≥ 1 bước) → không đánh giá quá cao,
+     nên số bước tìm được là NHỎ NHẤT thật sự
+   Trả về { solvable, moves, pushes, list } hoặc solvable = null nếu hết giờ / vượt số nút.
+   ========================================================= */
+function solveMoves(grid, player, boxesSet, targetsSet, opts) {
+  const rows = grid.length, cols = grid[0].length;
+  const N = rows * cols;
+  const maxNodes = (opts && opts.maxNodes) || 400000;
+  const deadline = (opts && opts.deadline) || Infinity;
+  const pdist = computePushDist(grid, targetsSet);
+  const wall = new Uint8Array(N);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] === '#') wall[r * cols + c] = 1;
+  const isTarget = new Uint8Array(N);
+  for (const key of targetsSet) { const [r, c] = fromKey(key); isTarget[r * cols + c] = 1; }
+  const nbr = [];
+  for (let i = 0; i < N; i++) {
+    const r = (i / cols) | 0, c = i % cols, l = [];
+    if (r > 0) l.push(i - cols);
+    if (r < rows - 1) l.push(i + cols);
+    if (c > 0) l.push(i - 1);
+    if (c < cols - 1) l.push(i + 1);
+    nbr.push(l);
+  }
+  const DR = [-1, 1, 0, 0], DC = [0, 0, -1, 1];
+  const occ = new Uint8Array(N);
+  const wd = new Int32Array(N);
+  const queue = new Int32Array(N);
+  // khoảng cách đi bộ từ p tới mọi ô (hộp là vật cản)
+  function walk(p) {
+    wd.fill(-1);
+    let h = 0, t = 0;
+    queue[t++] = p; wd[p] = 0;
+    while (h < t) {
+      const cur = queue[h++];
+      const l = nbr[cur];
+      for (let k = 0; k < l.length; k++) {
+        const n = l[k];
+        if (wall[n] || occ[n] || wd[n] !== -1) continue;
+        wd[n] = wd[cur] + 1;
+        queue[t++] = n;
+      }
+    }
+  }
+
+  const startBoxes = [...boxesSet].map(k => { const [r, c] = fromKey(k); return r * cols + c; }).sort((a, b) => a - b);
+  for (const b of startBoxes) if (pdist[b] === Infinity) return { solvable: false };
+  const startP = player.r * cols + player.c;
+  const keyOf = (boxes, p) => boxes.join(',') + '|' + p;
+  const hOf = boxes => { let h = 0; for (let i = 0; i < boxes.length; i++) h += pdist[boxes[i]]; return h; };
+
+  const heap = [];
+  const less = (a, b) => a.f < b.f || (a.f === b.f && a.g > b.g);
+  function push(n) { heap.push(n); let i = heap.length - 1; while (i > 0) { const q = (i - 1) >> 1; if (!less(heap[i], heap[q])) break; const t = heap[i]; heap[i] = heap[q]; heap[q] = t; i = q; } }
+  function pop() { const t = heap[0], e = heap.pop(); if (heap.length) { heap[0] = e; let i = 0; for (;;) { const l = 2 * i + 1, r = l + 1; let m = i; if (l < heap.length && less(heap[l], heap[m])) m = l; if (r < heap.length && less(heap[r], heap[m])) m = r; if (m === i) break; const t2 = heap[i]; heap[i] = heap[m]; heap[m] = t2; i = m; } } return t; }
+
+  const startKey = keyOf(startBoxes, startP);
+  const best = new Map([[startKey, 0]]);
+  const parent = new Map();
+  push({ boxes: startBoxes, p: startP, g: 0, f: hOf(startBoxes), key: startKey });
+  let explored = 0;
+
+  while (heap.length) {
+    const cur = pop();
+    if (cur.g !== best.get(cur.key)) continue;
+    explored++;
+    if (explored > maxNodes || ((explored & 255) === 0 && Date.now() > deadline)) return { solvable: null, explored };
+
+    const cb = cur.boxes;
+    let done = true;
+    for (let i = 0; i < cb.length; i++) if (!isTarget[cb[i]]) { done = false; break; }
+    if (done) {
+      const list = [];
+      let k = cur.key;
+      while (k !== startKey) { const pr = parent.get(k); list.push(pr.push); k = pr.prev; }
+      list.reverse();
+      return { solvable: true, moves: cur.g, pushes: list.length, list, explored };
+    }
+
+    for (let i = 0; i < cb.length; i++) occ[cb[i]] = 1;
+    walk(cur.p);
+    for (let bi = 0; bi < cb.length; bi++) {
+      const b = cb[bi];
+      const r = (b / cols) | 0, c = b % cols;
+      for (let di = 0; di < 4; di++) {
+        const fr = r - DR[di], fc = c - DC[di];
+        const tr = r + DR[di], tc = c + DC[di];
+        if (fr < 0 || fr >= rows || fc < 0 || fc >= cols || tr < 0 || tr >= rows || tc < 0 || tc >= cols) continue;
+        const from = fr * cols + fc, to = tr * cols + tc;
+        if (wd[from] < 0) continue;
+        if (wall[to] || occ[to] || pdist[to] === Infinity) continue;
+        const nb = cb.slice(); nb[bi] = to; nb.sort((x, y) => x - y);
+        const ng = cur.g + wd[from] + 1;
+        const nk = keyOf(nb, b);
+        const old = best.get(nk);
+        if (old !== undefined && old <= ng) continue;
+        best.set(nk, ng);
+        parent.set(nk, { prev: cur.key, push: { from: b, dir: di } });
+        push({ boxes: nb, p: b, g: ng, f: ng + hOf(nb), key: nk });
+      }
+    }
+    for (let i = 0; i < cb.length; i++) occ[cb[i]] = 0;
+  }
+  return { solvable: false, explored };
+}
+
 // Gợi ý nước đi tiếp theo (Developer Mode): ký tự U/D/L/R của bước đầu tiên trên lời giải ít lần đẩy nhất
 function solveHintMove(grid, player, boxesSet, targetsSet) {
-  const sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
+  // ưu tiên lời giải ÍT BƯỚC NHẤT (đi theo từng gợi ý sẽ đúng bằng số bước 3 sao); hết giờ mới dùng lời giải ít lần đẩy
+  let sol = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 1500000, deadline: Date.now() + 6000 });
+  if (!sol || sol.solvable !== true) sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
   if (!sol || sol.solvable !== true || !sol.list.length) return null;
 
   const rows = grid.length, cols = grid[0].length;
@@ -792,6 +906,7 @@ function finishLevel(levelIndex, stage, cand, metrics) {
       map: grid.map(row => row.join('')),
       difficulty: `${difficulty} • ${metrics.moves} bước`,
       par: metrics.moves,
+      parOpt: metrics.parOpt === true,   // true: số bước là số bước ít nhất thật sự
       stageDifficulty: stage
     };
 }
@@ -835,7 +950,13 @@ function createGeneratedLevel(levelIndex) {
     }
   }
 
-  if (best) return finishLevel(levelIndex, stage, best, best.m);
+  if (best) {
+    // Số bước 3 sao = số bước ÍT NHẤT thật sự (không phải số bước của lời giải ít lần đẩy)
+    const opt = solveMoves(best.grid, best.playerPos, best.boxesSet, best.targetsSet, { maxNodes: 2000000, deadline: Date.now() + 3500 });
+    if (opt && opt.solvable === true) { best.m.moves = opt.moves; best.m.pushes = opt.pushes; best.m.parOpt = true; }
+    else best.m.parOpt = false;
+    return finishLevel(levelIndex, stage, best, best.m);
+  }
   return createGeneratedLevel(levelIndex);   // hiếm: chưa có màn nào dùng được
 }
 
@@ -881,6 +1002,22 @@ function createGeneratedLevel(levelIndex) {
     
   self.onmessage = (e) => {
   const { type, levelIndex } = e.data;
+
+  if (type === "analyze") {
+    // Tính lại số bước ít nhất cho một màn đã có (màn lưu từ bản cũ)
+    const { id, map } = e.data;
+    const grid = map.map(row => row.split('').map(ch => ch === '#' ? '#' : ' '));
+    let player = { r: 0, c: 0 };
+    const boxes = new Set(), targets = new Set();
+    map.forEach((row, r) => row.split('').forEach((ch, c) => {
+      if (ch === '@' || ch === '+') player = { r, c };
+      if (ch === '$' || ch === '*') boxes.add(toKey(r, c));
+      if (ch === '.' || ch === '*' || ch === '+') targets.add(toKey(r, c));
+    }));
+    const opt = solveMoves(grid, player, boxes, targets, { maxNodes: 2000000, deadline: Date.now() + 8000 });
+    self.postMessage({ type: "analyzed", id, moves: opt && opt.solvable === true ? opt.moves : null });
+    return;
+  }
 
   if (type === "generate") {
     const level = createGeneratedLevel(levelIndex);
