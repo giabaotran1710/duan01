@@ -638,6 +638,53 @@ function solveMoves(grid, player, boxesSet, targetsSet, opts) {
   return { solvable: false, explored };
 }
 
+// Chuyển lời giải (danh sách lần đẩy) thành chuỗi bước U/D/L/R và danh sách khoá trạng thái trước mỗi bước.
+// Khoá = "r,c|" + các ô hộp (đã sắp xếp) nối bằng ";" — client dùng cùng cách tạo khoá để tra cứu.
+function stateKeyOf(r, c, boxes) {
+  return r + ',' + c + '|' + [...boxes].sort().join(';');
+}
+
+function solutionToPath(grid, player, boxesSet, list) {
+  const cols = grid[0].length;
+  const D = [[-1, 0, 'U'], [1, 0, 'D'], [0, -1, 'L'], [0, 1, 'R']];
+  const boxes = new Set(boxesSet);
+  let pr = player.r, pc = player.c;
+  const moves = [];
+  const keys = [stateKeyOf(pr, pc, boxes)];
+
+  const step = (ch) => {
+    const d = D.find(x => x[2] === ch);
+    const nr = pr + d[0], nc = pc + d[1], k = toKey(nr, nc);
+    if (boxes.has(k)) { boxes.delete(k); boxes.add(toKey(nr + d[0], nc + d[1])); }
+    pr = nr; pc = nc;
+    moves.push(ch);
+    keys.push(stateKeyOf(pr, pc, boxes));
+  };
+
+  for (const p of list) {
+    const r = (p.from / cols) | 0, c = p.from % cols;
+    const sr = r - D[p.dir][0], sc = c - D[p.dir][1];
+    const prev = new Map([[toKey(pr, pc), null]]);
+    const q = [[pr, pc]];
+    for (let qi = 0; qi < q.length; qi++) {
+      const [qr, qc] = q[qi];
+      if (qr === sr && qc === sc) break;
+      for (const [dr, dc, ch] of D) {
+        const nr = qr + dr, nc = qc + dc, k = toKey(nr, nc);
+        if (isWallCell(grid, nr, nc) || boxes.has(k) || prev.has(k)) continue;
+        prev.set(k, { from: toKey(qr, qc), ch });
+        q.push([nr, nc]);
+      }
+    }
+    let k = toKey(sr, sc), seg = [];
+    while (prev.get(k)) { seg.push(prev.get(k).ch); k = prev.get(k).from; }
+    seg.reverse();
+    for (const ch of seg) step(ch);
+    step(D[p.dir][2]);
+  }
+  return { path: moves.join(''), keys };
+}
+
 // Gợi ý nước đi tiếp theo (Developer Mode): ký tự U/D/L/R của bước đầu tiên trên lời giải ít lần đẩy nhất
 function solveHintMove(grid, player, boxesSet, targetsSet) {
   // ưu tiên lời giải ÍT BƯỚC NHẤT (đi theo từng gợi ý sẽ đúng bằng số bước 3 sao); hết giờ mới dùng lời giải ít lần đẩy
@@ -1002,6 +1049,20 @@ function createGeneratedLevel(levelIndex) {
     
   self.onmessage = (e) => {
   const { type, levelIndex } = e.data;
+
+  if (type === "plan") {
+    // Developer Mode: giải MỘT lần (ít bước nhất), trả cả đường đi để client tra cứu từng bước mà không giải lại
+    const { id, rows, player, boxes } = e.data;
+    const grid = rows.map(row => row.split('').map(ch => ch === '#' ? '#' : ' '));
+    const boxesSet = new Set(boxes);
+    const targetsSet = new Set(e.data.targets);
+    let sol = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 8000000, deadline: Date.now() + 20000 });
+    if (!sol || sol.solvable !== true) sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 600000, deadline: Date.now() + 5000 });
+    if (!sol || sol.solvable !== true) { self.postMessage({ type: "plan", id, path: null }); return; }
+    const out = solutionToPath(grid, player, boxesSet, sol.list);
+    self.postMessage({ type: "plan", id, path: out.path, keys: out.keys, optimal: sol.moves !== undefined });
+    return;
+  }
 
   if (type === "analyze") {
     // Tính lại số bước ít nhất cho một màn đã có (màn lưu từ bản cũ)

@@ -1088,11 +1088,64 @@ function buildCurrentSolveState() {
     return { walkGrid, player, boxesSet, targetsSet };
 }
 
+/*
+  Developer Mode: giải MỘT lần trong worker riêng (không chặn giao diện), lưu cả đường đi.
+  Mỗi bước chỉ tra khoá trạng thái hiện tại trong đường đã lưu; chỉ giải lại (nền) khi người chơi đi chệch.
+*/
+let devPlan = null;          // { moves: ['U',...], keys: [...] }
+let devWorker = null;
+let devReqId = 0;
+let devPendingKey = null;
+
+function devStateKey(player, boxesSet) {
+    return player.r + "," + player.c + "|" + [...boxesSet].sort().join(";");
+}
+
+function requestDevPlan(st, key) {
+    if (devPendingKey === key) return;
+    devPendingKey = key;
+    const id = ++devReqId;
+
+    if (!devWorker) {
+        try {
+            devWorker = new Worker("level-worker.js");
+            devWorker.onmessage = (e) => {
+                const d = e.data || {};
+                if (d.type !== "plan" || d.id !== devReqId) return;   // kết quả của yêu cầu cũ → bỏ
+                devPendingKey = null;
+                devPlan = d.path ? { moves: d.path.split(""), keys: d.keys } : null;
+                renderDeveloperHint();
+            };
+            devWorker.onerror = () => { devPendingKey = null; };
+        } catch (err) {
+            devWorker = null;
+            devPendingKey = null;
+            return;
+        }
+    }
+
+    const rows = st.walkGrid.map(r => r.join(""));
+    devWorker.postMessage({
+        type: "plan", id, rows,
+        player: st.player,
+        boxes: [...st.boxesSet],
+        targets: [...st.targetsSet]
+    });
+}
+
 function getDeveloperHintMove() {
     if (!developerMode) return null;
 
-    const { walkGrid, player, boxesSet, targetsSet } = buildCurrentSolveState();
-    return solveHintMove(walkGrid, player, boxesSet, targetsSet);
+    const st = buildCurrentSolveState();
+    const key = devStateKey(st.player, st.boxesSet);
+
+    if (devPlan) {
+        const i = devPlan.keys.indexOf(key);
+        if (i >= 0 && i < devPlan.moves.length) return devPlan.moves[i];
+    }
+
+    requestDevPlan(st, key);   // đi chệch đường đã lưu (hoặc chưa có): tính lại trong nền
+    return null;
 }
 
 function clearDeveloperHint() {
@@ -1115,7 +1168,20 @@ function renderDeveloperHint() {
     if (!developerMode || !boardData.length || gameWon) return;
 
     const move = getDeveloperHintMove();
-    if (!move) return;
+    if (!move) {
+        if (devPendingKey) {
+            // đang tính đường đi ở nền: hiện biểu tượng chờ ngay trên nhân vật
+            const wrapperW = document.querySelector(".board-wrapper");
+            const cs = parseFloat(getComputedStyle(boardEl).getPropertyValue("--cell-size")) || 24;
+            devHintEl = document.createElement("div");
+            devHintEl.className = "dev-hint";
+            devHintEl.style.left = (boardEl.offsetLeft + 3 + playerPos.c * (cs + 2) + cs / 2) + "px";
+            devHintEl.style.top = (boardEl.offsetTop + 3 + playerPos.r * (cs + 2) + cs / 2 - cs * 0.8) + "px";
+            devHintEl.innerHTML = '<div class="dev-arrow">⏳</div>';
+            wrapperW.appendChild(devHintEl);
+        }
+        return;
+    }
 
     const dirClassMap = {
         U: "up",
@@ -1315,7 +1381,7 @@ async function loadLevel(levelIndex, forceNew = false) {
     }
 
     // Màn lưu từ bản cũ có số bước 3 sao chưa tối ưu: tính lại một lần rồi lưu
-    if (level.parOpt === undefined) {
+    if (level.parOpt !== true && !level.parTried) {
         const mv = await analyzeParWithWorker(level.map);
         if (mv !== null) {
             level.par = mv;
@@ -1326,6 +1392,7 @@ async function loadLevel(levelIndex, forceNew = false) {
         } else {
             level.parOpt = false;
         }
+        level.parTried = true;   // chỉ thử một lần để không bắt người chơi chờ lại mỗi lần mở màn
         if (unlockedLevels[levelIndex]) { unlockedLevels[levelIndex] = level; saveUnlockedLevels(); }
     }
 
