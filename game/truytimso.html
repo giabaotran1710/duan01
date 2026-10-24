@@ -295,49 +295,12 @@ button{font:inherit;color:inherit}
 .board[data-mode="veryHard"] .number{
     width:clamp(38px,4.6vw,50px);
 }
-.board[data-mode="superHard"] .number,
-.board[data-mode="master"] .number{
-    width:clamp(30px,3.7vw,42px);
-}
-
-.board.numbers-hidden .number:not(.done){
-    opacity:0;
-    transform:translate(-50%,-50%) scale(.82);
-}
-.board[data-mode="master"] .number.master-blink{
-    --master-alpha:var(--master-opacity,1);
-    transition:none;
-    /* Ô vẫn luôn hiện; chỉ độ sáng nội dung thay đổi. */
-    background:
-        linear-gradient(
-            145deg,
-            rgba(32,56,82,calc(.34 + var(--master-alpha) * .66)),
-            rgba(17,34,55,calc(.34 + var(--master-alpha) * .66))
-        );
-    border-color:rgba(
-        255,255,255,
-        calc(.07 + var(--master-alpha) * .18)
-    );
-    box-shadow:
-        0 8px 18px rgba(0,0,0,.28),
-        inset 0 1px 0 rgba(255,255,255,calc(.03 + var(--master-alpha) * .08));
-    color:rgba(237,246,255,calc(.16 + var(--master-alpha) * .84));
-    text-shadow:0 0 calc(10px * var(--master-alpha))
-        rgba(94,234,212,calc(.15 * var(--master-alpha)));
-}
-.board[data-mode="master"] .number.master-blink.good{
-    --master-alpha:1;
-    background:
-        linear-gradient(
-            145deg,
-            rgba(82,227,194,calc(.30 + var(--master-alpha) * .70)),
-            rgba(66,183,163,calc(.30 + var(--master-alpha) * .70))
-        );
-    color:rgba(6,35,30,calc(.20 + var(--master-alpha) * .80));
-    border-color:rgba(255,255,255,calc(.10 + var(--master-alpha) * .22));
-    box-shadow:
-        0 0 0 4px rgba(94,234,212,calc(.025 + var(--master-alpha) * .065)),
-        0 9px 20px rgba(94,234,212,calc(.05 + var(--master-alpha) * .15));
+/* Rất khó trở lên: màu ngẫu nhiên cho từng số (--h là sắc độ) */
+.number.colored{
+    background:linear-gradient(145deg,hsl(var(--h) 62% 42%),hsl(var(--h) 62% 26%));
+    border-color:hsl(var(--h) 70% 62% / .55);
+    color:#fff;
+    text-shadow:0 1px 2px rgba(0,0,0,.45);
 }
 .number.good{
     background:linear-gradient(145deg,#52e3c2,#42b7a3);
@@ -504,8 +467,8 @@ button{font:inherit;color:inherit}
                     <h1>Truy tìm số</h1>
                     <p>Vui lòng lựa chọn chế độ<br>Chạm các số theo đúng thứ tự càng nhanh càng tốt.</p>
                     <div class="rule">
-                        <span class="pill">Thường - Khó · 30 số</span>
-                        <span class="pill">Rất khó - Bậc thầy · 50 số</span>
+                        <span class="pill">30 số</span>
+                        <span class="pill" id="modeDesc"></span>
                   
                     </div>
                     <button id="startBtn" class="primary">Bắt đầu</button>
@@ -525,7 +488,7 @@ button{font:inherit;color:inherit}
         </section>
     </main>
 </div>
-<footer> Version:D20262208-H00M20T8910 »»» developed by Tran Gia Bao</footer>
+<footer> Version:D20262410-H04M22T7961 »»» developed by Tran Gia Bao</footer>
 
 <script>
 (() => {
@@ -533,6 +496,7 @@ button{font:inherit;color:inherit}
     const board = document.getElementById('board');
 const logoEl = document.querySelector('.logo');
 const startIconEl = document.querySelector('.card .icon');
+const modeDescEl = document.getElementById('modeDesc');
     
     const scoreEl = null;
     const bestEl = document.getElementById('best');
@@ -552,13 +516,15 @@ const startIconEl = document.querySelector('.card .icon');
     const againBtn = document.getElementById('againBtn');
     const changeModeBtn = document.getElementById('changeModeBtn');
 
+    // Mọi chế độ đều 30 số. Chế độ khó hơn thừa hưởng tính năng của chế độ dễ hơn:
+    // Khó: số đúng không biến mất · Rất khó: + màu ngẫu nhiên · Siêu khó: + kích thước lớn nhỏ · Bậc thầy: + tìm số theo thứ tự ngẫu nhiên
     const MODES = {
-    normal:    { count: 30, time: 60, label: 'Thường', persistent: false, pulse: false, master: false },
-    hard:      { count: 30, time: 60, label: 'Khó', persistent: false, pulse: false, master: false },
-    veryHard:  { count: 50, time: 75, label: 'Rất khó', persistent: true,  pulse: false, master: false },
-    superHard: { count: 50, time: 75, label: 'Siêu khó', persistent: true,  pulse: true,  master: false },
-    master:    { count: 50, time: 75, label: 'Bậc thầy', persistent: true,  pulse: false, master: true }
-};
+        normal:    { count: 30, time: 60, label: 'Thường',   persistent: false, colors: false, sizes: false, random: false, desc: 'Số tìm đúng sẽ biến mất' },
+        hard:      { count: 30, time: 60, label: 'Khó',      persistent: true,  colors: false, sizes: false, random: false, desc: 'Số tìm đúng không biến mất' },
+        veryHard:  { count: 30, time: 60, label: 'Rất khó',  persistent: true,  colors: true,  sizes: false, random: false, desc: 'Thêm màu sắc ngẫu nhiên' },
+        superHard: { count: 30, time: 65, label: 'Siêu khó', persistent: true,  colors: true,  sizes: true,  random: false, desc: 'Thêm số to nhỏ khác nhau' },
+        master:    { count: 30, time: 70, label: 'Bậc thầy', persistent: true,  colors: true,  sizes: true,  random: true,  desc: 'Tìm số theo thứ tự ngẫu nhiên' }
+    };
 
     // Ánh xạ chế độ -> khóa lưu trữ (dùng chung cho window.storage).
     const BEST_KEYS = {
@@ -578,11 +544,8 @@ const startIconEl = document.querySelector('.card .icon');
     let raf = 0;
     let running = false;
     let cells = [];
-    let hiddenPulseActive = false;
-    let hidePulseTimer = 0;
-    let restorePulseTimer = 0;
-    let masterBlinkFrame = 0;
-    let masterBlinkStart = 0;
+    let seq = [];   // thứ tự các số cần tìm (1..30, hoặc xáo trộn ở Bậc thầy)
+    let idx = 0;    // đang tìm số seq[idx]
 
     // Kỉ lục được lưu bằng window.storage (bền vững trong artifact Claude),
     // KHÔNG dùng localStorage vì localStorage không được hỗ trợ trong artifact
@@ -612,25 +575,25 @@ function loadBests() {
      * Số 10 sẽ nằm giữa.
      */
 
-    const start = Math.max(1, target - 3);
-    const end = Math.min(count, target + 3);
+    const start = Math.max(0, idx - 3);
+    const end = Math.min(count - 1, idx + 3);
 
-    for(let n = start; n <= end; n++){
+    for(let k = start; k <= end; k++){
         const number = document.createElement('span');
 
         number.className = 'targetNumber';
 
-        if(n === target){
+        if(k === idx){
             number.classList.add('current');
         }
-        else if(Math.abs(n - target) === 1){
+        else if(Math.abs(k - idx) === 1){
             number.classList.add('near');
         }
         else{
             number.classList.add('far');
         }
 
-        number.textContent = n;
+        number.textContent = seq[k] === undefined ? '' : seq[k];
 
         targetTrack.appendChild(number);
     }
@@ -647,7 +610,7 @@ function loadBests() {
     /*
      * Vị trí của target trong track.
      */
-    const currentIndex = target - start;
+    const currentIndex = idx - start;
 
     /*
      * Đưa target vào chính giữa viewport.
@@ -682,6 +645,7 @@ function updateModeUI() {
 count = cfg.count;
 limit = cfg.time;
 
+modeDescEl.textContent = cfg.desc;
 logoEl.textContent = cfg.count;
 startIconEl.textContent = cfg.count;
 
@@ -725,15 +689,17 @@ updateBest();
         return arr;
     }
 
-    function getScatterLayout(size) {
+    function getScatterLayout(size, maxScale = 1) {
         const rect = board.getBoundingClientRect();
         const width = rect.width;
         const height = rect.height;
 
         // Kích thước ô thực tế theo từng chế độ.
-        const buttonSize = size >= 50
+        const nominal = size >= 50
             ? Math.min(42, Math.max(30, width * 0.037))
             : Math.min(50, Math.max(38, width * 0.046));
+        // Có số to nhỏ khác nhau: chừa chỗ theo cỡ lớn nhất để các số không đè nhau
+        const buttonSize = nominal * maxScale;
 
         const half = buttonSize / 2;
         const edge = half + 5;
@@ -757,11 +723,11 @@ updateBest();
             rows = Math.ceil(size / cols);
         }
 
-        return { width, height, buttonSize, half, edge, cols, rows };
+        return { width, height, buttonSize, nominal, half, edge, cols, rows };
     }
 
-    function createEvenScatterPositions(size) {
-        const layout = getScatterLayout(size);
+    function createEvenScatterPositions(size, maxScale = 1) {
+        const layout = getScatterLayout(size, maxScale);
         const {
             width, height, half, edge, cols, rows
         } = layout;
@@ -797,7 +763,8 @@ updateBest();
             return {
                 x: cx + (Math.random() * 2 - 1) * jitterX,
                 y: cy + (Math.random() * 2 - 1) * jitterY,
-                half
+                half,
+                nominal: layout.nominal
             };
         });
     }
@@ -805,7 +772,6 @@ updateBest();
     function buildBoard() {
         board.innerHTML = '';
         cells = [];
-        hiddenPulseActive = false;
 
         const nums = shuffle(Array.from({length: count}, (_, i) => i + 1));
         const isNormal = mode === 'normal';
@@ -846,19 +812,31 @@ updateBest();
         // Khó / Rất khó / Cực khó:
         // chia bàn thành các vùng, mỗi vùng tối đa 1 số,
         // sau đó xáo trộn vùng + jitter để vừa đều vừa ngẫu nhiên.
-        const scatterPositions = createEvenScatterPositions(count);
+        const cfg = MODES[mode];
+        const SIZE_MAX = 1.3;
+        const scatterPositions = createEvenScatterPositions(count, cfg.sizes ? SIZE_MAX : 1);
 
         nums.forEach((n, index) => {
             const btn = document.createElement('button');
             btn.className = 'number';
             btn.type = 'button';
-            if (MODES[mode].master) btn.classList.add('master-blink');
+            if (cfg.colors) {
+                btn.classList.add('colored');
+                btn.style.setProperty('--h', String(Math.floor(Math.random() * 360)));
+            }
             btn.textContent = n;
             btn.dataset.number = n;
 
             const pos = scatterPositions[index];
             btn.style.left = pos.x + 'px';
             btn.style.top = pos.y + 'px';
+
+            if (cfg.sizes) {
+                // Kích thước ngẫu nhiên từ nhỏ (0,62×) tới lớn (1,3×) so với cỡ chuẩn
+                const px = pos.nominal * (0.62 + Math.random() * (SIZE_MAX - 0.62));
+                btn.style.width = px + 'px';
+                btn.style.fontSize = Math.max(11, px * 0.42) + 'px';
+            }
 
             btn.addEventListener('click', () => handleNumber(btn, n));
             board.appendChild(btn);
@@ -872,114 +850,25 @@ updateBest();
         if (n === target) {
             btn.classList.add('good');
 
-            // Bậc thầy: khi tìm đúng, ô phải sáng cố định ngay lập tức
-            // thay vì tiếp tục nhấp nháy mờ/tỏ theo vòng lặp.
-            if (MODES[mode].master) {
-                btn.style.setProperty('--master-opacity', '1');
-            }
-
-            score = target;
-            target++;
+            idx++;
 
             if (!MODES[mode].persistent) {
                 setTimeout(() => btn.classList.add('done'), 70);
             }
 
-            if (target > count) {
+            if (idx >= count) {
+                score = count;
                 finish(true);
                 return;
             }
 
+            target = seq[idx];
             updateTargetDisplay(true);
         } else {
             btn.classList.remove('bad');
             void btn.offsetWidth;
             btn.classList.add('bad');
         }
-    }
-
-    function startSuperHardPulse() {
-        stopSuperHardPulse();
-        if (!MODES[mode].pulse || !running) return;
-
-        // Khoảng 10 giây lặp lại một lần. Các số đang còn trên bàn cùng ẩn 0.75s.
-        hidePulseTimer = window.setInterval(() => {
-            if (!running || !MODES[mode].pulse) return;
-
-            hiddenPulseActive = true;
-            board.classList.add('numbers-hidden');
-
-            restorePulseTimer = window.setTimeout(() => {
-                hiddenPulseActive = false;
-                board.classList.remove('numbers-hidden');
-            }, 750);
-        }, 10000);
-    }
-
-    function stopSuperHardPulse() {
-        if (hidePulseTimer) {
-            clearInterval(hidePulseTimer);
-            hidePulseTimer = 0;
-        }
-        if (restorePulseTimer) {
-            clearTimeout(restorePulseTimer);
-            restorePulseTimer = 0;
-        }
-        hiddenPulseActive = false;
-        board.classList.remove('numbers-hidden');
-    }
-
-    function startMasterBlink() {
-        stopMasterBlink();
-        if (!MODES[mode].master || !running) return;
-
-        // Mỗi số có một phase riêng, được xác định cố định khi ván bắt đầu.
-        // Chu kỳ 5 giây: opacity 0 → 1 → 0, chạy độc lập giữa các số.
-        cells.forEach((btn) => {
-            btn.style.setProperty('--blink-phase', String(Math.random() * 5));
-        });
-
-        masterBlinkStart = performance.now();
-        const tick = (now) => {
-            if (!running || !MODES[mode].master) {
-                masterBlinkFrame = 0;
-                return;
-            }
-
-            const elapsed = (now - masterBlinkStart) / 1000;
-
-            cells.forEach(btn => {
-                // Số đã hoàn thành ('done') hoặc đã trả lời đúng ('good')
-                // phải luôn sáng, không tiếp tục nhấp nháy mờ/tỏ.
-                if (btn.classList.contains('done') || btn.classList.contains('good')) return;
-
-                const phase = Number(btn.style.getPropertyValue('--blink-phase') || 0);
-                const t = ((elapsed + phase) % 5) / 5;
-
-                // 0 → 1 trong nửa chu kỳ, rồi 1 → 0 trong nửa chu kỳ.
-                const opacity = t < 0.5
-                    ? t * 2
-                    : 2 - t * 2;
-
-                btn.style.setProperty('--master-opacity', opacity.toFixed(3));
-            });
-
-            masterBlinkFrame = requestAnimationFrame(tick);
-        };
-
-        masterBlinkFrame = requestAnimationFrame(tick);
-    }
-
-    function stopMasterBlink() {
-        if (masterBlinkFrame) {
-            cancelAnimationFrame(masterBlinkFrame);
-            masterBlinkFrame = 0;
-        }
-
-        cells.forEach(btn => {
-            btn.style.removeProperty('--blink-phase');
-            btn.style.removeProperty('--master-opacity');
-        });
     }
 
     function updateTimer() {
@@ -1006,9 +895,13 @@ updateBest();
     function startGame() {
         cancelAnimationFrame(raf);
         running = true;
-  target = 1;
-score = 0;
-updateTargetDisplay(false);
+  // Bậc thầy: thứ tự tìm số ngẫu nhiên; các chế độ khác: 1, 2, 3...
+  seq = Array.from({length: count}, (_, i) => i + 1);
+  if (MODES[mode].random) shuffle(seq);
+  idx = 0;
+  target = seq[0];
+  score = 0;
+  updateTargetDisplay(false);
         startScreen.classList.add('hidden');
         resultScreen.classList.add('hidden');
 
@@ -1018,8 +911,6 @@ updateTargetDisplay(false);
             startedAt = performance.now();
             timeBar.style.width = '100%';
             timeBar.style.background = 'linear-gradient(90deg,var(--accent),var(--accent2))';
-            if (MODES[mode].pulse) startSuperHardPulse();
-            if (MODES[mode].master) startMasterBlink();
             raf = requestAnimationFrame(updateTimer);
         });
     }
@@ -1028,8 +919,6 @@ updateTargetDisplay(false);
         if (!running) return;
         running = false;
         cancelAnimationFrame(raf);
-        stopSuperHardPulse();
-        stopMasterBlink();
 
         // Thời gian đã trôi qua tính bằng mili-giây, giới hạn không vượt quá thời gian cho phép.
         const elapsedMs = Math.min(limit * 1000, performance.now() - startedAt);
@@ -1073,7 +962,9 @@ if (!best || elapsedMs < best) {
         updateModeUI();
     });
 
+    seq = Array.from({length: count}, (_, i) => i + 1);
     updateModeUI();
+    updateTargetDisplay(false);
     loadBests();
 })();
 </script>
