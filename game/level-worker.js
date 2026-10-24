@@ -1063,12 +1063,12 @@ function measureSolution(grid, player, boxesSet, sol) {
    - Dựng màn bằng cách "kéo ngược" từ trạng thái thắng → luôn giải được.
    - Giải bằng solvePushes để đo độ hóc búa:
        điểm = 4·số lần đẩy + số bước + 3·số lần đổi hộp + 2·số lần hộp đổi hướng
-   - Sinh nhiều ứng viên trong giới hạn thời gian (GEN_BUDGET_MS, tối đa 15 giây),
+   - Sinh nhiều ứng viên trong giới hạn thời gian (GEN_BUDGET_MS, tối đa 30 giây),
      chọn màn khó nhất; dừng sớm khi đạt điểm mục tiêu theo cấp.
    ========================================================= */
-// Tối đa ~8 giây tìm màn + tối đa ~5 giây tính số bước ít nhất chính xác ≈ dưới 15 giây
-const GEN_BUDGET_MS = 8000;
-const EVAL_CAP = 45000;
+// Tối đa ~19 giây tìm màn + tối đa ~9 giây tính số bước ít nhất chính xác ≈ dưới 30 giây
+const GEN_BUDGET_MS = 19000;
+const EVAL_CAP = 130000;
 // Kích thước bàn và số hộp theo loại màn (màn cứ 4 cấp là khó, 10 cấp là cực khó)
 const LEVEL_CFG = {
   normal:  { size: 8, boxes: 5 },
@@ -1078,9 +1078,9 @@ const LEVEL_CFG = {
 
 // Mục tiêu độ khó (số trạng thái bộ giải phải duyệt) theo loại màn; tăng nhẹ theo cấp
 function targetPushesFor(levelIndex, stage) {
-  const base = stage === 'extreme' ? 40000 : stage === 'hard' ? 22000 : 9000;
+  const base = stage === 'extreme' ? 110000 : stage === 'hard' ? 60000 : 25000;
   const ramp = 0.4 + 0.6 * Math.min(1, levelIndex / 12);   // các cấp đầu dễ hơn để vào game nhanh
-  return Math.round((base + Math.min(6, Math.floor(levelIndex / 3)) * 600) * ramp);
+  return Math.round((base + Math.min(6, Math.floor(levelIndex / 3)) * 1800) * ramp);
 }
 
 // Leo đồi: từ thế bắt đầu, kéo ngược thêm vài bước ngẫu nhiên rồi giải lại;
@@ -1272,8 +1272,8 @@ function createGeneratedLevel(levelIndex, budget = GEN_BUDGET_MS) {
     const cand = buildCandidate(levelIndex, rand, stage);
     if (!cand) continue;
 
-    // mỗi ứng viên được leo tối đa ~4 giây để còn thử nhiều bàn khác nhau
-    const m = climb(cand, rand, goal, Math.min(deadline, Date.now() + 4000));
+    // mỗi ứng viên được leo tối đa ~7 giây để còn thử nhiều bàn khác nhau
+    const m = climb(cand, rand, goal, Math.min(deadline, Date.now() + 7000));
     if (!m) continue;
 
     pool.push({ grid: cand.grid, playerPos: cand.playerPos, boxesSet: cand.boxesSet, targetsSet: cand.targetsSet, targets: cand.targets, m });
@@ -1283,14 +1283,14 @@ function createGeneratedLevel(levelIndex, budget = GEN_BUDGET_MS) {
   }
 
   // Số bước 3 sao PHẢI là số bước ít nhất thật sự: chỉ nhận màn mà bộ giải tối ưu giải xong.
-  // Màn khó nhất được tối đa ~5 giây, các màn dự phòng ~2 giây; tổng cộng không quá ~15 giây.
-  const hardEnd = started + budget + 5000;
+  // Màn khó nhất được tối đa ~8 giây, các màn dự phòng ~3 giây; tổng cộng không quá ~30 giây.
+  const hardEnd = started + budget + 9000;
   for (let i = 0; i < pool.length; i++) {
     const left = hardEnd - Date.now();
     if (left < 400 && i > 0) break;
     const s = pool[i];
     const opt = solveMoves(s.grid, s.playerPos, s.boxesSet, s.targetsSet, {
-      maxNodes: 3500000, deadline: Date.now() + Math.max(400, Math.min(i === 0 ? 5000 : 2000, left))
+      maxNodes: 3500000, deadline: Date.now() + Math.max(400, Math.min(i === 0 ? 8000 : 3000, left))
     });
     if (opt && opt.solvable === true) {
       s.m.moves = opt.moves; s.m.pushes = opt.pushes; s.m.parOpt = true;
