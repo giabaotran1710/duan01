@@ -631,6 +631,29 @@ href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css"
     transform:translate(-50%,-50%);
 }
 
+.dev-wait{
+    font-size:13px;
+    line-height:1;
+    filter:drop-shadow(0 0 4px rgba(255,255,255,.55));
+    animation:devHourglass 2.6s ease-in-out infinite;
+}
+
+/* Quay 2 quãng 180° (nghỉ một nhịp giữa hai lần quay) */
+@keyframes devHourglass{
+    0%{transform:rotate(0deg)}
+    35%{transform:rotate(180deg)}
+    50%{transform:rotate(180deg)}
+    85%{transform:rotate(360deg)}
+    100%{transform:rotate(360deg)}
+}
+
+.dev-fail{
+    font-size:18px;
+    font-weight:900;
+    color:#ff5a5a;
+    text-shadow:0 0 8px rgba(255,90,90,.9);
+}
+
 .dev-arrow{
     font-size:25px;
     color:#4cff7a;
@@ -1096,14 +1119,17 @@ let devPlan = null;          // { moves: ['U',...], keys: [...] }
 let devWorker = null;
 let devReqId = 0;
 let devPendingKey = null;
+let devAskedKey = null;       // thế đã gửi yêu cầu giải
+let devFail = null;           // { key, reason } khi thế đó không giải được
 
 function devStateKey(player, boxesSet) {
     return player.r + "," + player.c + "|" + [...boxesSet].sort().join(";");
 }
 
-function requestDevPlan(st, key) {
+function requestDevPlan(st, key, skipFast = false) {
     if (devPendingKey === key) return;
     devPendingKey = key;
+    devAskedKey = key;
     const id = ++devReqId;
 
     if (!devWorker) {
@@ -1112,8 +1138,29 @@ function requestDevPlan(st, key) {
             devWorker.onmessage = (e) => {
                 const d = e.data || {};
                 if (d.type !== "plan" || d.id !== devReqId) return;   // kết quả của yêu cầu cũ → bỏ
+                const asked = devPendingKey;
                 devPendingKey = null;
-                devPlan = d.path ? { moves: d.path.split(""), keys: d.keys } : null;
+
+                if (!d.path) {
+                    // Không có lời giải (ngõ cụt) hoặc hết giờ: báo rõ và KHÔNG gửi lại yêu cầu cho cùng một thế
+                    devFail = { key: devAskedKey, reason: d.reason };
+                    renderDeveloperHint();
+                    return;
+                }
+
+                const next = { moves: d.path.split(""), keys: d.keys };
+                if (d.optimal && devPlan) {
+                    // đường ít bước hơn chỉ nhận nếu thế hiện tại nằm trên đó; nếu người chơi đã đi tiếp theo đường nhanh,
+                    // tính lại đường ít bước nhất từ thế hiện tại (ngắn dần nên sẽ bắt kịp)
+                    const st = buildCurrentSolveState();
+                    const key = devStateKey(st.player, st.boxesSet);
+                    if (next.keys.indexOf(key) < 0) {
+                        if (devPlan.keys.indexOf(key) >= 0 && devPlan.moves.length - devPlan.keys.indexOf(key) > 8) requestDevPlan(st, key, true);
+                        return;
+                    }
+                }
+                devFail = null;
+                devPlan = next;
                 renderDeveloperHint();
             };
             devWorker.onerror = () => { devPendingKey = null; };
@@ -1129,7 +1176,8 @@ function requestDevPlan(st, key) {
         type: "plan", id, rows,
         player: st.player,
         boxes: [...st.boxesSet],
-        targets: [...st.targetsSet]
+        targets: [...st.targetsSet],
+        skipFast
     });
 }
 
@@ -1144,6 +1192,7 @@ function getDeveloperHintMove() {
         if (i >= 0 && i < devPlan.moves.length) return devPlan.moves[i];
     }
 
+    if (devFail && devFail.key === key) return null;   // thế này đã biết là không giải được
     requestDevPlan(st, key);   // đi chệch đường đã lưu (hoặc chưa có): tính lại trong nền
     return null;
 }
@@ -1169,15 +1218,23 @@ function renderDeveloperHint() {
 
     const move = getDeveloperHintMove();
     if (!move) {
-        if (devPendingKey) {
-            // đang tính đường đi ở nền: hiện biểu tượng chờ ngay trên nhân vật
+        // đang tính ở nền: đồng hồ cát nhỏ xoay 2 quãng 180°; thế không giải được: dấu ✖ kèm lý do
+        const st = devPendingKey ? "wait" : (devFail ? "fail" : null);
+        if (st) {
             const wrapperW = document.querySelector(".board-wrapper");
             const cs = parseFloat(getComputedStyle(boardEl).getPropertyValue("--cell-size")) || 24;
             devHintEl = document.createElement("div");
             devHintEl.className = "dev-hint";
             devHintEl.style.left = (boardEl.offsetLeft + 3 + playerPos.c * (cs + 2) + cs / 2) + "px";
             devHintEl.style.top = (boardEl.offsetTop + 3 + playerPos.r * (cs + 2) + cs / 2 - cs * 0.8) + "px";
-            devHintEl.innerHTML = '<div class="dev-arrow">⏳</div>';
+            if (st === "wait") {
+                devHintEl.innerHTML = '<div class="dev-wait">⏳</div>';
+            } else {
+                devHintEl.innerHTML = '<div class="dev-fail">✖</div>';
+                if (typeof showToast === "function") {
+                    showToast(devFail.reason === "dead" ? "Thế này đã bí, không còn lời giải. Hãy hoàn tác hoặc chơi lại." : "Không tìm được lời giải trong thời gian cho phép.");
+                }
+            }
             wrapperW.appendChild(devHintEl);
         }
         return;
@@ -1228,10 +1285,10 @@ switch(activeDir){
         break;
 }
     const arrowMap = {
-    up: "▲",
-    down: "▼",
-    left: "◀",
-    right: "▶"
+    up: "↑",
+    down: "↓",
+    left: "←",
+    right: "→"
 };
 
 devHintEl.innerHTML = `

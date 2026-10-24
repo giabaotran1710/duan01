@@ -1051,16 +1051,43 @@ function createGeneratedLevel(levelIndex) {
   const { type, levelIndex } = e.data;
 
   if (type === "plan") {
-    // Developer Mode: giải MỘT lần (ít bước nhất), trả cả đường đi để client tra cứu từng bước mà không giải lại
+    // Developer Mode: trả NGAY đường đi nhanh (ít lần đẩy), rồi tìm tiếp đường ít bước nhất và trả lần hai nếu ngắn hơn.
+    // path = null: reason "dead" (thế đã vào ngõ cụt, không còn lời giải) hoặc "timeout" (hết giờ).
     const { id, rows, player, boxes } = e.data;
     const grid = rows.map(row => row.split('').map(ch => ch === '#' ? '#' : ' '));
     const boxesSet = new Set(boxes);
     const targetsSet = new Set(e.data.targets);
-    let sol = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 8000000, deadline: Date.now() + 20000 });
-    if (!sol || sol.solvable !== true) sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 600000, deadline: Date.now() + 5000 });
-    if (!sol || sol.solvable !== true) { self.postMessage({ type: "plan", id, path: null }); return; }
-    const out = solutionToPath(grid, player, boxesSet, sol.list);
-    self.postMessage({ type: "plan", id, path: out.path, keys: out.keys, optimal: sol.moves !== undefined });
+
+    // 1) ưu tiên đường ít bước nhất (tối đa 5 giây): đi theo gợi ý sẽ đúng bằng số bước 3 sao
+    const quick = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 2500000, deadline: Date.now() + 5000 });
+    if (quick && quick.solvable === true) {
+      const o = solutionToPath(grid, player, boxesSet, quick.list);
+      self.postMessage({ type: "plan", id, path: o.path, keys: o.keys, optimal: true });
+      return;
+    }
+    if (quick && quick.solvable === false) {
+      self.postMessage({ type: "plan", id, path: null, reason: "dead" });
+      return;
+    }
+
+    // 2) chưa kịp: trả đường nhanh (ít lần đẩy) để có gợi ý ngay, rồi tìm tiếp đường ít bước nhất
+    let firstLen = Infinity;
+    if (!e.data.skipFast) {
+      const fast = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 1500000, deadline: Date.now() + 10000 });
+      if (!fast || fast.solvable !== true) {
+        self.postMessage({ type: "plan", id, path: null, reason: fast && fast.solvable === false ? "dead" : "timeout" });
+        return;
+      }
+      const first = solutionToPath(grid, player, boxesSet, fast.list);
+      firstLen = first.path.length;
+      self.postMessage({ type: "plan", id, path: first.path, keys: first.keys, optimal: false });
+    }
+
+    const opt = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 6000000, deadline: Date.now() + 20000 });
+    if (opt && opt.solvable === true && opt.moves < firstLen) {
+      const better = solutionToPath(grid, player, boxesSet, opt.list);
+      self.postMessage({ type: "plan", id, path: better.path, keys: better.keys, optimal: true });
+    }
     return;
   }
 
