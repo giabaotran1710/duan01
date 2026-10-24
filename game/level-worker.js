@@ -518,6 +518,48 @@ function solvePushes(grid, player, boxesSet, targetsSet, opts) {
   return { solvable: false, explored };
 }
 
+// Phân tích một màn có sẵn (màn chia sẻ): giải được không và số bước theo lời giải ít lần đẩy nhất
+function analyzeLevel(grid, player, boxesSet, targetsSet) {
+  const sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
+  if (!sol || sol.solvable !== true) return { solvable: false, moves: 0 };
+  const m = measureSolution(grid, player, boxesSet, sol);
+  return { solvable: true, moves: m.moves, pushes: m.pushes };
+}
+
+// Gợi ý nước đi tiếp theo (Developer Mode): ký tự U/D/L/R của bước đầu tiên trên lời giải ít lần đẩy nhất
+function solveHintMove(grid, player, boxesSet, targetsSet) {
+  const sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
+  if (!sol || sol.solvable !== true || !sol.list.length) return null;
+
+  const rows = grid.length, cols = grid[0].length;
+  const D = [[-1, 0, 'U'], [1, 0, 'D'], [0, -1, 'L'], [0, 1, 'R']];
+  const p = sol.list[0];
+  const br = (p.from / cols) | 0, bc = p.from % cols;
+  const sr = br - D[p.dir][0], sc = bc - D[p.dir][1];   // ô người phải đứng để đẩy
+
+  if (player.r === sr && player.c === sc) return D[p.dir][2];   // đã đứng đúng chỗ → đẩy luôn
+
+  const boxes = new Set([...boxesSet]);
+  const start = toKey(player.r, player.c);
+  const prev = new Map([[start, null]]);
+  const q = [[player.r, player.c]];
+  for (let qi = 0; qi < q.length; qi++) {
+    const [r, c] = q[qi];
+    if (r === sr && c === sc) break;
+    for (const [dr, dc, ch] of D) {
+      const nr = r + dr, nc = c + dc, k = toKey(nr, nc);
+      if (isWallCell(grid, nr, nc) || boxes.has(k) || prev.has(k)) continue;
+      prev.set(k, { from: toKey(r, c), ch });
+      q.push([nr, nc]);
+    }
+  }
+  let k = toKey(sr, sc);
+  if (!prev.has(k)) return null;
+  let first = null;
+  while (prev.get(k)) { first = prev.get(k).ch; k = prev.get(k).from; }
+  return first;
+}
+
 // Đo độ hóc búa từ lời giải ít lần đẩy nhất: số lần đẩy, số bước đi, số lần đổi hộp, số lần hộp đổi hướng
 function measureSolution(grid, player, boxesSet, sol) {
   const rows = grid.length, cols = grid[0].length;
