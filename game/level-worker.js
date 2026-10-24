@@ -1,3 +1,12 @@
+// Dùng chung với trang dayhop.html (tệp này cũng được nạp như script thường)
+function isBox(ch) {
+  return ch === '$' || ch === '*';
+}
+
+function isFloor(ch) {
+  return ch === ' ' || ch === '.';
+}
+
 function mulberry32(seed) {
         return function () {
           let t = seed += 0x6D2B79F5;
@@ -19,160 +28,9 @@ function mulberry32(seed) {
         return arr;
       }
 
-      function isBox(ch) {
-        return ch === '$' || ch === '*';
-      }
-
-      function isFloor(ch) {
-        return ch === ' ' || ch === '.';
-      }
-
-      function serializeBoxes(boxesSet) {
-        return [...boxesSet].sort().join('|');
-      }
-
-      function stateKey(player, boxesSet) {
-        return `${player.r},${player.c};${serializeBoxes(boxesSet)}`;
-      }
-
       function isWallCell(grid, r, c) {
         return r < 0 || r >= grid.length || c < 0 || c >= grid[0].length || grid[r][c] === '#';
       }
-
-      function isFreeForPlayer(grid, r, c, boxesSet) {
-        if (isWallCell(grid, r, c)) return false;
-        return !boxesSet.has(`${r},${c}`);
-      }
-
-      function reachableCells(grid, player, boxesSet) {
-        const dirs = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
-        const q = [[player.r, player.c]];
-        const seen = new Set([`${player.r},${player.c}`]);
-
-        while (q.length) {
-          const [r, c] = q.shift();
-          for (const d of dirs) {
-            const nr = r + d.dr, nc = c + d.dc;
-            const key = `${nr},${nc}`;
-            if (seen.has(key)) continue;
-            if (!isFreeForPlayer(grid, nr, nc, boxesSet)) continue;
-            seen.add(key);
-            q.push([nr, nc]);
-          }
-        }
-        return seen;
-      }
-
-function isSolved(boxesSet, targetsSet) {
-        for (const b of boxesSet) {
-          if (!targetsSet.has(b)) return false;
-        }
-        return true;
-      }
-
-      function isSolvableFast(grid, player, boxesSet, targetsSet) {
-        const dirs = [{ dr: -1, dc: 0 }, { dr: 1, dc: 0 }, { dr: 0, dc: -1 }, { dr: 0, dc: 1 }];
-        
-        const visited = new Set();
-        const queue = [{ player: { ...player }, boxes: new Set(boxesSet) }];
-        visited.add(stateKey(player, boxesSet));
-        
-        let steps = 0;
-        // Giới hạn thấp hơn cho solver nhanh
-        const MAX_STATES = 100000;
-        
-        while (queue.length > 0 && steps < MAX_STATES) {
-          const state = queue.shift();
-          steps++;
-          
-          if (isSolved(state.boxes, targetsSet)) return true;
-          
-          const reach = reachableCells(grid, state.player, state.boxes);
-          
-          for (const box of state.boxes) {
-            const [br, bc] = box.split(',').map(Number);
-            
-            for (const d of dirs) {
-              const pushFromR = br - d.dr, pushFromC = bc - d.dc;
-              const destR = br + d.dr, destC = bc + d.dc;
-              
-              // Kiểm tra nhanh: ô đẩy phải đến được và ô đích phải trống
-              if (!reach.has(`${pushFromR},${pushFromC}`)) continue;
-              if (!isFreeForPlayer(grid, destR, destC, state.boxes)) continue;
-              
-              // Kiểm tra deadlock đơn giản: hộp không nên dính tường nếu không phải target
-              const destKey = `${destR},${destC}`;
-              if (!targetsSet.has(destKey)) {
-                // Deadlock: hộp ở góc
-                const wallChecks = [
-                  [destR - 1, destC], [destR + 1, destC],
-                  [destR, destC - 1], [destR, destC + 1]
-                ];
-                let blockedCount = 0;
-                for (const [wr, wc] of wallChecks) {
-                  if (isWallCell(grid, wr, wc)) blockedCount++;
-                }
-                if (blockedCount >= 2) continue; // Bỏ qua nếu hộp bị kẹt góc
-              }
-              
-              const nextBoxes = new Set(state.boxes);
-              nextBoxes.delete(box);
-              nextBoxes.add(destKey);
-              
-              const nextPlayer = { r: br, c: bc };
-              const key = stateKey(nextPlayer, nextBoxes);
-              
-              if (!visited.has(key)) {
-                visited.add(key);
-                queue.push({ player: nextPlayer, boxes: nextBoxes });
-              }
-            }
-          }
-        }
-        
-        return false;
-      }
-
-function manhattan(a, b) {
-  return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]);
-}
-
-function hasClearStraightLine(grid, a, b) {
-  if (a[0] === b[0]) {
-    const r = a[0];
-    const [from, to] = a[1] < b[1] ? [a[1], b[1]] : [b[1], a[1]];
-    for (let c = from + 1; c < to; c++) {
-      if (grid[r][c] === '#') return false;
-    }
-    return true;
-  }
-
-  if (a[1] === b[1]) {
-    const c = a[1];
-    const [from, to] = a[0] < b[0] ? [a[0], b[0]] : [b[0], a[0]];
-    for (let r = from + 1; r < to; r++) {
-      if (grid[r][c] === '#') return false;
-    }
-    return true;
-  }
-
-  return false;
-}
-
-function looksTooObvious(grid, targets, boxes, minDist) {
-  for (const box of boxes) {
-    for (const target of targets) {
-      const d = manhattan(box, target);
-
-      // Quá gần nhau -> dễ đoán cặp
-      if (d < minDist) return true;
-
-      // Cùng hàng/cột và nhìn thẳng được -> rất lộ
-      if (d <= minDist + 1 && hasClearStraightLine(grid, box, target)) return true;
-    }
-  }
-  return false;
-}
 
 function toKey(r, c) {
   return `${r},${c}`;
@@ -180,192 +38,6 @@ function toKey(r, c) {
 
 function fromKey(key) {
   return key.split(',').map(Number);
-}
-
-function boxesOnTargetCount(boxesSet, targetsSet) {
-  let count = 0;
-  for (const b of boxesSet) {
-    if (targetsSet.has(b)) count++;
-  }
-  return count;
-}
-
-function freeNeighborCount(grid, r, c) {
-  const dirs = [
-    [-1, 0], [1, 0], [0, -1], [0, 1]
-  ];
-  let count = 0;
-  for (const [dr, dc] of dirs) {
-    const nr = r + dr, nc = c + dc;
-    if (!isWallCell(grid, nr, nc)) count++;
-  }
-  return count;
-}
-
-function pickSpreadCells(cells, count, minDist, rand) {
-  const attempts = 60;
-
-  for (let t = 0; t < attempts; t++) {
-    const pool = [...cells];
-    shuffleWithRand(pool, rand);
-
-    const chosen = [];
-    for (const cell of pool) {
-      let ok = true;
-      for (const other of chosen) {
-        const d = Math.abs(cell[0] - other[0]) + Math.abs(cell[1] - other[1]);
-        if (d < minDist) {
-          ok = false;
-          break;
-        }
-      }
-      if (ok) chosen.push(cell);
-      if (chosen.length === count) return chosen;
-    }
-  }
-
-  return null;
-}
-
-function nearestTargetInfo(pos, targetPoints) {
-  let bestDist = Infinity;
-  let bestTarget = null;
-
-  for (const t of targetPoints) {
-    const d = Math.abs(pos[0] - t[0]) + Math.abs(pos[1] - t[1]);
-    if (d < bestDist) {
-      bestDist = d;
-      bestTarget = t;
-    }
-  }
-
-  return { dist: bestDist, target: bestTarget };
-}
-
-function isCornerDeadlockCell(grid, r, c, targetsSet) {
-  const key = toKey(r, c);
-  if (targetsSet.has(key)) return false;
-
-  const up = isWallCell(grid, r - 1, c);
-  const down = isWallCell(grid, r + 1, c);
-  const left = isWallCell(grid, r, c - 1);
-  const right = isWallCell(grid, r, c + 1);
-
-  return (up || down) && (left || right);
-}
-
-function scoreReverseCandidate(
-    grid,
-    candidate,
-    boxesSet,
-    targetsSet,
-    targetPoints,
-    rand
-) {
-  const [br, bc] = fromKey(candidate.boxKey);
-  const [nr, nc] = fromKey(candidate.nextBoxKey);
-  const [pr, pc] = fromKey(candidate.nextPlayerKey);
-
-  let score = 0;
-  // Khuyến khích box tụ lại
-
-
-for (const other of boxesSet) {
-    if (other === candidate.boxKey) continue;
-
-    const [or, oc] = fromKey(other);
-
-    const d = Math.abs(nr - or) + Math.abs(nc - oc);
-
-    if(d===1) score+=120;
-
-else if(d===2) score+=70;
-
-else if(d===3) score+=30;
-
-else if(d>=7) score-=80;}
-
-  const oldInfo = nearestTargetInfo([br, bc], targetPoints);
-  const newInfo = nearestTargetInfo([nr, nc], targetPoints);
-
-  // Ưu tiên làm box rời xa đích
-  score+=(newInfo.dist-oldInfo.dist)*100;
-
-  // Đẩy box off target là tốt
-  const boxWasTarget = targetsSet.has(candidate.boxKey);
-  const boxNowTarget = targetsSet.has(candidate.nextBoxKey);
-  if (boxWasTarget && !boxNowTarget) score += 160;
-  if (boxNowTarget) score -= 450;
-
-  // Không cho box dính quá gần target
-  if(newInfo.dist<=4) score -= (3 - newInfo.dist) * 120;
-
-  // Càng vào hành lang / chỗ chật vừa phải càng tốt
-  const open = freeNeighborCount(grid, nr, nc);
-  score += (4 - open) * 14;
-
-  // Tránh vị trí quá lộ: thẳng hàng nhìn thấy target
-  if (newInfo.target && hasClearStraightLine(grid, [nr, nc], newInfo.target)) {
-    score -= newInfo.dist <= 4 ? 90 : 30;
-  }
-
-  // Tránh deadlock thật sự
-  if (isCornerDeadlockCell(grid, nr, nc, targetsSet)) {
-    score -= 10000;
-  }
-
-  // Đừng để player đứng quá sát sau khi reverse
-  const playerToBox = Math.abs(pr - nr) + Math.abs(pc - nc);
-  score += Math.max(0, playerToBox - 1) * 3;
-
-  // Nhiễu nhỏ để tránh lặp pattern
-  score += rand() * 8;
-
-  return score;
-}
-
-function chooseReverseCandidate(
-    candidates,
-    grid,
-    boxesSet,
-    targetsSet,
-    targetPoints,
-    rand
-) {
-  const scored = [];
-
-for (const c of candidates) {
-  const s = scoreReverseCandidate(
-    grid,
-    c,
-    boxesSet,
-    targetsSet,
-    targetPoints,
-    rand
-  );
-  if (s > -9000) scored.push({ c, s });
-}
-  if (scored.length === 0) return null;
-
-  scored.sort((a, b) => b.s - a.s);
-
-  const top = scored.slice(0,2);
-  const minScore = top[top.length - 1].s;
-
-  let totalWeight = 0;
-  const weighted = top.map(item => {
-    const w = Math.max(1, item.s - minScore + 1);
-    totalWeight += w;
-    return { item, w };
-  });
-
-  let r = rand() * totalWeight;
-  for (const entry of weighted) {
-    r -= entry.w;
-    if (r <= 0) return entry.item.c;
-  }
-
-  return weighted[0].item.c;
 }
 
 /* =========================================================
@@ -519,16 +191,6 @@ function solvePushes(grid, player, boxesSet, targetsSet, opts) {
 }
 
 // Phân tích một màn có sẵn (màn chia sẻ): giải được không và số bước theo lời giải ít lần đẩy nhất
-function analyzeLevel(grid, player, boxesSet, targetsSet) {
-  const opt = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 2000000, deadline: Date.now() + 8000 });
-  if (opt && opt.solvable === true) return { solvable: true, moves: opt.moves, pushes: opt.pushes };
-  // không tìm được lời giải ít bước nhất trong thời gian cho phép: dùng lời giải ít lần đẩy (số bước chỉ là ước lượng trên)
-  const sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
-  if (!sol || sol.solvable !== true) return { solvable: false, moves: 0 };
-  const m = measureSolution(grid, player, boxesSet, sol);
-  return { solvable: true, moves: m.moves, pushes: m.pushes };
-}
-
 /* =========================================================
    BỘ GIẢI TỐI ƯU THEO SỐ BƯỚC ĐI (dùng cho số bước 3 sao và gợi ý Developer)
    - Mỗi "cạnh" là một lần đẩy, chi phí = quãng đường người chơi đi tới chỗ đẩy + 1 bước đẩy
@@ -984,255 +646,332 @@ function solutionToPath(grid, player, boxesSet, list) {
 }
 
 // Gợi ý nước đi tiếp theo (Developer Mode): ký tự U/D/L/R của bước đầu tiên trên lời giải ít lần đẩy nhất
-function solveHintMove(grid, player, boxesSet, targetsSet) {
-  // ưu tiên lời giải ÍT BƯỚC NHẤT (đi theo từng gợi ý sẽ đúng bằng số bước 3 sao); hết giờ mới dùng lời giải ít lần đẩy
-  let sol = solveMoves(grid, player, boxesSet, targetsSet, { maxNodes: 3500000, deadline: Date.now() + 6000 });
-  if (!sol || sol.solvable !== true) sol = solvePushes(grid, player, boxesSet, targetsSet, { maxNodes: 300000, deadline: Date.now() + 3000 });
-  if (!sol || sol.solvable !== true || !sol.list.length) return null;
-
-  const rows = grid.length, cols = grid[0].length;
-  const D = [[-1, 0, 'U'], [1, 0, 'D'], [0, -1, 'L'], [0, 1, 'R']];
-  const p = sol.list[0];
-  const br = (p.from / cols) | 0, bc = p.from % cols;
-  const sr = br - D[p.dir][0], sc = bc - D[p.dir][1];   // ô người phải đứng để đẩy
-
-  if (player.r === sr && player.c === sc) return D[p.dir][2];   // đã đứng đúng chỗ → đẩy luôn
-
-  const boxes = new Set([...boxesSet]);
-  const start = toKey(player.r, player.c);
-  const prev = new Map([[start, null]]);
-  const q = [[player.r, player.c]];
-  for (let qi = 0; qi < q.length; qi++) {
-    const [r, c] = q[qi];
-    if (r === sr && c === sc) break;
-    for (const [dr, dc, ch] of D) {
-      const nr = r + dr, nc = c + dc, k = toKey(nr, nc);
-      if (isWallCell(grid, nr, nc) || boxes.has(k) || prev.has(k)) continue;
-      prev.set(k, { from: toKey(r, c), ch });
-      q.push([nr, nc]);
-    }
-  }
-  let k = toKey(sr, sc);
-  if (!prev.has(k)) return null;
-  let first = null;
-  while (prev.get(k)) { first = prev.get(k).ch; k = prev.get(k).from; }
-  return first;
-}
-
 // Đo độ hóc búa từ lời giải ít lần đẩy nhất: số lần đẩy, số bước đi, số lần đổi hộp, số lần hộp đổi hướng
-function measureSolution(grid, player, boxesSet, sol) {
-  const rows = grid.length, cols = grid[0].length;
-  const dirs = [[-1, 0], [1, 0], [0, -1], [0, 1]];
-  const boxes = new Set([...boxesSet].map(k => { const [r, c] = fromKey(k); return r * cols + c; }));
-  let pr = player.r, pc = player.c;
-  let moves = 0, switches = 0, turns = 0;
-  let lastBox = -1; const lastDir = new Map();   // hướng đẩy gần nhất của từng hộp (theo vị trí hiện tại)
-
-  for (const p of sol.list) {
-    const r = (p.from / cols) | 0, c = p.from % cols;
-    const [dr, dc] = dirs[p.dir];
-    const sr = r - dr, sc = c - dc;
-    // BFS quãng đường người chơi tới ô đứng đẩy
-    const seen = new Map([[pr * cols + pc, 0]]);
-    const q = [[pr, pc]];
-    for (let qi = 0; qi < q.length && !seen.has(sr * cols + sc); qi++) {
-      const [qr, qc] = q[qi];
-      for (const [ar, ac] of dirs) {
-        const nr = qr + ar, nc = qc + ac, n = nr * cols + nc;
-        if (isWallCell(grid, nr, nc) || boxes.has(n) || seen.has(n)) continue;
-        seen.set(n, seen.get(qr * cols + qc) + 1);
-        q.push([nr, nc]);
-      }
-    }
-    moves += (seen.get(sr * cols + sc) || 0) + 1;
-    if (lastBox !== -1 && lastBox !== p.from) switches++;
-    if (lastDir.has(p.from) && lastDir.get(p.from) !== p.dir) turns++;
-    boxes.delete(p.from);
-    const to = (r + dr) * cols + (c + dc);
-    boxes.add(to);
-    if (lastDir.has(p.from)) lastDir.delete(p.from);
-    lastDir.set(to, p.dir);
-    lastBox = to;
-    pr = r; pc = c;
-  }
-  return { pushes: sol.list.length, moves, switches, turns };
-}
-
 /* =========================================================
-   SINH MÀN
-   - Dựng màn bằng cách "kéo ngược" từ trạng thái thắng → luôn giải được.
-   - Giải bằng solvePushes để đo độ hóc búa:
-       điểm = 4·số lần đẩy + số bước + 3·số lần đổi hộp + 2·số lần hộp đổi hướng
-   - Sinh nhiều ứng viên trong giới hạn thời gian (GEN_BUDGET_MS, tối đa 30 giây),
-     chọn màn khó nhất; dừng sớm khi đạt điểm mục tiêu theo cấp.
+   SINH MÀN (bản 2) — độ khó dựa trên cấu trúc, không dựa vào số hộp
+   1) Địa hình ghép từ các khối mẫu 3x3 (phòng, hành lang hẹp, cột, góc) → có lối đi chật, góc chết.
+   2) Đặt đích, rồi khám phá TOÀN BỘ không gian trạng thái bằng cách "kéo ngược" từ thế thắng:
+      mọi thế trong tập này đều giải được, thế ngoài tập là bế tắc → biết chính xác đâu là nước "bẫy".
+   3) Chấm điểm từng thế bắt đầu:
+      - số lần đẩy tối thiểu,
+      - số nước bẫy dọc đường giải (đẩy sai 1 nước là kẹt vĩnh viễn; bế tắc khó thấy được điểm cao hơn đẩy vào góc),
+      - số lần phải đổi hộp, hộp nằm sát nhau, hộp xa đích, người chơi bị kẹp giữa các hộp.
    ========================================================= */
-// Tối đa ~19 giây tìm màn + tối đa ~9 giây tính số bước ít nhất chính xác ≈ dưới 30 giây
-const GEN_BUDGET_MS = 19000;
-const EVAL_CAP = 130000;
-// Kích thước bàn và số hộp theo loại màn (màn cứ 4 cấp là khó, 10 cấp là cực khó)
-const LEVEL_CFG = {
-  normal:  { size: 8, boxes: 5 },
-  hard:    { size: 9, boxes: 6 },
-  extreme: { size: 9, boxes: 7 }
-};
 
-// Mục tiêu độ khó (số trạng thái bộ giải phải duyệt) theo loại màn; tăng nhẹ theo cấp
-function targetPushesFor(levelIndex, stage) {
-  const base = stage === 'extreme' ? 110000 : stage === 'hard' ? 60000 : 25000;
-  const ramp = 0.4 + 0.6 * Math.min(1, levelIndex / 12);   // các cấp đầu dễ hơn để vào game nhanh
-  return Math.round((base + Math.min(6, Math.floor(levelIndex / 3)) * 1800) * ramp);
+const MAP_TEMPLATES = [
+  ["...", "...", "..."],
+  ["#..", "...", "..."],
+  ["##.", "#..", "..."],
+  ["###", "...", "..."],
+  ["###", "#..", "#.."],
+  ["#..", "#..", "#.."],
+  [".#.", "...", "..."],
+  ["...", ".#.", "..."],
+  ["##.", "##.", "..."],
+  ["#..", "...", "..#"],
+  [".#.", ".#.", "..."],
+  [".##", "...", "##."],
+  ["#.#", "...", "..."],
+  ["###", "###", "###"],
+  ["#..", "...", ".#."],
+  ["..#", ".##", "..."]
+];
+
+function templateCells(t, rot, mirror) {
+  // trả về ma trận 3x3 sau khi xoay/lật
+  let m = t.map(row => row.split(''));
+  if (mirror) m = m.map(row => row.slice().reverse());
+  for (let k = 0; k < rot; k++) m = m[0].map((_, c) => m.map(row => row[c]).reverse());
+  return m;
 }
 
-// Leo đồi: từ thế bắt đầu, kéo ngược thêm vài bước ngẫu nhiên rồi giải lại;
-// giữ thế mới nếu lời giải ít lần đẩy nhất dài hơn. Màn vẫn luôn giải được vì chỉ dùng bước kéo ngược.
-function climb(cand, rand, goalPushes, deadline) {
-  const { grid, targetsSet } = cand;
-  let boxes = new Set(cand.boxesSet);
-  let player = { ...cand.playerPos };
-
-  // Độ khó = số trạng thái bộ giải phải duyệt (hộp phụ thuộc lẫn nhau càng nhiều càng lớn).
-  // Vượt EVAL_CAP thì tính là EVAL_CAP (vẫn giải được vì thế bắt đầu dựng ngược từ thế thắng).
-  const evalState = (bx, pl) => {
-    const sol = solvePushes(grid, pl, bx, targetsSet, { maxNodes: EVAL_CAP, deadline });
-    if (!sol) return null;
-    if (sol.solvable === true) { const m = measureSolution(grid, pl, bx, sol); m.hard = sol.explored; return m; }
-    if (sol.solvable === null && sol.explored > EVAL_CAP) return { pushes: 0, moves: 0, switches: 0, turns: 0, hard: EVAL_CAP, capped: true };
-    return null;
-  };
-
-  let cur = evalState(boxes, player);
-  if (!cur) return null;
-  let best = cur, bestBoxes = boxes, bestPlayer = player;
-  let stale = 0;
-
-  while (Date.now() < deadline && best.hard < goalPushes && stale < 220) {
-    const bx = new Set(boxes);
-    let pl = { ...player };
-    const k = 1 + Math.floor(rand() * 7);
-    let ok = true;
-    for (let i = 0; i < k; i++) {
-      const cs = getReverseCandidates(grid, pl, bx, targetsSet);
-      if (!cs.length) { ok = false; break; }
-      const pick = cs[Math.floor(rand() * cs.length)];
-      bx.delete(pick.boxKey);
-      bx.add(pick.nextBoxKey);
-      const np = fromKey(pick.nextPlayerKey);
-      pl = { r: np[0], c: np[1] };
-    }
-    stale++;
-    if (!ok || boxesOnTargetCount(bx, targetsSet) !== 0) continue;
-    const ev = evalState(bx, pl);
-    if (!ev) continue;
-
-    // chấp nhận thế tốt hơn hoặc ngang bằng (đi ngang để thoát cực trị cục bộ); thỉnh thoảng cho lùi 1 lần đẩy
-    const accept = ev.hard >= cur.hard * 0.97 || (rand() < 0.08);
-    if (!accept) continue;
-    boxes = bx; player = pl; cur = ev;
-    if (ev.hard > best.hard) {
-      if (ev.hard > best.hard * 1.1) stale = 0;
-      best = ev; bestBoxes = bx; bestPlayer = pl;
+function buildTemplateMap(rand, bw, bh, minFloor, maxFloor) {
+  const rows = bh * 3 + 2, cols = bw * 3 + 2;
+  const g = Array.from({ length: rows }, () => Array(cols).fill('#'));
+  for (let by = 0; by < bh; by++) for (let bx = 0; bx < bw; bx++) {
+    // khối trống ít được chọn hơn để địa hình có nhiều chi tiết
+    let t = MAP_TEMPLATES[Math.floor(rand() * MAP_TEMPLATES.length)];
+    if (t === MAP_TEMPLATES[0] && rand() < 0.5) t = MAP_TEMPLATES[1 + Math.floor(rand() * (MAP_TEMPLATES.length - 1))];
+    const m = templateCells(t, Math.floor(rand() * 4), rand() < 0.5);
+    for (let r = 0; r < 3; r++) for (let c = 0; c < 3; c++) g[1 + by * 3 + r][1 + bx * 3 + c] = m[r][c] === '#' ? '#' : ' ';
+  }
+  const isF = (r, c) => r > 0 && c > 0 && r < rows - 1 && c < cols - 1 && g[r][c] === ' ';
+  // lấp ngõ cụt (ô trống có ≥3 mặt tường) — vô dụng cho việc đẩy hộp
+  for (let changed = true; changed;) {
+    changed = false;
+    for (let r = 1; r < rows - 1; r++) for (let c = 1; c < cols - 1; c++) {
+      if (g[r][c] !== ' ') continue;
+      const n = isF(r - 1, c) + isF(r + 1, c) + isF(r, c - 1) + isF(r, c + 1);
+      if (n <= 1) { g[r][c] = '#'; changed = true; }
     }
   }
-  cand.boxesSet = bestBoxes;
-  cand.playerPos = bestPlayer;
-  return best;
+  // giữ vùng liên thông lớn nhất
+  const comp = Array.from({ length: rows }, () => Array(cols).fill(-1));
+  let bestId = -1, bestSize = 0, id = 0;
+  for (let r = 1; r < rows - 1; r++) for (let c = 1; c < cols - 1; c++) {
+    if (!isF(r, c) || comp[r][c] >= 0) continue;
+    let size = 0; const q = [[r, c]]; comp[r][c] = id;
+    while (q.length) {
+      const [a, b] = q.pop(); size++;
+      for (const [dr, dc] of [[-1, 0], [1, 0], [0, -1], [0, 1]]) {
+        const na = a + dr, nb = b + dc;
+        if (isF(na, nb) && comp[na][nb] < 0) { comp[na][nb] = id; q.push([na, nb]); }
+      }
+    }
+    if (size > bestSize) { bestSize = size; bestId = id; }
+    id++;
+  }
+  if (bestSize < minFloor || bestSize > maxFloor) return null;
+  for (let r = 1; r < rows - 1; r++) for (let c = 1; c < cols - 1; c++) if (g[r][c] === ' ' && comp[r][c] !== bestId) g[r][c] = '#';
+  // quá thoáng (có vùng trống 3x4) thì bỏ — màn thoáng dễ xoay xở, không có thế bí
+  for (let r = 1; r + 2 < rows - 1; r++) for (let c = 1; c + 2 < cols - 1; c++) {
+    let open33 = true;
+    for (let a = 0; a < 3 && open33; a++) for (let b = 0; b < 3; b++) if (g[r + a][c + b] !== ' ') { open33 = false; break; }
+    if (!open33) continue;
+    const ext = (r + 3 < rows - 1 && [0, 1, 2].every(b => g[r + 3][c + b] === ' ')) || (c + 3 < cols - 1 && [0, 1, 2].every(a => g[r + a][c + 3] === ' '));
+    if (ext) return null;
+  }
+  // cắt viền tường thừa
+  let r0 = rows, r1 = 0, c0 = cols, c1 = 0;
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (g[r][c] === ' ') { r0 = Math.min(r0, r); r1 = Math.max(r1, r); c0 = Math.min(c0, c); c1 = Math.max(c1, c); }
+  return g.slice(r0 - 1, r1 + 2).map(row => row.slice(c0 - 1, c1 + 2));
 }
 
-function buildCandidate(levelIndex, rand, stage) {
-    const cfg = LEVEL_CFG[stage];
-    const size = cfg.size;
-    const rows = size;
-    const cols = size;
+// Khám phá toàn bộ không gian trạng thái từ thế thắng bằng nước kéo ngược.
+// Trạng thái = tập ô hộp + vùng người chơi (đại diện bằng ô nhỏ nhất). depth = số lần đẩy ít nhất tới thế thắng.
+function exploreStateSpace(grid, targetCells, cap, deadline) {
+  const rows = grid.length, cols = grid[0].length;
+  const fl = [], idxOf = new Int32Array(rows * cols).fill(-1);
+  for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] !== '#') { idxOf[r * cols + c] = fl.length; fl.push(r * cols + c); }
+  const F = fl.length;
+  if (F > 63) return null;
+  const nb = [];   // nb[i*4+d]
+  const DR = [-1, 1, 0, 0], DC = [0, 0, -1, 1];
+  for (let i = 0; i < F; i++) {
+    const r = (fl[i] / cols) | 0, c = fl[i] % cols;
+    for (let d = 0; d < 4; d++) {
+      const nr = r + DR[d], nc = c + DC[d];
+      nb.push(nr >= 0 && nc >= 0 && nr < rows && nc < cols ? idxOf[nr * cols + nc] : -1);
+    }
+  }
+  const n = targetCells.length;
+  const occ = new Uint8Array(F), mark = new Int32Array(F), stack = new Int32Array(F);
+  let stamp = 0;
+  function flood(p) {
+    stamp++; let top = 0, mn = p; stack[top++] = p; mark[p] = stamp;
+    while (top) { const cur = stack[--top]; if (cur < mn) mn = cur; for (let d = 0; d < 4; d++) { const m = nb[cur * 4 + d]; if (m < 0 || occ[m] || mark[m] === stamp) continue; mark[m] = stamp; stack[top++] = m; } }
+    return mn;
+  }
+  const enc = (bx, rep) => { let k = 0; for (let i = 0; i < n; i++) k = k * 64 + bx[i]; return k * 64 + rep; };
+  const dec = (k, bx) => { const rep = k % 64; k = (k - rep) / 64; for (let i = n - 1; i >= 0; i--) { bx[i] = k % 64; k = (k - bx[i]) / 64; } return rep; };
 
-    const boxCount = cfg.boxes;
-    const wallDensity = 0.15 + rand() * 0.15;
-    const reverseSteps = Math.min(180 + levelIndex * 4, 260);
+  const goal = targetCells.map(c => idxOf[c]).sort((a, b) => a - b);
+  const depth = new Map();
+  let frontier = [];
+  for (const b of goal) occ[b] = 1;
+  const seenRep = new Set();
+  for (let i = 0; i < F; i++) {
+    if (occ[i]) continue;
+    const rep = flood(i);
+    if (seenRep.has(rep)) continue;
+    seenRep.add(rep);
+    const k = enc(goal, rep); depth.set(k, 0); frontier.push(k);
+  }
+  for (const b of goal) occ[b] = 0;
 
-    const dirs = [
-      { dr: -1, dc: 0 },
-      { dr: 1, dc: 0 },
-      { dr: 0, dc: -1 },
-      { dr: 0, dc: 1 }
-    ];
+  const bx = new Int32Array(n), nbx = new Int32Array(n);
+  let d = 0;
+  while (frontier.length) {
+    const next = [];
+    for (const k of frontier) {
+      const rep = dec(k, bx);
+      for (let i = 0; i < n; i++) occ[bx[i]] = 1;
+      flood(rep);
+      let st = stamp;
+      for (let i = 0; i < n; i++) {
+        const b = bx[i];
+        for (let dd = 0; dd < 4; dd++) {
+          const p = nb[b * 4 + dd];            // người đứng cạnh hộp
+          if (p < 0 || mark[p] !== st) continue;
+          const q = nb[p * 4 + dd];            // lùi thêm 1 ô (kéo hộp theo)
+          if (q < 0 || occ[q]) continue;
+          // áp dụng: hộp b → p, người → q
+          occ[b] = 0; occ[p] = 1;
+          const nrep = flood(q);
+          occ[p] = 0; occ[b] = 1;
+          for (let j = 0; j < n; j++) nbx[j] = bx[j];
+          nbx[i] = p;
+          // sắp xếp chèn
+          for (let a = 1; a < n; a++) { const v = nbx[a]; let c = a - 1; while (c >= 0 && nbx[c] > v) { nbx[c + 1] = nbx[c]; c--; } nbx[c + 1] = v; }
+          const nk = enc(nbx, nrep);
+          if (!depth.has(nk)) { depth.set(nk, d + 1); next.push(nk); }
+          // flood() đã ghi đè mark: dựng lại vùng hiện tại
+          flood(rep); st = stamp;
+        }
+      }
+      for (let i = 0; i < n; i++) occ[bx[i]] = 0;
+      if (depth.size > cap || Date.now() > deadline) return null;
+    }
+    frontier = next; d++;
+  }
+  return { depth, F, fl, idxOf, nb, n, enc, dec, flood, occ, mark, getStamp: () => stamp, maxDepth: d - 1 };
+}
 
-    const grid = Array.from({ length: rows }, (_, r) =>
-      Array.from({ length: cols }, (_, c) =>
-        (r === 0 || c === 0 || r === rows - 1 || c === cols - 1) ? '#' : ' '
-      )
-    );
-
-    const innerCells = [];
-    for (let r = 1; r <= rows - 2; r++) {
-      for (let c = 1; c <= cols - 2; c++) {
-        innerCells.push([r, c]);
+// Chấm điểm một thế bắt đầu (khoá k trong không gian trạng thái)
+function scoreStart(sp, k, pdistIdx) {
+  const { depth, n, nb, enc, dec, flood, occ, mark } = sp;
+  const bx = new Int32Array(n), nbx = new Int32Array(n);
+  let rep = dec(k, bx);
+  const D = depth.get(k);
+  let traps = 0, subtle = 0, switches = 0, choiceSum = 0, lastBox = -1, steps = 0;
+  let curK = k;
+  // đi theo một đường tối ưu (ưu tiên đẩy tiếp hộp vừa đẩy → số lần đổi hộp là ít nhất có thể theo đường này)
+  while (depth.get(curK) > 0) {
+    const cd = depth.get(curK);
+    rep = dec(curK, bx);
+    for (let i = 0; i < n; i++) occ[bx[i]] = 1;
+    flood(rep);
+    const st = sp.getStamp();
+    const reach = new Uint8Array(sp.F);
+    for (let i = 0; i < sp.F; i++) reach[i] = mark[i] === st ? 1 : 0;
+    let bestK = -1, bestTo = -1, bestSame = false, good = 0, legal = 0;
+    for (let i = 0; i < n; i++) {
+      const b = bx[i];
+      for (let dd = 0; dd < 4; dd++) {
+        const s = nb[b * 4 + (dd ^ 1)];        // ô người đứng đẩy (phía đối diện)
+        const t = nb[b * 4 + dd];              // ô hộp đi tới
+        if (s < 0 || t < 0 || !reach[s] || occ[t]) continue;
+        legal++;
+        occ[b] = 0; occ[t] = 1;
+        const nrep = flood(b);
+        occ[t] = 0; occ[b] = 1;
+        for (let j = 0; j < n; j++) nbx[j] = bx[j];
+        nbx[i] = t;
+        for (let a = 1; a < n; a++) { const v = nbx[a]; let c = a - 1; while (c >= 0 && nbx[c] > v) { nbx[c + 1] = nbx[c]; c--; } nbx[c + 1] = v; }
+        const nk = enc(nbx, nrep);
+        const nd = depth.get(nk);
+        if (nd === undefined) {
+          traps++;
+          if (pdistIdx[t] < 1e6) subtle++;     // ô đích đến không phải ô chết hiển nhiên → bế tắc khó thấy
+        } else {
+          if (nd < cd) good++;
+          if (nd === cd - 1) {
+            const same = b === lastBox;
+            if (bestK < 0 || (same && !bestSame)) { bestK = nk; bestTo = t; bestSame = same; }
+          }
+        }
       }
     }
-    shuffleWithRand(innerCells, rand);
-
-    const numWalls = Math.floor(innerCells.length * wallDensity);
-    for (const [r, c] of innerCells.slice(0, numWalls)) {
-      grid[r][c] = '#';
-      let isolated = true;
-      for (const d of dirs) {
-        const nr = r + d.dr, nc = c + d.dc;
-        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols && grid[nr][nc] === ' ') { isolated = false; break; }
-      }
-      if (isolated) grid[r][c] = ' ';
+    for (let i = 0; i < n; i++) occ[bx[i]] = 0;
+    if (bestK < 0) break;
+    if (lastBox >= 0 && !bestSame) switches++;
+    choiceSum += legal ? good / legal : 1;
+    lastBox = bestTo;
+    curK = bestK;
+    steps++;
+  }
+  // đặc điểm của thế đầu
+  rep = dec(k, bx);
+  let adj = 0, nearT = 0, far = 0;
+  const F = sp.F;
+  for (let i = 0; i < n; i++) {
+    for (let j = i + 1; j < n; j++) {
+      for (let dd = 0; dd < 4; dd++) if (nb[bx[i] * 4 + dd] === bx[j]) adj++;
     }
+    const pd = pdistIdx[bx[i]];
+    if (pd <= 1) nearT++;
+    far += Math.min(pd, 8);
+  }
+  for (let i = 0; i < n; i++) occ[bx[i]] = 1;
+  flood(rep);
+  let region = 0; const st = sp.getStamp();
+  for (let i = 0; i < F; i++) if (sp.mark[i] === st) region++;
+  for (let i = 0; i < n; i++) occ[bx[i]] = 0;
+  const free = F - n;
+  const cramped = region < free ? 1 - region / free : 0;   // người chơi bị nhốt trong vùng nhỏ lúc đầu
+  const forced = steps ? 1 - choiceSum / steps : 0;        // tỉ lệ nước "không tiến bộ" → phải tính toán
+  const score = D * 1.0 + (traps - subtle) * 0.25 + subtle * 1.1 + switches * 2.2 + adj * 1.5
+    - nearT * 3 + far * 0.4 + cramped * 4 + forced * 10;
+  return { score, pushes: D, traps, subtle, switches, adj, nearT, cramped, forced };
+}
 
-    const emptyCells = [];
-    for (let r = 1; r <= rows - 2; r++) for (let c = 1; c <= cols - 2; c++) if (grid[r][c] === ' ') emptyCells.push([r, c]);
-    if (emptyCells.length < boxCount + 1) return null;
+// cấu hình theo loại màn: (khối ngang, khối dọc, số hộp, số ô trống tối thiểu/tối đa)
+function genConfigFor(levelIndex, stage) {
+  const early = levelIndex < 3;
+  if (stage === 'extreme') return { shapes: [[3, 3], [3, 2], [2, 3]], boxes: [4, 5], floor: [24, 40], cap: 1500000 };
+  if (stage === 'hard') return { shapes: [[3, 2], [3, 3], [2, 3]], boxes: [4], floor: [20, 36], cap: 900000 };
+  if (early) return { shapes: [[2, 2], [3, 2]], boxes: [3], floor: [14, 26], cap: 300000 };
+  return { shapes: [[3, 2], [2, 3], [3, 3]], boxes: [3, 4], floor: [18, 34], cap: 700000 };
+}
 
-    const visited = new Set([toKey(emptyCells[0][0], emptyCells[0][1])]);
-    const queue = [emptyCells[0]];
-    while (queue.length) {
-      const [r, c] = queue.shift();
-      for (const d of dirs) {
-        const nr = r + d.dr, nc = c + d.dc, key = toKey(nr, nc);
-        if (visited.has(key)) continue;
-        if (grid[nr] && grid[nr][nc] === ' ') { visited.add(key); queue.push([nr, nc]); }
-      }
+function createStructuredLevel(levelIndex, stage, budget) {
+  const started = Date.now();
+  const deadline = started + budget;
+  const cfg = genConfigFor(levelIndex, stage);
+  const pool = [];
+  let tries = 0;
+  while (Date.now() < deadline) {
+    const rand = mulberry32((0x51C0 + levelIndex * 7919 + tries * 104729) ^ Math.floor(Math.random() * 0x7fffffff));
+    tries++;
+    const [bw, bh] = cfg.shapes[Math.floor(rand() * cfg.shapes.length)];
+    const grid = buildTemplateMap(rand, bw, bh, cfg.floor[0], cfg.floor[1]);
+    if (!grid) continue;
+    const rows = grid.length, cols = grid[0].length;
+    const floor = [];
+    for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) if (grid[r][c] !== '#') floor.push(r * cols + c);
+    const nBox = cfg.boxes[Math.floor(rand() * cfg.boxes.length)];
+    if (floor.length < nBox * 4) continue;
+    // đích: chọn ngẫu nhiên, không cho nằm ở ô chết với chính nó (ô mà hộp không thể rời đi vẫn được)
+    shuffleWithRand(floor, rand);
+    const tcells = floor.slice(0, nBox);
+    const sp = exploreStateSpace(grid, tcells, cfg.cap, deadline);
+    if (!sp || sp.maxDepth < 6) continue;
+
+    // khoảng cách đẩy tới đích gần nhất (theo chỉ số ô trống)
+    const targetsSet = new Set(tcells.map(c => toKey((c / cols) | 0, c % cols)));
+    const pdistCell = computePushDist(grid, targetsSet);
+    const pdistIdx = sp.fl.map(c => pdistCell[c] === Infinity ? 1e6 : pdistCell[c]);
+    const isT = new Uint8Array(sp.F);
+    for (const c of tcells) isT[sp.idxOf[c]] = 1;
+
+    // chọn ứng viên: các thế sâu nhất, không hộp nào nằm sẵn trên đích
+    const bx = new Int32Array(sp.n);
+    const cands = [];
+    const minD = Math.max(4, sp.maxDepth - 10);
+    for (const [k, d] of sp.depth) {
+      if (d < minD) continue;
+      sp.dec(k, bx);
+      let on = false;
+      for (let i = 0; i < sp.n; i++) if (isT[bx[i]]) { on = true; break; }
+      if (!on) cands.push(k);
     }
-    if (visited.size < emptyCells.length) return null;
-
-    const targets = pickSpreadCells(emptyCells, boxCount, 1, rand);
-    if (!targets) return null;
-    const targetsSet = new Set(targets.map(([r, c]) => toKey(r, c)));
-    const targetPoints = targets.map(([r, c]) => [r, c]);
-
-    const playerCandidates = emptyCells.filter(([r, c]) => !targetsSet.has(toKey(r, c)));
-    if (!playerCandidates.length) return null;
-    shuffleWithRand(playerCandidates, rand);
-    let playerCell = playerCandidates.find(([r, c]) =>
-      Math.min(...targets.map(t => Math.abs(r - t[0]) + Math.abs(c - t[1]))) >= 2) || playerCandidates[0];
-
-    let playerPos = { r: playerCell[0], c: playerCell[1] };
-    const boxesSet = new Set(targets.map(([r, c]) => toKey(r, c)));
-
-    const reverseOnce = () => {
-      let candidates = getReverseCandidates(grid, playerPos, boxesSet, targetsSet);
-      if (!candidates.length) return false;
-      const off = candidates.filter(c => {
-        const [br, bc] = fromKey(c.boxKey), [nr, nc] = fromKey(c.nextBoxKey);
-        return targetsSet.has(toKey(br, bc)) && !targetsSet.has(toKey(nr, nc));
-      });
-      if (off.length) candidates = off;
-      const pick = chooseReverseCandidate(candidates, grid, boxesSet, targetsSet, targetPoints, rand);
-      if (!pick) return false;
-      boxesSet.delete(pick.boxKey);
-      boxesSet.add(pick.nextBoxKey);
-      const np = fromKey(pick.nextPlayerKey);
-      playerPos = { r: np[0], c: np[1] };
-      return true;
-    };
-
-    for (let step = 0; step < reverseSteps; step++) if (!reverseOnce()) return null;
-    let safety = 0;
-    while (boxesOnTargetCount(boxesSet, targetsSet) > 0 && safety < 30) { if (!reverseOnce()) break; safety++; }
-    if (boxesOnTargetCount(boxesSet, targetsSet) !== 0) return null;
-
-    return { grid, playerPos, boxesSet, targetsSet, targets };
+    if (!cands.length) continue;
+    shuffleWithRand(cands, rand);
+    let best = null;
+    for (const k of cands.slice(0, 160)) {
+      const s = scoreStart(sp, k, pdistIdx);
+      if (!best || s.score > best.s.score) best = { k, s };
+    }
+    // vị trí người chơi: chọn ngẫu nhiên trong vùng (ưu tiên ô xa hộp đầu tiên cần đẩy thì không cần)
+    const rep = sp.dec(best.k, bx);
+    for (let i = 0; i < sp.n; i++) sp.occ[bx[i]] = 1;
+    sp.flood(rep);
+    const st = sp.getStamp();
+    const region = [];
+    for (let i = 0; i < sp.F; i++) if (sp.mark[i] === st) region.push(i);
+    for (let i = 0; i < sp.n; i++) sp.occ[bx[i]] = 0;
+    const pIdx = region[Math.floor(rand() * region.length)];
+    const pc = sp.fl[pIdx];
+    pool.push({
+      grid, targets: tcells.map(c => [(c / cols) | 0, c % cols]), targetsSet,
+      boxesSet: new Set([...bx].map(i => toKey((sp.fl[i] / cols) | 0, sp.fl[i] % cols))),
+      playerPos: { r: (pc / cols) | 0, c: pc % cols },
+      m: { ...best.s, hard: best.s.score }
+    });
+    pool.sort((a, b) => b.m.hard - a.m.hard);
+    if (pool.length > 6) pool.pop();
+  }
+  return pool;
 }
 
 function finishLevel(levelIndex, stage, cand, metrics) {
@@ -1244,8 +983,8 @@ function finishLevel(levelIndex, stage, cand, metrics) {
     }
     grid[playerPos.r][playerPos.c] = targetsSet.has(toKey(playerPos.r, playerPos.c)) ? '+' : '@';
 
-    const p = metrics.pushes;
-    const difficulty = p >= 26 ? 'CỰC KHÓ' : p >= 21 ? 'RẤT KHÓ' : p >= 16 ? 'KHÓ' : p >= 11 ? 'VỪA' : 'DỄ';
+    const sc = metrics.score;   // điểm độ phức tạp (số lần đẩy, nước bẫy, đổi hộp, ...)
+    const difficulty = sc >= 160 ? 'CỰC KHÓ' : sc >= 125 ? 'RẤT KHÓ' : sc >= 95 ? 'KHÓ' : sc >= 65 ? 'VỪA' : 'DỄ';
     return {
       name: `Cấp ${levelIndex + 1}`,
       map: grid.map(row => row.join('')),
@@ -1256,89 +995,33 @@ function finishLevel(levelIndex, stage, cand, metrics) {
     };
 }
 
-function createGeneratedLevel(levelIndex, budget = GEN_BUDGET_MS) {
+// Tổng thời gian tạo một màn < 30 giây: tìm màn theo loại + tính số bước ít nhất chính xác
+const GEN_BUDGET_MS = { early: 6000, normal: 11000, hard: 16000, extreme: 19000 };
+
+function createGeneratedLevel(levelIndex, budget) {
   const levelNo = levelIndex + 1;
   const stage = levelNo % 10 === 0 ? 'extreme' : levelNo % 4 === 0 ? 'hard' : 'normal';
   const started = Date.now();
-  const deadline = started + budget;
-  const goal = targetPushesFor(levelIndex, stage);
-
-  const pool = [];         // các ứng viên khó nhất (giữ tối đa 6) để chọn màn tính được số bước ít nhất chính xác
-  let n = 0;
-
-  while (Date.now() < deadline) {
-    const rand = mulberry32((0xA53A + levelIndex * 9973 + n * 7919) ^ Math.floor(Math.random() * 0x7fffffff));
-    n++;
-    const cand = buildCandidate(levelIndex, rand, stage);
-    if (!cand) continue;
-
-    // mỗi ứng viên được leo tối đa ~7 giây để còn thử nhiều bàn khác nhau
-    const m = climb(cand, rand, goal, Math.min(deadline, Date.now() + 7000));
-    if (!m) continue;
-
-    pool.push({ grid: cand.grid, playerPos: cand.playerPos, boxesSet: cand.boxesSet, targetsSet: cand.targetsSet, targets: cand.targets, m });
-    pool.sort((x, y) => y.m.hard - x.m.hard);
-    if (pool.length > 6) pool.pop();
-    if (m.hard >= goal) break;
-  }
+  if (budget === undefined) budget = levelIndex < 3 && stage === 'normal' ? GEN_BUDGET_MS.early : GEN_BUDGET_MS[stage];
+  const pool = createStructuredLevel(levelIndex, stage, budget);
 
   // Số bước 3 sao PHẢI là số bước ít nhất thật sự: chỉ nhận màn mà bộ giải tối ưu giải xong.
-  // Màn khó nhất được tối đa ~8 giây, các màn dự phòng ~3 giây; tổng cộng không quá ~30 giây.
-  const hardEnd = started + budget + 9000;
+  const hardEnd = started + 29000;
   for (let i = 0; i < pool.length; i++) {
     const left = hardEnd - Date.now();
     if (left < 400 && i > 0) break;
     const s = pool[i];
     const opt = solveMoves(s.grid, s.playerPos, s.boxesSet, s.targetsSet, {
-      maxNodes: 3500000, deadline: Date.now() + Math.max(400, Math.min(i === 0 ? 8000 : 3000, left))
+      maxNodes: 3500000, deadline: Date.now() + Math.max(400, Math.min(i === 0 ? 7000 : 2500, left))
     });
     if (opt && opt.solvable === true) {
-      s.m.moves = opt.moves; s.m.pushes = opt.pushes; s.m.parOpt = true;
+      s.m.moves = opt.moves; s.m.parOpt = true;
       return finishLevel(levelIndex, stage, s, s.m);
     }
   }
-  return createGeneratedLevel(levelIndex, 1000);   // hiếm: chưa có màn nào dùng được
+  return createGeneratedLevel(levelIndex, 2000);   // hiếm: chưa có màn nào dùng được
 }
 
-  function getReverseCandidates(grid, playerPos, boxesSet, targetsSet) {
-  const reach = reachableCells(grid, playerPos, boxesSet);
-
-  const dirs = [
-    { dr: -1, dc: 0 },
-    { dr: 1, dc: 0 },
-    { dr: 0, dc: -1 },
-    { dr: 0, dc: 1 }
-  ];
-
-  const candidates = [];
-
-  for (const boxKey of boxesSet) {
-    const [br, bc] = fromKey(boxKey);
-
-    for (const d of dirs) {
-      const nextBoxR = br - d.dr;
-      const nextBoxC = bc - d.dc;
-
-      const nextPlayerR = br - 2 * d.dr;
-      const nextPlayerC = bc - 2 * d.dc;
-
-      const nextBoxKey = toKey(nextBoxR, nextBoxC);
-      const nextPlayerKey = toKey(nextPlayerR, nextPlayerC);
-
-      if (!reach.has(nextBoxKey)) continue;
-      if (!isFreeForPlayer(grid, nextBoxR, nextBoxC, boxesSet)) continue;
-      if (!isFreeForPlayer(grid, nextPlayerR, nextPlayerC, boxesSet)) continue;
-
-      candidates.push({
-        boxKey,
-        nextBoxKey,
-        nextPlayerKey
-      });
-    }
-  }
-
-  return candidates;
-}
     
   self.onmessage = (e) => {
   const { type, levelIndex } = e.data;
