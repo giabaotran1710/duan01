@@ -18,16 +18,20 @@
   #time{font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
   #best{font-size:12px;opacity:.9;font-weight:600}
   #wind{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:120px;justify-content:center}
-  #windArrow{display:inline-block;transition:transform .25s;font-size:18px;line-height:1}
+  /* ba mũi tên chạy theo chiều gió; chạy càng nhanh và đổi màu khi gió càng mạnh (biến --d = chu kỳ, --c = màu) */
+  #windFlow{display:inline-flex;gap:3px;align-items:center;--d:1.6s;--c:#fff;transform:scaleX(1)}
+  #windFlow i{width:8px;height:8px;border-top:3px solid var(--c);border-right:3px solid var(--c);transform:rotate(45deg);opacity:.2;
+    animation:flow var(--d) linear infinite;filter:drop-shadow(0 0 3px var(--c))}
+  #windFlow i:nth-child(2){animation-delay:calc(var(--d) / -3)}
+  #windFlow i:nth-child(3){animation-delay:calc(var(--d) / -1.5)}
+  @keyframes flow{0%,100%{opacity:.15}50%{opacity:1}}
+  #windText{font-variant-numeric:tabular-nums;min-width:62px;text-align:right}
   #tensionWrap{display:flex;align-items:center;gap:8px}
   #tensionWrap span{font-size:12px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
   #tension{flex:1;height:10px;border-radius:99px;background:rgba(10,30,60,.38);border:1px solid rgba(255,255,255,.35);overflow:hidden}
   #tension i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#5ee08a,#ffd54a 60%,#ff4d4d);background-size:100vw 100%;transition:width .08s linear}
   #tension.danger{animation:shake .12s linear infinite}
   @keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
-  #warn{position:fixed;left:50%;top:19%;transform:translate(-50%,-50%);font-size:clamp(22px,7vw,34px);font-weight:900;letter-spacing:1px;
-    text-shadow:0 2px 10px rgba(0,0,0,.45),0 0 18px rgba(255,255,255,.3);opacity:0;transition:opacity .2s;pointer-events:none;z-index:6;white-space:nowrap}
-  #warn.show{opacity:1}
   /* nút kéo */
   #ctl{position:fixed;left:0;right:0;bottom:0;display:flex;gap:12px;padding:0 12px max(26px,env(safe-area-inset-bottom));z-index:5}
   .pull{flex:1;height:76px;border-radius:22px;border:2px solid rgba(255,255,255,.55);background:rgba(10,30,60,.28);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
@@ -59,11 +63,10 @@
   <div class="row">
     <div class="pill" id="time">0.0 giây</div>
     <div class="pill" id="best">Kỷ lục 0.0 giây</div>
-    <div class="pill" id="wind"><span id="windArrow">➜</span><span id="windText">Lặng gió</span></div>
+    <div class="pill" id="wind"><span id="windFlow"><i></i><i></i><i></i></span><span id="windText">0.0 m/s</span></div>
   </div>
   <div id="tensionWrap"><span>Lực căng dây</span><div id="tension"><i></i></div></div>
 </div>
-<div id="warn"></div>
 
 <div id="ctl">
   <button class="pull" id="bL">◀ Kéo trái</button>
@@ -276,7 +279,6 @@ function updateWind(dt) {
       const maxL = clamp(2 + Math.floor(state.t / 15), 2, 4);   // đầu game có gió nhẹ/vừa, sau đó mạnh dần
       const level = Math.min(maxL - 1, Math.floor(Math.pow(Math.random(), 0.8) * maxL));
       wind.warn = { dir: Math.random() < 0.5 ? -1 : 1, level, t: 0 };
-      showWarn(wind.warn);
     }
   }
   if (wind.warn) {
@@ -284,7 +286,7 @@ function updateWind(dt) {
     gx += wind.warn.dir * LEVELS[wind.warn.level].f * 0.12 * (wind.warn.t / 0.9);   // gió bắt đầu nổi
     if (wind.warn.t >= 0.9) {
       wind.gust = { dir: wind.warn.dir, level: wind.warn.level, t: 0, dur: rand(1.3, 2.8) + wind.warn.level * 0.3 };
-      wind.warn = null; hideWarn();
+      wind.warn = null;
     }
   }
   if (wind.gust) {
@@ -297,13 +299,6 @@ function updateWind(dt) {
   }
   wind.x = drift + turb + gx;
 }
-function showWarn(w) {
-  const el = $('warn');
-  el.textContent = `${w.dir < 0 ? '⟵ ' : ''}${LEVELS[w.level].name}${w.dir > 0 ? ' ⟶' : ''}`;
-  el.style.color = ['#e8fff0', '#fff4c2', '#ffd29a', '#ffb0b0'][w.level];
-  el.classList.add('show');
-}
-function hideWarn() { $('warn').classList.remove('show'); }
 
 // ---------- vật lý diều ----------
 const PULL = 270, BREAK = 1;
@@ -340,7 +335,7 @@ function snap(reason) {
   kite.fx = x; kite.fy = y; kite.fvx = kite.vx + wind.x * 0.8 + rand(-40, 40); kite.fvy = -rand(60, 140); kite.spin = rand(-4, 4);
   // sợi dây rơi xuống
   looseStr = { t: 0, x: x, y: y };
-  hideWarn(); Snd.snap();
+  Snd.snap();
   try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
 }
 let looseStr = null;
@@ -415,10 +410,12 @@ function drawStreaks() {
   }
 }
 
-function drawGrass() {
+function drawGrass(front) {
   const bendBase = clamp(wind.x / 300, -1, 1);
   ctx.lineCap = 'round';
+  const feet = groundY + 70;   // chân người chơi
   for (const b of grass) {
+    if ((b.y > feet) !== !!front) continue;   // cỏ phía sau người vẽ trước, cỏ phía trước vẽ sau
     const sway = Math.sin(state.t * (2 + Math.abs(bendBase) * 4) + b.ph + b.x * 0.02) * (0.15 + Math.abs(bendBase) * 0.25);
     const bend = (bendBase * 0.9 + sway) * b.h;
     ctx.strokeStyle = b.col; ctx.lineWidth = 2;
@@ -554,8 +551,9 @@ function draw() {
     drawKite(kite.fx, kite.fy, kite.spin * state.snapT, Math.max(0.4, 1 - state.snapT * 0.25));
   }
   drawLeaves();
+  drawGrass(false);
   drawPerson();
-  drawGrass();
+  drawGrass(true);
   drawEdgeWarning();
 }
 
@@ -570,11 +568,13 @@ function updateHUD(dt) {
   hudT = 0.1;
   $('time').textContent = state.t.toFixed(1) + ' giây';
   $('best').textContent = 'Kỷ lục ' + store.best.toFixed(1) + ' giây';
-  const w = wind.x, a = Math.abs(w);
-  const name = a < 45 ? 'Lặng gió' : a < 110 ? 'Gió nhẹ' : a < 175 ? 'Gió vừa' : a < 245 ? 'Gió mạnh' : 'Gió rất mạnh';
-  $('windText').textContent = name;
-  $('windArrow').style.transform = `rotate(${w < 0 ? 180 : 0}deg) scale(${0.8 + Math.min(1, a / 260) * 0.7})`;
-  $('windArrow').style.opacity = a < 45 ? 0.4 : 1;
+  const w = wind.x, v = Math.abs(w) / 16;   // m/s (quy ước: 16 đơn vị = 1 m/s)
+  $('windText').textContent = v.toFixed(1) + ' m/s';
+  const f = $('windFlow');
+  f.style.setProperty('--d', clamp(1.7 - v * 0.095, 0.2, 1.7).toFixed(2) + 's');   // gió càng mạnh mũi tên chạy càng nhanh
+  f.style.setProperty('--c', v < 3 ? '#e8f4ff' : v < 7 ? '#fff2a8' : v < 11 ? '#ffc266' : '#ff7a6a');
+  f.style.transform = w < 0 ? 'scaleX(-1)' : 'scaleX(1)';
+  f.style.opacity = v < 0.6 ? 0.45 : 1;
 }
 
 // ---------- vòng lặp ----------
