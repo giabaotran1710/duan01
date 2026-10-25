@@ -134,9 +134,11 @@ function crossN(c,cuts){let k=0;for(const o of cuts){let x=false;for(let i=0;i<c
 function pickType(n,pl){if(Math.random()<(pl===undefined?.7:pl))return'line';return n>=4?pick(['seg','zig']):n>=2?'seg':'line'}
 function spreadCut(pool,n,cuts,pl){const wantX=cuts.length>0&&Math.random()<.4;let best=null,bs=-1e9;
  for(let k=0;k<(cuts.length?12:1);k++){const c=makeCut(pickType(n,pl),n);let g=1e9;for(const o of cuts)g=Math.min(g,cutGap1(c,o),cutGap1(o,c));const x=crossN(c,cuts),v=(wantX?(x===1?2000:0):-x*1000)+Math.min(g,45)+rr(0,45);if(v>bs){bs=v;best=c}}return best}
-// Số vết cắt = số màn (tối đa MAX_CUTS), nhưng luôn chừa ≥ ~10% vị trí đặt mảnh an toàn (đo trên lưới dày):
+// Số vết cắt = số màn (tối đa MAX_CUTS), nhưng luôn chừa ≥ ~7% vị trí đặt mảnh an toàn (đo trên lưới dày):
 // vết cắt nào làm vùng trống tụt dưới mức đó thì bị bỏ, nên màn rất cao có thể ít vết hơn số màn.
-const FREE_MIN=.10,MAX_CUTS=60,FRAME_SIZE=10;
+const FREE_MIN=.07,MAX_CUTS=60;
+// số khung: 1 khung tới màn 19; từ màn 20 là 2 khung, cứ mỗi 5 màn thêm 1 khung (màn 25 → 3, màn 30 → 4, ...)
+const framesFor=n=>n<20?1:Math.floor((n-20)/5)+2;
 function genLevel(n){const want=Math.min(n,MAX_CUTS);let best=null;
  for(let at=0;at<20;at++){
   const shape=makeShape(n),b=shape.bb,pts=[];
@@ -163,8 +165,8 @@ const ov=(id,on)=>$(id).classList.toggle('show',on),playing=()=>['intro','show',
 function setPhase(p){S.phase=p;S.t=0;hint.textContent=HINTS[p]||'';$('bar').style.visibility=p==='place'?'visible':'hidden';S.left=0;$('bar').firstElementChild.style.transform='scaleX(1)'}
 function syncHUD(lost){$('hearts').innerHTML=Array.from({length:C.LIVES},(_,i)=>`<span class="h${i>=S.lives?' x':''}${lost&&i===S.lives?' pop':''}">${HEART}</span>`).join('');$('lv').textContent=S.level;$('sc').textContent=S.score}
 function setupLevel(){const L=genLevel(S.level);S.cuts=L.cuts;S.shape=L.shape;
- // chia khung: mỗi khung ~10 vết, dưới 20 vết thì chỉ một khung; phần dư dồn vào các khung đầu (vd 21 vết → 11 + 10)
- const order=S.cuts.slice().sort(()=>Math.random()-.5),nf=Math.max(1,Math.floor(order.length/FRAME_SIZE)),base=Math.floor(order.length/nf),extra=order.length%nf;
+ // chia đều vết cắt cho các khung; phần dư dồn vào các khung đầu (vd 33 vết / 4 khung → 9, 8, 8, 8)
+ const order=S.cuts.slice().sort(()=>Math.random()-.5),nf=Math.max(1,Math.min(framesFor(S.level),order.length)),base=Math.floor(order.length/nf),extra=order.length%nf;
  S.frames=[];let at=0;for(let i=0;i<nf;i++){const sz=base+(i<extra?1:0);S.frames.push(order.slice(at,at+sz));at+=sz}
  const per=Math.ceil(order.length/nf);S.frameDur=Math.min(2.4,.7+.1*per);S.showDur=S.frames.length*(S.frameDur+FRAME_GAP)-FRAME_GAP;S.frameShown=-1;S.result=null;S.drag=null;S.moved=false;setPhase('intro');syncHUD();Sfx.sw()}
 function startGame(){Object.assign(S,{level:1,lives:C.LIVES,score:0,streak:0,paused:false,retry:false,shake:0,parts:[],floats:[]});ov('menu',false);ov('over',false);ov('pause',false);setupLevel()}
