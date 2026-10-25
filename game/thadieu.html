@@ -244,6 +244,35 @@ const LEVELS = [
 const state = { phase: 'menu', t: 0, snapT: 0, reason: '' };
 const kite = { x: 0, y: 0, vx: 0, vy: 0, tilt: 0, alive: true, fx: 0, fy: 0, fvx: 0, fvy: 0, spin: 0, tail: [] };
 const wind = { x: 0, gust: null, next: 2.5, warn: null };
+// ---------- nghiêng thiết bị: góp một lực nhỏ lên diều (không ảnh hưởng lực căng dây) ----------
+const tiltCtl = { raw: 0, base: null, val: 0, on: false };
+function onTilt(e) {
+  if (e.gamma == null) return;
+  let g = e.gamma;   // nghiêng trái/phải khi cầm dọc (độ)
+  const ang = (screen.orientation && screen.orientation.angle) || window.orientation || 0;
+  if (ang === 90) g = -(e.beta || 0); else if (ang === -90 || ang === 270) g = (e.beta || 0);   // màn hình xoay ngang
+  tiltCtl.raw = g;
+  if (tiltCtl.base === null) tiltCtl.base = g;   // tư thế cầm ban đầu là vị trí trung hòa
+  tiltCtl.on = true;
+}
+function enableTilt() {
+  try {
+    if (typeof DeviceOrientationEvent !== 'undefined' && typeof DeviceOrientationEvent.requestPermission === 'function') {
+      DeviceOrientationEvent.requestPermission().then(r => { if (r === 'granted') addEventListener('deviceorientation', onTilt); }).catch(() => {});
+    } else addEventListener('deviceorientation', onTilt);
+  } catch (e) {}
+}
+const TILT_FORCE = 38;   // so với lực kéo PULL = 270: chỉ khoảng 14% ở độ nghiêng tối đa
+function tiltInput(dt) {
+  if (!tiltCtl.on || tiltCtl.base === null) return 0;
+  let d = tiltCtl.raw - tiltCtl.base;
+  tiltCtl.base += clamp(d, -1, 1) * dt * 0.5;   // trung hòa trôi dần theo tư thế cầm để không bị lệch lâu dài
+  if (Math.abs(d) < 3) d = 0; else d -= Math.sign(d) * 3;   // vùng chết 3°
+  const v = clamp(d / 25, -1, 1);
+  tiltCtl.val = lerp(tiltCtl.val, v, 1 - Math.exp(-8 * dt));
+  return tiltCtl.val;
+}
+
 let tension = 0, input = 0, keyL = false, keyR = false, btnL = false, btnR = false;
 let streaks = [], leaves = [], birds = [], birdTimer = 4;
 
@@ -308,7 +337,7 @@ function updateKite(dt) {
   const wAbs = Math.abs(wind.x);
   // lực: gió + kéo dây + dây có xu hướng kéo diều về giữa (yếu) + cản không khí
   const k = SCALE();
-  const ax = (wind.x * 1.05 + input * PULL) * k - kite.x * 0.25 - kite.vx * 1.35;
+  const ax = (wind.x * 1.05 + input * PULL + tiltInput(dt) * TILT_FORCE) * k - kite.x * 0.25 - kite.vx * 1.35;
   kite.vx += ax * dt; kite.x += kite.vx * dt;
   // độ cao: gió mạnh nâng diều lên, lặng gió diều hạ nhẹ, kéo dây cũng nâng diều
   const targetY = kiteBaseY() - Math.min(70, wAbs * 0.22) - (input ? 18 : 0) + Math.sin(state.t * 1.7) * 6;
@@ -614,7 +643,7 @@ function frame(ts) {
 // ---------- màn hình ----------
 const show = (id, on) => $(id).classList.toggle('show', on);
 function start() {
-  Snd.init();
+  Snd.init(); enableTilt(); tiltCtl.base = null;   // đặt lại tư thế trung hòa mỗi ván
   resetGame();
   state.phase = 'play';
   show('menu', false); show('over', false);
