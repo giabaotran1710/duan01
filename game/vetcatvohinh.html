@@ -131,24 +131,29 @@ function solvable(s,cuts,n){const need=Math.max(2,Math.round(55-n*2.4)),b=s.bb;l
 function ptAt(c,L){const q=c.pts,m=q.length;for(let i=0;i<c.sc;i++)if(c.cum[i+1]>=L){const t=(L-c.cum[i])/((c.cum[i+1]-c.cum[i])||1),a=q[i],b=q[(i+1)%m];return[a[0]+(b[0]-a[0])*t,a[1]+(b[1]-a[1])*t]}return q[0]}
 function cutGap1(a,b){let d=1e9;for(let i=0;i<=10;i++){const p=ptAt(a,a.len*i/10);for(let j=0;j<b.sc;j++){const u=b.pts[j],v=b.pts[(j+1)%b.pts.length];d=Math.min(d,ptSeg(p[0],p[1],u[0],u[1],v[0],v[1]))}}return d}
 function crossN(c,cuts){let k=0;for(const o of cuts){let x=false;for(let i=0;i<c.sc&&!x;i++){const a=c.pts[i],b=c.pts[(i+1)%c.pts.length];for(let j=0;j<o.sc;j++){const u=o.pts[j],v=o.pts[(j+1)%o.pts.length];if(segX(a[0],a[1],b[0],b[1],u[0],u[1],v[0],v[1])){x=true;break}}}if(x)k++}return k}
-function pickType(n){if(Math.random()<.7)return'line';return n>=4?pick(['seg','zig']):n>=2?'seg':'line'}
-function spreadCut(pool,n,cuts){const wantX=cuts.length>0&&Math.random()<.4;let best=null,bs=-1e9;
- for(let k=0;k<(cuts.length?12:1);k++){const c=makeCut(pickType(n),n);let g=1e9;for(const o of cuts)g=Math.min(g,cutGap1(c,o),cutGap1(o,c));const x=crossN(c,cuts),v=(wantX?(x===1?2000:0):-x*1000)+Math.min(g,45)+rr(0,45);if(v>bs){bs=v;best=c}}return best}
-// Thêm vết cắt cho tới khi chỉ còn khoảng 5% vị trí đặt mảnh an toàn (đo trên lưới dày), không dưới 2% để vẫn có lời giải
-const FREE_TARGET=.05,FREE_MIN=.02,MAX_CUTS=40,FRAME=5;
-function genLevel(n){const pool=n<=3?['line']:['line','zig'];
- for(let at=0;;at++){
+function pickType(n,pl){if(Math.random()<(pl===undefined?.7:pl))return'line';return n>=4?pick(['seg','zig']):n>=2?'seg':'line'}
+function spreadCut(pool,n,cuts,pl){const wantX=cuts.length>0&&Math.random()<.4;let best=null,bs=-1e9;
+ for(let k=0;k<(cuts.length?12:1);k++){const c=makeCut(pickType(n,pl),n);let g=1e9;for(const o of cuts)g=Math.min(g,cutGap1(c,o),cutGap1(o,c));const x=crossN(c,cuts),v=(wantX?(x===1?2000:0):-x*1000)+Math.min(g,45)+rr(0,45);if(v>bs){bs=v;best=c}}return best}
+// Số vết cắt = số màn (tối đa MAX_CUTS), nhưng luôn chừa ≥ ~10% vị trí đặt mảnh an toàn (đo trên lưới dày):
+// vết cắt nào làm vùng trống tụt dưới mức đó thì bị bỏ, nên màn rất cao có thể ít vết hơn số màn.
+const FREE_MIN=.10,MAX_CUTS=60,FRAME_SIZE=10;
+function genLevel(n){const want=Math.min(n,MAX_CUTS);let best=null;
+ for(let at=0;at<20;at++){
   const shape=makeShape(n),b=shape.bb,pts=[];
   for(let y=4-b[1];y<=H-4-b[3];y+=9)for(let x=4-b[0];x<=W-4-b[2];x+=9)if(!inZone(x,y))pts.push([x,y]);
   let free=pts;const cuts=[];
-  while(cuts.length<MAX_CUTS&&free.length>pts.length*FREE_TARGET){
+  while(cuts.length<want){
    let added=false;
-   for(let k=0;k<8&&!added;k++){const c=spreadCut(pool,n,cuts);
+   for(let k=0;k<10&&!added;k++){
+    // màn cao dùng nhiều vết ngắn/gấp khúc để còn chỗ cho nhiều vết hơn
+    const c=spreadCut(['line','zig'],n,cuts,n>=6?Math.max(.25,.8-n*.025):1);
     const nf=free.filter(q=>!evalCuts(wpoly(shape,q[0],q[1]),[c],3).hit);
     if(nf.length>=pts.length*FREE_MIN){cuts.push(c);free=nf;added=true}}
    if(!added)break}
-  const f=free.length/pts.length;
-  if((f<=FREE_TARGET*1.6&&f>=FREE_MIN&&cuts.length)||(at>=15&&free.length&&cuts.length))return{cuts,shape,free:f}}}
+  const r={cuts,shape,free:free.length/pts.length};
+  if(!best||cuts.length>best.cuts.length)best=r;
+  if(cuts.length>=want)break}
+ return best}
 /* ---- state ---- */
 const S={frames:[],frameDur:1,phase:'menu',paused:false,level:1,lives:C.LIVES,score:0,streak:0,t:0,cuts:[],shape:null,showDur:3,result:null,drag:null,moved:false,retry:false,shake:0,parts:[],floats:[]};
 const hint=$('hint'),HEART='<svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z"/></svg>';
@@ -158,9 +163,10 @@ const ov=(id,on)=>$(id).classList.toggle('show',on),playing=()=>['intro','show',
 function setPhase(p){S.phase=p;S.t=0;hint.textContent=HINTS[p]||'';$('bar').style.visibility=p==='place'?'visible':'hidden';S.left=0;$('bar').firstElementChild.style.transform='scaleX(1)'}
 function syncHUD(lost){$('hearts').innerHTML=Array.from({length:C.LIVES},(_,i)=>`<span class="h${i>=S.lives?' x':''}${lost&&i===S.lives?' pop':''}">${HEART}</span>`).join('');$('lv').textContent=S.level;$('sc').textContent=S.score}
 function setupLevel(){const L=genLevel(S.level);S.cuts=L.cuts;S.shape=L.shape;
- // chia vết cắt thành từng khung tối đa 5 vết, các khung nối tiếp nhau
- const order=S.cuts.slice().sort(()=>Math.random()-.5);S.frames=[];for(let i=0;i<order.length;i+=FRAME)S.frames.push(order.slice(i,i+FRAME));
- S.frameDur=Math.max(.6,1.1-(S.level-1)*.03);S.showDur=S.frames.length*(S.frameDur+FRAME_GAP)-FRAME_GAP;S.frameShown=-1;S.result=null;S.drag=null;S.moved=false;setPhase('intro');syncHUD();Sfx.sw()}
+ // chia khung: mỗi khung ~10 vết, dưới 20 vết thì chỉ một khung; phần dư dồn vào các khung đầu (vd 21 vết → 11 + 10)
+ const order=S.cuts.slice().sort(()=>Math.random()-.5),nf=Math.max(1,Math.floor(order.length/FRAME_SIZE)),base=Math.floor(order.length/nf),extra=order.length%nf;
+ S.frames=[];let at=0;for(let i=0;i<nf;i++){const sz=base+(i<extra?1:0);S.frames.push(order.slice(at,at+sz));at+=sz}
+ const per=Math.ceil(order.length/nf);S.frameDur=Math.min(2.4,.7+.1*per);S.showDur=S.frames.length*(S.frameDur+FRAME_GAP)-FRAME_GAP;S.frameShown=-1;S.result=null;S.drag=null;S.moved=false;setPhase('intro');syncHUD();Sfx.sw()}
 function startGame(){Object.assign(S,{level:1,lives:C.LIVES,score:0,streak:0,paused:false,retry:false,shake:0,parts:[],floats:[]});ov('menu',false);ov('over',false);ov('pause',false);setupLevel()}
 function saveBest(){St.d.best=Math.max(St.d.best,S.level);St.d.bs=Math.max(St.d.bs,S.score);St.save()}
 function goMenu(){if(playing())saveBest();S.paused=false;S.drag=null;S.phase='menu';S.cuts=[];S.shape=null;S.result=null;ov('pause',false);ov('over',false);ov('menu',true);$('mB').textContent=St.d.best?`Kỷ lục: màn ${St.d.best} · ${St.d.bs} điểm`:'';hint.textContent='';$('bar').style.visibility='hidden'}
