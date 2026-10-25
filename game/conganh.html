@@ -1,0 +1,375 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js" data-game="conganh"></script>
+<script src="../scene.js" data-game="conganh"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>Cờ Gánh</title>
+<style>
+  :root{
+    --bg:#0e1424;--surface:#151d33;--border:#25304f;
+    --red:#e5384f;--blue:#2f6fe0;--gold:#f0b429;--green:#2ecc71;
+    --text:#d6dcf0;--muted:#7d89ab;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  html,body{min-height:100%}
+  body{background:radial-gradient(120% 60% at 50% 0,#1b2548,var(--bg) 70%);color:var(--text);
+    font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;display:flex;flex-direction:column;align-items:center;
+    padding:max(12px,env(safe-area-inset-top)) 12px max(34px,env(safe-area-inset-bottom));user-select:none;-webkit-user-select:none}
+  .wrapper{width:100%;max-width:480px}
+  header{text-align:center;margin-bottom:10px}
+  header h1{font-size:clamp(22px,6vw,30px);font-weight:800;letter-spacing:3px;text-transform:uppercase;
+    background:linear-gradient(90deg,var(--red),#ffb3bd,var(--blue));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+  .mode-bar{display:flex;gap:8px;margin-bottom:8px}
+  .mode-btn,.opt,.ctl{flex:1;background:var(--surface);border:1px solid var(--border);color:var(--muted);padding:9px 8px;
+    border-radius:12px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;transition:.15s}
+  .mode-btn.on{color:#fff;border-color:#6d7fbf;background:#1d2850}
+  .pick{display:none;gap:8px;margin-bottom:8px;align-items:center}
+  .pick.show{display:flex}
+  .pick span{font-size:13px;color:var(--muted);white-space:nowrap}
+  .opt.on.r{color:#fff;border-color:var(--red);background:rgba(229,56,79,.18)}
+  .opt.on.b{color:#fff;border-color:var(--blue);background:rgba(47,111,224,.18)}
+  .scoreboard{display:flex;gap:8px;margin-bottom:8px}
+  .card{flex:1;background:var(--surface);border:1px solid var(--border);border-radius:14px;padding:8px 12px;display:flex;align-items:center;gap:10px;transition:.2s}
+  .card.act-r{border-color:var(--red);box-shadow:0 0 14px rgba(229,56,79,.35)}
+  .card.act-b{border-color:var(--blue);box-shadow:0 0 14px rgba(47,111,224,.35)}
+  .dot{width:20px;height:20px;border-radius:50%;border:2px solid #fff}
+  .dot.r{background:var(--red)}.dot.b{background:var(--blue)}
+  .who{font-size:12px;color:var(--muted)}
+  .num{font-size:24px;font-weight:800;line-height:1}
+  .num.r{color:#ff7a8c}.num.b{color:#6fa1ff}
+  .badge{margin-left:auto;font-size:11px;font-weight:700;padding:2px 8px;border-radius:99px;color:#fff;display:none}
+  .badge.r{background:var(--red)}.badge.b{background:var(--blue)}
+  .thinking{height:22px;text-align:center;font-size:13px;color:var(--gold);opacity:0;transition:.2s}
+  .thinking.show{opacity:1}
+  .board-wrap{width:100%;aspect-ratio:1;max-width:460px;margin:0 auto}
+  svg#board{width:100%;height:100%;display:block;touch-action:manipulation}
+  .pt{fill:transparent;cursor:pointer}
+  .piece{stroke:#fff;stroke-width:3;transition:cx .28s ease,cy .28s ease,fill .35s ease,opacity .2s;cursor:pointer}
+  .piece.r{fill:var(--red)}.piece.b{fill:var(--blue)}
+  .piece.sel{stroke:var(--gold);stroke-width:5}
+  .piece.flip{animation:pop .45s ease}
+  @keyframes pop{40%{transform:scale(1.25)}}
+  .piece{transform-box:fill-box;transform-origin:center}
+  .hint{fill:rgba(46,204,113,.85);pointer-events:none;animation:pulse 1s ease-in-out infinite}
+  .hint.forced{fill:rgba(255,213,74,.95)}
+  @keyframes pulse{50%{opacity:.45}}
+  .last{fill:none;stroke:var(--gold);stroke-width:3;stroke-dasharray:6 5;pointer-events:none}
+  .status{margin:10px 0 0;text-align:center;font-size:15px;font-weight:600;min-height:24px;padding:6px;border-radius:10px;background:var(--surface);border:1px solid var(--border)}
+  .status.warn{color:#ffd54a;border-color:#8a6d1a}
+  .status.win{color:#fff;border-color:var(--green);background:rgba(46,204,113,.15)}
+  .status.draw{color:#fff;border-color:var(--gold)}
+  .ctls{display:flex;gap:8px;margin-top:10px}
+  .ctl{color:var(--text)}
+  .ctl:active,.mode-btn:active,.opt:active{transform:translateY(1px)}
+  .info{display:flex;justify-content:space-between;font-size:12px;color:var(--muted);margin-top:8px;padding:0 4px}
+  .rules-toggle{text-align:center;margin-top:10px}
+  .rules-toggle button{background:transparent;border:1px solid var(--border);color:var(--muted);font:inherit;font-size:12px;padding:5px 14px;border-radius:99px;cursor:pointer}
+  .rules{display:none;background:var(--surface);border:1px solid var(--border);border-radius:12px;padding:12px 14px;margin-top:8px;font-size:13px;line-height:1.55;color:#bfc8e6}
+  .rules.open{display:block}
+  .rules b{color:#fff}.rules p{margin-bottom:8px}
+  footer{position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;font-family:Tahoma;z-index:99999}
+</style>
+</head>
+<body>
+<div class="wrapper">
+  <header><h1>Cờ Gánh</h1></header>
+
+  <div class="mode-bar">
+    <button class="mode-btn" id="btnPVP">👥 Người vs Người</button>
+    <button class="mode-btn on" id="btnPVE">🤖 Người vs AI</button>
+  </div>
+  <div class="pick show" id="pick">
+    <span>Bạn chơi màu:</span>
+    <button class="opt r on" id="optRed">🔴 Đỏ (đi trước)</button>
+    <button class="opt b" id="optBlue">🔵 Xanh (đi sau)</button>
+  </div>
+
+  <div class="scoreboard">
+    <div class="card act-r" id="cardR"><i class="dot r"></i><div><div class="who" id="whoR">Người chơi</div><div class="num r" id="numR">8</div></div><span class="badge r" id="badgeR" style="display:block">Lượt</span></div>
+    <div class="card" id="cardB"><i class="dot b"></i><div><div class="who" id="whoB">AI.GiaBao</div><div class="num b" id="numB">8</div></div><span class="badge b" id="badgeB">Lượt</span></div>
+  </div>
+  <div class="thinking" id="thinking">🤖 AI.GiaBao đang suy nghĩ…</div>
+
+  <div class="board-wrap"><svg id="board" viewBox="0 0 300 300" aria-label="Bàn cờ gánh"></svg></div>
+
+  <div class="status" id="status">🔴 Lượt của bạn</div>
+  <div class="ctls">
+    <button class="ctl" id="btnUndo">↩ Hoàn tác</button>
+    <button class="ctl" id="btnNew">🔄 Ván mới</button>
+  </div>
+  <div class="info"><span id="capInfo">Nước không ăn quân: 0/40</span><span id="moveInfo">Nước đi: 0</span></div>
+
+  <div class="rules-toggle"><button id="btnRules">📖 Luật chơi</button></div>
+  <div class="rules" id="rules">
+    <p><b>Bàn cờ:</b> 5×5 điểm. Đường chéo chỉ có ở một số điểm giao (các điểm có đường chéo nối tới). Mỗi bên 8 quân, mỗi lượt đi một quân một bước theo đường nối sang điểm trống.</p>
+    <p><b>Gánh:</b> đi quân vào <b>giữa</b> hai quân đối phương nằm đối diện nhau trên một đường → cả hai đổi sang màu của bạn.</p>
+    <p><b>Chẹt:</b> hai quân đối phương nằm <b>liền nhau</b> trên một đường, bạn có quân ở một đầu và đi quân tới đầu kia → cả hai đổi màu. (Ba quân liền nhau thì không bị chẹt.)</p>
+    <p><b>Vây:</b> sau nước đi, nhóm quân đối phương liền nhau mà không còn điểm trống nào kề → cả nhóm đổi sang màu bạn.</p>
+    <p><b>Mở (bắt buộc ăn):</b> nếu đối phương vừa đi quân mà để lại chỗ trống cho bạn gánh hoặc chẹt khi đi vào đó, bạn <b>bắt buộc</b> phải đi vào chỗ trống đó để ăn (điểm vàng trên bàn).</p>
+    <p><b>Thắng:</b> đối phương hết quân hoặc hết nước đi. <b>Hòa:</b> 40 nước liên tiếp không có quân nào đổi màu.</p>
+    <p><b>Chế độ AI:</b> đánh với người máy do Gia Bảo huấn luyện (một mức mạnh nhất).</p>
+  </div>
+</div>
+<footer> Version:D20261025-H12M00T0000    »»»   developed by Tran Gia Bao</footer>
+
+<script src="conganh-ai.js"></script>
+<script>
+'use strict';
+const CG = window.CoGanh;
+const NS = 'http://www.w3.org/2000/svg';
+const SZ = 5, STEP = 60, OFF = 30, AI_THINK_MS = 3000;
+const $ = id => document.getElementById(id);
+const px = c => OFF + c * STEP;
+const xy = i => [px(i % SZ), px((i / SZ) | 0)];
+
+let state, history = [], mode = 'pve', playerColor = 1, over = false, aiLock = false, gen = 0;
+let selected = -1, lastMove = null, moveCount = 0, pieceEls = [];
+const boardEl = $('board');
+let aiWorker = null, aiReq = 0;
+try { aiWorker = new Worker('conganh-ai.js'); } catch (e) { aiWorker = null; }
+
+// ---------- vẽ bàn ----------
+function mk(tag, attrs, cls) {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (cls) e.setAttribute('class', cls);
+  return e;
+}
+function drawStatic() {
+  boardEl.innerHTML = '';
+  boardEl.appendChild(mk('rect', { x: 0, y: 0, width: 300, height: 300, rx: 16, fill: '#c98f4b' }));
+  boardEl.appendChild(mk('rect', { x: 8, y: 8, width: 284, height: 284, rx: 12, fill: '#e3b574' }));
+  const g = mk('g', { stroke: '#5a3a17', 'stroke-width': 2.4, 'stroke-linecap': 'round' });
+  for (let i = 0; i < SZ; i++) {
+    g.appendChild(mk('line', { x1: px(0), y1: px(i), x2: px(4), y2: px(i) }));
+    g.appendChild(mk('line', { x1: px(i), y1: px(0), x2: px(i), y2: px(4) }));
+  }
+  // đường chéo: nối các điểm kề nhau có (hàng + cột) chẵn
+  for (let r = 0; r < SZ; r++) for (let c = 0; c < SZ; c++) {
+    if ((r + c) % 2) continue;
+    if (r + 1 < SZ && c + 1 < SZ) g.appendChild(mk('line', { x1: px(c), y1: px(r), x2: px(c + 1), y2: px(r + 1) }));
+    if (r + 1 < SZ && c - 1 >= 0) g.appendChild(mk('line', { x1: px(c), y1: px(r), x2: px(c - 1), y2: px(r + 1) }));
+  }
+  boardEl.appendChild(g);
+  for (let i = 0; i < 25; i++) {
+    const [x, y] = xy(i);
+    const t = mk('circle', { cx: x, cy: y, r: 26 }, 'pt');
+    t.addEventListener('click', () => onPoint(i));
+    boardEl.appendChild(t);
+  }
+  boardEl.appendChild(mk('g', { id: 'layerHint' }));
+  boardEl.appendChild(mk('g', { id: 'layerPieces' }));
+}
+
+function pieceAt(cell) { return pieceEls.find(p => p.cell === cell); }
+
+function buildPieces() {
+  const layer = $('layerPieces');
+  layer.innerHTML = '';
+  pieceEls = [];
+  for (let i = 0; i < 25; i++) {
+    const v = state.b[i];
+    if (!v) continue;
+    addPiece(i, v);
+  }
+}
+function addPiece(cell, v) {
+  const [x, y] = xy(cell);
+  const e = mk('circle', { cx: x, cy: y, r: 19 }, 'piece ' + (v === 1 ? 'r' : 'b'));
+  e.addEventListener('click', () => onPoint(cell));
+  $('layerPieces').appendChild(e);
+  const p = { el: e, cell, v };
+  pieceEls.push(p);
+  return p;
+}
+
+// ---------- giao diện ----------
+function sideName(side) {
+  if (mode === 'pve') return side === playerColor ? 'bạn' : 'AI.GiaBao';
+  return side === 1 ? 'Đỏ' : 'Xanh';
+}
+function updateLabels() {
+  if (mode === 'pve') {
+    $('whoR').textContent = playerColor === 1 ? 'Người chơi' : 'AI.GiaBao';
+    $('whoB').textContent = playerColor === 2 ? 'Người chơi' : 'AI.GiaBao';
+  } else { $('whoR').textContent = 'Đỏ'; $('whoB').textContent = 'Xanh'; }
+}
+function updateHUD() {
+  const [r, b] = CG.counts(state.b);
+  $('numR').textContent = r; $('numB').textContent = b;
+  const red = state.side === 1;
+  $('cardR').className = 'card' + (!over && red ? ' act-r' : '');
+  $('cardB').className = 'card' + (!over && !red ? ' act-b' : '');
+  $('badgeR').style.display = !over && red ? 'block' : 'none';
+  $('badgeB').style.display = !over && !red ? 'block' : 'none';
+  $('capInfo').textContent = `Nước không ăn quân: ${state.noCap}/${CG.DRAW_PLIES}`;
+  $('moveInfo').textContent = `Nước đi: ${moveCount}`;
+}
+function setStatus(text, cls) { const s = $('status'); s.textContent = text; s.className = 'status' + (cls ? ' ' + cls : ''); }
+
+function updateStatus() {
+  const res = CG.result(state);
+  if (res) {
+    over = true;
+    const r = res;
+    if (r === 3) setStatus('🤝 HÒA CỜ!', 'draw');
+    else if (mode === 'pve') setStatus(r === playerColor ? '🏆 BẠN GIÀNH CHIẾN THẮNG!' : '🤖 AI.GiaBao GIÀNH CHIẾN THẮNG!', 'win');
+    else setStatus(r === 1 ? '🏆 ĐỎ THẮNG!' : '🏆 XANH THẮNG!', 'win');
+    return;
+  }
+  const icon = state.side === 1 ? '🔴' : '🔵';
+  const humanTurn = mode === 'pvp' || state.side === playerColor;
+  if (state.forced >= 0 && humanTurn) setStatus(`${icon} Phải ăn vào điểm vàng (luật mở)`, 'warn');
+  else if (mode === 'pve') setStatus(humanTurn ? `${icon} Lượt của bạn` : `${icon} AI đang suy nghĩ…`);
+  else setStatus(`${icon} Lượt của ${state.side === 1 ? 'Đỏ' : 'Xanh'}`);
+}
+
+function clearHints() { $('layerHint').innerHTML = ''; }
+function showHints() {
+  clearHints();
+  const layer = $('layerHint');
+  if (lastMove) {
+    const [x, y] = xy(lastMove[0]); layer.appendChild(mk('circle', { cx: x, cy: y, r: 22 }, 'last'));
+    const [x2, y2] = xy(lastMove[1]); layer.appendChild(mk('circle', { cx: x2, cy: y2, r: 25 }, 'last'));
+  }
+  if (over || aiLock) return;
+  const humanTurn = mode === 'pvp' || state.side === playerColor;
+  if (!humanTurn) return;
+  const moves = CG.legalMoves(state);
+  const forced = state.forced >= 0 && moves.length && moves.every(m => m[1] === state.forced);
+  if (selected < 0) {
+    if (forced) { const [x, y] = xy(state.forced); layer.appendChild(mk('circle', { cx: x, cy: y, r: 9 }, 'hint forced')); }
+    return;
+  }
+  for (const m of moves) if (m[0] === selected) {
+    const [x, y] = xy(m[1]);
+    layer.appendChild(mk('circle', { cx: x, cy: y, r: 9 }, 'hint' + (forced ? ' forced' : '')));
+  }
+}
+function updateSelection() {
+  for (const p of pieceEls) p.el.classList.toggle('sel', p.cell === selected);
+}
+
+// ---------- chơi ----------
+function onPoint(i) {
+  if (over || aiLock) return;
+  if (mode === 'pve' && state.side !== playerColor) return;
+  const v = state.b[i];
+  if (v === state.side) {
+    const moves = CG.legalMoves(state);
+    if (!moves.some(m => m[0] === i)) {
+      selected = -1; updateSelection(); showHints();
+      if (state.forced >= 0) setStatus('Bắt buộc ăn vào điểm vàng (luật mở)', 'warn');
+      return;
+    }
+    selected = selected === i ? -1 : i;
+    updateSelection(); showHints();
+    return;
+  }
+  if (selected >= 0 && v === 0) {
+    const moves = CG.legalMoves(state);
+    if (moves.some(m => m[0] === selected && m[1] === i)) doMove(selected, i);
+  }
+}
+
+function doMove(from, to) {
+  history.push({ st: CG.cloneState(state), last: lastMove, n: moveCount });
+  const p = pieceAt(from);
+  const mover = state.side;
+  const info = CG.applyMove(state, from, to);
+  moveCount++;
+  selected = -1;
+  lastMove = [from, to];
+  if (p) { p.cell = to; const [x, y] = xy(to); p.el.setAttribute('cx', x); p.el.setAttribute('cy', y); }
+  // quân bị đổi màu
+  for (const c of info.flips) {
+    const q = pieceAt(c);
+    if (q) {
+      q.v = mover;
+      q.el.setAttribute('class', 'piece ' + (mover === 1 ? 'r' : 'b') + ' flip');
+      setTimeout(() => q.el.classList.remove('flip'), 500);
+    }
+  }
+  updateSelection();
+  updateHUD();
+  updateStatus();
+  showHints();
+  if (!over && mode === 'pve' && state.side !== playerColor) scheduleAI();
+}
+
+// ---------- AI ----------
+function requestAI() {
+  return new Promise(resolve => {
+    const payload = { board: Array.from(state.b), side: state.side, forced: state.forced, noCap: state.noCap, timeMs: AI_THINK_MS };
+    if (!aiWorker) { resolve(CG.chooseMove(state, AI_THINK_MS)); return; }
+    const id = ++aiReq;
+    const onMsg = e => { if (e.data && e.data.id === id) { aiWorker.removeEventListener('message', onMsg); resolve(e.data.move); } };
+    aiWorker.addEventListener('message', onMsg);
+    aiWorker.onerror = () => { aiWorker = null; resolve(CG.chooseMove(state, AI_THINK_MS)); };
+    aiWorker.postMessage(Object.assign({ id }, payload));
+  });
+}
+function scheduleAI() {
+  aiLock = true;
+  $('thinking').classList.add('show');
+  clearHints();
+  const g = gen, started = Date.now();
+  requestAI().then(move => {
+    setTimeout(() => {
+      if (g !== gen) return;   // đã ván mới / đổi chế độ / hoàn tác
+      $('thinking').classList.remove('show');
+      aiLock = false;
+      if (move) doMove(move[0], move[1]);
+    }, Math.max(0, 600 - (Date.now() - started)));
+  });
+}
+
+// ---------- điều khiển ----------
+function newGame() {
+  gen++;
+  state = CG.newGame(); history = []; over = false; aiLock = false; selected = -1; lastMove = null; moveCount = 0;
+  $('thinking').classList.remove('show');
+  updateLabels(); buildPieces(); updateHUD(); updateStatus(); showHints();
+  if (mode === 'pve' && playerColor === 2) scheduleAI();
+}
+function undo() {
+  if (aiLock || !history.length) return;
+  gen++;
+  let h = history.pop();
+  if (mode === 'pve') {
+    // lùi tới lượt của người chơi
+    while (h.st.side !== playerColor && history.length) h = history.pop();
+    if (h.st.side !== playerColor) return;
+  }
+  state = h.st; lastMove = h.last; moveCount = h.n; over = false; selected = -1;
+  buildPieces(); updateHUD(); updateStatus(); showHints();
+}
+function setMode(m) {
+  mode = m;
+  $('btnPVP').classList.toggle('on', m === 'pvp');
+  $('btnPVE').classList.toggle('on', m === 'pve');
+  $('pick').classList.toggle('show', m === 'pve');
+  newGame();
+}
+function setColor(c) {
+  if (playerColor === c) return;
+  playerColor = c;
+  $('optRed').classList.toggle('on', c === 1);
+  $('optBlue').classList.toggle('on', c === 2);
+  newGame();
+}
+$('btnPVP').onclick = () => setMode('pvp');
+$('btnPVE').onclick = () => setMode('pve');
+$('optRed').onclick = () => setColor(1);
+$('optBlue').onclick = () => setColor(2);
+$('btnNew').onclick = newGame;
+$('btnUndo').onclick = undo;
+$('btnRules').onclick = () => $('rules').classList.toggle('open');
+
+drawStatic();
+newGame();
+</script>
+</body>
+</html>
