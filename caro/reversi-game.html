@@ -264,8 +264,9 @@
     <strong>Chế độ AI:</strong> Đánh với người máy do Gia Bảo huấn luyện.
   </div>
 </div>
-    <footer> Version:D20260208-H16M52T2350    »»»   developed by Tran Gia Bao</footer>
+    <footer> Version:D20261025-H10M35T0000    »»»   developed by Tran Gia Bao</footer>
 
+<script src="reversi-ai.js"></script>
 <script>
 const SIZE = 10;
 const DIRS = [[0,1],[1,0],[1,1],[1,-1]];
@@ -275,6 +276,7 @@ let mode = 'pvp';
 // playerColor: which piece number (1=red, 2=blue) belongs to the human in PVE
 let playerColor = 1;
 let aiLock = false;
+let gameGen = 0;   // tăng mỗi ván mới: kết quả AI của ván trước bị bỏ qua
 
 const boardEl      = document.getElementById('board');
 const statusBar    = document.getElementById('statusBar');
@@ -303,6 +305,7 @@ function updateWrapVisibility() {
   }
 }
 function initBoard() {
+  gameGen++;
   board = Array.from({length:SIZE}, () => Array(SIZE).fill(0));
   currentPlayer = 1; // red always goes first
   gameOver = false;
@@ -376,363 +379,68 @@ function applyCapturesFrom(r, c, b) {
 }
 
 // ── AI ENGINE ─────────────────────────────────────────────────────────────────
+// AI chạy trong Worker (reversi-ai.js) để giao diện không bị đứng; lỗi Worker thì chạy ngay trên trang.
+const AI_THINK_MS = 1200;
+let aiWorker = null, aiReqId = 0;
+try { aiWorker = new Worker('reversi-ai.js'); } catch (e) { aiWorker = null; }
+
+function requestAIMove(b, aiPlayer) {
+  return new Promise((resolve) => {
+    if (!aiWorker) { resolve(window.ReversiAI.chooseMove(b, aiPlayer, AI_THINK_MS)); return; }
+    const id = ++aiReqId;
+    const onMsg = (e) => {
+      if (!e.data || e.data.id !== id) return;
+      aiWorker.removeEventListener('message', onMsg);
+      resolve(e.data.move);
+    };
+    aiWorker.addEventListener('message', onMsg);
+    aiWorker.onerror = () => {
+      aiWorker = null;
+      resolve(window.ReversiAI.chooseMove(b, aiPlayer, AI_THINK_MS));
+    };
+    aiWorker.postMessage({ id, board: b, player: aiPlayer, timeMs: AI_THINK_MS });
+  });
+}
+
 function scheduleAI() {
   aiLock = true;
   aiThinking.classList.add('show');
-  setTimeout(() => {
-    const aiPlayer = 3 - playerColor;
-    const move = aiChooseMove(board, aiPlayer);
-    aiThinking.classList.remove('show');
+  const gen = gameGen;
+  const aiPlayer = 3 - playerColor;
+  const started = Date.now();
+  requestAIMove(board.map(r => [...r]), aiPlayer).then((move) => {
+    // giữ nhịp tối thiểu ~0.5 giây để người chơi kịp thấy lượt AI
+    setTimeout(() => {
+      if (gen !== gameGen) return;   // đã bấm Ván mới/đổi chế độ trong lúc AI nghĩ
+      aiThinking.classList.remove('show');
 
-    if (move) {
-      history.push(board.map(r => [...r]));
-      board[move[0]][move[1]] = aiPlayer;
-      applyCapturesFrom(move[0], move[1], board);
-      renderBoard();
-      updateScores();
-      const cell = getCell(move[0], move[1]);
-      cell.classList.add('ai-move');
-      setTimeout(() => cell.classList.remove('ai-move'), 400);
-      if (isBoardFull()) { endGame(); aiLock = false; return; }
-    }
+      if (move) {
+        history.push(board.map(r => [...r]));
+        board[move[0]][move[1]] = aiPlayer;
+        applyCapturesFrom(move[0], move[1], board);
+        renderBoard();
+        updateScores();
+        const cell = getCell(move[0], move[1]);
+        cell.classList.add('ai-move');
+        setTimeout(() => cell.classList.remove('ai-move'), 400);
+        if (isBoardFull()) { endGame(); aiLock = false; return; }
+      }
 
-    aiLock = false;
-    currentPlayer = playerColor;
-    updateTurnUI();
-  }, 700);
+      aiLock = false;
+      currentPlayer = playerColor;
+      updateTurnUI();
+    }, Math.max(0, 500 - (Date.now() - started)));
+  });
 }
 
-/**
- * AI — Expert + Edge-Aware Defense
- *
- * Extra heuristics vs old version:
- *  F) Edge threat detection: count how many edge cells the human owns → boosts
- *     score for ALL edge cells proportionally to stop border encirclement.
- *  G) Edge chain interrupt: if human has a run of ≥2 along an edge, adjacent
- *     empty edge cells get a heavy bonus to break the chain early.
- *  H) Corner control: corners are uniquely valuable (anchor for edge runs)
- *     so they get an extra bonus when empty.
- *  I) getCandidates always includes border cells when human edge pressure is high,
- *     even if no friendly piece is nearby — AI will no longer ignore the rim.
- */
-
-// ── EDGE ANALYSIS HELPERS ─────────────────────────────────────────────────────
-function isEdge(r, c) {
-  return r === 0 || r === SIZE-1 || c === 0 || c === SIZE-1;
-}
 function isCorner(r, c) {
   return (r === 0 || r === SIZE-1) && (c === 0 || c === SIZE-1);
 }
 
-/** Count how many edge cells belong to `player` */
-function edgeCount(b, player) {
-  let n = 0;
-  for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++)
-    if (isEdge(r,c) && b[r][c] === player) n++;
-  return n;
-}
-
-/**
- * For each empty edge cell, compute the longest run of `player` pieces
- * immediately adjacent along the same edge line, in either direction.
- * Returns a map: key = r*SIZE+c → longest flanking run length
- */
-function edgeChainPressure(b, player) {
-  const pressure = new Map();
-  // Scan four edge lines: top row, bottom row, left col, right col
-  const edgeLines = [
-    Array.from({length:SIZE}, (_,i) => [0, i]),
-    Array.from({length:SIZE}, (_,i) => [SIZE-1, i]),
-    Array.from({length:SIZE}, (_,i) => [i, 0]),
-    Array.from({length:SIZE}, (_,i) => [i, SIZE-1]),
-  ];
-  for (const line of edgeLines) {
-    for (let i = 0; i < line.length; i++) {
-      const [r, c] = line[i];
-      if (b[r][c] !== 0) continue; // only empty cells
-      let maxRun = 0;
-      // look left along line
-      let run = 0;
-      for (let j = i-1; j >= 0; j--) {
-        if (b[line[j][0]][line[j][1]] === player) run++; else break;
-      }
-      maxRun = Math.max(maxRun, run);
-      // look right along line
-      run = 0;
-      for (let j = i+1; j < line.length; j++) {
-        if (b[line[j][0]][line[j][1]] === player) run++; else break;
-      }
-      maxRun = Math.max(maxRun, run);
-      if (maxRun > 0) {
-        const key = r*SIZE+c;
-        pressure.set(key, Math.max(pressure.get(key) || 0, maxRun));
-      }
-    }
-  }
-  return pressure;
-}
-
-// Score every candidate for `mover` (against `opp`) and sort best-first.
-// The edge-chain-pressure map depends only on (b, opp), so it's computed once
-// here and reused across all candidates instead of once per candidate.
-function scoreAndSort(b, mover, opp, limit) {
-  const cands = getCandidates(b, opp);
-  const pressure = edgeChainPressure(b, opp);
-  const scored = cands.map(([r,c]) => ({r, c, score: evalMove(b, r, c, mover, opp, pressure)}));
-  scored.sort((a,z) => z.score - a.score);
-  return limit ? scored.slice(0, limit) : scored;
-}
-
-// Alpha-beta minimax. `isAiTurn` alternates the mover each ply so the search
-// actually looks at AI→Human→AI→Human, not just "my move, then your single
-// best reply" like the old version did. Branch width is narrowed at deeper
-// plies (10 → 8 → 6) to keep the search fast; alpha-beta pruning cuts it
-// further whenever a branch can no longer change the outcome.
-function minimax(b, depth, aiPlayer, human, isAiTurn, alpha, beta) {
-  if (depth === 0 || isFull(b)) return count(b, aiPlayer) - count(b, human);
-  const mover = isAiTurn ? aiPlayer : human;
-  const opp   = isAiTurn ? human : aiPlayer;
-  const limit = depth >= 3 ? 10 : depth === 2 ? 8 : 6;
-  const cands = scoreAndSort(b, mover, opp, limit);
-  if (!cands.length) return count(b, aiPlayer) - count(b, human);
-
-  if (isAiTurn) {
-    let best = -Infinity;
-    for (const cand of cands) {
-      const nb = cloneBoard(b);
-      nb[cand.r][cand.c] = aiPlayer;
-      applyCapturesFrom(cand.r, cand.c, nb);
-      const val = minimax(nb, depth-1, aiPlayer, human, false, alpha, beta);
-      if (val > best) best = val;
-      if (best > alpha) alpha = best;
-      if (alpha >= beta) break; // opponent would never let this branch happen
-    }
-    return best;
-  } else {
-    let worst = Infinity;
-    for (const cand of cands) {
-      const nb = cloneBoard(b);
-      nb[cand.r][cand.c] = human;
-      applyCapturesFrom(cand.r, cand.c, nb);
-      const val = minimax(nb, depth-1, aiPlayer, human, true, alpha, beta);
-      if (val < worst) worst = val;
-      if (worst < beta) beta = worst;
-      if (alpha >= beta) break;
-    }
-    return worst;
-  }
-}
-
-// How many extra plies to search beyond the AI's current move.
-// 3 = AI moves, then Human, then AI, then Human are all considered.
-// (Verified: this beats the previous single-reply lookahead in 100% of
-// head-to-head test games, and comfortably beats a "careless but corner-aware"
-// human proxy, at ~100ms average think time — well within the UI's budget.)
-const AI_SEARCH_DEPTH = 3;
-const AI_ROOT_POOL = 14;
-
-function aiChooseMove(b, aiPlayer) {
-  const human = 3 - aiPlayer;
-
-  // ── PHASE 1: CORNER ABSOLUTE PRIORITY ────────────────────────────────────────
-  // Corners are permanently immune, so an empty corner is always worth grabbing
-  // immediately — no opponent move can ever punish taking it.
-  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
-  for (const [cr, cc] of CORNERS) {
-    if (b[cr][cc] === 0) return [cr, cc];
-  }
-
-  // ── PHASE 2: MINIMAX SEARCH ───────────────────────────────────────────────────
-  // Rank candidates with the full heuristic, then for each of the top ones,
-  // search several plies ahead (assuming a strong opponent) and keep whichever
-  // move gives the best guaranteed outcome.
-  const scored = scoreAndSort(b, aiPlayer, human, AI_ROOT_POOL);
-  if (!scored.length) return null;
-
-  let bestMove = scored[0], bestVal = -Infinity;
-  for (const cand of scored) {
-    const nb = cloneBoard(b);
-    nb[cand.r][cand.c] = aiPlayer;
-    applyCapturesFrom(cand.r, cand.c, nb);
-    const val = minimax(nb, AI_SEARCH_DEPTH, aiPlayer, human, false, -Infinity, Infinity);
-    if (val > bestVal) { bestVal = val; bestMove = cand; }
-  }
-  return [bestMove.r, bestMove.c];
-}
-
-function evalMove(b, r, c, aiPlayer, human, pressureMap) {
-  if (b[r][c] !== 0) return -Infinity;
-
-  // A) Immediate flips
-  const gainAI    = simCaptures(b, r, c, aiPlayer);
-  // B) Block human immediate flips
-  const gainHuman = simCaptures(b, r, c, human);
-
-  // C) Center preference (mild — edge play is now also valued)
-  const half = (SIZE-1) / 2;
-  const centerD = Math.abs(r - half) + Math.abs(c - half);
-  const posScore = (SIZE*1.4 - centerD) * 0.2;
-
-  // D) Cluster with own pieces
-  let nearOwn = 0, nearOpp = 0;
-  for (const [dr,dc] of [[0,1],[0,-1],[1,0],[-1,0],[1,1],[1,-1],[-1,1],[-1,-1]]) {
-    const nr=r+dr, nc=c+dc;
-    if (inBounds(nr,nc)) {
-      if (b[nr][nc]===aiPlayer) nearOwn++;
-      else if (b[nr][nc]===human) nearOpp++;
-    }
-  }
-  const clusterScore = nearOwn * 1.0 - nearOpp * 0.3;
-
-  // E) Future setup (open flanks)
-  let future = 0;
-  const tmp = cloneBoard(b);
-  tmp[r][c] = aiPlayer;
-  applyCapturesFrom(r, c, tmp);
-  for (const [dr,dc] of DIRS) {
-    for (const sign of [1,-1]) {
-      let chain=0, nr=r+sign*dr, nc=c+sign*dc;
-      while (inBounds(nr,nc) && tmp[nr][nc]===human) { chain++; nr+=sign*dr; nc+=sign*dc; }
-      if (chain>0 && inBounds(nr,nc) && tmp[nr][nc]===0) future += chain * 0.7;
-    }
-  }
-
-  // F) Edge threat — if human has many edge cells, value ALL edge cells more
-  const humanEdge = edgeCount(b, human);
-  const totalEdge = 4*(SIZE-1); // total perimeter cells
-  const edgeThreatRatio = humanEdge / totalEdge; // 0..1
-  let edgeScore = 0;
-  if (isEdge(r, c)) {
-    // Base value for edge cells scales with how much human already owns the rim
-    edgeScore += edgeThreatRatio * 12;
-    // Extra for corners (both axes of potential encirclement meet here)
-    if (isCorner(r, c)) edgeScore += edgeThreatRatio * 8;
-  }
-
-  // G) Edge chain interrupt — heavy bonus to break human runs along rim
-  const pressure = pressureMap || edgeChainPressure(b, human);
-  const chainRun = pressure.get(r*SIZE+c) || 0;
-  // Bonus scales quadratically: run of 3 gives 9×base, run of 4 gives 16×base
-  const chainInterruptScore = chainRun * chainRun * 3.5;
-
-  // H) Corner strategy — ultra-aggressive corner scoring
-  let cornerTrapScore = 0;
-  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
-  for (const [cr,cc] of CORNERS) {
-    const dist = Math.abs(r-cr) + Math.abs(c-cc);
-
-    if (dist === 0 && b[cr][cc] === 0) {
-      // THIS IS A CORNER CELL — absolute top priority (handled above in aiChooseMove,
-      // but keep here as safety net for evalMove scoring)
-      cornerTrapScore += 500;
-    }
-
-    if (dist === 1) { // directly adjacent (orthogonal) to a corner
-      if (b[cr][cc] === human) {
-        // Enemy owns this corner (immune). Playing next to it is a trap for AI.
-        cornerTrapScore -= 30;
-      } else if (b[cr][cc] === 0) {
-        // Corner is empty — adjacent cells are DANGEROUS: they let the human grab
-        // the corner next turn. Heavily penalise these "X-squares".
-        cornerTrapScore -= 50;
-      }
-      // If AI owns the corner, nearby cells are safe/good — no penalty
-    }
-
-    if (dist === 2) { // diagonal to a corner (the "C-squares")
-      if (b[cr][cc] === 0) {
-        // Slightly avoid C-squares too — they can open X-squares for opponent
-        cornerTrapScore -= 10;
-      }
-    }
-  }
-
-  // H2) Penalise moves that would let the human take a corner NEXT turn.
-  //     Simulate the move, then check if any corner becomes available to human.
-  let givenCornerPenalty = 0;
-  {
-    const tmp2 = cloneBoard(b);
-    tmp2[r][c] = aiPlayer;
-    applyCapturesFrom(r, c, tmp2);
-    for (const [cr, cc] of CORNERS) {
-      if (tmp2[cr][cc] === 0) {
-        // Corner is still empty after AI plays — human might grab it
-        givenCornerPenalty -= 80;
-      }
-    }
-  }
-
-  return gainAI*10 + gainHuman*8 + posScore + clusterScore + future
-       + edgeScore + chainInterruptScore + cornerTrapScore + givenCornerPenalty;
-}
-
-function simCaptures(b, r, c, player) {
-  if (b[r][c] !== 0) return -999;
-  const opp = 3 - player;
-  let captured = 0;
-  for (const [dr,dc] of DIRS) {
-    for (const sign of [1,-1]) {
-      let run=[], nr=r+sign*dr, nc=c+sign*dc;
-      let blocked = false;
-      while (inBounds(nr,nc) && b[nr][nc]===opp) {
-        if (isCorner(nr,nc)) { blocked=true; break; } // immune corner blocks run
-        run.push([nr,nc]); nr+=sign*dr; nc+=sign*dc;
-      }
-      if (!blocked && run.length>0 && inBounds(nr,nc) && b[nr][nc]===player)
-        captured+=run.length;
-    }
-  }
-  return captured;
-}
-
-function getCandidates(b, oppPlayer) {
-  const total = count(b,1)+count(b,2);
-  const radius = total < 20 ? 3 : 2;
-  const seen = new Set();
-
-  // ALWAYS include all 4 corners if empty — AI must always consider them
-  const CORNERS = [[0,0],[0,SIZE-1],[SIZE-1,0],[SIZE-1,SIZE-1]];
-  for (const [cr,cc] of CORNERS) {
-    if (b[cr][cc] === 0) seen.add(cr*SIZE+cc);
-  }
-
-  // Standard: expand around existing pieces
-  for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
-    if (b[r][c]!==0) {
-      for (let dr=-radius;dr<=radius;dr++) for (let dc=-radius;dc<=radius;dc++) {
-        const nr=r+dr, nc=c+dc;
-        if (inBounds(nr,nc) && b[nr][nc]===0) seen.add(nr*SIZE+nc);
-      }
-    }
-  }
-
-  // Always include ALL empty edge cells when opponent has ≥2 edge pieces
-  // (ensures AI can always contest the border, even from far away)
-  if (oppPlayer !== undefined) {
-    const oppEdge = edgeCount(b, oppPlayer);
-    if (oppEdge >= 2) {
-      for (let r=0;r<SIZE;r++) for (let c=0;c<SIZE;c++) {
-        if (isEdge(r,c) && b[r][c]===0) seen.add(r*SIZE+c);
-      }
-    }
-  }
-
-  // Fallback: if board is empty, seed center zone
-  if (seen.size===0) {
-    const m = Math.floor(SIZE/2);
-    for (let r=m-2;r<=m+2;r++) for (let c=m-2;c<=m+2;c++)
-      if (inBounds(r,c) && b[r][c]===0) seen.add(r*SIZE+c);
-  }
-
-  return [...seen].map(k=>[Math.floor(k/SIZE), k%SIZE]);
-}
-
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 const inBounds   = (r,c) => r>=0 && r<SIZE && c>=0 && c<SIZE;
-const cloneBoard = b => b.map(row=>[...row]);
 function count(b,p){let n=0;for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(b[r][c]===p)n++;return n;}
 function isBoardFull(){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(board[r][c]===0)return false;return true;}
-function isFull(b){for(let r=0;r<SIZE;r++)for(let c=0;c<SIZE;c++)if(b[r][c]===0)return false;return true;}
 
 // ── RENDER ────────────────────────────────────────────────────────────────────
 function renderBoard() {
