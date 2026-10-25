@@ -1,0 +1,667 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js" data-game="thadieu"></script>
+<script src="../scene.js" data-game="thadieu"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#3f7fc4">
+<title>Thả diều</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  html,body{height:100%;overflow:hidden;background:#3f7fc4;font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
+  canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+  /* HUD */
+  #hud{position:fixed;left:0;right:0;top:0;padding:max(10px,env(safe-area-inset-top)) 12px 0;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5}
+  .row{display:flex;align-items:center;gap:8px}
+  .pill{background:rgba(10,30,60,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:6px 12px;font-weight:700;font-size:15px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  #time{font-variant-numeric:tabular-nums;min-width:96px;text-align:center}
+  #best{font-size:12px;opacity:.9;font-weight:600}
+  #wind{margin-left:auto;display:flex;align-items:center;gap:6px;min-width:120px;justify-content:center}
+  #windArrow{display:inline-block;transition:transform .25s;font-size:18px;line-height:1}
+  #tensionWrap{display:flex;align-items:center;gap:8px}
+  #tensionWrap span{font-size:12px;font-weight:700;text-shadow:0 1px 2px rgba(0,0,0,.4);white-space:nowrap}
+  #tension{flex:1;height:10px;border-radius:99px;background:rgba(10,30,60,.38);border:1px solid rgba(255,255,255,.35);overflow:hidden}
+  #tension i{display:block;height:100%;width:0;border-radius:99px;background:linear-gradient(90deg,#5ee08a,#ffd54a 60%,#ff4d4d);background-size:100vw 100%;transition:width .08s linear}
+  #tension.danger{animation:shake .12s linear infinite}
+  @keyframes shake{25%{transform:translateX(-2px)}75%{transform:translateX(2px)}}
+  #warn{position:fixed;left:50%;top:19%;transform:translate(-50%,-50%);font-size:clamp(22px,7vw,34px);font-weight:900;letter-spacing:1px;
+    text-shadow:0 2px 10px rgba(0,0,0,.45),0 0 18px rgba(255,255,255,.3);opacity:0;transition:opacity .2s;pointer-events:none;z-index:6;white-space:nowrap}
+  #warn.show{opacity:1}
+  /* nút kéo */
+  #ctl{position:fixed;left:0;right:0;bottom:0;display:flex;gap:12px;padding:0 12px max(26px,env(safe-area-inset-bottom));z-index:5}
+  .pull{flex:1;height:76px;border-radius:22px;border:2px solid rgba(255,255,255,.55);background:rgba(10,30,60,.28);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);
+    color:#fff;font:inherit;font-size:17px;font-weight:800;letter-spacing:.5px;text-shadow:0 1px 3px rgba(0,0,0,.4);touch-action:none;transition:background .1s,transform .1s}
+  .pull.on{background:rgba(255,255,255,.35);transform:scale(.97)}
+  /* màn hình */
+  .screen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:24px;text-align:center;
+    background:linear-gradient(180deg,rgba(10,30,70,.55),rgba(10,30,70,.75))}
+  .screen.show{display:flex;animation:fade .3s}
+  @keyframes fade{from{opacity:0}}
+  .title{font-size:clamp(44px,15vw,72px);font-weight:900;letter-spacing:3px;line-height:1.1;
+    background:linear-gradient(180deg,#fff 30%,#ffe39a);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;filter:drop-shadow(0 4px 10px rgba(0,0,0,.35))}
+  .sub{max-width:340px;font-size:15px;line-height:1.5;opacity:.95}
+  .sub b{color:#ffe39a}
+  .big{font-size:56px;font-weight:900;font-variant-numeric:tabular-nums;line-height:1}
+  .reason{font-size:18px;font-weight:800;color:#ffd0d0}
+  .btn{min-width:210px;height:54px;border:0;border-radius:18px;font:inherit;font-size:18px;font-weight:900;letter-spacing:1px;color:#5a2a00;cursor:pointer;
+    background:linear-gradient(#ffe39a,#ffb84a);box-shadow:0 5px 0 #b86a12,0 10px 20px rgba(0,0,0,.25)}
+  .btn:active{transform:translateY(3px);box-shadow:0 2px 0 #b86a12}
+  #snd{position:fixed;right:12px;bottom:calc(max(26px,env(safe-area-inset-bottom)) + 88px);z-index:6;width:42px;height:42px;border-radius:50%;
+    border:1px solid rgba(255,255,255,.4);background:rgba(10,30,60,.35);color:#fff;font-size:18px}
+  footer{position:fixed;bottom:5px;left:10px;font-size:10px;color:#eee;font-family:Tahoma;z-index:99999;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+</style>
+</head>
+<body>
+<canvas id="cv"></canvas>
+
+<div id="hud">
+  <div class="row">
+    <div class="pill" id="time">0.0 giây</div>
+    <div class="pill" id="best">Kỷ lục 0.0 giây</div>
+    <div class="pill" id="wind"><span id="windArrow">➜</span><span id="windText">Lặng gió</span></div>
+  </div>
+  <div id="tensionWrap"><span>Lực căng dây</span><div id="tension"><i></i></div></div>
+</div>
+<div id="warn"></div>
+
+<div id="ctl">
+  <button class="pull" id="bL">◀ Kéo trái</button>
+  <button class="pull" id="bR">Kéo phải ▶</button>
+</div>
+<button id="snd" aria-label="Âm thanh">🔊</button>
+
+<section class="screen show" id="menu">
+  <div class="title">THẢ DIỀU</div>
+  <p class="sub">Gió đổi chiều, đổi sức liên tục. Giữ nút <b>Kéo trái</b> hoặc <b>Kéo phải</b> để giữ diều trong khung trời.<br><br>
+    Diều bay ra khỏi khung hình là <b>đứt dây</b>. Kéo giữ quá lâu thì <b>dây căng quá mức</b> cũng đứt, hãy kéo từng nhịp!</p>
+  <button class="btn" id="bStart">BẮT ĐẦU</button>
+</section>
+<section class="screen" id="over">
+  <div class="title" style="font-size:clamp(34px,11vw,52px)">ĐỨT DÂY!</div>
+  <div class="reason" id="reason"></div>
+  <div><div class="sub">Thời gian bay</div><div class="big" id="oTime">0.0</div></div>
+  <div class="sub" id="oBest"></div>
+  <button class="btn" id="bAgain">CHƠI LẠI</button>
+</section>
+
+<footer> Version:D20261025-H14M00T0000    »»»   developed by Tran Gia Bao</footer>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const cv = $('cv'), ctx = cv.getContext('2d');
+const rand = (a, b) => a + Math.random() * (b - a), clamp = (v, a, b) => Math.max(a, Math.min(b, v)), lerp = (a, b, t) => a + (b - a) * t;
+let W = 0, H = 0, DPR = 1;
+
+// ---------- lưu trữ ----------
+const store = { best: 0, snd: true };
+try { const j = JSON.parse(localStorage.getItem('thadieu_v1') || '{}'); store.best = +j.best || 0; store.snd = j.snd !== false; } catch (e) {}
+const save = () => { try { localStorage.setItem('thadieu_v1', JSON.stringify(store)); } catch (e) {} };
+
+// ---------- âm thanh: tiếng gió (nhiễu lọc dải) + tiếng dây đứt ----------
+const Snd = {
+  x: null, gain: null, filt: null,
+  init() {
+    if (this.x) { if (this.x.state === 'suspended') this.x.resume(); return; }
+    try {
+      const A = window.AudioContext || window.webkitAudioContext; this.x = new A();
+      const n = this.x.sampleRate * 2, buf = this.x.createBuffer(1, n, this.x.sampleRate), d = buf.getChannelData(0);
+      let last = 0; for (let i = 0; i < n; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }   // nhiễu nâu: tiếng gió trầm
+      const src = this.x.createBufferSource(); src.buffer = buf; src.loop = true;
+      this.filt = this.x.createBiquadFilter(); this.filt.type = 'bandpass'; this.filt.frequency.value = 500; this.filt.Q.value = 0.7;
+      this.gain = this.x.createGain(); this.gain.gain.value = 0;
+      src.connect(this.filt); this.filt.connect(this.gain); this.gain.connect(this.x.destination); src.start();
+    } catch (e) { this.x = null; }
+  },
+  wind(level) {   // level 0..1
+    if (!this.x) return;
+    const t = this.x.currentTime, v = store.snd ? 0.05 + level * 0.5 : 0;
+    this.gain.gain.setTargetAtTime(v, t, 0.15);
+    this.filt.frequency.setTargetAtTime(380 + level * 900, t, 0.2);
+  },
+  snap() {
+    if (!this.x || !store.snd) return;
+    try {
+      const t = this.x.currentTime, o = this.x.createOscillator(), g = this.x.createGain();
+      o.type = 'triangle'; o.frequency.setValueAtTime(1400, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.25);
+      g.gain.setValueAtTime(0.35, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.3);
+      o.connect(g); g.connect(this.x.destination); o.start(t); o.stop(t + 0.32);
+    } catch (e) {}
+  },
+  mute() { if (this.x) this.gain.gain.setTargetAtTime(0, this.x.currentTime, 0.05); }
+};
+
+// ---------- khung hình & lớp nền vẽ sẵn ----------
+const bgCv = document.createElement('canvas'), bg = bgCv.getContext('2d');
+let groundY = 0, handX = 0, handY = 0;
+function resize() {
+  DPR = Math.min(2, window.devicePixelRatio || 1);
+  W = innerWidth; H = innerHeight;
+  cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+  bgCv.width = cv.width; bgCv.height = cv.height;
+  groundY = H - Math.max(150, H * 0.2);
+  handX = W / 2; handY = groundY + 34;
+  drawBackground();
+  initGrass();
+  if (!kite.alive || state.phase !== 'play') { kite.y = kiteBaseY(); }
+}
+const kiteBaseY = () => Math.max(170, H * 0.36);
+
+function drawBackground() {
+  const g = bg;
+  g.setTransform(DPR, 0, 0, DPR, 0, 0);
+  // trời
+  const sky = g.createLinearGradient(0, 0, 0, groundY);
+  sky.addColorStop(0, '#1f5fae'); sky.addColorStop(0.45, '#5d9fe0'); sky.addColorStop(0.85, '#b9dcf5'); sky.addColorStop(1, '#f6e7c8');
+  g.fillStyle = sky; g.fillRect(0, 0, W, H);
+  // mặt trời
+  const sx = W * 0.8, sy = H * 0.14;
+  let rg = g.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * 0.45);
+  rg.addColorStop(0, 'rgba(255,248,220,.75)'); rg.addColorStop(0.08, 'rgba(255,240,200,.45)'); rg.addColorStop(0.3, 'rgba(255,230,180,.1)'); rg.addColorStop(1, 'rgba(255,230,180,0)');
+  g.fillStyle = rg; g.fillRect(0, 0, W, H);
+  g.fillStyle = '#fffbe9'; g.beginPath(); g.arc(sx, sy, 22, 0, Math.PI * 2); g.fill();
+  // núi xa (sương mờ) — 2 lớp
+  const ridge = (baseY, amp, seed, col, hazeTop) => {
+    g.beginPath(); g.moveTo(0, H);
+    for (let x = 0; x <= W + 10; x += 8) {
+      const y = baseY - amp * (0.55 * Math.sin(x * 0.006 + seed) + 0.3 * Math.sin(x * 0.017 + seed * 2.1) + 0.15 * Math.sin(x * 0.041 + seed * 3.7));
+      g.lineTo(x, y);
+    }
+    g.lineTo(W, H); g.closePath();
+    const lg = g.createLinearGradient(0, baseY - amp, 0, groundY);
+    lg.addColorStop(0, hazeTop); lg.addColorStop(1, col);
+    g.fillStyle = lg; g.fill();
+  };
+  ridge(groundY - 40, 70, 1.3, '#8fb3cf', '#a9c6dc');
+  ridge(groundY - 6, 48, 4.1, '#5f8c6a', '#86a98e');
+  // đồi cỏ phía trước
+  const hill = g.createLinearGradient(0, groundY - 20, 0, H);
+  hill.addColorStop(0, '#79b552'); hill.addColorStop(0.35, '#5d9a3e'); hill.addColorStop(1, '#3d6e29');
+  g.fillStyle = hill;
+  g.beginPath(); g.moveTo(0, H); g.lineTo(0, groundY + 18);
+  g.quadraticCurveTo(W * 0.25, groundY - 6, W * 0.5, groundY + 4);
+  g.quadraticCurveTo(W * 0.78, groundY + 14, W, groundY - 2);
+  g.lineTo(W, H); g.closePath(); g.fill();
+  // vệt sáng trên cỏ
+  const shine = g.createRadialGradient(W * 0.7, groundY + 10, 0, W * 0.7, groundY + 10, W * 0.6);
+  shine.addColorStop(0, 'rgba(255,240,180,.18)'); shine.addColorStop(1, 'rgba(255,240,180,0)');
+  g.fillStyle = shine; g.fillRect(0, groundY - 30, W, H);
+}
+
+// ---------- mây (vẽ sẵn từng đám, trôi theo gió, có độ sâu) ----------
+function makeCloud(scale) {
+  const c = document.createElement('canvas'), w = Math.round(220 * scale), h = Math.round(110 * scale);
+  c.width = w * DPR; c.height = h * DPR;
+  const g = c.getContext('2d'); g.scale(DPR, DPR);
+  const n = 7 + (Math.random() * 5 | 0);
+  for (let i = 0; i < n; i++) {
+    const x = rand(0.25, 0.75) * w, y = rand(0.5, 0.62) * h;
+    // bán kính không vượt mép khung vẽ (tránh mây bị cắt cạnh vuông)
+    const r = Math.min(rand(0.12, 0.22) * w, x - 2, w - x - 2, y - 2, h - y - 2);
+    const rg = g.createRadialGradient(x, y - r * 0.3, r * 0.1, x, y, r);
+    rg.addColorStop(0, 'rgba(255,255,255,.95)'); rg.addColorStop(0.65, 'rgba(250,252,255,.75)'); rg.addColorStop(1, 'rgba(235,242,252,0)');
+    g.fillStyle = rg; g.beginPath(); g.arc(x, y, r, 0, Math.PI * 2); g.fill();
+  }
+  // đáy mây hơi xám cho có khối
+  const sh = g.createLinearGradient(0, h * 0.5, 0, h);
+  sh.addColorStop(0, 'rgba(180,195,215,0)'); sh.addColorStop(1, 'rgba(160,178,205,.35)');
+  g.globalCompositeOperation = 'source-atop'; g.fillStyle = sh; g.fillRect(0, 0, w, h);
+  return { img: c, w, h };
+}
+let clouds = [];
+function initClouds() {
+  clouds = [];
+  for (let i = 0; i < 9; i++) {
+    const depth = rand(0.3, 1);
+    const cl = makeCloud(lerp(0.55, 1.35, depth));
+    clouds.push({ ...cl, depth, x: rand(-0.2, 1.1) * W, y: rand(0.04, 0.5) * groundY * (1.1 - depth * 0.5) });
+  }
+  clouds.sort((a, b) => a.depth - b.depth);
+}
+
+// ---------- cỏ lay theo gió ----------
+let grass = [];
+function initGrass() {
+  grass = [];
+  const n = Math.round(W / 4.5);
+  for (let i = 0; i < n; i++) {
+    const x = (i + Math.random()) * (W / n);
+    const t = x / W;
+    const y = groundY + 18 + (t < 0.5 ? lerp(0, -14, t * 2) : lerp(-14, -16, (t - 0.5) * 2)) + rand(0, 14) + (H - groundY) * rand(0, 0.7);
+    grass.push({ x, y, h: rand(10, 22), ph: rand(0, 6.28), col: `hsl(${rand(85, 110)},${rand(45, 60)}%,${rand(26, 42)}%)` });
+  }
+  grass.sort((a, b) => a.y - b.y);
+}
+
+// ---------- trạng thái ----------
+const LEVELS = [
+  { name: 'Gió nhẹ', f: 70 }, { name: 'Gió vừa', f: 135 }, { name: 'Gió mạnh', f: 205 }, { name: 'Gió rất mạnh', f: 275 }
+];
+const state = { phase: 'menu', t: 0, snapT: 0, reason: '' };
+const kite = { x: 0, y: 0, vx: 0, vy: 0, tilt: 0, alive: true, fx: 0, fy: 0, fvx: 0, fvy: 0, spin: 0, tail: [] };
+const wind = { x: 0, gust: null, next: 2.5, warn: null };
+let tension = 0, input = 0, keyL = false, keyR = false, btnL = false, btnR = false;
+let streaks = [], leaves = [], birds = [], birdTimer = 4;
+
+function resetGame() {
+  state.t = 0; state.reason = '';
+  kite.x = 0; kite.vx = 0; kite.y = kiteBaseY(); kite.vy = 0; kite.tilt = 0; kite.alive = true; kite.spin = 0;
+  wind.x = 0; wind.gust = null; wind.next = 2.2; wind.warn = null;
+  tension = 0.12;
+  initTail();
+  streaks = []; leaves = [];
+}
+
+// đuôi diều: chuỗi điểm (verlet)
+const TAIL_N = 16, TAIL_SEG = 9;
+function kiteAnchor() { return [W / 2 + kite.x, kite.y]; }
+function initTail() {
+  const [x, y] = kiteAnchor();
+  kite.tail = Array.from({ length: TAIL_N }, (_, i) => ({ x, y: y + 34 + i * TAIL_SEG, px: x, py: y + 34 + i * TAIL_SEG }));
+}
+
+// ---------- gió ----------
+function difficulty() { return 1 + Math.min(1.6, state.t / 70); }
+function updateWind(dt) {
+  const d = difficulty(), t = state.t;
+  // gió nền trôi chậm + nhiễu động
+  const drift = Math.sin(t * 0.21) * 18 * d + Math.sin(t * 0.53 + 1.3) * 10;
+  const turb = (Math.sin(t * 2.7) * 0.6 + Math.sin(t * 4.3 + 2) * 0.4) * 14 * d;
+  let gx = 0;
+  // lịch cơn gió giật: cảnh báo trước ~0.9s
+  if (!wind.gust && !wind.warn) {
+    wind.next -= dt;
+    if (wind.next <= 0) {
+      const maxL = clamp(2 + Math.floor(state.t / 15), 2, 4);   // đầu game có gió nhẹ/vừa, sau đó mạnh dần
+      const level = Math.min(maxL - 1, Math.floor(Math.pow(Math.random(), 0.8) * maxL));
+      wind.warn = { dir: Math.random() < 0.5 ? -1 : 1, level, t: 0 };
+      showWarn(wind.warn);
+    }
+  }
+  if (wind.warn) {
+    wind.warn.t += dt;
+    gx += wind.warn.dir * LEVELS[wind.warn.level].f * 0.12 * (wind.warn.t / 0.9);   // gió bắt đầu nổi
+    if (wind.warn.t >= 0.9) {
+      wind.gust = { dir: wind.warn.dir, level: wind.warn.level, t: 0, dur: rand(1.3, 2.8) + wind.warn.level * 0.3 };
+      wind.warn = null; hideWarn();
+    }
+  }
+  if (wind.gust) {
+    const g = wind.gust; g.t += dt;
+    const up = 0.45, down = 0.7;
+    const env = g.t < up ? g.t / up : g.t < g.dur ? 1 : Math.max(0, 1 - (g.t - g.dur) / down);
+    const flutter = 1 + 0.18 * Math.sin(g.t * 9) ;
+    gx += g.dir * LEVELS[g.level].f * d * 0.75 * env * flutter;
+    if (g.t > g.dur + down) { wind.gust = null; wind.next = rand(1.6, 3.6) / Math.sqrt(d); }
+  }
+  wind.x = drift + turb + gx;
+}
+function showWarn(w) {
+  const el = $('warn');
+  el.textContent = `${w.dir < 0 ? '⟵ ' : ''}${LEVELS[w.level].name}${w.dir > 0 ? ' ⟶' : ''}`;
+  el.style.color = ['#e8fff0', '#fff4c2', '#ffd29a', '#ffb0b0'][w.level];
+  el.classList.add('show');
+}
+function hideWarn() { $('warn').classList.remove('show'); }
+
+// ---------- vật lý diều ----------
+const PULL = 210, BREAK = 1;
+const SCALE = () => W / 412;   // lực tính theo bề rộng màn hình để độ khó như nhau trên mọi máy
+function updateKite(dt) {
+  input = (keyR || btnR ? 1 : 0) - (keyL || btnL ? 1 : 0);
+  const wAbs = Math.abs(wind.x);
+  // lực: gió + kéo dây + dây có xu hướng kéo diều về giữa (yếu) + cản không khí
+  const k = SCALE();
+  const ax = (wind.x * 1.05 + input * PULL) * k - kite.x * 0.25 - kite.vx * 1.35;
+  kite.vx += ax * dt; kite.x += kite.vx * dt;
+  // độ cao: gió mạnh nâng diều lên, lặng gió diều hạ nhẹ, kéo dây cũng nâng diều
+  const targetY = kiteBaseY() - Math.min(70, wAbs * 0.22) - (input ? 18 : 0) + Math.sin(state.t * 1.7) * 6;
+  kite.vy += ((targetY - kite.y) * 3.2 - kite.vy * 2.4) * dt; kite.y += kite.vy * dt;
+  kite.tilt = lerp(kite.tilt, clamp(kite.vx * 0.0028 + wind.x * 0.0016, -0.75, 0.75), 1 - Math.exp(-6 * dt));
+  // lực căng: tự cân bằng theo sức gió; giữ nút thì tăng dần (kéo ngược gió và gió mạnh tăng nhanh hơn)
+  const base = 0.12 + 0.38 * Math.min(1, wAbs / 300);
+  if (input) {
+    const against = Math.sign(wind.x) === -input ? 1.35 : 0.85;
+    tension += (0.5 + 0.35 * Math.min(1, wAbs / 260)) * against * dt;   // giữ liên tục ~1.3–2 giây là đứt
+  } else {
+    tension += (base - tension) * Math.min(1, 1.6 * dt);
+  }
+  tension = Math.max(tension, base * 0.9);
+  // thua
+  if (tension >= BREAK) return snap('Dây căng quá mức');
+  if (Math.abs(kite.x) > W / 2 + 4) return snap('Diều bay khỏi khung trời');
+}
+
+function snap(reason) {
+  if (!kite.alive) return;
+  kite.alive = false; state.phase = 'snap'; state.snapT = 0; state.reason = reason;
+  const [x, y] = kiteAnchor();
+  kite.fx = x; kite.fy = y; kite.fvx = kite.vx + wind.x * 0.8 + rand(-40, 40); kite.fvy = -rand(60, 140); kite.spin = rand(-4, 4);
+  // sợi dây rơi xuống
+  looseStr = { t: 0, x: x, y: y };
+  hideWarn(); Snd.snap();
+  try { navigator.vibrate && navigator.vibrate(80); } catch (e) {}
+}
+let looseStr = null;
+
+function updateTail(dt) {
+  const [ax, ay] = kiteAnchor();
+  const anchorX = state.phase === 'snap' ? kite.fx : ax, anchorY = (state.phase === 'snap' ? kite.fy : ay) + 34;
+  const T = kite.tail, gx = wind.x * 0.9 - kite.vx * 0.4, gy = 260;
+  for (let i = 0; i < T.length; i++) {
+    const p = T[i];
+    const vx = (p.x - p.px) * 0.985, vy = (p.y - p.py) * 0.985;
+    p.px = p.x; p.py = p.y;
+    const wob = Math.sin(state.t * 8 + i * 0.7) * 30 * (0.3 + Math.min(1, Math.abs(wind.x) / 200));
+    p.x += vx + (gx + wob) * dt * dt * 1.0; p.y += vy + gy * dt * dt;
+  }
+  for (let k = 0; k < 4; k++) {
+    T[0].x = anchorX; T[0].y = anchorY;
+    for (let i = 1; i < T.length; i++) {
+      const a = T[i - 1], b = T[i], dx = b.x - a.x, dy = b.y - a.y, d = Math.hypot(dx, dy) || 1, f = (d - TAIL_SEG) / d;
+      if (i === 1) { b.x -= dx * f; b.y -= dy * f; }
+      else { a.x += dx * f * 0.5; a.y += dy * f * 0.5; b.x -= dx * f * 0.5; b.y -= dy * f * 0.5; }
+    }
+  }
+}
+
+// ---------- hiệu ứng ----------
+function updateFx(dt) {
+  const wAbs = Math.abs(wind.x);
+  // vệt gió
+  const rate = wAbs / 22;
+  if (Math.random() < rate * dt) streaks.push({ x: wind.x > 0 ? -60 : W + 60, y: rand(0.05, 0.85) * groundY, len: rand(40, 110) * (0.6 + wAbs / 300), life: rand(0.8, 1.6), a: 0, sp: rand(2.5, 4.2) });
+  for (let i = streaks.length - 1; i >= 0; i--) { const s = streaks[i]; s.x += wind.x * s.sp * dt; s.life -= dt; s.a = Math.min(1, s.a + dt * 3); if (s.life <= 0 || s.x < -200 || s.x > W + 200) streaks.splice(i, 1); }
+  // lá bay khi gió mạnh
+  if (wAbs > 120 && Math.random() < (wAbs - 120) / 60 * dt) leaves.push({ x: wind.x > 0 ? -20 : W + 20, y: rand(groundY - 120, groundY + 30), vx: wind.x * rand(1.5, 2.6), vy: rand(-40, 10), r: rand(0, 6.28), vr: rand(-6, 6), s: rand(4, 7), c: `hsl(${rand(30, 95)},70%,${rand(35, 50)}%)` });
+  for (let i = leaves.length - 1; i >= 0; i--) { const l = leaves[i]; l.vx = lerp(l.vx, wind.x * 2.2, dt); l.vy += (Math.sin(state.t * 3 + i) * 40 - l.vy * 0.5) * dt; l.x += l.vx * dt; l.y += l.vy * dt; l.r += l.vr * dt; if (l.x < -40 || l.x > W + 40 || l.y > H) leaves.splice(i, 1); }
+  // mây trôi theo gió (lớp gần trôi nhanh hơn)
+  for (const c of clouds) {
+    c.x += (6 + wind.x * 0.18) * c.depth * dt;
+    if (c.x > W + 40) c.x = -c.w - rand(0, 80); else if (c.x < -c.w - 120) c.x = W + rand(0, 40);
+  }
+  // chim
+  birdTimer -= dt;
+  if (birdTimer <= 0) {
+    birdTimer = rand(7, 15);
+    const dir = Math.random() < 0.5 ? 1 : -1, n = 3 + (Math.random() * 4 | 0), y0 = rand(0.12, 0.4) * groundY;
+    for (let i = 0; i < n; i++) birds.push({ x: dir > 0 ? -30 - i * 22 : W + 30 + i * 22, y: y0 + Math.abs(i - n / 2) * 10, v: dir * rand(40, 60), ph: rand(0, 6), s: rand(0.8, 1.1) });
+  }
+  for (let i = birds.length - 1; i >= 0; i--) { const b = birds[i]; b.x += (b.v + wind.x * 0.15) * dt; b.ph += dt * 9; if (b.x < -80 || b.x > W + 80) birds.splice(i, 1); }
+}
+
+// ---------- vẽ ----------
+function drawClouds() { for (const c of clouds) ctx.drawImage(c.img, c.x, c.y, c.w, c.h); }
+
+function drawBirds() {
+  ctx.strokeStyle = 'rgba(40,50,70,.75)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+  for (const b of birds) {
+    const f = Math.sin(b.ph) * 4 * b.s, w = 7 * b.s;
+    ctx.beginPath(); ctx.moveTo(b.x - w, b.y - f); ctx.quadraticCurveTo(b.x - w * 0.4, b.y - 3, b.x, b.y);
+    ctx.quadraticCurveTo(b.x + w * 0.4, b.y - 3, b.x + w, b.y - f); ctx.stroke();
+  }
+}
+
+function drawStreaks() {
+  ctx.lineCap = 'round';
+  for (const s of streaks) {
+    const a = Math.min(s.a, s.life) * 0.45;
+    const g = ctx.createLinearGradient(s.x - s.len, s.y, s.x, s.y);
+    g.addColorStop(0, 'rgba(255,255,255,0)'); g.addColorStop(1, `rgba(255,255,255,${a})`);
+    ctx.strokeStyle = g; ctx.lineWidth = 1.4;
+    const dir = Math.sign(wind.x) || 1;
+    ctx.beginPath(); ctx.moveTo(s.x - s.len * dir, s.y); ctx.quadraticCurveTo(s.x - s.len * 0.5 * dir, s.y - 3, s.x, s.y); ctx.stroke();
+  }
+}
+
+function drawGrass() {
+  const bendBase = clamp(wind.x / 300, -1, 1);
+  ctx.lineCap = 'round';
+  for (const b of grass) {
+    const sway = Math.sin(state.t * (2 + Math.abs(bendBase) * 4) + b.ph + b.x * 0.02) * (0.15 + Math.abs(bendBase) * 0.25);
+    const bend = (bendBase * 0.9 + sway) * b.h;
+    ctx.strokeStyle = b.col; ctx.lineWidth = 2;
+    ctx.beginPath(); ctx.moveTo(b.x, b.y); ctx.quadraticCurveTo(b.x + bend * 0.3, b.y - b.h * 0.6, b.x + bend, b.y - b.h + Math.abs(bend) * 0.25); ctx.stroke();
+  }
+}
+
+function drawLeaves() {
+  for (const l of leaves) {
+    ctx.save(); ctx.translate(l.x, l.y); ctx.rotate(l.r); ctx.fillStyle = l.c;
+    ctx.beginPath(); ctx.ellipse(0, 0, l.s, l.s * 0.45, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+  }
+}
+
+// người thả diều (bóng dáng) ở chân đồi
+function drawPerson() {
+  const x = handX, gy = groundY + 70, lean = clamp(input * 0.12 + (tension - 0.4) * 0.1, -0.2, 0.2);
+  ctx.save(); ctx.translate(x, gy);
+  ctx.fillStyle = 'rgba(0,0,0,.18)'; ctx.beginPath(); ctx.ellipse(0, 2, 26, 6, 0, 0, Math.PI * 2); ctx.fill();
+  ctx.rotate(lean * 0.4);
+  // chân
+  ctx.strokeStyle = '#2b3a55'; ctx.lineWidth = 7; ctx.lineCap = 'round';
+  ctx.beginPath(); ctx.moveTo(-5, -28); ctx.lineTo(-9, 0); ctx.moveTo(5, -28); ctx.lineTo(9, 0); ctx.stroke();
+  // thân áo
+  ctx.fillStyle = '#e8473f';
+  ctx.beginPath(); ctx.moveTo(-11, -30); ctx.quadraticCurveTo(-13, -50, -8, -56); ctx.lineTo(8, -56); ctx.quadraticCurveTo(13, -50, 11, -30); ctx.closePath(); ctx.fill();
+  // tay cầm dây giơ lên
+  const hx = (handX - x) + input * 6, hy = handY - gy;
+  ctx.strokeStyle = '#f2c79a'; ctx.lineWidth = 5;
+  ctx.beginPath(); ctx.moveTo(7, -52); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.beginPath(); ctx.moveTo(-7, -52); ctx.lineTo(-14, -36); ctx.stroke();
+  // đầu + nón lá
+  ctx.fillStyle = '#f2c79a'; ctx.beginPath(); ctx.arc(0, -63, 7.5, 0, Math.PI * 2); ctx.fill();
+  ctx.fillStyle = '#f4dc9b'; ctx.beginPath(); ctx.moveTo(-15, -64); ctx.lineTo(0, -80); ctx.lineTo(15, -64); ctx.closePath(); ctx.fill();
+  ctx.strokeStyle = 'rgba(150,110,40,.6)'; ctx.lineWidth = 1; ctx.stroke();
+  ctx.restore();
+}
+
+// dây diều: võng nhiều khi chùng, căng thẳng và đỏ dần khi sắp đứt
+function drawString(kx, ky) {
+  const slack = clamp(1 - tension, 0, 1);
+  const mx = (handX + kx) / 2 - wind.x * 0.18 * slack, my = (handY + ky) / 2 + 60 * slack;
+  const shakeAmt = tension > 0.78 ? (tension - 0.78) * 30 : 0;
+  const jx = (Math.random() - 0.5) * shakeAmt, jy = (Math.random() - 0.5) * shakeAmt;
+  const r = Math.round(lerp(245, 255, tension)), g = Math.round(lerp(245, 70, clamp((tension - 0.45) / 0.55, 0, 1))), b = Math.round(lerp(240, 60, clamp((tension - 0.45) / 0.55, 0, 1)));
+  ctx.strokeStyle = `rgba(${r},${g},${b},.95)`; ctx.lineWidth = 1.4 + tension * 0.8;
+  ctx.beginPath(); ctx.moveTo(handX, handY); ctx.quadraticCurveTo(mx + jx, my + jy, kx, ky); ctx.stroke();
+}
+
+function drawKite(x, y, tilt, scale) {
+  ctx.save(); ctx.translate(x, y); ctx.rotate(tilt); ctx.scale(scale, scale);
+  const w = 34, top = -46, mid = -6, bot = 40;
+  // bóng mờ
+  ctx.shadowColor = 'rgba(0,0,0,.25)'; ctx.shadowBlur = 10; ctx.shadowOffsetY = 6;
+  // 4 mảnh màu (ánh sáng: nửa trái sáng hơn)
+  const panels = [
+    [[0, top], [-w, mid], [0, mid], '#ff5a4f'],
+    [[0, top], [w, mid], [0, mid], '#d8322b'],
+    [[-w, mid], [0, bot], [0, mid], '#ffcf3f'],
+    [[w, mid], [0, bot], [0, mid], '#f0a91f'],
+  ];
+  for (const [a, b, c, col] of panels) {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(a[0], a[1]); ctx.lineTo(b[0], b[1]); ctx.lineTo(c[0], c[1]); ctx.closePath(); ctx.fill();
+  }
+  ctx.shadowColor = 'transparent';
+  // họa tiết mặt trời giữa diều
+  ctx.fillStyle = 'rgba(255,255,255,.85)'; ctx.beginPath(); ctx.arc(0, mid, 7, 0, Math.PI * 2); ctx.fill();
+  ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 1.5;
+  for (let i = 0; i < 8; i++) { const a = i * Math.PI / 4; ctx.beginPath(); ctx.moveTo(Math.cos(a) * 10, mid + Math.sin(a) * 10); ctx.lineTo(Math.cos(a) * 14, mid + Math.sin(a) * 14); ctx.stroke(); }
+  // nan tre
+  ctx.strokeStyle = '#6b4a22'; ctx.lineWidth = 2;
+  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(0, bot); ctx.moveTo(-w, mid); ctx.quadraticCurveTo(0, mid - 8, w, mid); ctx.stroke();
+  // viền
+  ctx.strokeStyle = 'rgba(90,30,10,.55)'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(w, mid); ctx.lineTo(0, bot); ctx.lineTo(-w, mid); ctx.closePath(); ctx.stroke();
+  // ánh nắng phản chiếu
+  const sh = ctx.createLinearGradient(-w, top, w, bot);
+  sh.addColorStop(0, 'rgba(255,255,255,.28)'); sh.addColorStop(0.5, 'rgba(255,255,255,0)'); sh.addColorStop(1, 'rgba(0,0,0,.12)');
+  ctx.fillStyle = sh; ctx.beginPath(); ctx.moveTo(0, top); ctx.lineTo(w, mid); ctx.lineTo(0, bot); ctx.lineTo(-w, mid); ctx.closePath(); ctx.fill();
+  ctx.restore();
+}
+
+function drawTail() {
+  const T = kite.tail;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+  ctx.strokeStyle = 'rgba(120,60,20,.7)'; ctx.lineWidth = 1.2;
+  ctx.beginPath(); ctx.moveTo(T[0].x, T[0].y); for (let i = 1; i < T.length; i++) ctx.lineTo(T[i].x, T[i].y); ctx.stroke();
+  // nơ ruy băng xen màu
+  for (let i = 2; i < T.length; i += 2) {
+    const p = T[i], q = T[i - 1], a = Math.atan2(p.y - q.y, p.x - q.x) + Math.PI / 2;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(a);
+    ctx.fillStyle = i % 4 === 0 ? '#ff5a4f' : '#ffcf3f';
+    ctx.beginPath(); ctx.moveTo(0, 0); ctx.lineTo(-7, -4); ctx.lineTo(-7, 4); ctx.closePath(); ctx.moveTo(0, 0); ctx.lineTo(7, -4); ctx.lineTo(7, 4); ctx.closePath(); ctx.fill();
+    ctx.restore();
+  }
+}
+
+// mép khung đỏ dần khi diều sắp ra ngoài
+function drawEdgeWarning() {
+  const d = Math.abs(kite.x) / (W / 2);
+  if (d < 0.65 || !kite.alive) return;
+  const a = clamp((d - 0.65) / 0.3, 0, 1) * (0.55 + 0.25 * Math.sin(state.t * 14));
+  const left = kite.x < 0;
+  const g = ctx.createLinearGradient(left ? 0 : W, 0, left ? 70 : W - 70, 0);
+  g.addColorStop(0, `rgba(255,50,50,${a})`); g.addColorStop(1, 'rgba(255,50,50,0)');
+  ctx.fillStyle = g; ctx.fillRect(left ? 0 : W - 70, 0, 70, H);
+}
+
+function draw() {
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.drawImage(bgCv, 0, 0);
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  drawClouds();
+  drawBirds();
+  drawStreaks();
+  // dây + diều
+  if (kite.alive) {
+    const [kx, ky] = kiteAnchor();
+    drawString(kx, ky + 30);
+    drawTail();
+    drawKite(kx, ky, kite.tilt, 1);
+  } else {
+    // dây đứt rơi xuống, diều xoay tít bay theo gió
+    if (looseStr) {
+      const k = Math.min(1, looseStr.t / 1.2);
+      ctx.strokeStyle = `rgba(255,255,255,${0.9 - k * 0.6})`; ctx.lineWidth = 1.3;
+      ctx.beginPath(); ctx.moveTo(handX, handY);
+      ctx.quadraticCurveTo(lerp((handX + looseStr.x) / 2, handX + 30, k), lerp((handY + looseStr.y) / 2 + 80, handY + 40, k),
+        lerp(looseStr.x, handX + 50, k), lerp(looseStr.y, handY + 60, k));
+      ctx.stroke();
+    }
+    drawTail();
+    drawKite(kite.fx, kite.fy, kite.spin * state.snapT, Math.max(0.4, 1 - state.snapT * 0.25));
+  }
+  drawLeaves();
+  drawPerson();
+  drawGrass();
+  drawEdgeWarning();
+}
+
+// ---------- HUD ----------
+let hudT = 0;
+function updateHUD(dt) {
+  hudT -= dt;
+  const ti = $('tension');
+  ti.firstElementChild.style.width = (Math.min(1, tension) * 100).toFixed(1) + '%';
+  ti.classList.toggle('danger', tension > 0.8 && state.phase === 'play');
+  if (hudT > 0) return;
+  hudT = 0.1;
+  $('time').textContent = state.t.toFixed(1) + ' giây';
+  $('best').textContent = 'Kỷ lục ' + store.best.toFixed(1) + ' giây';
+  const w = wind.x, a = Math.abs(w);
+  const name = a < 45 ? 'Lặng gió' : a < 110 ? 'Gió nhẹ' : a < 175 ? 'Gió vừa' : a < 245 ? 'Gió mạnh' : 'Gió rất mạnh';
+  $('windText').textContent = name;
+  $('windArrow').style.transform = `rotate(${w < 0 ? 180 : 0}deg) scale(${0.8 + Math.min(1, a / 260) * 0.7})`;
+  $('windArrow').style.opacity = a < 45 ? 0.4 : 1;
+}
+
+// ---------- vòng lặp ----------
+let last = 0;
+function frame(ts) {
+  requestAnimationFrame(frame);
+  const dt = Math.min(0.033, (ts - last) / 1000 || 0); last = ts;
+  if (document.hidden) return;
+  if (state.phase === 'play') {
+    state.t += dt;
+    updateWind(dt);
+    updateKite(dt);
+  } else if (state.phase === 'menu') {
+    // màn chờ: gió hiu hiu, diều tự bay
+    state.t += dt;
+    wind.x = Math.sin(state.t * 0.5) * 60 + Math.sin(state.t * 1.7) * 15;
+    kite.x = Math.sin(state.t * 0.5 - 0.6) * W * 0.12; kite.vx = Math.cos(state.t * 0.5 - 0.6) * W * 0.06;
+    kite.y = kiteBaseY() + Math.sin(state.t * 1.3) * 10;
+    kite.tilt = lerp(kite.tilt, clamp(kite.vx * 0.003 + wind.x * 0.0015, -0.6, 0.6), 0.08);
+    tension = 0.3;
+  } else if (state.phase === 'snap' || state.phase === 'over') {
+    state.snapT += dt;
+    wind.x *= Math.exp(-0.3 * dt);
+    kite.fvx = lerp(kite.fvx, wind.x * 1.4, dt); kite.fvy -= 20 * dt;
+    kite.fx += kite.fvx * dt; kite.fy += kite.fvy * dt;
+    if (looseStr) looseStr.t += dt;
+    tension = Math.max(0, tension - dt * 2);
+    if (state.phase === 'snap' && state.snapT > 1.4) gameOver();
+  }
+  updateTail(dt);
+  updateFx(dt);
+  Snd.wind(Math.min(1, Math.abs(wind.x) / 280));
+  updateHUD(dt);
+  draw();
+}
+
+// ---------- màn hình ----------
+const show = (id, on) => $(id).classList.toggle('show', on);
+function start() {
+  Snd.init();
+  resetGame();
+  state.phase = 'play';
+  show('menu', false); show('over', false);
+}
+function gameOver() {
+  state.phase = 'over';
+  const t = state.t, nb = t > store.best;
+  if (nb) { store.best = t; save(); }
+  $('reason').textContent = state.reason;
+  $('oTime').textContent = t.toFixed(1) + ' giây';
+  $('oBest').textContent = nb ? '🎉 Kỷ lục mới!' : 'Kỷ lục: ' + store.best.toFixed(1) + ' giây';
+  show('over', true);
+}
+$('bStart').onclick = start;
+$('bAgain').onclick = start;
+
+// ---------- điều khiển ----------
+function bindHold(el, set) {
+  const on = e => { e.preventDefault(); Snd.init(); set(true); el.classList.add('on'); try { el.setPointerCapture(e.pointerId); } catch (_) {} };
+  const off = () => { set(false); el.classList.remove('on'); };
+  el.addEventListener('pointerdown', on);
+  el.addEventListener('pointerup', off); el.addEventListener('pointercancel', off); el.addEventListener('lostpointercapture', off);
+  el.addEventListener('contextmenu', e => e.preventDefault());
+}
+bindHold($('bL'), v => btnL = v);
+bindHold($('bR'), v => btnR = v);
+addEventListener('keydown', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') { keyL = true; e.preventDefault(); }
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') { keyR = true; e.preventDefault(); }
+  if ((e.key === ' ' || e.key === 'Enter') && state.phase !== 'play' && state.phase !== 'snap') start();
+});
+addEventListener('keyup', e => {
+  if (e.key === 'ArrowLeft' || e.key === 'a' || e.key === 'A') keyL = false;
+  if (e.key === 'ArrowRight' || e.key === 'd' || e.key === 'D') keyR = false;
+});
+addEventListener('blur', () => { keyL = keyR = btnL = btnR = false; });
+const sndBtn = $('snd');
+const syncSnd = () => { sndBtn.textContent = store.snd ? '🔊' : '🔇'; };
+sndBtn.onclick = () => { store.snd = !store.snd; save(); syncSnd(); Snd.init(); if (!store.snd) Snd.mute(); };
+syncSnd();
+
+addEventListener('resize', resize);
+resize();
+initClouds();
+resetGame();
+state.phase = 'menu';
+requestAnimationFrame(frame);
+</script>
+</body>
+</html>

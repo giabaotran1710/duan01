@@ -57,6 +57,7 @@
     truytimso: ['blinds', '#0f172a', '#334155', '#fbbf24'],
     vetcatvohinh: ['diagonal', '#070a14', '#1d2658', '#7df9ff'],
     conganh: ['curtain', '#3b1d0a', '#a16207', '#fde68a'],
+    thadieu: ['diagonal', '#1f5fae', '#5d9fe0', '#ffe39a'],
     noimach: ['blinds', '#022c22', '#0f766e', '#5eead4'],
     dieukhiengiaolo: ['diagonal', '#1f2937', '#374151', '#facc15'],
     dungsidietvirus: ['iris', '#052e16', '#16a34a', '#bbf7d0'],
