@@ -55,6 +55,7 @@
     dogdoku: ['blinds', '#422006', '#b45309', '#fef3c7'],
     phagach: ['iris', '#1c1917', '#b91c1c', '#fde68a'],
     truytimso: ['blinds', '#0f172a', '#334155', '#fbbf24'],
+    vetcatvohinh: ['diagonal', '#070a14', '#1d2658', '#7df9ff'],
     noimach: ['blinds', '#022c22', '#0f766e', '#5eead4'],
     dieukhiengiaolo: ['diagonal', '#1f2937', '#374151', '#facc15'],
     dungsidietvirus: ['iris', '#052e16', '#16a34a', '#bbf7d0'],
