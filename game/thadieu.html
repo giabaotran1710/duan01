@@ -12,6 +12,8 @@
   html,body{height:100%;overflow:hidden;background:#3f7fc4;font-family:'Segoe UI',system-ui,-apple-system,Roboto,sans-serif;color:#fff;touch-action:none;overscroll-behavior:none}
   canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
   /* HUD */
+  /* màn chờ: chỉ có cảnh nền, chưa hiện đồng hồ, sức gió, lực căng và nút kéo */
+  body[data-ph="menu"] #hud, body[data-ph="menu"] #ctl, body[data-ph="menu"] #snd{display:none}
   #hud{position:fixed;left:0;right:0;top:0;padding:max(10px,env(safe-area-inset-top)) 12px 0;display:flex;flex-direction:column;gap:6px;pointer-events:none;z-index:5}
   .row{display:flex;align-items:center;gap:8px}
   .pill{background:rgba(10,30,60,.38);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);border:1px solid rgba(255,255,255,.25);border-radius:99px;padding:6px 12px;font-weight:700;font-size:15px;text-shadow:0 1px 2px rgba(0,0,0,.35)}
@@ -608,21 +610,22 @@ function updateHUD(dt) {
 }
 
 // ---------- vòng lặp ----------
-let last = 0;
+let last = 0, menuT = 0;
 function frame(ts) {
   requestAnimationFrame(frame);
   const dt = Math.min(0.033, (ts - last) / 1000 || 0); last = ts;
   if (document.hidden) return;
+  if (document.body.dataset.ph !== state.phase) document.body.dataset.ph = state.phase;
   if (state.phase === 'play') {
     state.t += dt;
     updateWind(dt);
     updateKite(dt);
   } else if (state.phase === 'menu') {
     // màn chờ: gió hiu hiu, diều tự bay
-    state.t += dt;
-    wind.x = Math.sin(state.t * 0.5) * 60 + Math.sin(state.t * 1.7) * 15;
-    kite.x = Math.sin(state.t * 0.5 - 0.6) * W * 0.12; kite.vx = Math.cos(state.t * 0.5 - 0.6) * W * 0.06;
-    kite.y = kiteBaseY() + Math.sin(state.t * 1.3) * 10;
+    menuT += dt; state.t += dt;   // chỉ để cảnh nền (cỏ, đuôi diều, mây) chuyển động; HUD đang ẩn và ván mới sẽ đặt lại về 0
+    wind.x = Math.sin(menuT * 0.5) * 60 + Math.sin(menuT * 1.7) * 15;
+    kite.x = Math.sin(menuT * 0.5 - 0.6) * W * 0.12; kite.vx = Math.cos(menuT * 0.5 - 0.6) * W * 0.06;
+    kite.y = kiteBaseY() + Math.sin(menuT * 1.3) * 10;
     kite.tilt = lerp(kite.tilt, clamp(kite.vx * 0.003 + wind.x * 0.0015, -0.6, 0.6), 0.08);
     tension = 0.3;
   } else if (state.phase === 'snap' || state.phase === 'over') {
