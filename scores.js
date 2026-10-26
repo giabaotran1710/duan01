@@ -1,22 +1,52 @@
-// Thư viện lưu điểm dùng chung cho các game.
+// Thư viện lưu điểm và bảng xếp hạng dùng chung cho các game.
 //
-//   Scores.submit('nedan', 1234)   -> lưu điểm (server nếu có, luôn lưu cả máy)
-//   Scores.top('nedan', 10)        -> Promise<{ online, scores: [{ name, score, at }] }>
+//   Scores.submit('nedan', 1234)   -> ghi điểm (luôn lưu trên máy; gửi lên Firebase nếu có mạng)
+//   Scores.top('nedan', 50)        -> Promise<{ online, scores: [{ name, score, at, me }] }>
 //   Scores.getName() / Scores.setName('Bảo')
+//   Scores.games                   -> danh sách game có bảng xếp hạng: [{ id, name }]
+//   Scores.format('thadieu', 123)  -> chuỗi điểm để hiển thị (ví dụ "12.3 giây")
 //
-// Địa chỉ server: mặc định là cùng trang web (/api). Có thể đổi bằng
-//   window.SCORE_API_BASE = 'https://server-cua-ban.com'  (trước khi nạp file này)
-// hoặc localStorage.setItem('score_api_base', 'https://server-cua-ban.com').
-// Khi không gọi được server (ví dụ trang chạy trên GitHub Pages), điểm vẫn được
-// lưu trong localStorage và sẽ tự gửi lại lên server khi kết nối được.
+// Nơi lưu: Firebase Realtime Database (giao diện REST, không cần SDK). Mỗi người chơi một khoá ngẫu nhiên
+// tạo trên máy (lb_uid) nên mỗi game mỗi người chỉ có MỘT dòng, giữ điểm cao nhất. Quy tắc bảo mật nằm ở
+// database.rules.json (dán vào Firebase Console → Realtime Database → Rules).
+// Có thể đổi nơi lưu: window.SCORE_FIREBASE_URL = '...' hoặc dùng server riêng bằng window.SCORE_API_BASE.
+// Khi không gọi được mạng, điểm vẫn được lưu trên máy và tự gửi lại sau.
 (function () {
   'use strict';
 
+  const FIREBASE_URL = (window.SCORE_FIREBASE_URL || 'https://giabao-f4854-default-rtdb.firebaseio.com').replace(/\/+$/, '');
   const NAME_KEY = 'player_name';
+  const UID_KEY = 'lb_uid';
   const LOCAL_KEY = 'scores_local_v1';
   const PENDING_KEY = 'scores_pending_v1';
+  const SENT_KEY = 'scores_sent_v1';     // điểm cao nhất đã gửi thành công của từng game
+  const PLAYED_KEY = 'scores_games_v1';  // các game đã gửi điểm (để đổi tên đồng loạt)
+  const ASKED_KEY = 'lb_name_asked';
   const LOCAL_MAX = 20;
-  const TIMEOUT_MS = 4000;
+  const TIMEOUT_MS = 6000;
+  const MAX_SCORE = 10000000;
+
+  // Các game có bảng xếp hạng (id trùng với id trong index.html). fmt: cách hiển thị điểm.
+  const GAMES = [
+    { id: 'nedan', name: 'Né đạn' },
+    { id: 'neonreflex', name: 'Neon Reflex' },
+    { id: 'dapquai', name: 'Đập chuột chũi' },
+    { id: 'comet', name: 'Trốn khỏi thiên thạch' },
+    { id: 'ganangdong', name: 'Gà năng động' },
+    { id: 'dieukhiengiaolo', name: 'Điều khiển giao lộ' },
+    { id: 'thadieu', name: 'Thả diều', fmt: v => (v / 10).toFixed(1) + ' giây' },
+    { id: 'vetcatvohinh', name: 'Vết cắt vô hình' },
+    { id: 'bongnay', name: 'Bóng nảy' },
+    { id: 'xepbonggai', name: 'Xếp bóng gai' },
+    { id: 'hungbi', name: 'Hứng bi' },
+    { id: 'sieuduoibat', name: 'Siêu đuổi bắt' },
+    { id: 'khinhkhicau', name: 'Khinh khí cầu', fmt: v => v.toLocaleString('vi-VN') + ' m' },
+    { id: 'blockjump', name: 'Nhảy! Nhảy và nhảy!' },
+    { id: 'dungsidietvirus', name: 'Bắn phá virus' },
+    { id: 'fishsurvival', name: 'Cá lớn nuốt cá bé' },
+    { id: 'phagach', name: 'Phá gạch' },
+  ];
+  const gameInfo = id => GAMES.find(g => g.id === id);
 
   function safeGet(key) { try { return localStorage.getItem(key); } catch (e) { return null; } }
   function safeSet(key, val) { try { localStorage.setItem(key, val); } catch (e) {} }
@@ -29,13 +59,29 @@
     return b.replace(/\/+$/, '');
   }
 
-  function getName() {
-    return (safeGet(NAME_KEY) || '').trim() || 'Người chơi';
+  // ---------- Danh tính ----------
+  function getUid() {
+    let id = safeGet(UID_KEY);
+    if (!/^[a-f0-9]{24,40}$/.test(id || '')) {
+      const a = new Uint8Array(16);
+      (window.crypto || window.msCrypto).getRandomValues(a);
+      id = Array.from(a, b => b.toString(16).padStart(2, '0')).join('');
+      safeSet(UID_KEY, id);
+    }
+    return id;
   }
+  function getName() { return (safeGet(NAME_KEY) || '').trim() || 'Người chơi'; }
+  function cleanName(name) { return String(name || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function setName(name) {
-    const n = String(name || '').replace(/[<>]/g, '').trim().slice(0, 20);
-    if (n) safeSet(NAME_KEY, n);
+    const n = cleanName(name);
+    if (n) { safeSet(NAME_KEY, n); renameOnServer(n); }
     return getName();
+  }
+  const hasName = () => !!(safeGet(NAME_KEY) || '').trim();
+
+  function format(game, score) {
+    const g = gameInfo(game), v = Number(score) || 0;
+    return g && g.fmt ? g.fmt(v) : v.toLocaleString('vi-VN');
   }
 
   // ---------- Bảng điểm trên máy ----------
@@ -52,33 +98,40 @@
     safeSet(LOCAL_KEY, JSON.stringify(all));
   }
 
-  // ---------- Gọi server ----------
-  async function request(path, options) {
+  // ---------- Gọi mạng ----------
+  async function http(url, options) {
     const ctrl = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timer = ctrl && setTimeout(() => ctrl.abort(), TIMEOUT_MS);
     try {
-      const res = await fetch(apiBase() + path, Object.assign({ signal: ctrl && ctrl.signal }, options));
-      const type = res.headers.get('content-type') || '';
-      // Trên hosting tĩnh, /api trả về trang 404 HTML -> coi như không có server.
-      if (!type.includes('application/json')) throw new Error('no_server');
-      const body = await res.json();
-      if (!res.ok) { const err = new Error(body.error || 'http_' + res.status); err.status = res.status; throw err; }
-      return body;
+      const res = await fetch(url, Object.assign({ signal: ctrl && ctrl.signal }, options));
+      if (!res.ok) { const err = new Error('http_' + res.status); err.status = res.status; throw err; }
+      return await res.json();
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
+  // Gửi body dạng text/plain để tránh yêu cầu preflight CORS (Firebase vẫn đọc được JSON)
+  const fbWrite = (method, path, body) => http(FIREBASE_URL + path + '.json', { method, body: JSON.stringify(body), keepalive: true });
 
   function postScore(entry) {
-    return request('/api/scores/' + encodeURIComponent(entry.game), {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name: entry.name, score: entry.score }),
-    });
+    if (apiBase()) {   // server riêng (tuỳ chọn)
+      return http(apiBase() + '/api/scores/' + encodeURIComponent(entry.game), {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ name: entry.name, score: entry.score }),
+      });
+    }
+    return fbWrite('PUT', '/leaderboards/' + encodeURIComponent(entry.game) + '/' + getUid(),
+      { name: entry.name, score: entry.score, at: { '.sv': 'timestamp' } });
   }
 
-  // Lỗi do dữ liệu (400) thì bỏ, không gửi lại mãi; lỗi mạng / quá tải thì giữ lại.
+  // Lỗi do dữ liệu/quy tắc (4xx) thì bỏ, không gửi lại mãi; lỗi mạng / quá tải thì giữ lại.
   function isPermanent(err) { return err && err.status >= 400 && err.status < 500 && err.status !== 429; }
+
+  function markSent(game, score) {
+    const sent = readJson(SENT_KEY, {});
+    if (!(score <= sent[game])) { sent[game] = score; safeSet(SENT_KEY, JSON.stringify(sent)); }
+    const played = readJson(PLAYED_KEY, []);
+    if (!played.includes(game)) { played.push(game); safeSet(PLAYED_KEY, JSON.stringify(played)); }
+  }
 
   let flushing = false;
   async function flushPending() {
@@ -87,7 +140,7 @@
     try {
       let pending = readJson(PENDING_KEY, []);
       while (pending.length) {
-        try { await postScore(pending[0]); }
+        try { await postScore(pending[0]); markSent(pending[0].game, pending[0].score); }
         catch (e) { if (!isPermanent(e)) break; }
         pending = readJson(PENDING_KEY, []);
         pending.shift();
@@ -98,14 +151,14 @@
     }
   }
 
-  async function submit(game, score, name) {
-    const s = Math.floor(Number(score));
-    if (!game || !Number.isFinite(s) || s < 0) return { ok: false, online: false };
-    const entry = { game, name: name ? setName(name) : getName(), score: s, at: new Date().toISOString() };
-    localAdd(game, { name: entry.name, score: entry.score, at: entry.at });
+  // Mỗi game chỉ gửi một yêu cầu tại một thời điểm; điểm cao hơn đến trong lúc đang gửi sẽ gửi tiếp sau đó.
+  const inflight = {};
+  async function sendBest(game, entry) {
+    if (inflight[game]) { inflight[game].next = entry; return { ok: true, online: true, queued: true }; }
+    inflight[game] = { next: null };
     try {
       const res = await postScore(entry);
-      flushPending();
+      markSent(game, entry.score);
       return Object.assign({ online: true }, res);
     } catch (e) {
       if (!isPermanent(e)) {
@@ -114,20 +167,85 @@
         safeSet(PENDING_KEY, JSON.stringify(pending.slice(-50)));
       }
       return { ok: true, online: false };
+    } finally {
+      const nx = inflight[game].next;
+      delete inflight[game];
+      if (nx) sendBest(game, nx);
     }
+  }
+
+  async function submit(game, score, name) {
+    const s = Math.floor(Number(score));
+    if (!game || !Number.isFinite(s) || s < 0 || s > MAX_SCORE) return { ok: false, online: false };
+    const entry = { game, name: name ? setName(name) : getName(), score: s, at: new Date().toISOString() };
+    localAdd(game, { name: entry.name, score: entry.score, at: entry.at });
+    maybeAskName();
+    // chỉ gửi khi cao hơn điểm đã gửi thành công của game này (server giữ điểm cao nhất mỗi người)
+    const sent = readJson(SENT_KEY, {})[game];
+    if (sent !== undefined && s <= sent) return { ok: true, online: true, skipped: true };
+    const res = await sendBest(game, entry);
+    flushPending();
+    return res;
   }
 
   async function top(game, limit) {
     limit = limit || 10;
     try {
-      const res = await request('/api/scores/' + encodeURIComponent(game) + '?limit=' + limit);
-      return { online: true, scores: res.scores };
+      if (apiBase()) {
+        const res = await http(apiBase() + '/api/scores/' + encodeURIComponent(game) + '?limit=' + limit);
+        return { online: true, scores: res.scores };
+      }
+      const data = await http(FIREBASE_URL + '/leaderboards/' + encodeURIComponent(game) + '.json?orderBy=%22score%22&limitToLast=' + limit);
+      const me = getUid();
+      const scores = Object.keys(data || {}).map(uid => {
+        const d = data[uid] || {};
+        return { name: cleanName(d.name) || 'Người chơi', score: Number(d.score) || 0, at: d.at ? new Date(d.at).toISOString() : '', me: uid === me, _t: d.at || 0 };
+      }).sort((a, b) => b.score - a.score || a._t - b._t).slice(0, limit);
+      scores.forEach(s => delete s._t);
+      return { online: true, scores };
     } catch (e) {
       return { online: false, scores: localTop(game, limit) };
     }
   }
 
-  window.Scores = { submit, top, getName, setName, localTop, flushPending };
+  // Đổi tên: cập nhật mọi dòng của người này trên bảng xếp hạng
+  async function renameOnServer(name) {
+    if (apiBase()) return;
+    const uid = getUid(), played = readJson(PLAYED_KEY, []);
+    for (const game of played) {
+      try { await fbWrite('PATCH', '/leaderboards/' + encodeURIComponent(game) + '/' + uid, { name }); } catch (e) {}
+    }
+  }
+
+  // ---------- Hỏi biệt danh (một lần, khi lần đầu có điểm) ----------
+  let asking = false;
+  function maybeAskName() {
+    if (asking || hasName() || safeGet(ASKED_KEY) || !document.body) return;
+    asking = true;
+    safeSet(ASKED_KEY, '1');   // chỉ hỏi một lần; muốn đổi thì vào bảng xếp hạng ở trang chủ
+    setTimeout(showNamePrompt, 900);
+  }
+  function showNamePrompt() {
+    const host = document.createElement('div');
+    host.setAttribute('style', 'position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(5,8,20,.72);padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif');
+    host.innerHTML = '<div style="width:100%;max-width:340px;background:#171e38;border:1px solid #34406e;border-radius:18px;padding:20px;color:#eef1ff;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5)">' +
+      '<div style="font-size:34px">🏆</div>' +
+      '<div style="font-weight:800;font-size:18px;margin:6px 0 4px">Ghi tên lên bảng xếp hạng</div>' +
+      '<div style="font-size:13px;color:#9aa6d6;margin-bottom:12px">Nhập biệt danh để mọi người thấy điểm của bạn.</div>' +
+      '<input id="lbNameIn" maxlength="20" placeholder="Biệt danh (tối đa 20 ký tự)" style="width:100%;padding:11px 12px;border-radius:12px;border:1px solid #34406e;background:#0e1328;color:#fff;font-size:16px;outline:none;margin-bottom:12px">' +
+      '<div style="display:flex;gap:8px"><button id="lbNameSkip" style="flex:1;padding:11px;border-radius:12px;border:1px solid #34406e;background:transparent;color:#9aa6d6;font-size:15px;cursor:pointer">Bỏ qua</button>' +
+      '<button id="lbNameOk" style="flex:1;padding:11px;border-radius:12px;border:0;background:linear-gradient(#5ee0c8,#2bb39a);color:#052a24;font-weight:800;font-size:15px;cursor:pointer">Lưu</button></div></div>';
+    document.body.appendChild(host);
+    const input = host.querySelector('#lbNameIn');
+    const close = () => { host.remove(); asking = false; };
+    host.querySelector('#lbNameSkip').onclick = close;
+    host.querySelector('#lbNameOk').onclick = () => { if (cleanName(input.value)) setName(input.value); close(); };
+    input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') host.querySelector('#lbNameOk').click(); });
+    ['keyup', 'keypress'].forEach(t => input.addEventListener(t, e => e.stopPropagation()));
+    setTimeout(() => { try { input.focus(); } catch (e) {} }, 50);
+  }
+
+  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid };
 
   // Gửi lại các điểm còn chờ khi trang mở lại hoặc có mạng trở lại.
   if (readJson(PENDING_KEY, []).length) setTimeout(flushPending, 1500);
