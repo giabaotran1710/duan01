@@ -153,7 +153,7 @@
       <div class="lbAv" id="lbMeAv"></div>
       <div id="lbMeInfo"><div id="lbMeName"><span></span><button id="lbEditBtn" type="button" title="Đổi biệt danh"><i class="fa-solid fa-pen"></i></button></div><div id="lbMeSub"></div></div>
       <div id="lbMeRank"><div>Hạng</div><div id="lbMeRk">—</div></div>
-      <div id="lbEdit"><input id="lbName" maxlength="20" placeholder="Biệt danh của bạn"><button class="ok" id="lbSave" type="button">Lưu</button><button class="lbIcoBtn" id="lbCancel" type="button" title="Hủy"><i class="fa-solid fa-xmark"></i></button></div>
+      <div id="lbEdit"><input id="lbName" maxlength="10" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="6–10 ký tự, có chữ và số"><button class="ok" id="lbSave" type="button">Lưu</button><button class="lbIcoBtn" id="lbCancel" type="button" title="Hủy"><i class="fa-solid fa-xmark"></i></button></div>
     </div></div>`;
   document.body.appendChild(btn);
   document.body.appendChild(modal);
@@ -262,13 +262,29 @@
   $('lbRefresh').onclick = () => { const i = $('lbRefresh').firstElementChild; i.style.transition = 'transform .6s'; i.style.transform = 'rotate(360deg)'; setTimeout(() => { i.style.transition = 'none'; i.style.transform = ''; }, 650); load(); };
   $('lbEditBtn').onclick = () => { $('lbMe').classList.add('editing'); $('lbName').value = Scores.hasName() ? Scores.getName() : ''; setTimeout(() => $('lbName').focus(), 30); };
   $('lbCancel').onclick = () => $('lbMe').classList.remove('editing');
+  $('lbName').addEventListener('input', e => { const p = Scores.normalizeName(e.target.value); if (p !== e.target.value) e.target.value = p; e.target.style.borderColor = ''; });
   $('lbSave').onclick = () => {
-    const v = $('lbName').value;
-    if (!v.trim()) return;
-    Scores.setName(v);
+    const v = Scores.validateName($('lbName').value);
+    if (!v.ok) { const i = $('lbName'); i.style.borderColor = '#ff6b6b'; const old = i.value; i.value = ''; i.placeholder = v.error; setTimeout(() => { i.value = old; i.placeholder = '6–10 ký tự, có chữ và số'; }, 1800); return; }
+    Scores.setName(v.name);
     $('lbMe').classList.remove('editing'); renderMe();
     setTimeout(load, 700);   // chờ máy chủ cập nhật tên rồi tải lại
   };
   $('lbName').addEventListener('keydown', e => { if (e.key === 'Enter') $('lbSave').click(); if (e.key === 'Escape') { e.stopPropagation(); $('lbCancel').click(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
+
+  // ---------- Lần đầu vào trang chủ: bắt buộc đặt tên (chỉ hỏi một lần) ----------
+  if (!Scores.hasName()) {
+    const introGone = () => {
+      const ov = document.getElementById('intro-overlay');
+      if (!ov || !ov.isConnected) return true;
+      const cs = getComputedStyle(ov);
+      return cs.display === 'none' || cs.visibility === 'hidden' || parseFloat(cs.opacity) < 0.05;
+    };
+    const wait = setInterval(() => {
+      if (!introGone()) return;
+      clearInterval(wait);
+      if (!Scores.hasName()) Scores.askName({ required: true });
+    }, 400);
+  }
 })();

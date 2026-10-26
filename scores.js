@@ -71,10 +71,21 @@
     return id;
   }
   function getName() { return (safeGet(NAME_KEY) || '').trim() || 'Người chơi'; }
+  // Tên hợp lệ: 6–10 ký tự, chỉ gồm chữ a–z (không dấu) và số 0–9, có ít nhất một chữ và một số. Luôn chuyển về chữ thường.
+  const NAME_MIN = 6, NAME_MAX = 10;
+  function normalizeName(raw) { return String(raw || '').toLowerCase().replace(/[^a-z0-9]/g, '').slice(0, NAME_MAX); }
+  function validateName(raw) {
+    const name = normalizeName(raw);
+    if (name.length < NAME_MIN) return { ok: false, name, error: 'Tên cần ít nhất ' + NAME_MIN + ' ký tự.' };
+    if (!/[a-z]/.test(name)) return { ok: false, name, error: 'Tên cần có ít nhất một chữ cái (a–z).' };
+    if (!/[0-9]/.test(name)) return { ok: false, name, error: 'Tên cần có ít nhất một chữ số (0–9).' };
+    return { ok: true, name, error: '' };
+  }
+  // Dùng để hiển thị tên của người khác trên bảng (tên cũ có thể không theo quy tắc mới)
   function cleanName(name) { return String(name || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
   function setName(name) {
-    const n = cleanName(name);
-    if (n) { safeSet(NAME_KEY, n); renameOnServer(n); }
+    const v = validateName(name);
+    if (v.ok) { safeSet(NAME_KEY, v.name); renameOnServer(v.name); }
     return getName();
   }
   const hasName = () => !!(safeGet(NAME_KEY) || '').trim();
@@ -217,35 +228,53 @@
     }
   }
 
-  // ---------- Hỏi biệt danh (một lần, khi lần đầu có điểm) ----------
+  // ---------- Hộp hỏi tên (dùng chung) ----------
+  // opts.required: không cho bỏ qua (trang chủ). Trả về Promise<tên | null>.
+  function askName(opts) {
+    opts = opts || {};
+    return new Promise(resolve => {
+      if (document.getElementById('lbNameDlg')) return resolve(null);
+      const host = document.createElement('div');
+      host.id = 'lbNameDlg';
+      host.setAttribute('style', 'position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(3,6,16,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif');
+      host.innerHTML = '<div style="width:100%;max-width:360px;background:linear-gradient(170deg,#1a2147,#0d1226);border:1px solid #34406e;border-radius:20px;padding:22px 20px 18px;color:#eef1ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">' +
+        '<div style="font-size:34px;text-align:center">🏆</div>' +
+        '<div style="font-weight:800;font-size:19px;text-align:center;margin:6px 0 4px">Chọn tên người chơi</div>' +
+        '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
+        '<input id="lbNameIn" maxlength="' + NAME_MAX + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="vd: gamer2026" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #34406e;background:#0a0f22;color:#fff;font-size:18px;font-weight:700;letter-spacing:.06em;outline:none;margin-bottom:12px">' +
+        '<div id="lbNameRules" style="font-size:12.5px;line-height:1.75;color:#8f9bd0;margin-bottom:14px"></div>' +
+        '<div style="display:flex;gap:8px">' + (opts.required ? '' : '<button id="lbNameSkip" type="button" style="flex:1;padding:12px;border-radius:12px;border:1px solid #34406e;background:transparent;color:#9aa6d8;font-size:15px;cursor:pointer">Bỏ qua</button>') +
+        '<button id="lbNameOk" type="button" disabled style="flex:2;padding:12px;border-radius:12px;border:0;background:linear-gradient(#5ee0c8,#2bb39a);color:#052a24;font-weight:800;font-size:15px;cursor:pointer;opacity:.45">Xác nhận</button></div></div>';
+      document.body.appendChild(host);
+      const input = host.querySelector('#lbNameIn'), ok = host.querySelector('#lbNameOk'), rules = host.querySelector('#lbNameRules');
+      const done = v => { host.remove(); resolve(v); };
+      function refresh() {
+        const n = input.value, hasL = /[a-z]/.test(n), hasD = /[0-9]/.test(n), lenOk = n.length >= NAME_MIN && n.length <= NAME_MAX;
+        const row = (good, t) => '<div style="color:' + (good ? '#5eead4' : '#8f9bd0') + '">' + (good ? '✓' : '○') + ' ' + t + '</div>';
+        rules.innerHTML = row(lenOk, NAME_MIN + '–' + NAME_MAX + ' ký tự (đang có ' + n.length + ')') + row(hasL, 'Có ít nhất một chữ cái a–z') + row(hasD, 'Có ít nhất một chữ số 0–9') +
+          '<div style="color:#6e7bb0">Chỉ dùng chữ a–z không dấu và số. Chữ hoa tự đổi thành chữ thường.</div>';
+        const valid = validateName(n).ok;
+        ok.disabled = !valid; ok.style.opacity = valid ? '1' : '.45';
+      }
+      input.addEventListener('input', () => { const p = normalizeName(input.value); if (p !== input.value) input.value = p; refresh(); });
+      ['keydown', 'keyup', 'keypress'].forEach(t => input.addEventListener(t, e => e.stopPropagation()));
+      input.addEventListener('keydown', e => { if (e.key === 'Enter' && !ok.disabled) ok.click(); });
+      ok.onclick = () => { const v = validateName(input.value); if (v.ok) { setName(v.name); done(v.name); } };
+      const skip = host.querySelector('#lbNameSkip'); if (skip) skip.onclick = () => done(null);
+      refresh(); setTimeout(() => { try { input.focus(); } catch (e) {} }, 60);
+    });
+  }
+
+  // ---------- Hỏi tên trong game (một lần, khi lần đầu có điểm) ----------
   let asking = false;
   function maybeAskName() {
     if (asking || hasName() || safeGet(ASKED_KEY) || !document.body) return;
     asking = true;
-    safeSet(ASKED_KEY, '1');   // chỉ hỏi một lần; muốn đổi thì vào bảng xếp hạng ở trang chủ
-    setTimeout(showNamePrompt, 900);
-  }
-  function showNamePrompt() {
-    const host = document.createElement('div');
-    host.setAttribute('style', 'position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(5,8,20,.72);padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif');
-    host.innerHTML = '<div style="width:100%;max-width:340px;background:#171e38;border:1px solid #34406e;border-radius:18px;padding:20px;color:#eef1ff;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5)">' +
-      '<div style="font-size:34px">🏆</div>' +
-      '<div style="font-weight:800;font-size:18px;margin:6px 0 4px">Ghi tên lên bảng xếp hạng</div>' +
-      '<div style="font-size:13px;color:#9aa6d6;margin-bottom:12px">Nhập biệt danh để mọi người thấy điểm của bạn.</div>' +
-      '<input id="lbNameIn" maxlength="20" placeholder="Biệt danh (tối đa 20 ký tự)" style="width:100%;padding:11px 12px;border-radius:12px;border:1px solid #34406e;background:#0e1328;color:#fff;font-size:16px;outline:none;margin-bottom:12px">' +
-      '<div style="display:flex;gap:8px"><button id="lbNameSkip" style="flex:1;padding:11px;border-radius:12px;border:1px solid #34406e;background:transparent;color:#9aa6d6;font-size:15px;cursor:pointer">Bỏ qua</button>' +
-      '<button id="lbNameOk" style="flex:1;padding:11px;border-radius:12px;border:0;background:linear-gradient(#5ee0c8,#2bb39a);color:#052a24;font-weight:800;font-size:15px;cursor:pointer">Lưu</button></div></div>';
-    document.body.appendChild(host);
-    const input = host.querySelector('#lbNameIn');
-    const close = () => { host.remove(); asking = false; };
-    host.querySelector('#lbNameSkip').onclick = close;
-    host.querySelector('#lbNameOk').onclick = () => { if (cleanName(input.value)) setName(input.value); close(); };
-    input.addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter') host.querySelector('#lbNameOk').click(); });
-    ['keyup', 'keypress'].forEach(t => input.addEventListener(t, e => e.stopPropagation()));
-    setTimeout(() => { try { input.focus(); } catch (e) {} }, 50);
+    safeSet(ASKED_KEY, '1');   // trong game chỉ hỏi một lần; tên chính thức được hỏi khi vào trang chủ
+    setTimeout(() => { askName({ required: false }).then(() => { asking = false; }); }, 900);
   }
 
-  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid };
+  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid, askName, validateName, normalizeName };
 
   // Gửi lại các điểm còn chờ khi trang mở lại hoặc có mạng trở lại.
   if (readJson(PENDING_KEY, []).length) setTimeout(flushPending, 1500);
