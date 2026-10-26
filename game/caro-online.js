@@ -139,7 +139,7 @@
   const content = document.querySelector('#overlay .overlay-content');
   const pvpBtn = document.getElementById('pvpBtn');
   const btn = document.createElement('button');
-  btn.className = 'mode-btn'; btn.id = 'onlineBtn'; btn.textContent = 'TRỰC TUYẾN (MÃ PHÒNG)';
+  btn.className = 'mode-btn'; btn.id = 'onlineBtn'; btn.textContent = 'ONLINE';
   pvpBtn.after(btn);
 
   const panel = document.createElement('div');
@@ -151,7 +151,6 @@
       <div class="onRow"><input id="onCodeIn" maxlength="5" placeholder="NHẬP MÃ PHÒNG" autocomplete="off" autocapitalize="characters" spellcheck="false"><button class="mode-btn" id="onJoin">VÀO</button></div>
     </div>
     <div id="onQueueBox"><div id="onQSym"><b>X</b><b>O</b></div><div id="onQWait">Đang tìm đối thủ<i></i><i></i><i></i></div>
-      <div class="onSub" style="margin-top:6px">Bạn sẽ được ghép với người cũng bấm CHƠI NGAY</div>
       <div class="onRow" style="justify-content:center;margin-top:10px"><button class="mode-btn" id="onQCancel" style="width:130px;height:38px;margin:0">HỦY</button></div></div>
     <div id="onCodeBox"><div class="onSub">Mã phòng của bạn</div><div id="onCode">-----</div>
       <div class="onRow" style="justify-content:center;margin-top:8px"><button class="mode-btn" id="onCopy" style="width:130px;height:38px;margin:0">SAO CHÉP MÃ</button></div>
@@ -467,8 +466,8 @@
     else if (gameOver) {
       const win = on.winner === on.mySym;
       text = win ? '🎉 Bạn thắng!' : 'Đối thủ thắng'; cls += win ? ' win' : ' lose';
-    } else if (currentTurn === on.mySym) { text = `Lượt của bạn — đặt quân ${on.mySym}`; cls += ' mine ' + on.mySym; }
-    else text = 'Đối thủ đang đi…';
+    } else if (currentTurn === on.mySym) { text = 'Lượt của bạn'; cls += ' mine ' + on.mySym; }
+    else text = 'Lượt của ' + names()[currentTurn];
     b.className = cls; b.textContent = text;
     $('vsRoom').innerHTML = 'Phòng <b>' + esc(on.code) + '</b>';
   }
