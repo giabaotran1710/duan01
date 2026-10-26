@@ -266,15 +266,19 @@
   $('lbSave').onclick = () => {
     const v = Scores.validateName($('lbName').value);
     if (!v.ok) { const i = $('lbName'); i.style.borderColor = '#ff6b6b'; const old = i.value; i.value = ''; i.placeholder = v.error; setTimeout(() => { i.value = old; i.placeholder = '6–10 ký tự, có chữ và số'; }, 1800); return; }
-    Scores.setName(v.name);
-    $('lbMe').classList.remove('editing'); renderMe();
-    setTimeout(load, 700);   // chờ máy chủ cập nhật tên rồi tải lại
+    const btn = $('lbSave'); btn.disabled = true;
+    Scores.claimName(v.name).then(r => {
+      btn.disabled = false;
+      if (!r.ok) { const i = $('lbName'); i.style.borderColor = '#ff6b6b'; const old = i.value; i.value = ''; i.placeholder = r.error; setTimeout(() => { i.value = old; i.placeholder = '6–10 ký tự, có chữ và số'; }, 2200); return; }
+      $('lbMe').classList.remove('editing'); renderMe();
+      setTimeout(load, 700);   // chờ máy chủ cập nhật tên rồi tải lại
+    });
   };
   $('lbName').addEventListener('keydown', e => { if (e.key === 'Enter') $('lbSave').click(); if (e.key === 'Escape') { e.stopPropagation(); $('lbCancel').click(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
 
   // ---------- Lần đầu vào trang chủ: bắt buộc đặt tên (chỉ hỏi một lần) ----------
-  if (!Scores.hasName()) {
+  Scores.ready.then(() => { if (!Scores.hasName()) {
     const introGone = () => {
       const ov = document.getElementById('intro-overlay');
       if (!ov || !ov.isConnected) return true;
@@ -286,5 +290,5 @@
       clearInterval(wait);
       if (!Scores.hasName()) Scores.askName({ required: true });
     }, 400);
-  }
+  } });
 })();

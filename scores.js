@@ -22,6 +22,7 @@
   const SENT_KEY = 'scores_sent_v1';     // điểm cao nhất đã gửi thành công của từng game
   const PLAYED_KEY = 'scores_games_v1';  // các game đã gửi điểm (để đổi tên đồng loạt)
   const ASKED_KEY = 'lb_name_asked';
+  const CLAIMED_KEY = 'lb_name_claimed';
   const LOCAL_MAX = 20;
   const TIMEOUT_MS = 6000;
   const MAX_SCORE = 10000000;
@@ -89,6 +90,33 @@
     return getName();
   }
   const hasName = () => !!(safeGet(NAME_KEY) || '').trim();
+
+  // Giữ chỗ tên trên máy chủ: /names/{tên} = uid. Mỗi tên chỉ thuộc về một người chơi.
+  // Trả về { ok } hoặc { ok:false, error, taken?, offline? }.
+  async function claimName(raw) {
+    const v = validateName(raw);
+    if (!v.ok) return v;
+    if (apiBase()) { setName(v.name); return v; }
+    const uid = getUid(), path = '/names/' + v.name;
+    try {
+      const owner = await http(FIREBASE_URL + path + '.json');
+      if (owner && owner !== uid) return { ok: false, taken: true, name: v.name, error: 'Tên này đã có người dùng, hãy chọn tên khác.' };
+      if (!owner) await fbWrite('PUT', path, uid);   // quy tắc chỉ cho ghi khi chưa có chủ → hai người tranh nhau thì một người bị từ chối
+      safeSet(CLAIMED_KEY, v.name);
+      setName(v.name);
+      return { ok: true, name: v.name, error: '' };
+    } catch (e) {
+      if (isPermanent(e)) return { ok: false, taken: true, name: v.name, error: 'Tên này đã có người dùng, hãy chọn tên khác.' };
+      return { ok: false, offline: true, name: v.name, error: 'Không kết nối được máy chủ, hãy thử lại.' };
+    }
+  }
+  // Người chơi cũ đã có tên nhưng chưa giữ chỗ: giữ chỗ ngay; nếu tên đã bị người khác lấy thì xoá để hỏi lại.
+  const ready = (async () => {
+    const n = (safeGet(NAME_KEY) || '').trim();
+    if (!n || safeGet(CLAIMED_KEY) === n) return;
+    const r = await claimName(n);
+    if (r.taken) { try { localStorage.removeItem(NAME_KEY); localStorage.removeItem(ASKED_KEY); } catch (e) {} }
+  })().catch(() => {});
 
   function format(game, score) {
     const g = gameInfo(game), v = Number(score) || 0;
@@ -259,7 +287,14 @@
       input.addEventListener('input', () => { const p = normalizeName(input.value); if (p !== input.value) input.value = p; refresh(); });
       ['keydown', 'keyup', 'keypress'].forEach(t => input.addEventListener(t, e => e.stopPropagation()));
       input.addEventListener('keydown', e => { if (e.key === 'Enter' && !ok.disabled) ok.click(); });
-      ok.onclick = () => { const v = validateName(input.value); if (v.ok) { setName(v.name); done(v.name); } };
+      ok.onclick = async () => {
+        const v = validateName(input.value); if (!v.ok) return;
+        ok.disabled = true; ok.style.opacity = '.45'; ok.textContent = 'Đang kiểm tra...';
+        const r = await claimName(v.name);
+        if (r.ok) return done(v.name);
+        ok.textContent = 'Xác nhận'; refresh();
+        const e = document.createElement('div'); e.style.cssText = 'color:#ff8a8a;font-weight:700'; e.textContent = r.error; rules.appendChild(e);
+      };
       const skip = host.querySelector('#lbNameSkip'); if (skip) skip.onclick = () => done(null);
       refresh(); setTimeout(() => { try { input.focus(); } catch (e) {} }, 60);
     });
@@ -274,7 +309,7 @@
     setTimeout(() => { askName({ required: false }).then(() => { asking = false; }); }, 900);
   }
 
-  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid, askName, validateName, normalizeName };
+  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid, askName, validateName, normalizeName, claimName, ready };
 
   // Gửi lại các điểm còn chờ khi trang mở lại hoặc có mạng trở lại.
   if (readJson(PENDING_KEY, []).length) setTimeout(flushPending, 1500);
