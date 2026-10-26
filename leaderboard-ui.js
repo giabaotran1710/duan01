@@ -12,10 +12,12 @@
   #lbBtn i{filter:drop-shadow(0 0 6px rgba(255,200,60,.75));position:relative;z-index:2;animation:lbTrophy 3.6s ease-in-out infinite}
   @keyframes lbTrophy{0%,70%,100%{transform:none}78%{transform:rotate(-12deg) scale(1.12)}86%{transform:rotate(10deg) scale(1.12)}94%{transform:rotate(-4deg)}}
   #lbBtn:hover{box-shadow:0 12px 40px rgba(255,190,60,.35)}
-  /* ánh lướt qua nút */
-  #lbBtn::after{content:"";position:absolute;inset:0;border-radius:6px;pointer-events:none;overflow:hidden;
-    background:linear-gradient(115deg,transparent 35%,rgba(255,236,170,.55) 50%,transparent 65%);background-size:260% 100%;background-position:160% 0;animation:lbShine 3.6s ease-in-out infinite}
-  @keyframes lbShine{0%,55%{background-position:160% 0}85%,100%{background-position:-60% 0}}
+  /* ánh lướt qua nút: lớp con có overflow kín, vệt sáng đi bằng transform ở ngoài nút cả lúc đầu và cuối nên không khựng */
+  .lbSh{position:absolute;inset:0;border-radius:inherit;overflow:hidden;pointer-events:none;z-index:2}
+  .lbSh::before{content:"";position:absolute;top:-10%;bottom:-10%;left:0;width:55%;
+    background:linear-gradient(100deg,transparent 0%,rgba(255,240,180,.0) 20%,rgba(255,240,180,.6) 50%,rgba(255,240,180,0) 80%,transparent 100%);
+    transform:translateX(-130%) skewX(-18deg);animation:lbShine 3.6s linear infinite}
+  @keyframes lbShine{0%,55%{transform:translateX(-130%) skewX(-18deg)}85%,100%{transform:translateX(260%) skewX(-18deg)}}
   /* lấp lánh: các ngôi sao nhỏ nhấp nháy quanh nút */
   .lbSp{position:absolute;width:12px;height:12px;pointer-events:none;z-index:3;opacity:0;
     background:radial-gradient(circle,#fff 0 22%,rgba(255,235,150,.9) 23% 40%,transparent 41%);
@@ -31,7 +33,7 @@
   .lbDot.sq{border-radius:1px;width:4px;height:7px}
   @keyframes lbSprinkle{0%,62%{opacity:0;transform:translate(-50%,-50%) scale(.3)}66%{opacity:1}
     100%{opacity:0;transform:translate(calc(-50% + var(--x)),calc(-50% + var(--y))) rotate(var(--r)) scale(1)}}
-  @media (prefers-reduced-motion:reduce){#lbBtn i,#lbBtn::after,.lbSp,.lbDot{animation:none!important}.lbSp,.lbDot{display:none}}
+  @media (prefers-reduced-motion:reduce){#lbBtn i,.lbSh::before,.lbSp,.lbDot{animation:none!important}.lbSp,.lbDot,.lbSh{display:none}}
 
   /* ---------- Cửa sổ ---------- */
   #lbModal{position:fixed;inset:0;z-index:2147483200;display:none;align-items:center;justify-content:center;background:rgba(3,6,16,.72);
@@ -133,7 +135,7 @@
   btn.id = 'lbBtn'; btn.type = 'button'; btn.className = 'toggle-btn';
   btn.title = 'Bảng xếp hạng'; btn.setAttribute('aria-label', 'Bảng xếp hạng');
   const dots = [[-26, -30, '#ffd35a'], [28, -26, '#ff6b9d'], [-32, 8, '#5eead4'], [34, 12, '#8ab4ff'], [-14, 34, '#ffd35a'], [10, -36, '#fff'], [26, 32, '#ff9f43'], [-34, -8, '#c4a1ff']];
-  btn.innerHTML = '<i class="fa-solid fa-trophy"></i><span class="lbSp s1"></span><span class="lbSp s2"></span><span class="lbSp s3"></span><span class="lbSp s4"></span>' +
+  btn.innerHTML = '<i class="fa-solid fa-trophy"></i><span class="lbSh"></span><span class="lbSp s1"></span><span class="lbSp s2"></span><span class="lbSp s3"></span><span class="lbSp s4"></span>' +
     dots.map((d, i) => `<span class="lbDot${i % 2 ? ' sq' : ''}" style="--x:${d[0]}px;--y:${d[1]}px;--c:${d[2]};--r:${(i * 70) % 360}deg;--d:${(i * 0.09).toFixed(2)}s"></span>`).join('');
 
   const modal = document.createElement('div');
