@@ -17,10 +17,10 @@
   const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // bỏ O/0/I/1 cho khỏi nhầm khi đọc mã
   const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
   const SAVE_KEY = 'caro_online_v1';
-  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000;
+  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000, INTRO_MS = 3000;
 
   const on = { active: false, code: null, role: null, id: null, es: null, tree: null, round: null, applied: 0, mySym: 'X',
-               hb: null, watch: null, oppSeen: null, oppSeenAt: 0, oppLost: false, connOk: true, forfeit: false, winner: null, started: false, closing: false };
+               hb: null, watch: null, oppSeen: null, oppSeenAt: 0, oppLost: false, connOk: true, forfeit: false, winner: null, emoN: null, emoInit: false, started: false, closing: false };
 
   // ---------- Mạng ----------
   async function http(method, path, body) {
@@ -94,31 +94,46 @@
   @keyframes vsPulse{0%,100%{box-shadow:0 0 0 0 transparent}50%{box-shadow:0 0 14px -3px var(--c)}}
   .vsRoom{text-align:center;font-size:9.5px;color:var(--dim);letter-spacing:.06em}
   .vsRoom b{color:#c7beb1;letter-spacing:.22em}
-  #onLeaveCard{display:none}
-  body.online #onLeaveCard{display:block}
-  body.online #btnReset{opacity:.4}
-  body.on-over #btnReset{opacity:1;color:var(--gold)}
-  body.on-forfeit #btnReset{opacity:.25;pointer-events:none}
-  body.online .control-panel{margin-top:2px}
+  body.online .control-panel{display:none}
+  /* nút thoát: góc dưới bên phải màn hình */
+  #btnLeaveOnline{display:none;position:fixed;right:14px;bottom:calc(12px + env(safe-area-inset-bottom));z-index:60;align-items:center;gap:6px;height:36px;padding:0 14px;border-radius:99px;
+    border:1px solid var(--line-strong);background:rgba(17,16,13,.9);color:#c7beb1;font-size:11px;font-weight:700;cursor:pointer}
+  #btnLeaveOnline:active{transform:scale(.96)}
+  body.online #btnLeaveOnline{display:inline-flex}
+  /* biểu cảm */
+  #emoBar{display:none;justify-content:center;gap:10px;padding-top:4px}
+  body.online #emoBar{display:flex}
+  #emoBar button{width:58px;height:50px;border-radius:14px;border:1px solid var(--line-strong);background:rgba(243,238,229,.04);font-size:26px;line-height:1;cursor:pointer;padding:0;transition:transform .1s,background .15s;-webkit-user-select:none;user-select:none;touch-action:manipulation}
+  #emoBar button:active{transform:scale(.88);background:rgba(243,238,229,.1)}
+  .vsP{overflow:visible}
+  .vsRow{position:relative}
+  .vsEmo{position:absolute;z-index:20;font-size:30px;line-height:1;pointer-events:none;will-change:transform,opacity;animation:vsEmoFly 1.5s ease-out forwards}
+  @keyframes vsEmoFly{0%{transform:translate(-50%,0) scale(.5);opacity:0}15%{opacity:1;transform:translate(-50%,6px) scale(1.15)}100%{transform:translate(calc(-50% + var(--dx)),64px) scale(1);opacity:0}}
+  /* hộp xác nhận thoát */
+  #vsConfirm{position:fixed;inset:0;z-index:95;display:none;align-items:center;justify-content:center;background:rgba(17,16,13,.8);padding:20px}
+  #vsConfirm.show{display:flex}
+  .vscBox{width:min(100%,300px);background:#211e19;border:1px solid var(--line-strong);border-radius:12px;padding:20px 18px 16px;text-align:center;box-shadow:0 18px 42px rgba(0,0,0,.4)}
+  .vscT{font-size:15px;font-weight:800;color:var(--text);margin-bottom:8px}
+  .vscD{font-size:12px;color:#cdc4b8;line-height:1.55;margin-bottom:16px}
+  .vscB{display:flex;gap:10px}
+  .vscB button{flex:1;height:42px;border-radius:9px;font-size:12px;font-weight:800;cursor:pointer;border:1px solid var(--line-strong);background:transparent;color:var(--text)}
+  .vscB .yes{border-color:rgba(224,110,114,.6);color:#ff9b9b;background:rgba(224,110,114,.1)}
   /* màn giới thiệu trận đấu */
   #vsIntro{position:fixed;inset:0;z-index:80;display:none;align-items:center;justify-content:center;background:rgba(17,16,13,.93);padding:20px}
   #vsIntro.show{display:flex;animation:vsiFade .3s ease both}
   @keyframes vsiFade{from{opacity:0}to{opacity:1}}
   .vsiBox{width:min(100%,380px);text-align:center}
-  .vsiTitle{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--gold);margin-bottom:22px}
+  .vsiTitle{font-size:11px;font-weight:800;letter-spacing:.22em;color:var(--gold);margin-bottom:22px;animation:vsiFade .6s ease both}
   .vsiRow{display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:8px}
   .vsiP{--c:var(--muted);display:flex;flex-direction:column;align-items:center;gap:8px;padding:18px 8px 14px;border-radius:16px;border:1.5px solid var(--c);background:rgba(243,238,229,.04);min-width:0}
-  .vsiP.X{--c:var(--x);animation:vsiL .5s cubic-bezier(.2,.9,.3,1.2) both}.vsiP.O{--c:var(--o);animation:vsiR .5s cubic-bezier(.2,.9,.3,1.2) both}
-  @keyframes vsiL{from{transform:translateX(-40px);opacity:0}to{transform:none;opacity:1}}
-  @keyframes vsiR{from{transform:translateX(40px);opacity:0}to{transform:none;opacity:1}}
+  .vsiP.X{--c:var(--x);animation:vsiL .8s cubic-bezier(.2,.85,.25,1) both}.vsiP.O{--c:var(--o);animation:vsiR .8s cubic-bezier(.2,.85,.25,1) both}
+  @keyframes vsiL{from{transform:translateX(-110vw)}to{transform:none}}
+  @keyframes vsiR{from{transform:translateX(110vw)}to{transform:none}}
   .vsiSym{font-size:64px;line-height:1;font-weight:900;color:var(--c);text-shadow:0 0 22px var(--c)}
   .vsiName{font-size:15px;font-weight:800;color:var(--text);max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .vsiTag{font-size:9px;font-weight:800;letter-spacing:.14em;color:var(--c);min-height:12px}
-  .vsiVs{font-size:15px;font-weight:900;letter-spacing:.1em;color:var(--dim)}
-  .vsiNote{margin-top:22px;font-size:13px;color:#cdc4b8;line-height:1.6}
-  .vsiNote b{font-size:18px}
-  .vsiNote .X{color:var(--x)}.vsiNote .O{color:var(--o)}
-  .vsiGo{margin-top:6px;font-size:10px;color:var(--dim)}`;
+  .vsiVs{font-size:15px;font-weight:900;letter-spacing:.1em;color:var(--dim);animation:vsiFade .6s .5s ease both}
+`;
   const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
 
   const content = document.querySelector('#overlay .overlay-content');
@@ -152,13 +167,22 @@
     '<div class="vsBanner" id="vsBanner"></div><div class="vsRoom" id="vsRoom"></div>';
   document.getElementById('statusTop').after(hud);
 
-  // nút Thoát trong thanh điều khiển
-  const ctl = document.querySelector('.control-panel');
-  const leaveCard = document.createElement('div');
-  leaveCard.className = 'action-card'; leaveCard.id = 'onLeaveCard';
-  leaveCard.innerHTML = '<button class="action-btn" id="btnLeaveOnline" type="button"><span class="action-icon">⎋</span><span class="action-label">Thoát phòng</span></button><div class="control-spacer"></div>';
-  ctl.appendChild(leaveCard);
-  leaveCard.querySelector('button').onclick = () => goToModeSelect();
+  // nút Thoát phòng ở góc dưới bên phải (có xác nhận)
+  const leaveBtn = document.createElement('button');
+  leaveBtn.id = 'btnLeaveOnline'; leaveBtn.type = 'button'; leaveBtn.innerHTML = '<span>⎋</span><span>Thoát phòng</span>';
+  document.body.appendChild(leaveBtn);
+  leaveBtn.onclick = () => goToModeSelect();
+
+  // biểu cảm: 4 nút dưới bàn cờ
+  const EMOS = ['😂', '🙁', '😭', '😡'];
+  const emoBar = document.createElement('div');
+  emoBar.id = 'emoBar';
+  emoBar.innerHTML = EMOS.map((e, i) => `<button type="button" data-k="${i}" aria-label="Biểu cảm ${e}">${e}</button>`).join('');
+  document.getElementById('board-wrap').after(emoBar);
+
+  const confirmEl = document.createElement('div');
+  confirmEl.id = 'vsConfirm';
+  document.body.appendChild(confirmEl);
 
   const intro = document.createElement('div');
   intro.id = 'vsIntro';
@@ -311,7 +335,7 @@
   const split = p => p.split('/').filter(Boolean);
 
   function connect() {
-    Object.assign(on, { active: true, closing: false, started: false, tree: null, applied: 0, round: null, forfeit: false, winner: null, connOk: true });
+    Object.assign(on, { active: true, closing: false, started: false, tree: null, applied: 0, round: null, forfeit: false, winner: null, connOk: true, emoN: null, emoInit: false });
     document.body.classList.add('online');
     document.body.classList.remove('on-over', 'on-forfeit');
     startStream();
@@ -370,6 +394,7 @@
     if (t.left && t.left !== on.role) opponentLeft();
     if (t.round && t.round !== on.round && !on.forfeit) { startRound(t.round); showIntro(false); }
     applyMoves();
+    checkEmo(t);
     updateOpp();
   }
 
@@ -445,7 +470,7 @@
     } else if (currentTurn === on.mySym) { text = `Lượt của bạn — đặt quân ${on.mySym}`; cls += ' mine ' + on.mySym; }
     else text = 'Đối thủ đang đi…';
     b.className = cls; b.textContent = text;
-    $('vsRoom').innerHTML = (gameOver && !on.forfeit ? 'Bấm <b style="letter-spacing:0">Ván mới</b> để chơi tiếp (đổi bên X/O) · ' : '') + 'Phòng <b>' + esc(on.code) + '</b>';
+    $('vsRoom').innerHTML = 'Phòng <b>' + esc(on.code) + '</b>';
   }
 
   function renderTurn() {
@@ -456,23 +481,58 @@
   }
 
   // ---------- Màn giới thiệu trận ----------
-  let introTimer = null, rollTimer = null;
-  function hideIntro() { clearTimeout(introTimer); clearInterval(rollTimer); intro.classList.remove('show'); intro.innerHTML = ''; }
+  let introTimer = null;
+  function hideIntro() { clearTimeout(introTimer); intro.classList.remove('show'); intro.innerHTML = ''; }
   function showIntro(first) {
     hideIntro();
     const n = names(), me = on.mySym;
-    const card = sym => `<div class="vsiP ${sym}"><div class="vsiSym" data-s="${sym}">?</div><div class="vsiName">${esc(n[sym])}</div><div class="vsiTag">${sym === me ? 'BẠN' : ''}</div></div>`;
+    const card = sym => `<div class="vsiP ${sym}"><div class="vsiSym">${sym}</div><div class="vsiName">${esc(n[sym])}</div><div class="vsiTag">${sym === me ? 'BẠN' : ''}</div></div>`;
     intro.innerHTML = `<div class="vsiBox"><div class="vsiTitle">${first ? 'GHÉP TRẬN THÀNH CÔNG' : 'VÁN MỚI — ĐỔI BÊN'}</div>
-      <div class="vsiRow">${card('X')}<div class="vsiVs">VS</div>${card('O')}</div>
-      <div class="vsiNote">Bạn cầm quân <b class="${me}">${me}</b><br>X đi trước</div><div class="vsiGo">Chạm để bắt đầu</div></div>`;
+      <div class="vsiRow">${card('X')}<div class="vsiVs">VS</div>${card('O')}</div></div>`;
     intro.classList.add('show');
-    // hiệu ứng "bốc thăm" quân cờ rồi chốt kết quả
-    const syms = intro.querySelectorAll('.vsiSym'); let i = 0;
-    rollTimer = setInterval(() => { i++; syms.forEach((el, k) => { el.textContent = (i + k) % 2 ? 'X' : 'O'; }); }, 90);
-    setTimeout(() => { clearInterval(rollTimer); syms.forEach(el => { el.textContent = el.dataset.s; }); }, 900);
-    introTimer = setTimeout(hideIntro, first ? 3200 : 2200);
+    introTimer = setTimeout(hideIntro, INTRO_MS);   // hết 3 giây là vào trận
   }
-  intro.addEventListener('click', hideIntro);
+
+  // ---------- Biểu cảm ----------
+  function floatEmo(sym, k) {
+    const card = $('vs' + sym), row = card && card.parentElement, em = EMOS[k];   // gắn vào hàng, không gắn vào thẻ (thẻ được vẽ lại liên tục)
+    if (!card || !em || row.querySelectorAll('.vsEmo').length > 24) return;
+    const el = document.createElement('span');
+    el.className = 'vsEmo'; el.textContent = em;
+    el.style.left = (card.offsetLeft + card.offsetWidth / 2) + 'px';
+    el.style.top = (card.offsetTop + card.offsetHeight * 0.55) + 'px';
+    el.style.setProperty('--dx', (Math.random() * 44 - 22).toFixed(0) + 'px');
+    row.appendChild(el);
+    setTimeout(() => el.remove(), 1600);
+  }
+  emoBar.addEventListener('click', e => {
+    const b = e.target.closest('button'); if (!b || !on.active || !on.started) return;
+    const k = +b.dataset.k;
+    floatEmo(on.mySym, k);   // hiện ngay bên mình
+    http('PUT', '/caro_rooms/' + on.code + '/emo/' + on.role, { k, n: Date.now() * 1000 + Math.floor(Math.random() * 1000) }).catch(() => {});
+  });
+  function checkEmo(t) {
+    const e = t.emo && t.emo[oppRole()];
+    if (!e || typeof e.k !== 'number') { on.emoInit = true; return; }
+    if (on.emoInit && e.n !== on.emoN) floatEmo(oppSym(), e.k);
+    on.emoN = e.n; on.emoInit = true;
+  }
+
+  // ---------- Xác nhận thoát ----------
+  function askLeave(done) {
+    const mid = on.started && !gameOver && !on.forfeit;
+    confirmEl.innerHTML = `<div class="vscBox"><div class="vscT">Thoát phòng?</div><div class="vscD">${mid ? 'Ván đang chơi dở. Nếu thoát, đối thủ sẽ thắng.' : 'Bạn sẽ rời khỏi phòng trực tuyến.'}</div>
+      <div class="vscB"><button type="button" class="no">Ở LẠI</button><button type="button" class="yes">THOÁT</button></div></div>`;
+    confirmEl.classList.add('show');
+    const close = () => { confirmEl.classList.remove('show'); confirmEl.innerHTML = ''; };
+    confirmEl.querySelector('.no').onclick = close;
+    confirmEl.querySelector('.yes').onclick = () => { close(); done(); };
+  }
+  const baseGoToModeSelect = window.goToModeSelect;
+  window.goToModeSelect = function () {
+    if (on.active && on.started && !on.closing) return askLeave(() => baseGoToModeSelect());
+    return baseGoToModeSelect();
+  };
 
   function applyMoves() {
     for (const mv of roundMoves()) {
