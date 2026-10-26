@@ -58,21 +58,45 @@
         fetch(FIREBASE_URL + '/activity/' + dayKey(now) + '.json', { method: 'POST', body: JSON.stringify(body), keepalive: true }).catch(() => {});
       } catch (e) {}
     }
-    // vào game = bấm chơi từ trang chủ
-    log();
-    const REPLAY = /^(chơi lại|choi lai|ván mới|van moi|ván tiếp|chơi tiếp|chơi ván mới|thử lại|làm lại|bắt đầu lại|chơi lượt mới|restart|replay|play again|retry|new game|try again)/i;
-    const START = /^(chơi|bắt đầu|play|start|vào chơi|chơi ngay|với máy|hai người|người vs|1 người|2 người)/i;
+    // vào game = bấm chơi từ trang chủ (game đang bảo trì thì không tính)
+    const mtId = (document.querySelector('script[data-game]') || {}).getAttribute ? document.querySelector('script[data-game]').getAttribute('data-game') : '';
+    const inMaintenance = () => { try { return !!(mtId && window.gameMaintenance && gameMaintenance.isOff(mtId)); } catch (e) { return false; } };
+    const mtReady = (window.gameMaintenance && gameMaintenance.ready) || Promise.resolve();
+    mtReady.then(() => { if (!inMaintenance()) log(); });
+    const REPLAY = /^(chơi lại|choi lai|ván mới|van moi|ván tiếp|chơi tiếp|chơi ván mới|thử lại|làm lại|bắt đầu lại|chơi lượt mới|màn sau|màn tiếp|qua màn|restart|replay|play again|retry|new game|try again|next)/i;
+    const REPLAY_ID = /(restart|reset|again|retry|replay|newgame|new-game|btnnew|playagain|nextlevel|nextbtn)/i;
+    const START = /^(chơi|bắt đầu|play|start|vào chơi|chơi ngay|với máy|hai người|người vs|1 người|2 người|đấu|solo)/i;
+    const NOT_PLAY = /(trang chủ|menu|thoát|quay lại|về |home|back|exit|xem lại|bảng xếp hạng|luật|cài đặt|âm thanh|tạm dừng|pause|đóng|close)/i;
+    // game vừa kết thúc (có gửi điểm): lần chạm kế tiếp (không phải nút thoát) là bắt đầu ván mới, kể cả game chạm màn hình để chơi lại
+    let ended = 0;
+    const hookSubmit = () => {
+      if (!(window.Scores && Scores.submit) || Scores.submit.__act) return !!(window.Scores && Scores.submit);
+      const orig = Scores.submit;
+      Scores.submit = function () { ended = Date.now(); return orig.apply(this, arguments); };
+      Scores.submit.__act = true;
+      return true;
+    };
+    if (!hookSubmit()) { const t = setInterval(() => { if (hookSubmit()) clearInterval(t); }, 300); setTimeout(() => clearInterval(t), 10000); }
     document.addEventListener('click', e => {
+      if (inMaintenance()) return;
       const el = e.target.closest && e.target.closest('button, a, [role="button"], .btn, input[type="button"]');
-      if (!el) return;
-      const label = ((el.innerText || el.value || '') + ' ' + (el.getAttribute('title') || '') + ' ' + (el.getAttribute('aria-label') || ''))
-        .replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim();
-      if (REPLAY.test(label)) { absorbStart = false; log(); return; }
-      if (START.test(label)) {
+      const label = el ? ((el.innerText || el.value || '') + ' ' + (el.getAttribute('title') || '') + ' ' + (el.getAttribute('aria-label') || ''))
+        .replace(/[^\p{L}\p{N}\s]/gu, ' ').replace(/\s+/g, ' ').trim() : '';
+      const ident = el ? (el.id || '') + ' ' + (typeof el.className === 'string' ? el.className : '') : '';
+      if (el && NOT_PLAY.test(label)) { ended = 0; return; }
+      if (el && (REPLAY.test(label) || REPLAY_ID.test(ident))) { absorbStart = false; ended = 0; log(); return; }
+      if (el && START.test(label)) {
         // lần bấm "Bắt đầu" đầu tiên ngay sau khi vào game thuộc cùng lượt vào game, không tính thêm
         if (absorbStart && Date.now() - loadedAt < 90000) { absorbStart = false; return; }
-        absorbStart = false; log();
+        absorbStart = false; ended = 0; log(); return;
       }
+      if (ended && Date.now() - ended > 500) { ended = 0; log(); }
+    }, true);
+    // game chơi bằng chạm/chạm giữ trên canvas (không có nút): pointerdown đầu tiên sau khi kết thúc
+    document.addEventListener('pointerdown', e => {
+      if (!ended || Date.now() - ended < 500 || inMaintenance()) return;
+      if (e.target.closest && e.target.closest('button, a, [role="button"], .btn, input')) return;   // nút đã được xử lý ở click
+      ended = 0; log();
     }, true);
   }
 
