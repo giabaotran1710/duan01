@@ -70,7 +70,10 @@
     covua: ['curtain', '#0b1220', '#1e3a5f', '#5cc8ff'],
     stickman: ['diagonal', '#101114', '#2378ff', '#ef3f54'],
     thamtubayes: ['iris', '#0f2a47', '#1e4a7a', '#ffd45e'],
-    timkhacbiet: ['iris', '#1c1530', '#3a2a5e', '#ffb454']
+    timkhacbiet: ['iris', '#1c1530', '#3a2a5e', '#ffb454'],
+    noithu: ['tiles', '#0c3b34', '#1a7a62', '#ffe27a'],
+    xepthap: ['diagonal', '#7b2a6b', '#e8577e', '#ffd28a'],
+    xepgach: ['blinds', '#0a0b1e', '#2a2470', '#7c8cff']
   };
   var t = THEMES[gameId] || ['iris', '#0f172a', '#1e293b', '#93c5fd'];
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
