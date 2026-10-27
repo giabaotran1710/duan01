@@ -498,7 +498,6 @@
     HC.showBoard('B');
     $('onTabs').classList.add('hidden');
     HC.addLog(`Đã ghép trận với ${on.names.opp}. Hãy bố trí hạm đội trong 90 giây.`, 'system');
-    HC.addLog('Mũi tàu là ô yếu nhất: trúng mũi là chìm cả tàu.', 'system');
     updatePlaceUi();
     HC.closeMenu();
     const el = $('intro');
@@ -701,8 +700,7 @@
     if (win) SFX.win(); else SFX.lose();
     if (win && B.reason === 'fleet') HC.banner('CHIẾN THẮNG', 'HẠM ĐỘI ĐỊCH BỊ XOÁ SỔ', '#2bf59a');
     const acc = B.myShots ? Math.round(B.myHits / B.myShots * 100) : 0;
-    const why = B.reason === 'fleet' ? (win ? `Bạn đã đánh chìm toàn bộ hạm đội của ${esc(on.names.opp)}!` : `${esc(on.names.opp)} đã đánh chìm toàn bộ hạm đội của bạn.`)
-      : B.reason === 'left' ? `${esc(on.names.opp)} đã rời trận. Bạn được xử thắng.` : '';
+    const why = '';
     setTimeout(() => {
       if (!B) return;
       HC.showResult({

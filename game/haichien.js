@@ -309,8 +309,7 @@
     clearLog();
     document.body.dataset.mode = difficulty;
     $('modeTag').textContent = DIFFICULTY[difficulty].label;
-    addLog(`Trận hải chiến bắt đầu! (Chế độ ${DIFFICULTY[difficulty].label}) Hãy tiêu diệt toàn bộ hạm đội địch.`, 'system');
-    addLog('Bắn trúng MŨI TÀU sẽ đánh chìm toàn bộ tàu đó!', 'system');
+    addLog(`Trận hải chiến bắt đầu! (Chế độ ${DIFFICULTY[difficulty].label})`, 'system');
     WEAPONS.forEach(n => { const b = $('btn-' + n); b.disabled = false; b.classList.remove('active'); });
     buildFleet();
     selectWeapon('torpedo');
@@ -567,7 +566,7 @@
         banner('CHIẾN THẮNG', 'HẠM ĐỘI ĐỊCH BỊ XOÁ SỔ', '#2bf59a');
         setTimeout(() => showResult({
           win: true, title: 'CHIẾN THẮNG',
-          msg: `<div class="stats">${stat(shotsCount, 'PHÁT BẮN')}${stat(getTotalAmmo(), 'ĐẠN CÒN')}</div>Bạn đã tiêu diệt toàn bộ hạm đội địch!`,
+          msg: `<div class="stats">${stat(shotsCount, 'PHÁT BẮN')}${stat(getTotalAmmo(), 'ĐẠN CÒN')}</div>`,
           buttons: endButtons()
         }), 1300);
       }, 700);
