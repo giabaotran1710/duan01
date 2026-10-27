@@ -141,7 +141,9 @@
       if (HC.models.B && (!b.classList.contains('off') || parseFloat(getComputedStyle(b).opacity) > .02)) viewB.draw(now, dt, HC.models.B(now));
     }
     fx.frame(dt);
-    stage.style.transform = fx.shake ? `translate(${rnd(-1, 1) * fx.shake}px, ${rnd(-1, 1) * fx.shake}px)` : '';
+    const sx = fx.shake ? rnd(-1, 1) * fx.shake : 0, sy = fx.shake ? rnd(-1, 1) * fx.shake : 0;
+    HCArt.shake.x = sx; HCArt.shake.y = sy;
+    stage.style.transform = fx.shake ? `translate(${sx}px, ${sy}px)` : '';
     requestAnimationFrame(loop);
   }
 
@@ -262,7 +264,7 @@
       },
       ships: ships.filter(s => !s.alive || revealAll).map(s => ({ size: s.size, r: s.headCell.r, c: s.headCell.c, dir: s.dir, look: 'enemy', sunk: !s.alive, sunkAt: s.sunkAt, ghost: s.alive })),
       shipAt(r, c) { const b = board[r][c]; return b ? ships[b.shipId] : null; },
-      blips: blips.filter(b => b.until > now),
+      blips: blips.filter(b => b.start === null || b.until > now),
       aim: aim && !gameOver && !firingLocked && isOpen(revealed[aim.r][aim.c]) ? { r: aim.r, c: aim.c, weapon: selectedWeapon } : null
     };
   }
@@ -417,8 +419,8 @@
   function launchFrom(weapon, r, c, to) {
     if (weapon === 'bomb') return to;
     if (weapon === 'torpedo') {
-      const b = $('boardA').getBoundingClientRect(), k = b.width / viewA.size, fromLeft = c >= GRID / 2;
-      return { x: fromLeft ? b.left + viewA.m * k : b.right - viewA.m * k, y: to.y };
+      const o = viewA.toScreen(0, 0), k = viewA.screenCs() / viewA.cs, fromLeft = c >= GRID / 2;
+      return { x: fromLeft ? o.x + viewA.m * k : o.x + (viewA.size - viewA.m) * k, y: to.y };
     }
     return { x: innerWidth / 2 + rnd(-70, 70), y: innerHeight + 30 };
   }
@@ -550,7 +552,7 @@
       const nr = r + dr, nc = c + dc;
       if (nr >= 0 && nr < GRID && nc >= 0 && nc < GRID && board[nr][nc] !== null && revealed[nr][nc] === '') {
         revealed[nr][nc] = 'detected';
-        blips.push({ r: nr, c: nc, start: now, until: now + ms });
+        blips.push({ r: nr, c: nc, start: null, until: 0, dur: ms });
         addLog('Radar phát hiện tàu!', 'detect');
       }
     });

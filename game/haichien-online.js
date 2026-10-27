@@ -310,7 +310,6 @@
   function setSearchUi(searching, err) {
     $('onFind').classList.toggle('hidden', searching);
     $('onCancel').classList.toggle('hidden', !searching);
-    $('onIdleTxt').classList.toggle('hidden', searching);
     $('onSearchTxt').classList.toggle('hidden', !searching);
     $('radar').classList.toggle('spin', searching);
     $('onMsg').textContent = err || '';

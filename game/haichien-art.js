@@ -464,15 +464,17 @@
       this.vignCv = V.cv;
     }
     center(r, c) { return { x: this.ox + this.cs * (c + .5), y: this.oy + this.cs * (r + .5) }; }
-    toScreen(x, y) {
-      const b = this.cv.getBoundingClientRect(), k = b.width / this.size;
-      return { x: b.left + x * k, y: b.top + y * k };
+    // Gốc toạ độ lấy từ khung chứa (không dính hiệu ứng thu/phóng của canvas hay rung màn hình) để đạn luôn rơi đúng ô
+    base() {
+      const b = this.cv.parentElement.getBoundingClientRect();
+      return { x: b.left - HCArt.shake.x, y: b.top - HCArt.shake.y, k: b.width / this.size };
     }
+    toScreen(x, y) { const b = this.base(); return { x: b.x + x * b.k, y: b.y + y * b.k }; }
     screenCenter(r, c) { const p = this.center(r, c); return this.toScreen(p.x, p.y); }
-    screenCs() { const b = this.cv.getBoundingClientRect(); return this.cs * b.width / this.size; }
+    screenCs() { return this.cs * this.base().k; }
     cellAt(cx, cy) {
-      const b = this.cv.getBoundingClientRect(), k = this.size / b.width;
-      const x = (cx - b.left) * k - this.ox, y = (cy - b.top) * k - this.oy;
+      const b = this.base();
+      const x = (cx - b.x) / b.k - this.ox, y = (cy - b.y) / b.k - this.oy;
       const c = Math.floor(x / this.cs), r = Math.floor(y / this.cs);
       if (r < 0 || c < 0 || r >= this.N || c >= this.N) return null;
       return { r, c };
@@ -622,19 +624,20 @@
 
       // radar phát hiện
       if (M.blips) for (const b of M.blips) {
+        if (b.dur && b.start === null) b.start = now, b.until = now + b.dur;   // tính từ khung hình đầu tiên được vẽ, máy yếu cũng thấy đủ thời gian
         const k = (now - b.start) / (b.until - b.start);
         if (k < 0 || k > 1) continue;
         const { x, y } = this.center(b.r, b.c);
-        const a = k > .7 ? (1 - k) / .3 : 1, pop = Math.min(1, k * 8);
+        const a = k > .8 ? (1 - k) / .2 : 1, pop = Math.min(1, k * 10), pulse = .75 + .25 * Math.sin(k * 30);
         g.globalAlpha = a;
         g.globalCompositeOperation = 'lighter';
-        g.drawImage(SPR.red, x - cs * .7, y - cs * .7, cs * 1.4, cs * 1.4);
+        g.drawImage(SPR.red, x - cs * 1.1, y - cs * 1.1, cs * 2.2, cs * 2.2);
+        g.drawImage(SPR.yellow, x - cs * .6 * pulse, y - cs * .6 * pulse, cs * 1.2 * pulse, cs * 1.2 * pulse);
         g.globalCompositeOperation = 'source-over';
-        const ph = (t * 1.6) % 1;
-        g.strokeStyle = `rgba(255,90,90,${(1 - ph) * .9})`; g.lineWidth = 2;
-        g.beginPath(); g.arc(x, y, cs * (.2 + ph * .45), 0, TAU); g.stroke();
-        g.font = `700 ${cs * .7 * (.6 + pop * .4)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
-        g.lineWidth = 4; g.strokeStyle = 'rgba(40,0,0,.9)'; g.strokeText('!', x, y + 1);
+        g.strokeStyle = '#ffe14d'; g.lineWidth = 2.5;
+        g.beginPath(); g.arc(x, y, cs * (.25 + k * .45), 0, TAU); g.stroke();
+        g.font = `700 ${cs * .95 * (.5 + pop * .5)}px ${FONT}`; g.textAlign = 'center'; g.textBaseline = 'middle';
+        g.lineWidth = 5; g.lineJoin = 'round'; g.strokeStyle = 'rgba(70,0,0,.95)'; g.strokeText('!', x, y + 1);
         g.fillStyle = '#ffe14d'; g.fillText('!', x, y + 1);
         g.globalAlpha = 1;
       }
@@ -682,7 +685,7 @@
       this.resize(); addEventListener('resize', () => this.resize());
     }
     resize() {
-      const d = dprOf(); this.d = d; this.w = innerWidth; this.h = innerHeight;
+      const d = dprOf(); this.d = d; this.w = this.cv.clientWidth || innerWidth; this.h = this.cv.clientHeight || innerHeight;
       this.cv.width = Math.round(this.w * d); this.cv.height = Math.round(this.h * d);
     }
     get busy() { return this.projs.length > 0; }
@@ -841,6 +844,7 @@
     }
     frame(dt) {
       const g = this.g;
+      if (this.cv.clientWidth !== this.w || this.cv.clientHeight !== this.h) this.resize();   // thanh địa chỉ trình duyệt co giãn
       g.setTransform(this.d, 0, 0, this.d, 0, 0);
       g.clearRect(0, 0, this.w, this.h);
       const done = [];
@@ -993,5 +997,5 @@
     };
   })();
 
-  window.HCArt = { BoardView, FX, Hero, SFX, shipCells, drawShip, fleetIcon, ANG, BODY, WCOL };
+  window.HCArt = { shake: { x: 0, y: 0 }, BoardView, FX, Hero, SFX, shipCells, drawShip, fleetIcon, ANG, BODY, WCOL };
 })();
