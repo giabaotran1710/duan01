@@ -212,3 +212,17 @@
     document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
   }
 })();
+
+// Rung nhẹ khi bấm nút (phản hồi chạm trên điện thoại); tôn trọng chế độ giảm chuyển động
+(function () {
+  if (!navigator.vibrate || (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches)) return;
+  let last = 0;
+  document.addEventListener('pointerdown', e => {
+    if (e.pointerType !== 'touch') return;
+    const b = e.target.closest && e.target.closest('button:not(:disabled), [role="button"], .btn');
+    const now = Date.now();
+    if (!b || now - last < 60) return;
+    last = now;
+    try { navigator.vibrate(8); } catch (err) {}
+  }, true);
+})();
