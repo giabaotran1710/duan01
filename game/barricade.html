@@ -39,7 +39,10 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background: radial-gradient(circle at top, #151520 0%, #09090d 42%, #050507 100%);
+      background:
+        radial-gradient(90% 40% at 50% 0%, rgba(79,140,255,.22), transparent 70%),
+        radial-gradient(90% 40% at 50% 100%, rgba(255,94,103,.18), transparent 70%),
+        #080b16;
       color: var(--text);
       font-family: "Oswald", sans-serif;
       -webkit-tap-highlight-color: transparent;
@@ -80,7 +83,12 @@
     }
 
     .title {
-      font-size: 18px;
+      font-size: 22px;
+      letter-spacing: .5px;
+      background: linear-gradient(90deg, #8fb6ff, #fff 50%, #ff9aa1);
+      -webkit-background-clip: text;
+      background-clip: text;
+      color: transparent;
       font-weight: 800;
       line-height: 1.1;
     }
@@ -149,14 +157,14 @@
     }
 
     canvas {
-      width: min(96vw, 640px);
-      height: min(96vw, 640px);
+      width: min(96vw, 640px, 62dvh);
+      height: min(96vw, 640px, 62dvh);
       max-width: 640px;
       max-height: 640px;
       aspect-ratio: 1/1;
       display: block;
       border-radius: 22px;
-      background: #0d0d12;
+      background: #080b16;
       box-shadow: 0 18px 50px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .08);
       touch-action: none;
       cursor: pointer;
@@ -258,7 +266,7 @@
       pointer-events: none;
     }
     .mode-box {
-      background: #13131a;
+      background: linear-gradient(180deg, #172036, #0d1222);
       padding: 32px 40px;
       border-radius: 28px;
       border: 1px solid rgba(255, 255, 255, .08);
@@ -353,7 +361,7 @@
     <div class="footer">
       <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
       <div class="help">💡 Chạm vào khe tường (giữa hai ô) để xem trước, rồi bấm "Xác nhận đặt tường". Tường không được chặn toàn bộ đường đi của bên nào.</div>
-      <div class="small"> Version:D20261009-H14M30T0100    »»»   developed by Tran Gia Bao</div>
+      <div class="small"> Version:D20261027-H17M20T0000    »»»   developed by Tran Gia Bao</div>
     </div>
   </div>
 
@@ -1414,26 +1422,40 @@
         const { offsetX, offsetY, pitch, cellSize } = state.layout;
 
         ctx.save();
-        ctx.fillStyle = 'rgba(0,0,0,.34)';
-        roundRect(ctx, offsetX - 6, offsetY - 6, SIZE * pitch - (pitch - cellSize) + 12, SIZE * pitch - (pitch - cellSize) +
-          12, 22);
+        const bw = SIZE * pitch - (pitch - cellSize) + 12;
+        const fg = ctx.createLinearGradient(0, offsetY - 6, 0, offsetY - 6 + bw);
+        fg.addColorStop(0, 'rgba(79,140,255,.45)');
+        fg.addColorStop(.5, 'rgba(120,130,170,.18)');
+        fg.addColorStop(1, 'rgba(255,94,103,.45)');
+        ctx.fillStyle = fg;
+        roundRect(ctx, offsetX - 8, offsetY - 8, bw + 4, bw + 4, 22);
+        ctx.fill();
+        ctx.fillStyle = '#0f1424';
+        roundRect(ctx, offsetX - 6, offsetY - 6, bw, bw, 20);
         ctx.fill();
 
         for (let y = 0; y < SIZE; y++) {
           for (let x = 0; x < SIZE; x++) {
             const r = cellRect(x, y);
-            let fill = (x + y) % 2 === 0 ? '#252530' : '#2b2b38';
-            if (y === 0) fill = 'rgba(79,140,255,.15)';
-            if (y === 8) fill = 'rgba(255,94,103,.15)';
-
-            ctx.fillStyle = fill;
-            roundRect(ctx, r.x, r.y, r.w, r.h, 7);
+            // ô nổi: màu theo hàng đích (xanh trên, đỏ dưới), giữa bàn xen kẽ hai sắc xanh thép
+            let top, bot;
+            if (y === 0) { top = '#26437f'; bot = '#1a2d5c'; }
+            else if (y === 8) { top = '#7f2a35'; bot = '#5a1a22'; }
+            else if ((x + y) % 2 === 0) { top = '#33405e'; bot = '#252f47'; }
+            else { top = '#2c3854'; bot = '#212a40'; }
+            const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
+            g.addColorStop(0, top);
+            g.addColorStop(1, bot);
+            ctx.fillStyle = g;
+            roundRect(ctx, r.x, r.y, r.w, r.h, 8);
             ctx.fill();
 
-            ctx.strokeStyle = 'rgba(255,255,255,.03)';
+            ctx.strokeStyle = 'rgba(255,255,255,.10)';
             ctx.lineWidth = 1;
-            roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 7);
+            roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8);
             ctx.stroke();
+            ctx.fillStyle = 'rgba(0,0,0,.22)';
+            ctx.fillRect(r.x + 3, r.y + r.h - 3, r.w - 6, 2);
           }
         }
         ctx.restore();
@@ -1658,8 +1680,8 @@
 
         ctx.clearRect(0, 0, w, h);
         const grad = ctx.createRadialGradient(w * 0.5, h * 0.35, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
-        grad.addColorStop(0, '#151520');
-        grad.addColorStop(1, '#07070b');
+        grad.addColorStop(0, '#141b33');
+        grad.addColorStop(1, '#080b16');
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, w, h);
 
