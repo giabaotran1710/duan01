@@ -819,7 +819,7 @@
       state.moles = state.moles.filter(o => o !== m);
       state.shake = 18;
       burst(h.x, h.y - s, 30, ['#ff7043','#ffca28','#555']);
-      addEffect('BÙM! -1 ', h.x, hy - 10, 'bad');
+      addEffect('BÙM! -1', h.x, hy - 10, 'bad', true);
       sound.boom(); buzz([60,40,120]);
       loseCarrot();
       state.combo = 0; updateCombo();
@@ -872,7 +872,7 @@
       sound.gold();
       if(state.carrots < MAX_CARROTS){
         state.carrots++;
-        addEffect('+1 ', h.x, hy - 52, 'gold');
+        addEffect('+1', h.x, hy - 52, 'gold', true);
         popCarrot(state.carrots - 1);
       }
     }
@@ -901,19 +901,19 @@
     if(m.type === 'boss'){
       state.bossActive = false;
       state.bossNext = state.score + state.mode.bossEvery * .6;
-      addEffect('Vua chạy mất! -2 ', W/2, H*.3, 'bad');
+      addEffect('Vua chạy mất! -2', W/2, H*.3, 'bad', true);
       state.shake = 10;
       sound.lose();
       loseCarrot(2);
       return;
     }
-    addEffect('-1 ', m.hole.x, m.hole.y - m.hole.size*1.6, 'bad');
+    addEffect('-1', m.hole.x, m.hole.y - m.hole.size*1.6, 'bad', true);
     sound.lose();
     loseCarrot(1);
   }
 
   // ================= HIỆU ỨNG =================
-  function addEffect(text, x, y, kind){ state.effects.push({ text, x, y, age:0, life:800, kind }); }
+  function addEffect(text, x, y, kind, carrot){ state.effects.push({ text, x, y, age:0, life:800, kind, carrot }); }
   function addPow(x, y, sc){ state.effects.push({ pow:true, x, y, age:0, life:300, sc, rot:(Math.random()-.5)*.5 }); }
   function burst(x, y, n, cols){
     for(let i=0;i<n;i++){
@@ -1158,6 +1158,25 @@
     }
   }
 
+  // Củ cà rốt vẽ bằng canvas (dùng cho hiệu ứng trừ/cộng cà rốt)
+  function drawCarrot(c, x, y, s){
+    c.save();
+    c.translate(x, y); c.rotate(.5);
+    c.beginPath();
+    c.moveTo(-s*.34, -s*.42);
+    c.lineTo(s*.34, -s*.42);
+    c.quadraticCurveTo(s*.4, 0, 0, s*.55);
+    c.quadraticCurveTo(-s*.4, 0, -s*.34, -s*.42);
+    c.closePath();
+    c.fillStyle = '#ff8a2a'; c.strokeStyle = '#7a3a10'; c.lineWidth = Math.max(1.5, s*.1);
+    c.fill(); c.stroke();
+    c.fillStyle = '#4caf50';
+    for(const dx of [-s*.14, s*.14]){
+      c.beginPath(); c.ellipse(dx, -s*.6, s*.14, s*.32, dx < 0 ? -.5 : .5, 0, Math.PI*2); c.fill();
+    }
+    c.restore();
+  }
+
   function drawEffects(){
     for(const e of state.effects){
       const k = e.age / e.life;
@@ -1186,6 +1205,7 @@
         ctx.strokeStyle = e.kind === 'bad' ? '#7a1d16' : '#3a2412';
         ctx.fillStyle = e.kind === 'bad' ? '#ff6b5e' : e.kind === 'gold' ? '#ffd54f' : e.kind === 'neutral' ? '#e3f2fd' : e.kind === 'miss' ? '#ffffff' : '#b9f6a1';
         ctx.strokeText(e.text, e.x, e.y); ctx.fillText(e.text, e.x, e.y);
+        if(e.carrot) drawCarrot(ctx, e.x + ctx.measureText(e.text).width / 2 + size * .7, e.y, size * 1.1);
       }
       ctx.restore();
     }
@@ -1368,9 +1388,9 @@
       ['normal', 'Chuột chũi', '+10', ''],
       ['fast', 'Ninja', 'Lặn rất nhanh', ''],
       ['helmet', 'Đội mũ', 'Đập 2 lần', ''],
-      ['gold', 'Chuột vàng', '+1 ', ''],
+      ['gold', 'Chuột vàng', '+1 <i class="fa-solid fa-carrot" aria-hidden="true"></i>', ''],
       ['bunny', 'Thỏ', 'Đừng đập!', 'bad'],
-      ['bomb', 'Bom', 'Mất 1 ', 'bad']
+      ['bomb', 'Bom', 'Mất 1 <i class="fa-solid fa-carrot" aria-hidden="true"></i>', 'bad']
     ];
     const box = $('legend');
     box.innerHTML = '';
