@@ -10,1153 +10,450 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 <style>
-  /* ═════════ VARIABLES ═════════ */
   :root {
-    --bg0: #02090f;
-    --bg1: #061a2e;
-    --panel: rgba(8, 28, 48, 0.82);
-    --panel-edge: #17466b;
-    --brass: #c9a25a;
-    --water-a: #0d3d6b;
-    --water-b: #072645;
-    --radar-green: #00ff88;
-    --danger-red: #ff2244;
-    --fire-orange: #ff7a1a;
-    --torpedo-cyan: #00e5ff;
-    --missile-yellow: #ffdd00;
-    --stone-gray: #aabbcc;
-    --bomb-red: #ff3b4a;
-    --text-bright: #e6f5ff;
-    --text-dim: #6f97b3;
-    --sel: var(--torpedo-cyan);
+    --bg0: #02080f; --bg1: #061a2e;
+    --panel: rgba(9, 30, 50, .78); --edge: rgba(80, 160, 220, .22); --brass: #c9a25a;
+    --cyan: #00e5ff; --yellow: #ffdd00; --stone: #cfe3f2; --red: #ff3b4a; --green: #2bf59a; --orange: #ff8a3d;
+    --text: #e6f5ff; --dim: #7ea3bf;
+    --sel: var(--cyan);
     --font: 'Chakra Petch', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
   }
-  body[data-weapon="torpedo"] { --sel: var(--torpedo-cyan); }
-  body[data-weapon="missile"] { --sel: var(--missile-yellow); }
-  body[data-weapon="stone"]   { --sel: var(--stone-gray); }
-  body[data-weapon="bomb"]    { --sel: var(--bomb-red); }
+  body[data-weapon="torpedo"] { --sel: var(--cyan); }
+  body[data-weapon="missile"] { --sel: var(--yellow); }
+  body[data-weapon="stone"]   { --sel: var(--stone); }
+  body[data-weapon="bomb"]    { --sel: var(--red); }
 
-  /* ═════════ BASE ═════════ */
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
   html { -webkit-text-size-adjust: 100%; }
   body {
-    font-family: var(--font);
-    color: var(--text-bright);
+    font-family: var(--font); color: var(--text);
     background:
-      radial-gradient(ellipse 80% 50% at 50% -10%, rgba(0,120,190,0.28), transparent 70%),
-      radial-gradient(ellipse 60% 40% at 90% 100%, rgba(0,80,140,0.22), transparent 70%),
+      radial-gradient(ellipse 90% 55% at 50% -12%, rgba(0,130,200,.30), transparent 70%),
+      radial-gradient(ellipse 70% 45% at 100% 110%, rgba(0,90,150,.25), transparent 70%),
       linear-gradient(180deg, var(--bg1), var(--bg0));
     background-attachment: fixed;
-    min-height: 100vh; min-height: 100dvh;
-    overflow-x: hidden;
+    min-height: 100vh; min-height: 100dvh; overflow-x: hidden;
     user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
-    touch-action: manipulation;
   }
-  button { font-family: inherit; touch-action: manipulation; }
+  button { font-family: inherit; color: inherit; cursor: pointer; touch-action: manipulation; }
   .hidden { display: none !important; }
 
-  .container {
-    position: relative; z-index: 1;
-    max-width: 640px; margin: 0 auto;
-    padding: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
-    display: flex; flex-direction: column; gap: 10px;
-  }
+  #fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 400; }
 
-  /* ═════════ HEADER ═════════ */
-  header { display: flex; align-items: center; justify-content: center; gap: 10px; }
-  .title {
-    display: flex; align-items: center; gap: 10px;
-    font-weight: 700; font-size: clamp(22px, 6vw, 32px); letter-spacing: 5px;
-    color: var(--text-bright);
-    text-shadow: 0 0 18px rgba(0,229,255,0.45);
+  #app {
+    max-width: 600px; margin: 0 auto; position: relative;
+    padding: max(10px, env(safe-area-inset-top)) max(10px, env(safe-area-inset-right)) calc(26px + env(safe-area-inset-bottom)) max(10px, env(safe-area-inset-left));
+    display: flex; flex-direction: column; gap: 8px; min-height: 100vh; min-height: 100dvh;
   }
-  .title svg { width: 1.05em; height: 1.05em; color: var(--torpedo-cyan); flex: none; }
-  #btn-info, #btn-menu {
-    display: inline-flex; align-items: center; justify-content: center;
-    width: 32px; height: 32px; border-radius: 50%; cursor: pointer; flex: none;
-    background: rgba(0,229,255,0.06); border: 1px solid rgba(0,229,255,0.5); color: var(--torpedo-cyan);
-    font-weight: 700; font-size: 16px; transition: background .2s, box-shadow .2s;
+  #app.enter { animation: appIn .5s ease-out both; }
+  @keyframes appIn { from { opacity: 0; transform: translateY(12px); } to { opacity: 1; transform: none; } }
+
+  /* ───── Thanh trên ───── */
+  .top { display: flex; align-items: center; gap: 8px; }
+  .ib {
+    width: 38px; height: 38px; flex: none; border-radius: 12px; display: grid; place-items: center; font-size: 16px;
+    background: linear-gradient(180deg, rgba(20,60,95,.9), rgba(8,30,52,.95)); border: 1px solid var(--edge); color: #9fd8ff;
+    box-shadow: 0 4px 12px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.08); transition: transform .1s;
   }
-  #btn-menu svg { width: 16px; height: 16px; }
-  #btn-info:active, #btn-menu:active { background: rgba(0,229,255,0.25); }
+  .ib:active { transform: scale(.94); }
+  .brand { flex: 1; display: flex; align-items: center; justify-content: center; gap: 9px; min-width: 0; }
+  .brand i { color: var(--brass); font-size: 18px; filter: drop-shadow(0 0 6px rgba(201,162,90,.5)); }
+  .brand span { font-weight: 700; font-size: clamp(19px, 5.4vw, 26px); letter-spacing: 4px; text-shadow: 0 0 18px rgba(0,229,255,.45); white-space: nowrap; }
+  .brand em { font-style: normal; font-size: 10px; font-weight: 700; letter-spacing: 2px; padding: 3px 7px; border-radius: 6px; color: var(--cyan); border: 1px solid rgba(0,229,255,.45); background: rgba(0,229,255,.08); }
+  body[data-mode="hard"] .brand em { color: var(--red); border-color: rgba(255,59,74,.5); background: rgba(255,59,74,.1); }
+  body[data-mode="online"] .brand em { color: var(--green); border-color: rgba(43,245,154,.5); background: rgba(43,245,154,.08); }
 
-  /* ═════════ MODE ═════════ */
-  body[data-mode="hard"] .board-frame { border-color: rgba(255,59,74,0.65); }
-  body[data-mode="hard"] .title { text-shadow: 0 0 18px rgba(255,59,74,0.5); }
-
-  /* ═════════ MODE SCREEN ═════════ */
-  #mode-screen { z-index: 110; background: rgba(2,8,16,0.97); backdrop-filter: none; -webkit-backdrop-filter: none; transition: opacity .35s ease; will-change: opacity; }
-  #mode-screen.fade-out { opacity: 0; pointer-events: none; }
-  #mode-screen .mode-box { transition: transform .35s ease; will-change: transform; }
-  #mode-screen.fade-out .mode-box { transform: scale(1.05); }
-  .container.enter { animation: gameEnter .5s ease-out both; will-change: opacity, transform; }
-  @keyframes gameEnter { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
-  .mode-box { width: min(100%, 420px); }
-  .mode-card {
-    text-align: center; padding: 18px 16px; border-radius: 12px; cursor: pointer; color: var(--text-bright);
-    background: linear-gradient(180deg, rgba(14,44,74,0.9), rgba(6,24,42,0.95));
-    border: 1.5px solid var(--torpedo-cyan); transition: transform .1s, box-shadow .2s;
-  }
-  .mode-card:active { transform: scale(0.98); }
-  .mode-card b { display: block; font-size: 22px; letter-spacing: 4px; text-align: center; color: var(--torpedo-cyan); }
-  .mode-card.hard { border-color: var(--bomb-red); }
-  .mode-card.hard b { color: var(--bomb-red); }
-  .ship-art { width: 100%; max-width: 340px; height: auto; margin: 0 auto -2px; filter: drop-shadow(0 6px 10px rgba(0,0,0,0.5)); }
-
-  /* ═════════ HUD ═════════ */
+  /* ───── HUD chơi với máy ───── */
   .hud {
-    background: var(--panel); border: 1px solid var(--panel-edge); border-radius: 10px;
-    padding: 8px 12px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px 8px;
+    display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px 6px; padding: 8px 10px 7px;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 14px;
+    box-shadow: 0 8px 22px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.05);
   }
-  .hud-stat { display: flex; flex-direction: column; align-items: center; line-height: 1.1; }
-  .hud-label { font-size: 9px; letter-spacing: 2px; color: var(--text-dim); font-weight: 600; }
-  .hud-val { font-size: 18px; font-weight: 700; font-variant-numeric: tabular-nums; margin-top: 2px; transition: color .2s; }
-  .hud-val.low { color: var(--danger-red); }
-  .reload { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; }
-  .reload i { width: 12px; height: 12px; border-radius: 50%; border: 1.5px solid var(--stone-gray); opacity: .5; transition: all .2s; }
-  .reload i.on { background: var(--stone-gray); opacity: 1; box-shadow: 0 0 6px var(--stone-gray); }
-  .fleet {
-    grid-column: 1 / -1; display: flex; justify-content: center; flex-wrap: wrap; gap: 6px 12px;
-    padding-top: 7px; border-top: 1px dashed rgba(23,70,107,0.9);
-  }
-  .ship-item { display: flex; }
-  .ship-blocks { display: flex; gap: 2px; }
-  .ship-block { width: 9px; height: 9px; border-radius: 2px; background: linear-gradient(180deg,#5f8fb0,#2c5677); border: 1px solid #0d3454; }
-  .ship-item.dead { opacity: .55; }
-  .ship-item.dead .ship-block { background: linear-gradient(180deg,#ff5a4a,#8a1420); border-color: #4a0a10; }
+  .stat { display: flex; flex-direction: column; align-items: center; line-height: 1.05; }
+  .stat b { font-size: 20px; font-variant-numeric: tabular-nums; transition: color .2s; }
+  .stat b.low { color: var(--red); text-shadow: 0 0 10px rgba(255,59,74,.6); }
+  .stat span { font-size: 9px; letter-spacing: 2px; color: var(--dim); font-weight: 600; margin-top: 2px; }
+  .fleet { grid-column: 1 / -1; display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 2px 8px; padding-top: 6px; border-top: 1px dashed rgba(80,160,220,.22); }
+  .fleet canvas { display: block; transition: opacity .3s; }
+  .reload { grid-column: 1 / -1; display: flex; align-items: center; justify-content: center; gap: 6px; font-size: 9px; letter-spacing: 2px; color: var(--dim); font-weight: 600; }
+  .reload i { width: 10px; height: 10px; border-radius: 50%; border: 1.5px solid var(--stone); opacity: .45; transition: all .2s; }
+  .reload i.on { background: var(--stone); opacity: 1; box-shadow: 0 0 8px var(--stone); }
 
-  /* ═════════ WEAPONS ═════════ */
-  .weapons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
-  .weapon-btn {
-    --c: var(--torpedo-cyan);
-    position: relative; overflow: hidden; cursor: pointer; color: var(--text-bright);
-    background: linear-gradient(180deg, rgba(14,44,74,0.85), rgba(6,24,42,0.9));
-    border: 1px solid rgba(255,255,255,0.08); border-radius: 10px;
-    padding: 9px 6px 8px; display: flex; flex-direction: column; align-items: center; gap: 2px;
+  /* ───── HUD online ───── */
+  .vs {
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 4px 8px; padding: 8px 10px;
+    background: var(--panel); border: 1px solid var(--edge); border-radius: 14px; box-shadow: 0 8px 22px rgba(0,0,0,.35);
+  }
+  .vs .side { display: flex; flex-direction: column; gap: 4px; min-width: 0; padding: 6px 8px; border-radius: 10px; border: 1px solid transparent; transition: all .25s; }
+  .vs .side.opp { align-items: flex-end; text-align: right; }
+  .vs .side.act { border-color: rgba(43,245,154,.6); background: rgba(43,245,154,.08); box-shadow: 0 0 14px rgba(43,245,154,.18); }
+  .vs .side.opp.act { border-color: rgba(255,90,74,.6); background: rgba(255,90,74,.08); box-shadow: 0 0 14px rgba(255,90,74,.18); }
+  .vs .nm { font-weight: 700; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .vs .nm i { font-size: 11px; margin-right: 5px; opacity: .8; }
+  .pips { display: flex; gap: 3px; }
+  .pips i { width: 14px; height: 6px; border-radius: 3px; background: linear-gradient(180deg, #8fd0ff, #3a86b8); box-shadow: 0 0 5px rgba(80,180,255,.5); }
+  .opp .pips i { background: linear-gradient(180deg, #ffa79e, #c23a2f); box-shadow: 0 0 5px rgba(255,80,60,.5); }
+  .pips i.dead { background: rgba(255,255,255,.12); box-shadow: none; }
+  .clock { position: relative; width: 48px; height: 48px; display: grid; place-items: center; }
+  .clock svg { position: absolute; inset: 0; transform: rotate(-90deg); }
+  .clock circle { fill: none; stroke-width: 3.5; }
+  .clock .bg { stroke: rgba(255,255,255,.1); }
+  .clock .fg { stroke: var(--green); stroke-linecap: round; stroke-dasharray: 106.8; transition: stroke .3s; }
+  .clock.opp .fg { stroke: #ff5a4a; }
+  .clock.warn .fg { stroke: var(--yellow); }
+  .clock b { font-size: 16px; font-variant-numeric: tabular-nums; }
+  .vs .turn { grid-column: 1 / -1; text-align: center; font-size: 11px; font-weight: 700; letter-spacing: 3px; color: var(--dim); }
+  .vs .turn.me { color: var(--green); text-shadow: 0 0 10px rgba(43,245,154,.5); }
+  .vs .turn.opp { color: #ff8a7a; }
+
+  .tabs { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+  .tabs button {
+    padding: 8px 6px; border-radius: 10px; font-size: 11px; font-weight: 700; letter-spacing: 2px;
+    background: rgba(8,28,48,.7); border: 1px solid var(--edge); color: var(--dim); transition: all .2s;
+  }
+  .tabs button i { margin-right: 6px; }
+  .tabs button.on { color: var(--text); border-color: rgba(0,229,255,.55); background: linear-gradient(180deg, rgba(0,229,255,.16), rgba(8,28,48,.8)); box-shadow: 0 0 12px rgba(0,229,255,.18); }
+  .tabs button[data-v="mine"].on { border-color: rgba(43,245,154,.55); background: linear-gradient(180deg, rgba(43,245,154,.14), rgba(8,28,48,.8)); box-shadow: 0 0 12px rgba(43,245,154,.16); }
+  .tabs button.ping { animation: tabPing .6s ease 3; }
+  @keyframes tabPing { 50% { color: #fff; border-color: #ff5a4a; box-shadow: 0 0 16px rgba(255,90,74,.6); } }
+
+  /* ───── Bàn ───── */
+  .stage { position: relative; margin: 0 auto; border-radius: 16px; will-change: transform; }
+  .stage canvas { display: block; position: absolute; left: 0; top: 0; border-radius: 16px; touch-action: none; cursor: crosshair;
+    box-shadow: 0 18px 40px rgba(0,0,0,.55), 0 0 0 1px rgba(0,0,0,.6); transition: opacity .28s ease, transform .28s ease; }
+  .stage canvas.off { opacity: 0; transform: scale(.97); pointer-events: none; }
+  body.locked .stage canvas { cursor: wait; }
+  .banner {
+    position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); pointer-events: none; z-index: 5;
+    text-align: center; white-space: nowrap; opacity: 0;
+  }
+  .banner.show { animation: bannerIn 1.9s cubic-bezier(.2,.9,.3,1.2) forwards; }
+  .banner b { display: block; font-size: clamp(22px, 7vw, 38px); font-weight: 700; letter-spacing: 4px; color: #fff;
+    text-shadow: 0 0 22px var(--bc, #ff6a3d), 0 3px 0 rgba(0,0,0,.6); }
+  .banner span { display: inline-block; margin-top: 4px; font-size: 12px; font-weight: 700; letter-spacing: 3px; padding: 4px 12px; border-radius: 20px;
+    background: rgba(2,10,20,.75); border: 1px solid var(--bc, #ff6a3d); color: var(--bc, #ff6a3d); }
+  @keyframes bannerIn {
+    0% { opacity: 0; transform: translate(-50%, -50%) scale(2.2); }
+    14% { opacity: 1; transform: translate(-50%, -50%) scale(.95); }
+    22% { transform: translate(-50%, -50%) scale(1); }
+    80% { opacity: 1; transform: translate(-50%, -50%) scale(1.02); }
+    100% { opacity: 0; transform: translate(-50%, -60%) scale(1.04); }
+  }
+
+  /* ───── Vũ khí ───── */
+  .weapons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 7px; }
+  .wbtn {
+    --c: var(--cyan); position: relative; overflow: hidden;
+    padding: 8px 4px 7px; border-radius: 13px; display: flex; flex-direction: column; align-items: center; gap: 1px;
+    background: linear-gradient(180deg, rgba(16,48,78,.92), rgba(6,24,42,.95)); border: 1px solid rgba(255,255,255,.07);
+    box-shadow: 0 6px 14px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.06);
     transition: transform .12s, border-color .2s, box-shadow .2s, background .2s;
   }
-  .weapon-btn.torpedo { --c: var(--torpedo-cyan); }
-  .weapon-btn.missile { --c: var(--missile-yellow); }
-  .weapon-btn.stone   { --c: var(--stone-gray); }
-  .weapon-btn.bomb    { --c: var(--bomb-red); }
-  .weapon-btn::before {
-    content: ''; position: absolute; left: 20%; right: 20%; top: 0; height: 2px; border-radius: 0 0 2px 2px;
-    background: var(--c); opacity: 0; transition: opacity .2s;
-  }
-  .weapon-btn:active:not(:disabled) { transform: scale(0.96); }
-  .weapon-btn.active {
-    border-color: var(--c);
-    background: linear-gradient(180deg, color-mix(in srgb, var(--c) 18%, #0a2440), rgba(6,24,42,0.95));
-    box-shadow: 0 0 14px color-mix(in srgb, var(--c) 35%, transparent), inset 0 0 12px color-mix(in srgb, var(--c) 10%, transparent);
-  }
-  .weapon-btn.active::before { opacity: 1; }
-  .w-ico { width: 26px; height: 26px; color: var(--c); }
-  .w-ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
-  .weapon-name { font-size: 11px; font-weight: 700; letter-spacing: 1px; color: var(--c); }
-  .weapon-count { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
-  .weapon-desc { font-size: 9px; color: var(--text-dim); text-align: center; line-height: 1.3; }
-
-  .weapon-btn:disabled { opacity: .4; cursor: not-allowed; filter: grayscale(.8); box-shadow: none; }
-  .weapon-btn:disabled::after {
-    content: "HẾT ĐẠN"; position: absolute; top: 50%; left: 50%;
-    transform: translate(-50%,-50%) rotate(-14deg);
-    background: rgba(220,20,60,0.92); color: #fff; font-weight: 700; font-size: 11px; letter-spacing: 1px;
-    padding: 2px 8px; border: 1.5px solid rgba(255,255,255,0.8); border-radius: 2px; white-space: nowrap;
-    pointer-events: none; animation: stampEffect .3s cubic-bezier(.175,.885,.32,1.275) forwards;
-  }
-  @keyframes stampEffect {
-    0%   { transform: translate(-50%,-50%) rotate(-14deg) scale(4); opacity: 0; }
-    100% { transform: translate(-50%,-50%) rotate(-14deg) scale(1); opacity: 1; }
+  .wbtn.torpedo { --c: var(--cyan); } .wbtn.missile { --c: var(--yellow); } .wbtn.stone { --c: var(--stone); } .wbtn.bomb { --c: var(--red); }
+  .wbtn::before { content: ''; position: absolute; left: 18%; right: 18%; top: 0; height: 3px; border-radius: 0 0 3px 3px; background: var(--c); opacity: 0; transition: opacity .2s; box-shadow: 0 0 10px var(--c); }
+  .wbtn:active:not(:disabled) { transform: scale(.95); }
+  .wbtn.active { border-color: var(--c); background: linear-gradient(180deg, color-mix(in srgb, var(--c) 22%, #0b2744), rgba(6,24,42,.96)); box-shadow: 0 0 18px color-mix(in srgb, var(--c) 35%, transparent), inset 0 0 14px color-mix(in srgb, var(--c) 12%, transparent); }
+  .wbtn.active::before { opacity: 1; }
+  .wbtn .ico { width: 26px; height: 26px; color: var(--c); filter: drop-shadow(0 0 4px color-mix(in srgb, var(--c) 50%, transparent)); }
+  .wbtn .ico svg { width: 100%; height: 100%; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+  .wbtn .nm { font-size: 10.5px; font-weight: 700; letter-spacing: 1px; color: var(--c); white-space: nowrap; }
+  .wbtn .ct { font-size: 15px; font-weight: 700; font-variant-numeric: tabular-nums; }
+  .wbtn .ds { font-size: 9px; color: var(--dim); }
+  .wbtn:disabled { opacity: .38; cursor: not-allowed; filter: grayscale(.8); box-shadow: none; }
+  .wbtn:disabled::after {
+    content: "HẾT ĐẠN"; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%) rotate(-14deg);
+    background: rgba(220,20,60,.92); color: #fff; font-weight: 700; font-size: 10px; letter-spacing: 1px; padding: 2px 7px; border: 1.5px solid rgba(255,255,255,.8); border-radius: 2px; white-space: nowrap;
   }
 
-  /* ═════════ BOARD ═════════ */
-  .board-frame {
-    width: min(100%, clamp(300px, calc(100dvh - 380px), 600px)); margin: 0 auto;
-    padding: 8px; border-radius: 14px;
-    background: linear-gradient(145deg, #1d3a57, #08182a);
-    border: 1px solid rgba(201,162,90,0.55);
-    box-shadow: 0 12px 32px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.1), inset 0 0 0 3px rgba(0,0,0,0.25);
+  /* ───── Bố trí (online) ───── */
+  .placebar { display: grid; grid-template-columns: 1fr 1fr 1.3fr; gap: 7px; }
+  .placebar .hint { grid-column: 1 / -1; text-align: center; font-size: 11px; color: var(--dim); letter-spacing: .5px; }
+  .pbtn {
+    padding: 11px 6px; border-radius: 12px; font-size: 12px; font-weight: 700; letter-spacing: 1.5px;
+    background: linear-gradient(180deg, rgba(16,48,78,.92), rgba(6,24,42,.95)); border: 1px solid var(--edge);
+    box-shadow: 0 6px 14px rgba(0,0,0,.35); transition: transform .1s;
   }
-  .board-body { display: flex; }
-  .grid-wrap { position: relative; flex: 1; border-radius: 6px; overflow: hidden; box-shadow: 0 0 0 1px rgba(0,0,0,0.6), inset 0 0 20px rgba(0,0,0,0.5); }
-  .grid { display: grid; grid-template-columns: repeat(12, 1fr); gap: 2px; padding: 2px; background: #041424; }
-  .caustics {
-    position: absolute; inset: -50%; pointer-events: none; z-index: 3; will-change: transform;
-    background:
-      radial-gradient(circle at 30% 40%, rgba(120,210,255,0.10) 0 10%, transparent 30%),
-      radial-gradient(circle at 72% 66%, rgba(120,210,255,0.08) 0 9%, transparent 28%);
-    background-size: 130px 130px;
-    animation: drift 16s linear infinite;
-  }
-  @keyframes drift { to { transform: translate(130px, 65px); } }
+  .pbtn i { margin-right: 6px; }
+  .pbtn:active:not(:disabled) { transform: scale(.96); }
+  .pbtn.primary { color: #02251a; background: linear-gradient(180deg, #5dffbd, #12c47c); border: none; box-shadow: 0 4px 0 #0a7a4c, 0 8px 18px rgba(43,245,154,.25); }
+  .pbtn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.6); }
 
-  .cell {
-    aspect-ratio: 1; position: relative; overflow: hidden; cursor: pointer; border-radius: 3px;
-    background: linear-gradient(160deg, var(--water-a), var(--water-b));
-    box-shadow: inset 0 1px 0 rgba(140,210,255,0.16), inset 0 -2px 4px rgba(0,0,0,0.35);
-    transition: background .15s, box-shadow .15s;
-  }
-  .cell::before {
-    content: ''; position: absolute; inset: 0; pointer-events: none;
-    background: linear-gradient(135deg, rgba(255,255,255,0.06), transparent 55%);
-  }
-  @media (hover: hover) {
-    .cell:hover:not(.revealed):not(.disabled) {
-      background: linear-gradient(160deg, #14609a, #0a3a66);
-      box-shadow: inset 0 0 0 1.5px var(--sel), 0 0 8px color-mix(in srgb, var(--sel) 50%, transparent);
-      z-index: 2;
-    }
-  }
-  .cell:active:not(.revealed):not(.disabled) { box-shadow: inset 0 0 0 2px var(--sel); }
-  .cell.revealed { cursor: default; }
-  .cell.disabled { cursor: default; pointer-events: none; }
-  body.firing-lock .cell:not(.revealed):not(.disabled) { cursor: wait; }
-
-  /* Trượt: vòng sóng */
-  .cell.miss { background: linear-gradient(160deg, #082a4a, #051c33); }
-  .cell.miss::after {
-    content: ''; position: absolute; inset: 27%; border-radius: 50%;
-    border: 1.5px solid rgba(150,205,245,0.55);
-    background: radial-gradient(circle, rgba(150,205,245,0.5) 0 12%, transparent 14%);
-    animation: ringIn .35s ease-out;
-  }
-  @keyframes ringIn { from { transform: scale(.2); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-  /* Trúng: lửa */
-  .cell.hit { background: radial-gradient(circle at 50% 60%, rgba(255,110,20,0.45), rgba(90,20,5,0.55) 75%), linear-gradient(160deg, var(--water-a), var(--water-b)); }
-  .cell.hit::after, .flame {
-    content: ''; position: absolute; inset: 14%; pointer-events: none;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 1.5c1 4.2 6.2 6.3 6.2 12.4a6.2 6.2 0 0 1-12.4 0c0-3.2 2.1-4.4 3.1-7.4 1 1 2 2 2.1 3.2 1.1-2 1.2-5 1-8.2z' fill='%23ff5a0a'/%3E%3Cpath d='M12 10.5c.6 2.2 3.2 3.2 3.2 6.2a3.2 3.2 0 0 1-6.4 0c0-2.1 2.1-3.3 3.2-6.2z' fill='%23ffd23f'/%3E%3C/svg%3E") center / contain no-repeat;
-    filter: drop-shadow(0 0 4px rgba(255,90,10,0.9));
-    animation: burnFlicker .45s ease-in-out infinite alternate;
-    transform-origin: 50% 90%;
-  }
-  @keyframes burnFlicker { from { opacity: .8; transform: scale(.9) rotate(-2deg); } to { opacity: 1; transform: scale(1.08) rotate(2deg); } }
-
-  /* Tàu (chìm / lộ diện) */
-  .cell.sunk { background: #05121f; box-shadow: inset 0 0 8px rgba(255,60,30,0.45); }
-  .cell.sunk::after { content: none; }
-  .ship-part {
-    position: absolute; inset: 0; z-index: 1;
-    background: linear-gradient(180deg, #9db1c3, #566a7e 50%, #2d3d4d);
-    box-shadow: inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -2px 3px rgba(0,0,0,0.4);
-  }
-  .ship-part::before { content: ''; position: absolute; background: rgba(255,255,255,0.16); border-radius: 2px; }
-  .ship-part.h::before { left: 12%; right: 12%; top: 42%; bottom: 42%; }
-  .ship-part.v::before { top: 12%; bottom: 12%; left: 42%; right: 42%; }
-  .ship-part.h.start { border-radius: 40% 2px 2px 40%; }
-  .ship-part.h.end   { border-radius: 2px 40% 40% 2px; }
-  .ship-part.v.start { border-radius: 40% 40% 2px 2px; }
-  .ship-part.v.end   { border-radius: 2px 2px 40% 40%; }
-  .ship-part.head::after {
-    content: ''; position: absolute; inset: 27%; border-radius: 50%;
-    background: radial-gradient(circle at 35% 30%, #ffe08a, #c9852a 70%);
-    box-shadow: 0 0 0 1.5px rgba(0,0,0,0.5);
-  }
-  .cell.sunk .ship-part { filter: grayscale(.7) brightness(.5); }
-  .cell.sunk .flame { z-index: 2; inset: 20%; opacity: .75; }
-
-  /* Khiên đuôi tàu (đã vỡ lớp 1) */
-  .cell.shield {
-    background: radial-gradient(circle, rgba(0,229,255,0.35), rgba(0,60,100,0.4) 80%), linear-gradient(160deg, var(--water-a), var(--water-b));
-    box-shadow: inset 0 0 0 1.5px rgba(0,229,255,0.7), inset 0 0 8px rgba(0,229,255,0.4);
-  }
-  .cell.shield::after {
-    content: ''; position: absolute; inset: 16%; pointer-events: none; z-index: 2; animation: ringIn .35s ease-out;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l8 3v6c0 5-3.4 9.3-8 11-4.6-1.7-8-6-8-11V5z' fill='%2300e5ff' fill-opacity='.35' stroke='%2300e5ff' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
-    filter: drop-shadow(0 0 4px #00e5ff);
-  }
-
-  /* Ô bí mật */
-  .cell.secret { background: radial-gradient(circle, rgba(255,210,90,0.5), rgba(120,70,10,0.5) 80%), linear-gradient(160deg, var(--water-a), var(--water-b)); }
-  .cell.secret::after {
-    content: ''; position: absolute; inset: 16%; pointer-events: none; animation: ringIn .35s ease-out;
-    background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'%3E%3Cpath d='M12 2l2.9 6.3 6.9.8-5.1 4.7 1.4 6.8L12 17.3 5.9 20.6l1.4-6.8L2.2 9.1l6.9-.8z' fill='%23ffd23f' stroke='%238a5a00' stroke-width='1'/%3E%3C/svg%3E") center / contain no-repeat;
-    filter: drop-shadow(0 0 4px rgba(255,200,60,0.9));
-  }
-  .cell.secret.unfound { opacity: .55; }
-
-  /* ═════════ LOG ═════════ */
+  /* ───── Nhật ký ───── */
   .log {
-    background: rgba(2,10,20,0.88); border: 1px solid var(--panel-edge); border-radius: 10px;
-    padding: 8px 12px; height: 92px; overflow-y: auto;
-    scrollbar-width: thin; scrollbar-color: var(--panel-edge) transparent;
+    flex: 1 1 64px; min-height: 64px; max-height: 150px; overflow-y: auto; padding: 6px 10px; border-radius: 12px;
+    background: rgba(2,10,20,.75); border: 1px solid var(--edge);
+    scrollbar-width: thin; scrollbar-color: rgba(80,160,220,.35) transparent;
+    -webkit-mask-image: linear-gradient(180deg, transparent 0, #000 14px); mask-image: linear-gradient(180deg, transparent 0, #000 14px);
   }
-  .log-entry { font-size: 12px; line-height: 1.7; color: var(--text-dim); padding-left: 8px; border-left: 2px solid transparent; transition: color .5s; }
-  .log-entry.new    { color: var(--text-bright); }
-  .log-entry.hit    { color: var(--fire-orange); border-left-color: var(--fire-orange); }
-  .log-entry.sunk   { color: var(--danger-red); font-weight: 700; border-left-color: var(--danger-red); }
-  .log-entry.detect { color: var(--missile-yellow); border-left-color: var(--missile-yellow); }
-  .log-entry.system { color: var(--torpedo-cyan); }
+  .le { font-size: 12px; line-height: 1.6; color: var(--dim); padding-left: 8px; border-left: 2px solid transparent; transition: color .5s; }
+  .le.new { color: var(--text); }
+  .le.hit { color: var(--orange); border-left-color: var(--orange); }
+  .le.sunk { color: #ff5a6a; font-weight: 700; border-left-color: #ff5a6a; }
+  .le.detect { color: var(--yellow); border-left-color: var(--yellow); }
+  .le.system { color: var(--cyan); }
+  .le.good { color: var(--green); border-left-color: var(--green); }
 
-  footer { text-align: center; font-size: 10px; color: var(--text-dim); opacity: .6; padding: 2px 0 4px; }
+  /* ───── Hộp thoại ───── */
+  .ov { position: fixed; inset: 0; z-index: 300; display: flex; align-items: center; justify-content: center; padding: 16px; background: rgba(2,8,16,.82); backdrop-filter: blur(5px); -webkit-backdrop-filter: blur(5px); }
+  .box {
+    width: min(100%, 400px); padding: 24px 20px 20px; text-align: center; border-radius: 18px; display: flex; flex-direction: column; gap: 10px;
+    background: linear-gradient(160deg, rgba(16,48,78,.97), rgba(6,22,38,.98)); border: 1px solid rgba(201,162,90,.55);
+    box-shadow: 0 0 60px rgba(0,229,255,.12), 0 24px 60px rgba(0,0,0,.6);
+    animation: boxIn .38s cubic-bezier(.34,1.56,.64,1);
+  }
+  @keyframes boxIn { from { transform: scale(.86); opacity: 0; } to { transform: none; opacity: 1; } }
+  .box h2 { font-size: 28px; letter-spacing: 4px; }
+  .box h2.win { color: var(--green); text-shadow: 0 0 22px rgba(43,245,154,.55); }
+  .box h2.lose { color: #ff4d5e; text-shadow: 0 0 22px rgba(255,59,74,.55); }
+  .box .ico-big { font-size: 40px; margin-bottom: -4px; }
+  .box h2.win + .msg, .box .msg { color: var(--dim); font-size: 13px; line-height: 1.6; }
+  .stats { display: flex; gap: 8px; margin: 2px 0 6px; }
+  .stats > div { flex: 1; padding: 9px 4px; border-radius: 12px; background: rgba(0,0,0,.28); border: 1px solid var(--edge); display: flex; flex-direction: column; }
+  .stats b { font-size: 24px; font-variant-numeric: tabular-nums; }
+  .stats span { font-size: 9px; letter-spacing: 1.5px; color: var(--dim); }
+  .btn {
+    padding: 13px 18px; min-height: 46px; border-radius: 12px; border: none; font-size: 13px; font-weight: 700; letter-spacing: 3px;
+    color: #02202b; background: linear-gradient(180deg, #45f0ff, #00b4d0); box-shadow: 0 4px 0 #00788c, 0 8px 18px rgba(0,229,255,.25);
+    transition: transform .1s, box-shadow .1s;
+  }
+  .btn:active { transform: translateY(2px); box-shadow: 0 2px 0 #00788c; }
+  .btn i { margin-right: 8px; }
+  .btn.ghost { background: transparent; color: var(--dim); border: 1px solid var(--edge); box-shadow: none; }
+  .btn.ghost:active { transform: scale(.97); }
+  .btn.green { color: #02251a; background: linear-gradient(180deg, #5dffbd, #12c47c); box-shadow: 0 4px 0 #0a7a4c, 0 8px 18px rgba(43,245,154,.25); }
+  .row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 
-  /* ═════════ OVERLAY / MODAL ═════════ */
-  .overlay {
-    position: fixed; inset: 0; z-index: 100; padding: 16px;
-    background: rgba(2,8,16,0.9); backdrop-filter: blur(4px); -webkit-backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
-  }
-  .overlay-box {
-    width: min(100%, 400px); padding: 28px 22px 22px; text-align: center;
-    background: linear-gradient(160deg, #0d2c4a, #061a2e);
-    border: 1px solid rgba(201,162,90,0.6); border-radius: 14px;
-    box-shadow: 0 0 50px rgba(0,229,255,0.15), 0 20px 50px rgba(0,0,0,0.6);
-    display: flex; flex-direction: column; gap: 10px;
-    animation: overlayIn .35s cubic-bezier(.34,1.56,.64,1);
-  }
-  @keyframes overlayIn { from { transform: scale(.85); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-  .overlay-title { font-size: 26px; font-weight: 700; letter-spacing: 3px; margin-bottom: 4px; }
-  .overlay-title.win  { color: var(--radar-green); text-shadow: 0 0 18px rgba(0,255,136,0.5); }
-  .overlay-title.lose { color: var(--danger-red);  text-shadow: 0 0 18px rgba(255,34,68,0.5); }
-  .overlay-msg { color: var(--text-dim); font-size: 13px; line-height: 1.6; }
-  .stats { display: flex; gap: 10px; justify-content: center; margin-bottom: 8px; }
-  .stats > div { flex: 1; background: rgba(0,0,0,0.3); border: 1px solid var(--panel-edge); border-radius: 8px; padding: 8px 4px; display: flex; flex-direction: column; }
-  .stats b { font-size: 24px; color: var(--text-bright); font-variant-numeric: tabular-nums; }
-  .stats span { font-size: 10px; letter-spacing: 1px; color: var(--text-dim); }
+  .info { text-align: left; width: min(100%, 500px); max-height: 86vh; overflow-y: auto; }
+  .info h3 { font-size: 17px; letter-spacing: 3px; color: var(--cyan); padding-bottom: 8px; border-bottom: 1px solid var(--edge); }
+  .info h4 { font-size: 12px; letter-spacing: 3px; margin-top: 4px; }
+  .info p { font-size: 13px; line-height: 1.55; }
+  .info .w { display: flex; gap: 10px; align-items: flex-start; }
+  .info .w i { width: 18px; text-align: center; margin-top: 3px; }
+  .info .note { font-size: 11px; color: var(--dim); }
 
-  .btn-restart {
-    font-size: 13px; font-weight: 700; letter-spacing: 3px; text-transform: uppercase;
-    padding: 13px 24px; min-height: 46px; cursor: pointer; border-radius: 8px;
-    color: #02202b; background: linear-gradient(180deg, #33eeff, #00b8d4); border: none;
-    box-shadow: 0 3px 0 #007a8f, 0 6px 14px rgba(0,229,255,0.25); transition: transform .1s, box-shadow .1s;
-  }
-  .btn-restart:active { transform: translateY(2px); box-shadow: 0 1px 0 #007a8f; }
-  .btn-restart.ghost { background: transparent; color: var(--text-dim); border: 1px solid var(--panel-edge); box-shadow: none; }
-  .btn-restart.ghost:active { transform: scale(.97); }
+  #floatBtn { position: fixed; z-index: 250; right: max(14px, env(safe-area-inset-right)); bottom: calc(26px + env(safe-area-inset-bottom)); }
 
-  #floating-restart {
-    position: fixed; z-index: 90; right: max(14px, env(safe-area-inset-right)); bottom: max(14px, env(safe-area-inset-bottom));
-    padding: 12px 20px;
-  }
+  .toast { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translate(-50%, -20px); z-index: 500; opacity: 0; pointer-events: none;
+    padding: 10px 16px; border-radius: 12px; font-size: 13px; font-weight: 600; background: rgba(4,20,36,.95); border: 1px solid rgba(0,229,255,.45); box-shadow: 0 10px 28px rgba(0,0,0,.5); transition: all .3s; max-width: 92vw; text-align: center; }
+  .toast.show { opacity: 1; transform: translate(-50%, 0); }
 
-  .info-box { text-align: left; width: min(100%, 480px); }
-  .info-box .overlay-title { font-size: 18px; color: var(--torpedo-cyan); border-bottom: 1px solid var(--panel-edge); padding-bottom: 10px; }
-  .info-box p { margin-bottom: 8px; color: var(--text-bright); font-size: 13px; }
-  .info-box hr { border: 0; border-top: 1px solid var(--panel-edge); margin: 10px 0; }
-  .info-box [data-only] { display: none; }
-  body[data-mode="normal"] .info-box [data-only="normal"],
-  body[data-mode="hard"]   .info-box [data-only="hard"] { display: block; }
-  .info-box .mode-tag { font-weight: 700; letter-spacing: 3px; font-size: 12px; }
-  .info-box .note { font-size: 11px; color: var(--text-dim); }
+  /* ───── Menu ───── */
+  .menu { position: fixed; inset: 0; z-index: 200; overflow: hidden; background: #02080f; transition: opacity .38s ease; }
+  .menu.fade { opacity: 0; pointer-events: none; }
+  #hero { position: absolute; inset: 0; width: 100%; height: 100%; }
+  .menu-in { position: relative; z-index: 2; height: 100%; overflow-y: auto; display: flex; flex-direction: column; align-items: center; justify-content: flex-end;
+    padding: max(18px, env(safe-area-inset-top)) 16px calc(34px + env(safe-area-inset-bottom)); gap: 14px; }
+  .logo { text-align: center; margin-bottom: auto; padding-top: 4vh; }
+  .logo .l0 { font-size: 12px; letter-spacing: 6px; color: var(--brass); font-weight: 600; }
+  .logo .l0 i { margin: 0 8px; }
+  .logo .l1 { font-size: clamp(44px, 13vw, 76px); font-weight: 700; letter-spacing: 6px; line-height: 1.05;
+    background: linear-gradient(180deg, #ffffff 0%, #bfe9ff 45%, #4fb7e8 100%); -webkit-background-clip: text; background-clip: text; color: transparent;
+    filter: drop-shadow(0 4px 0 rgba(0,20,40,.7)) drop-shadow(0 0 24px rgba(0,229,255,.35)); }
+  .logo .l2 { font-size: 12px; letter-spacing: 5px; color: #9fd8ff; opacity: .85; }
+  .mv { width: min(100%, 420px); display: flex; flex-direction: column; gap: 10px; animation: mvIn .35s ease both; }
+  @keyframes mvIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+  .card {
+    --cc: var(--cyan); display: flex; align-items: center; gap: 14px; text-align: left; padding: 14px 16px; border-radius: 16px;
+    background: linear-gradient(120deg, rgba(10,36,60,.88), rgba(4,18,32,.92)); border: 1px solid color-mix(in srgb, var(--cc) 55%, transparent);
+    box-shadow: 0 10px 26px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.06), 0 0 18px color-mix(in srgb, var(--cc) 12%, transparent);
+    backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); transition: transform .12s, box-shadow .2s;
+  }
+  .card:active { transform: scale(.98); }
+  @media (hover: hover) { .card:hover { box-shadow: 0 10px 26px rgba(0,0,0,.45), 0 0 24px color-mix(in srgb, var(--cc) 30%, transparent); } }
+  .card.hard { --cc: var(--red); } .card.online { --cc: var(--green); }
+  .card .ci { width: 46px; height: 46px; flex: none; border-radius: 13px; display: grid; place-items: center; font-size: 21px; color: var(--cc);
+    background: color-mix(in srgb, var(--cc) 14%, transparent); border: 1px solid color-mix(in srgb, var(--cc) 40%, transparent); }
+  .card b { display: block; font-size: 18px; letter-spacing: 3px; color: var(--cc); }
+  .card span { font-size: 12px; color: var(--dim); }
+  .card .go { margin-left: auto; color: var(--cc); opacity: .7; }
+  .mrow { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+  .mrow .btn { padding: 11px 8px; min-height: 42px; font-size: 12px; letter-spacing: 2px; backdrop-filter: blur(6px); -webkit-backdrop-filter: blur(6px); background: rgba(4,18,32,.65); }
+  .mrow .btn.only { grid-column: 1 / -1; }
 
-  /* ═════════ FX ═════════ */
-  #fx-layer    { position: fixed; inset: 0; pointer-events: none; z-index: 500; overflow: hidden; }
-  #beam-canvas { position: fixed; inset: 0; pointer-events: none; z-index: 499; width: 100%; height: 100%; }
+  .radar { width: 150px; height: 150px; margin: 0 auto 4px; border-radius: 50%; position: relative; overflow: hidden;
+    background: radial-gradient(circle, rgba(43,245,154,.12) 0 2px, transparent 3px), repeating-radial-gradient(circle, transparent 0 24px, rgba(43,245,154,.25) 25px 26px), rgba(2,20,16,.8);
+    border: 2px solid rgba(43,245,154,.55); box-shadow: 0 0 30px rgba(43,245,154,.25), inset 0 0 30px rgba(0,0,0,.6); }
+  .radar::before { content: ''; position: absolute; inset: 0; background: conic-gradient(from 0deg, rgba(43,245,154,.55), rgba(43,245,154,0) 25%); border-radius: 50%; }
+  .radar::after { content: ''; position: absolute; left: 50%; top: 0; bottom: 0; width: 1px; background: rgba(43,245,154,.3); box-shadow: 0 0 0 0 transparent; }
+  .radar.spin::before { animation: sweep 1.8s linear infinite; }
+  .radar .blip { position: absolute; width: 8px; height: 8px; border-radius: 50%; background: #9fffd2; box-shadow: 0 0 10px #2bf59a; opacity: 0; }
+  .radar.spin .blip { animation: blip 1.8s linear infinite; }
+  .radar .blip:nth-child(2) { animation-delay: .6s !important; }
+  @keyframes sweep { to { transform: rotate(360deg); } }
+  @keyframes blip { 0%, 60% { opacity: 0; } 65% { opacity: 1; } 100% { opacity: 0; } }
+  .onp { text-align: center; font-size: 13px; color: #b8dcf2; line-height: 1.6; text-shadow: 0 1px 4px #000; }
+  .onp b { color: var(--green); }
+  .onmsg { text-align: center; font-size: 12px; color: #ff8a7a; min-height: 1em; }
 
-  .ripple-ring {
-    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%);
-    animation: rippleGrow var(--rr-dur, .65s) ease-out var(--rr-delay, 0s) forwards;
-    border: var(--rr-w, 2px) solid var(--rr-color, rgba(0,229,255,0.8)); width: 0; height: 0;
-  }
-  @keyframes rippleGrow { 0% { width: 4px; height: 4px; opacity: 1; } 100% { width: var(--rr-size, 80px); height: var(--rr-size, 80px); opacity: 0; } }
-  .ripple-ellipse {
-    position: absolute; border-radius: 50%; pointer-events: none; transform: translate(-50%, -50%) scaleY(.4);
-    animation: rippleEllipse var(--re-dur, .7s) ease-out var(--re-delay, 0s) forwards;
-    border: 1.5px solid var(--re-color, rgba(0,229,255,0.5)); width: 0; height: 0;
-  }
-  @keyframes rippleEllipse {
-    0%   { width: 4px; height: 4px; opacity: .8; transform: translate(-50%,-50%) scaleY(.4); }
-    100% { width: var(--re-size, 100px); height: var(--re-size, 100px); opacity: 0; transform: translate(-50%,-50%) scaleY(.35); }
-  }
-  .drop {
-    position: absolute; width: 3px; height: 3px; border-radius: 50%; pointer-events: none;
-    animation: dropFly var(--d-dur, .45s) ease-out forwards; background: var(--d-color, rgba(100,220,255,0.9));
-  }
-  @keyframes dropFly {
-    0%   { transform: translate(-50%,-50%) translate(0,0) scale(1); opacity: 1; }
-    100% { transform: translate(-50%,-50%) translate(var(--d-x,0px), var(--d-y,0px)) scale(0); opacity: 0; }
-  }
-  .blast {
-    position: fixed; pointer-events: none; border-radius: 6px; transform-origin: center;
-    background: radial-gradient(circle, rgba(255,240,180,0.95) 0%, rgba(255,90,40,0.75) 40%, rgba(255,40,60,0.25) 75%, transparent 100%);
-    box-shadow: 0 0 30px 8px rgba(255,60,50,0.6);
-    animation: blastAnim .6s ease-out forwards;
-  }
-  @keyframes blastAnim { 0% { transform: scale(.3); opacity: 1; } 60% { transform: scale(1.05); opacity: .9; } 100% { transform: scale(1.15); opacity: 0; } }
-  .detect-bang {
-    pointer-events: none; font-family: var(--font); font-weight: 700; color: #ffdd00;
-    text-shadow: 0 0 8px rgba(255,221,0,0.9), 0 0 20px rgba(255,200,0,0.5);
-    animation: bangAnim 2s cubic-bezier(.34,1.56,.64,1) forwards; transform-origin: center;
-  }
-  @keyframes bangAnim { 0% { transform: scale(0); opacity: 0; } 15% { transform: scale(1.5); opacity: 1; } 80% { transform: scale(1.2); opacity: 1; } 100% { transform: scale(0); opacity: 0; } }
+  /* Ghép trận */
+  .intro { position: fixed; inset: 0; z-index: 350; display: flex; align-items: center; justify-content: center; pointer-events: none; opacity: 0; transition: opacity .35s; background: rgba(2,8,16,.7); }
+  .intro.show { opacity: 1; }
+  .intro .ttl { text-align: center; font-size: 12px; letter-spacing: 5px; color: var(--brass); margin-bottom: 14px; }
+  .intro .row { display: flex; align-items: center; gap: 16px; }
+  .intro .pl { padding: 14px 18px; border-radius: 14px; min-width: 120px; text-align: center; background: rgba(8,30,52,.95); border: 1px solid rgba(43,245,154,.6); box-shadow: 0 0 22px rgba(43,245,154,.2); }
+  .intro .pl.b { border-color: rgba(255,90,74,.6); box-shadow: 0 0 22px rgba(255,90,74,.2); }
+  .intro .nm { font-size: 17px; font-weight: 700; }
+  .intro .tag { font-size: 10px; letter-spacing: 2px; color: var(--yellow); margin-top: 4px; min-height: 1em; }
+  .intro .vsx { font-size: 30px; font-weight: 700; color: #fff; text-shadow: 0 0 16px rgba(255,200,80,.8); }
+  .intro.show .pl.a { animation: slideL .5s cubic-bezier(.2,.9,.3,1.2); }
+  .intro.show .pl.b { animation: slideR .5s cubic-bezier(.2,.9,.3,1.2); }
+  @keyframes slideL { from { transform: translateX(-60px); opacity: 0; } }
+  @keyframes slideR { from { transform: translateX(60px); opacity: 0; } }
 
-  /* ═════════ RESPONSIVE ═════════ */
-  @media (max-width: 520px) {
-    .weapons { gap: 5px; }
-    .weapon-name { font-size: 10px; letter-spacing: .5px; }
-    .weapon-desc { display: none; }
-    .weapon-btn { padding: 8px 4px 7px; }
-    .weapon-btn:disabled::after { font-size: 10px; padding: 2px 6px; }
-    .overlay-box { padding: 24px 16px 18px; }
+  @media (max-width: 420px) {
+    .wbtn .ds { display: none; }
+    .wbtn .nm { font-size: 9.5px; letter-spacing: .3px; }
+    .placebar .pbtn { font-size: 11px; letter-spacing: .5px; }
   }
   @media (prefers-reduced-motion: reduce) {
-    .caustics { animation: none; }
-    .container.enter { animation: none; }
-    #mode-screen, #mode-screen .mode-box { transition: none; }
-    .cell.hit::after, .flame { animation: none; }
+    #app.enter, .banner.show, .radar.spin::before { animation: none; }
   }
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
-<body data-weapon="torpedo">
+<body data-weapon="torpedo" data-mode="normal">
+<footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<canvas id="fx"></canvas>
 
-<svg id="beam-canvas" xmlns="http://www.w3.org/2000/svg"></svg>
-<div id="fx-layer"></div>
-
-<div class="container">
-  <header>
-    <button id="btn-menu" onclick="openModeScreen()" aria-label="Chọn chế độ"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="4" width="6" height="6" rx="1"/><rect x="14" y="4" width="6" height="6" rx="1"/><rect x="4" y="14" width="6" height="6" rx="1"/><rect x="14" y="14" width="6" height="6" rx="1"/></svg></button>
-    <div class="title">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="5" r="2.2"/><path d="M12 7.2V21M8 11h8M4 14c0 4 3.6 7 8 7s8-3 8-7M4 14l-1.5 2M20 14l1.5 2"/></svg>
-      HẢI CHIẾN
-    </div>
-    <button id="btn-info" onclick="toggleInfo()" aria-label="Hướng dẫn">?</button>
+<div id="app">
+  <header class="top">
+    <button class="ib" id="btnMenu" aria-label="Menu"><i class="fa-solid fa-bars"></i></button>
+    <div class="brand"><i class="fa-solid fa-anchor"></i><span>HẢI CHIẾN</span><em id="modeTag">THƯỜNG</em></div>
+    <button class="ib" id="btnSound" aria-label="Âm thanh"><i class="fa-solid fa-volume-high"></i></button>
+    <button class="ib" id="btnInfo" aria-label="Hướng dẫn"><i class="fa-solid fa-circle-question"></i></button>
   </header>
 
-  <div class="hud">
-    <div class="hud-stat"><span class="hud-label">TÀU ĐỊCH</span><span class="hud-val" id="hud-ships">6/6</span></div>
-    <div class="hud-stat"><span class="hud-label">ĐÃ BẮN</span><span class="hud-val" id="hud-shots">0</span></div>
-    <div class="hud-stat"><span class="hud-label">TỔNG ĐẠN</span><span class="hud-val" id="hud-ammo">36</span></div>
-    <div class="reload hidden" id="reload"><span class="hud-label">NẠP ĐẠN ĐÁ</span><i></i><i></i><i></i><i></i></div>
+  <section class="hud" id="soloHud">
+    <div class="stat"><b id="hudShips">6/6</b><span>TÀU ĐỊCH</span></div>
+    <div class="stat"><b id="hudShots">0</b><span>ĐÃ BẮN</span></div>
+    <div class="stat"><b id="hudAmmo">36</b><span>ĐẠN CÒN</span></div>
+    <div class="reload hidden" id="reload">NẠP ĐẠN ĐÁ <i></i><i></i><i></i><i></i></div>
     <div class="fleet" id="fleet"></div>
+  </section>
+
+  <section class="vs hidden" id="onHud">
+    <div class="side me" id="onMeBox"><span class="nm"><i class="fa-solid fa-user"></i><span id="onMe">Bạn</span></span><span class="pips" id="onMePips"></span></div>
+    <div class="clock" id="onClock"><svg viewBox="0 0 40 40"><circle class="bg" cx="20" cy="20" r="17"/><circle class="fg" id="onRing" cx="20" cy="20" r="17"/></svg><b id="onSec">--</b></div>
+    <div class="side opp" id="onOppBox"><span class="nm"><span id="onOpp">Đối thủ</span><i class="fa-solid fa-user-secret" style="margin:0 0 0 5px"></i></span><span class="pips" id="onOppPips"></span></div>
+    <div class="turn" id="onTurn">BỐ TRÍ HẠM ĐỘI</div>
+  </section>
+  <div class="tabs hidden" id="onTabs">
+    <button data-v="A" class="on"><i class="fa-solid fa-crosshairs"></i>BIỂN ĐỊCH</button>
+    <button data-v="B"><i class="fa-solid fa-shield-halved"></i>HẠM ĐỘI TA</button>
   </div>
 
-  <div class="weapons">
-    <button class="weapon-btn bomb" id="btn-bomb" onclick="selectWeapon('bomb')">
-      <span class="w-ico"><svg viewBox="0 0 24 24"><path d="M12 2l2 4.6 4.8-1.6-1.6 4.8L22 12l-4.8 2.2 1.6 4.8-4.8-1.6L12 22l-2-4.6-4.8 1.6 1.6-4.8L2 12l4.8-2.2-1.6-4.8 4.8 1.6z"/><circle cx="12" cy="12" r="2.4"/></svg></span>
-      <span class="weapon-name">BOM</span>
-      <span class="weapon-count" id="count-bomb">×1</span>
-      <span class="weapon-desc">Nổ vùng 3×3</span>
+  <div class="stage" id="stage">
+    <canvas id="boardA"></canvas>
+    <canvas id="boardB" class="off"></canvas>
+    <div class="banner" id="banner"><b></b><span></span></div>
+  </div>
+
+  <div class="weapons" id="weapons">
+    <button class="wbtn bomb" id="btn-bomb" data-w="bomb">
+      <span class="ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="13.5" r="7"/><path d="M15.5 8.5l2-2M17.5 6.5l1.5-1.5M19 5l1.2.4M19 5l.4-1.2"/><path d="M8 11a3.5 3.5 0 0 1 3-2" opacity=".6"/></svg></span>
+      <span class="nm">BOM</span><span class="ct" id="count-bomb">×1</span><span class="ds">Nổ vùng 3×3</span>
     </button>
-    <button class="weapon-btn torpedo active" id="btn-torpedo" onclick="selectWeapon('torpedo')">
-      <span class="w-ico"><svg viewBox="0 0 24 24"><rect x="4" y="9.5" width="13" height="5" rx="2.5"/><path d="M17 12h3M6 9.5V7M6 14.5V17M1.5 12h1M22 12h.5"/></svg></span>
-      <span class="weapon-name">NGƯ LÔI</span>
-      <span class="weapon-count" id="count-torpedo">×5</span>
-      <span class="weapon-desc">Quét TRÁI + PHẢI</span>
+    <button class="wbtn torpedo active" id="btn-torpedo" data-w="torpedo">
+      <span class="ico"><svg viewBox="0 0 24 24"><rect x="4" y="9.5" width="13" height="5" rx="2.5"/><path d="M17 12h3M6 9.5V7M6 14.5V17M1.5 12h1M22 12h.5"/></svg></span>
+      <span class="nm">NGƯ LÔI</span><span class="ct" id="count-torpedo">×5</span><span class="ds">Dò trái + phải</span>
     </button>
-    <button class="weapon-btn missile" id="btn-missile" onclick="selectWeapon('missile')">
-      <span class="w-ico"><svg viewBox="0 0 24 24"><path d="M12 2c3 3 4 7 4 11l-2 3h-4l-2-3c0-4 1-8 4-11z"/><path d="M8 14l-3 4v3l4-2M16 14l3 4v3l-4-2M12 18v3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
-      <span class="weapon-name">TÊN LỬA</span>
-      <span class="weapon-count" id="count-missile">×5</span>
-      <span class="weapon-desc">Quét TRÊN + DƯỚI</span>
+    <button class="wbtn missile" id="btn-missile" data-w="missile">
+      <span class="ico"><svg viewBox="0 0 24 24"><path d="M12 2c3 3 4 7 4 11l-2 3h-4l-2-3c0-4 1-8 4-11z"/><path d="M8 14l-3 4v3l4-2M16 14l3 4v3l-4-2M12 18v3"/><circle cx="12" cy="9" r="1.4"/></svg></span>
+      <span class="nm">TÊN LỬA</span><span class="ct" id="count-missile">×5</span><span class="ds">Dò trên + dưới</span>
     </button>
-    <button class="weapon-btn stone" id="btn-stone" onclick="selectWeapon('stone')">
-      <span class="w-ico"><svg viewBox="0 0 24 24"><circle cx="11" cy="14" r="6.5"/><path d="M15.5 9.5L18 7M18 7l1.5-3M18 7l3 .5"/></svg></span>
-      <span class="weapon-name">ĐẠN ĐÁ</span>
-      <span class="weapon-count" id="count-stone">×25</span>
-      <span class="weapon-desc">Tấn công trực tiếp</span>
+    <button class="wbtn stone" id="btn-stone" data-w="stone">
+      <span class="ico"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="7"/><path d="M9 9.5a3.5 3.5 0 0 1 3-1.6" opacity=".6"/></svg></span>
+      <span class="nm">ĐẠN ĐÁ</span><span class="ct" id="count-stone">×25</span><span class="ds">Bắn trực tiếp</span>
     </button>
   </div>
 
-  <div class="board-frame">
-    <div class="board-body">
-      <div class="grid-wrap">
-        <div class="grid" id="game-grid"></div>
-        <div class="caustics"></div>
-      </div>
-    </div>
+  <div class="placebar hidden" id="placeBar">
+    <button class="pbtn" id="pbRandom"><i class="fa-solid fa-shuffle"></i>NGẪU NHIÊN</button>
+    <button class="pbtn" id="pbRotate"><i class="fa-solid fa-rotate-right"></i>XOAY</button>
+    <button class="pbtn primary" id="pbReady"><i class="fa-solid fa-check"></i>SẴN SÀNG</button>
+    <div class="hint" id="pbHint">Kéo tàu để di chuyển · chạm vào tàu để xoay · các tàu không được chạm nhau</div>
   </div>
 
   <div class="log" id="log"></div>
-  <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 </div>
 
-<div id="info-modal" class="overlay hidden" onclick="toggleInfo()">
-  <div class="overlay-box info-box" onclick="event.stopPropagation()">
-    <div class="overlay-title">HƯỚNG DẪN TÁC CHIẾN</div>
-    <div>
-      <p class="mode-tag" data-only="normal" style="color:var(--torpedo-cyan)">CHẾ ĐỘ THƯỜNG</p>
-      <p class="mode-tag" data-only="hard" style="color:var(--bomb-red)">CHẾ ĐỘ KHÓ</p>
-      <p data-only="normal">• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 6 tàu địch trước khi hết đạn.</p>
-      <p data-only="hard">• <b>Mục tiêu:</b> Tiêu diệt toàn bộ 7 tàu địch (có thêm 1 tàu dài 2 ô) trước khi hết đạn.</p>
-      <p>• <b>Đầu Tàu:</b> Mỗi tàu có 1 ô đầu não (chấm vàng khi lộ diện). Bắn trúng ô này sẽ <b>đánh chìm toàn bộ tàu</b> ngay lập tức!</p>
-      <p data-only="hard">• <b>Khiên đuôi tàu:</b> Đuôi mỗi tàu có khiên bảo vệ, phải bắn <b>2 lần</b> mới bốc cháy. Bắn trúng đầu tàu sẽ bỏ qua khiên và tiêu diệt trực tiếp.</p>
-      <p data-only="hard">• <b>Nạp đạn:</b> Cứ <b>4 lần</b> bắn không trúng tàu (mọi loại đạn) sẽ nhận thêm <b>1 đạn đá</b>.</p>
-      <hr>
-      <p style="color:var(--bomb-red)"><b>BOM:</b> Phá hủy toàn bộ vùng <b>3×3</b> quanh ô bắn.</p>
-      <p style="color:var(--torpedo-cyan)"><b>NGƯ LÔI:</b> Quét radar sang <b>Trái &amp; Phải</b> ô vừa bắn.</p>
-      <p style="color:var(--missile-yellow)"><b>TÊN LỬA:</b> Quét radar lên <b>Trên &amp; Dưới</b> ô vừa bắn.</p>
-      <p style="color:var(--stone-gray)"><b>ĐẠN ĐÁ:</b> Sát thương cơ bản, không có khả năng radar.</p>
-      <hr>
-      <p style="color:var(--missile-yellow)"><b>Ô BÍ MẬT:</b> Một ô bí mật được đặt ngẫu nhiên trên bàn. Khi bắn trúng sẽ thả ngẫu nhiên <b>5 quả đạn đá</b> vào 5 ô ngẫu nhiên trên bàn (không thả vào ô đã bắn).</p>
-      <p class="note" data-only="normal">* Nếu radar phát hiện tàu, dấu "!" sẽ hiện lên tại vị trí đó trong 2 giây.</p>
-      <p class="note" data-only="hard">* Nếu radar phát hiện tàu, dấu "!" chỉ hiện lên tại vị trí đó trong 0,5 giây.</p>
+<!-- Menu -->
+<div class="menu" id="menu">
+  <canvas id="hero"></canvas>
+  <div class="menu-in">
+    <div class="logo">
+      <div class="l0"><i class="fa-solid fa-anchor"></i>TÁC CHIẾN TRÊN BIỂN<i class="fa-solid fa-anchor"></i></div>
+      <div class="l1">HẢI CHIẾN</div>
+      <div class="l2">TÌM VÀ ĐÁNH CHÌM HẠM ĐỘI ĐỊCH</div>
     </div>
-    <button class="btn-restart" onclick="toggleInfo()">TÔI HIỂU</button>
+    <div class="mv" data-view="home">
+      <button class="card" data-solo="normal"><span class="ci"><i class="fa-solid fa-ship"></i></span><span><b>THƯỜNG</b><span>Chơi với máy · 6 tàu địch · 36 viên đạn</span></span><i class="fa-solid fa-chevron-right go"></i></button>
+      <button class="card hard" data-solo="hard"><span class="ci"><i class="fa-solid fa-skull-crossbones"></i></span><span><b>KHÓ</b><span>7 tàu · khiên đuôi tàu · radar chớp nhanh</span></span><i class="fa-solid fa-chevron-right go"></i></button>
+      <button class="card online" data-go="online"><span class="ci"><i class="fa-solid fa-globe"></i></span><span><b>ONLINE</b><span>Đấu 1-1 · tự bố trí hạm đội</span></span><i class="fa-solid fa-chevron-right go"></i></button>
+      <div class="mrow">
+        <button class="btn ghost hidden" id="mResume"><i class="fa-solid fa-play"></i>TIẾP TỤC</button>
+        <button class="btn ghost only" id="mInfo"><i class="fa-solid fa-book-open"></i>HƯỚNG DẪN</button>
+      </div>
+    </div>
+    <div class="mv hidden" data-view="online">
+      <div class="radar" id="radar"><span class="blip" style="left:62%;top:30%"></span><span class="blip" style="left:28%;top:64%"></span></div>
+      <p class="onp" id="onIdleTxt"><b>Đặt tàu</b> → <b>bắn đạn đá không giới hạn</b> → bên nào hết tàu thì thua.<br>Bắn trúng mũi tàu sẽ đánh chìm cả tàu.</p>
+      <p class="onp hidden" id="onSearchTxt">Đang dò tìm đối thủ trên biển…</p>
+      <p class="onmsg" id="onMsg"></p>
+      <button class="btn green" id="onFind"><i class="fa-solid fa-satellite-dish"></i>TÌM ĐỐI THỦ</button>
+      <button class="btn ghost hidden" id="onCancel"><i class="fa-solid fa-xmark"></i>HỦY TÌM</button>
+      <button class="btn ghost" data-go="home"><i class="fa-solid fa-arrow-left"></i>QUAY LẠI</button>
+    </div>
   </div>
 </div>
 
-<div class="overlay hidden" id="overlay">
-  <div class="overlay-box">
-    <div class="overlay-title" id="overlay-title">CHIẾN THẮNG</div>
-    <div class="overlay-msg" id="overlay-msg"></div>
-    <button class="btn-restart" onclick="initGame()">CHƠI LẠI</button>
-    <button class="btn-restart ghost" onclick="openModeScreen()">ĐỔI CHẾ ĐỘ</button>
-    <button class="btn-restart ghost" onclick="viewMap()">XEM BẢN ĐỒ</button>
+<div class="ov hidden" id="infoOv">
+  <div class="box info" onclick="event.stopPropagation()">
+    <h3><i class="fa-solid fa-book-open"></i> HƯỚNG DẪN TÁC CHIẾN</h3>
+    <h4 style="color:var(--cyan)">CHƠI VỚI MÁY</h4>
+    <p>• <b>Mục tiêu:</b> đánh chìm toàn bộ hạm đội địch (Thường 6 tàu, Khó 7 tàu) trước khi hết đạn.</p>
+    <p>• <b>Mũi tàu:</b> mỗi tàu có một ô mũi. Bắn trúng mũi sẽ <b>đánh chìm cả tàu</b> ngay lập tức.</p>
+    <p>• <b>Khó:</b> đuôi mỗi tàu có <b>khiên</b>, phải bắn 2 lần mới cháy (bắn trúng mũi thì bỏ qua khiên). Cứ <b>4 lần</b> bắn không trúng tàu sẽ được thêm <b>1 đạn đá</b>. Dấu "!" của radar chỉ hiện 0,5 giây.</p>
+    <div class="w"><i class="fa-solid fa-bomb" style="color:var(--red)"></i><p><b style="color:var(--red)">BOM:</b> phá huỷ cả vùng 3×3 quanh ô bắn.</p></div>
+    <div class="w"><i class="fa-solid fa-water" style="color:var(--cyan)"></i><p><b style="color:var(--cyan)">NGƯ LÔI:</b> dò radar ô bên trái và bên phải ô vừa bắn.</p></div>
+    <div class="w"><i class="fa-solid fa-rocket" style="color:var(--yellow)"></i><p><b style="color:var(--yellow)">TÊN LỬA:</b> dò radar ô phía trên và phía dưới ô vừa bắn.</p></div>
+    <div class="w"><i class="fa-solid fa-circle" style="color:var(--stone)"></i><p><b style="color:var(--stone)">ĐẠN ĐÁ:</b> sát thương cơ bản, không dò radar.</p></div>
+    <div class="w"><i class="fa-solid fa-box" style="color:var(--yellow)"></i><p><b style="color:var(--yellow)">THÙNG BÍ MẬT:</b> giấu ngẫu nhiên trên biển. Bắn trúng sẽ có 5 quả đạn đá rơi xuống 5 ô chưa bắn.</p></div>
+    <h4 style="color:var(--green)">ONLINE</h4>
+    <p>• Hai bên tự bố trí 6 tàu (kéo để di chuyển, chạm để xoay; các tàu không được chạm nhau), rồi bấm <b>Sẵn sàng</b>.</p>
+    <p>• Luân phiên mỗi bên bắn một phát <b>đạn đá</b> (không giới hạn), mỗi lượt 30 giây. Mũi tàu vẫn đánh chìm cả tàu.</p>
+    <p>• Bên nào mất hết tàu thì thua. Thoát giữa trận là xử thua.</p>
+    <p class="note">Bố trí của hai bên được khoá bằng mã băm trước trận và đối chiếu khi kết thúc để chống gian lận.</p>
+    <button class="btn" id="infoOk">TÔI HIỂU</button>
   </div>
 </div>
 
-<div class="overlay hidden" id="mode-screen">
-  <div class="overlay-box mode-box">
-    <svg class="ship-art" viewBox="0 0 320 112" aria-hidden="true">
-      <defs>
-        <linearGradient id="sh-hull" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#b4c4d2"/><stop offset=".55" stop-color="#6a7f93"/><stop offset="1" stop-color="#2b3b4b"/></linearGradient>
-        <linearGradient id="sh-deck" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#8ea2b4"/><stop offset="1" stop-color="#4d6175"/></linearGradient>
-        <linearGradient id="sh-sea" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#0d3d6b" stop-opacity=".9"/><stop offset="1" stop-color="#061a2e" stop-opacity="0"/></linearGradient>
-      </defs>
-      <rect x="0" y="88" width="320" height="24" fill="url(#sh-sea)"/>
-      <!-- thân tàu -->
-      <path d="M14 62 H288 L312 52 L297 82 Q291 90 270 90 H54 Q34 90 26 79 Z" fill="url(#sh-hull)" stroke="#1b2a38" stroke-width="1.5"/>
-      <path d="M22 80 H298 L296 84 Q291 90 270 90 H54 Q34 90 26 82 Z" fill="#7a1622"/>
-      <path d="M14 62 H288 L296 58 H20 Z" fill="url(#sh-deck)"/>
-      <g stroke="#1b2a38" stroke-width="1" opacity=".55"><path d="M60 66v10M100 66v10M140 66v10M180 66v10M220 66v10M260 66v10"/></g>
-      <!-- tháp pháo sau -->
-      <rect x="46" y="49" width="34" height="10" rx="4" fill="#5d7185" stroke="#1b2a38"/>
-      <path d="M80 52H108M80 56H108" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
-      <!-- ống khói -->
-      <path d="M112 58L114 32H128L130 58Z" fill="#46596c" stroke="#1b2a38"/><rect x="113.5" y="34" width="15" height="5" fill="#1b2a38"/>
-      <!-- đài chỉ huy -->
-      <rect x="138" y="42" width="44" height="17" fill="#8095a8" stroke="#1b2a38"/>
-      <rect x="146" y="31" width="28" height="11" fill="#6f8397" stroke="#1b2a38"/>
-      <rect x="152" y="22" width="16" height="9" fill="#5d7185" stroke="#1b2a38"/>
-      <g fill="#0b1a28"><rect x="152" y="45" width="4" height="3"/><rect x="160" y="45" width="4" height="3"/><rect x="168" y="45" width="4" height="3"/><rect x="154" y="34" width="4" height="3"/><rect x="162" y="34" width="4" height="3"/></g>
-      <path d="M160 22V6M150 13H170" stroke="#1b2a38" stroke-width="2" stroke-linecap="round"/>
-      <path d="M152 6Q160 0 168 6" fill="none" stroke="#00e5ff" stroke-width="1.6" stroke-linecap="round"/>
-      <!-- tháp pháo trước -->
-      <rect x="196" y="49" width="34" height="10" rx="4" fill="#5d7185" stroke="#1b2a38"/>
-      <path d="M230 52H258M230 56H258" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
-      <rect x="236" y="41" width="30" height="9" rx="4" fill="#6a7f93" stroke="#1b2a38"/>
-      <path d="M266 44H292M266 47H292" stroke="#2b3b4b" stroke-width="3" stroke-linecap="round"/>
-      <!-- sóng -->
-      <path d="M0 92q10-6 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#00e5ff" stroke-opacity=".55" stroke-width="2"/>
-      <path d="M-10 100q10-6 20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0t20 0" fill="none" stroke="#00e5ff" stroke-opacity=".3" stroke-width="2"/>
-    </svg>
-    <div class="overlay-title">CHỌN CHẾ ĐỘ</div>
-    <button class="mode-card" onclick="startGame('normal')"><b>THƯỜNG</b></button>
-    <button class="mode-card hard" onclick="startGame('hard')"><b>KHÓ</b></button>
-    <button class="btn-restart ghost hidden" id="mode-back" onclick="closeModeScreen()">QUAY LẠI</button>
+<div class="ov hidden" id="resultOv">
+  <div class="box">
+    <div class="ico-big" id="resIco"></div>
+    <h2 id="resTitle">CHIẾN THẮNG</h2>
+    <div class="msg" id="resMsg"></div>
+    <div id="resBtns" style="display:flex;flex-direction:column;gap:8px"></div>
   </div>
 </div>
 
-<button id="floating-restart" class="btn-restart hidden" onclick="initGame()">CHƠI LẠI</button>
+<div class="ov hidden" id="confirmOv">
+  <div class="box">
+    <h2 style="font-size:20px;letter-spacing:2px"><i class="fa-solid fa-triangle-exclamation" style="color:var(--yellow)"></i></h2>
+    <div class="msg" id="cfMsg"></div>
+    <div class="row2"><button class="btn ghost" id="cfNo">Ở LẠI</button><button class="btn" id="cfYes">ĐỒNG Ý</button></div>
+  </div>
+</div>
 
-<script>
-const GRID = 12;
-const SHIP_NAMES = ['Thiết Giáp Hạm', 'Tuần Dương Hạm', 'Khu Trục Hạm 1', 'Khu Trục Hạm 2', 'Tàu Hộ Tống 1', 'Tàu Hộ Tống 2', 'Tàu Hộ Tống 3'];
-const LOW_AMMO = 8;
-const DIFFICULTY = {
-  normal: { label: 'THƯỜNG', ships: [5, 4, 3, 3, 2, 2],    ammo: { torpedo: 5, missile: 5, stone: 25, bomb: 1 }, secretDrops: 5, bangMs: 2000, shield: false, reload: false },
-  hard:   { label: 'KHÓ',    ships: [5, 4, 3, 3, 2, 2, 2], ammo: { torpedo: 5, missile: 5, stone: 25, bomb: 1 }, secretDrops: 5, bangMs: 500,  shield: true,  reload: true }
-};
-const RELOAD_EVERY = 4;
-const MODE_KEY = 'haichien_difficulty';
-let difficulty = 'normal';
-try { const v = localStorage.getItem(MODE_KEY); if (DIFFICULTY[v]) difficulty = v; } catch (e) {}
+<div class="intro" id="intro"></div>
+<button class="btn hidden" id="floatBtn"></button>
+<div class="toast" id="toast"></div>
 
-let board = [];
-let revealed = [];
-let ships = [];
-let ammo = {};
-let selectedWeapon = 'torpedo';
-let shotsCount = 0;
-let shipsAlive = 6;
-let totalShips = 6;
-let missCount = 0;   // số lần bắn không trúng tàu (chế độ Khó)
-let started = false;
-let gameOver = true;
-let firingLocked = false;
-let secretCell = null, secretTriggered = false, secretPending = false;
-let gen = 0; // tăng mỗi ván, huỷ callback trễ của ván cũ
-
-const $ = id => document.getElementById(id);
-const WEAPONS = ['bomb','torpedo','missile','stone'];
-function getTotalAmmo() { return ammo.torpedo + ammo.missile + ammo.stone + ammo.bomb; }
-
-function lockFiring()   { firingLocked = true;  document.body.classList.add('firing-lock'); }
-function unlockFiring() { firingLocked = false; document.body.classList.remove('firing-lock'); }
-
-function isOpen(st) { return st === '' || st === 'detected' || st === 'shield'; }
-
-function toggleInfo() { $('info-modal').classList.toggle('hidden'); }
-
-function initGame() {
-  board    = Array.from({length: GRID}, () => Array(GRID).fill(null));
-  revealed = Array.from({length: GRID}, () => Array(GRID).fill(''));
-  ships    = [];
-  ammo     = { ...DIFFICULTY[difficulty].ammo };
-  selectedWeapon = 'torpedo';
-  shotsCount = 0;
-  shipsAlive = 0;
-  missCount  = 0;
-  gameOver   = false;
-  gen++;
-  secretPending = false;
-  unlockFiring();
-
-  placeShips();
-  placeSecret();
-  shipsAlive = totalShips = ships.length;
-  renderGrid();
-  updateAmmoButtons();
-  clearLog();
-  applyMode();
-  addLog(` Trận hải chiến bắt đầu! (Chế độ ${DIFFICULTY[difficulty].label}) Hãy tiêu diệt toàn bộ hạm đội địch.`, 'system');
-  addLog(' Bắn trúng ĐẦU TÀU sẽ đánh chìm toàn bộ tàu đó!', 'system');
-
-  $('overlay').classList.add('hidden');
-  $('floating-restart').classList.add('hidden');
-
-  WEAPONS.forEach(n => {
-    const btn = $(`btn-${n}`);
-    btn.disabled = false;
-    btn.classList.remove('active');
-  });
-  selectWeapon('torpedo');
-  updateHud();
-}
-
-function placeShips() {
-  DIFFICULTY[difficulty].ships.forEach((size, idx) => {
-    let placed = false, attempts = 0;
-    while (!placed && attempts < 1000) {
-      attempts++;
-      const horizontal = Math.random() < 0.5;
-      const maxR = horizontal ? GRID : GRID - size;
-      const maxC = horizontal ? GRID - size : GRID;
-      const r = Math.floor(Math.random() * maxR);
-      const c = Math.floor(Math.random() * maxC);
-
-      let fits = true;
-      const cells = [];
-      for (let i = 0; i < size; i++) {
-        const nr = horizontal ? r : r + i;
-        const nc = horizontal ? c + i : c;
-        if (board[nr][nc] !== null) { fits = false; break; }
-        for (let dr = -1; dr <= 1; dr++) {
-          for (let dc = -1; dc <= 1; dc++) {
-            const br = nr + dr, bc = nc + dc;
-            if (br >= 0 && br < GRID && bc >= 0 && bc < GRID && board[br][bc] !== null) { fits = false; break; }
-          }
-          if (!fits) break;
-        }
-        if (!fits) break;
-        cells.push({r: nr, c: nc});
-      }
-
-      if (fits) {
-        const isReverse = Math.random() < 0.5;
-        const headCell  = isReverse ? cells[cells.length - 1] : cells[0];
-        const tailCell  = isReverse ? cells[0] : cells[cells.length - 1];
-        const ship = { id: idx, name: SHIP_NAMES[idx], size, cells, alive: true, headCell, tailCell, shieldUp: DIFFICULTY[difficulty].shield, hit: new Set(), isHorizontal: horizontal };
-        ships.push(ship);
-        cells.forEach(({r, c}) => { board[r][c] = { shipId: idx, isHead: (r === headCell.r && c === headCell.c), isTail: (r === tailCell.r && c === tailCell.c) }; });
-        placed = true;
-      }
-    }
-  });
-}
-
-function applyMode() {
-  document.body.dataset.mode = difficulty;
-}
-
-function registerMiss() {
-  if (!DIFFICULTY[difficulty].reload) return;
-  if (++missCount >= RELOAD_EVERY) {
-    missCount = 0;
-    ammo.stone++;
-    addLog(' Nạp đạn: +1 ĐẠN ĐÁ (đã bắn trượt 4 lần)!', 'system');
-    updateAmmoButtons();
-  } else {
-    updateHud();
-  }
-}
-
-function openModeScreen() {
-  if (firingLocked || modeSwitching) return;
-  $('mode-back').classList.toggle('hidden', !started);
-  $('mode-screen').classList.remove('hidden');
-}
-
-function closeModeScreen() { $('mode-screen').classList.add('hidden'); }
-
-let modeSwitching = false;
-
-function startGame(m) {
-  if (!DIFFICULTY[m] || firingLocked || modeSwitching) return;
-  if (started && !gameOver && shotsCount > 0 && !confirm('Bắt đầu ván mới? Ván hiện tại sẽ bị hủy.')) return;
-  difficulty = m;
-  started = true;
-  try { localStorage.setItem(MODE_KEY, m); } catch (e) {}
-  modeSwitching = true;
-  initGame();   // dựng ván khi màn chọn còn che kín → không giật
-  const screen = $('mode-screen');
-  const box = document.querySelector('.container');
-  requestAnimationFrame(() => {
-    screen.classList.add('fade-out');
-    box.classList.remove('enter'); void box.offsetWidth; box.classList.add('enter');
-    box.addEventListener('animationend', () => box.classList.remove('enter'), { once: true });
-  });
-  setTimeout(() => {
-    closeModeScreen();
-    screen.classList.remove('fade-out');
-    modeSwitching = false;
-  }, 400);
-}
-
-function placeSecret() {
-  const free = [];
-  for (let r = 0; r < GRID; r++) for (let c = 0; c < GRID; c++) if (board[r][c] === null) free.push({r, c});
-  secretCell = free[Math.floor(Math.random() * free.length)];
-  secretTriggered = false;
-}
-
-function renderGrid() {
-  const grid = $('game-grid');
-  grid.innerHTML = '';
-  for (let r = 0; r < GRID; r++) {
-    for (let c = 0; c < GRID; c++) {
-      const cell = document.createElement('div');
-      cell.className = 'cell';
-      cell.id = `cell-${r}-${c}`;
-      cell.dataset.r = r; cell.dataset.c = c;
-      cell.onclick = () => fire(r, c);
-      grid.appendChild(cell);
-    }
-  }
-}
-
-function updateCell(r, c) {
-  const cell = $(`cell-${r}-${c}`);
-  if (!cell) return;
-  cell.className = 'cell';
-  const state = revealed[r][c];
-  if (state === 'shield') {
-    cell.classList.add('shield');   // vẫn bắn được lần nữa
-  } else if (state) {
-    cell.classList.add('revealed', state, 'disabled');
-  }
-}
-
-function updateHud() {
-  $('hud-ships').textContent = `${shipsAlive}/${totalShips}`;
-  $('hud-shots').textContent = shotsCount;
-  const total = getTotalAmmo();
-  const ammoEl = $('hud-ammo');
-  ammoEl.textContent = total;
-  ammoEl.classList.toggle('low', total <= LOW_AMMO);
-  $('reload').classList.toggle('hidden', !DIFFICULTY[difficulty].reload);
-  $('reload').querySelectorAll('i').forEach((p, i) => p.classList.toggle('on', i < missCount));
-  $('fleet').innerHTML = ships.map(s =>
-    `<div class="ship-item ${s.alive ? 'alive' : 'dead'}"><div class="ship-blocks">${'<i class="ship-block"></i>'.repeat(s.size)}</div></div>`
-  ).join('');
-}
-
-// ── EFFECTS ──────────────────────────────────────────────────────────
-const SVG_NS = 'http://www.w3.org/2000/svg';
-
-function getCellCenter(r, c) {
-  const el = $(`cell-${r}-${c}`);
-  if (!el) return null;
-  const rect = el.getBoundingClientRect();
-  return { x: rect.left + rect.width/2, y: rect.top + rect.height/2, w: rect.width, h: rect.height };
-}
-
-function launchBeam(r, c, weapon, onImpact) {
-  const target = getCellCenter(r, c);
-  if (!target) { onImpact(); return; }
-  const svg = $('beam-canvas');
-  const palette = { torpedo:{head:'#00e5ff',glow:'#00b8d4'}, missile:{head:'#ffdd00',glow:'#ffaa00'}, stone:{head:'#c8dff0',glow:'#7ab0cc'}, bomb:{head:'#ff3b4a',glow:'#c8102e'} };
-  const p = palette[weapon];
-  const fromLeft = Math.random() < 0.5;
-  const startX = fromLeft ? -30 : window.innerWidth + 30;
-  const startY = target.y - 70 - Math.random() * 50;
-  const endX = target.x, endY = target.y;
-  const dur = (weapon === 'stone' || weapon === 'bomb') ? 540 : 430;
-
-  const head = document.createElement('div');
-  head.style.cssText = `position:fixed;pointer-events:none;z-index:502;width:13px;height:13px;border-radius:50%;background:radial-gradient(circle,#fff 0%,${p.head} 50%,transparent 100%);box-shadow:0 0 16px 6px ${p.head},0 0 35px 12px ${p.glow};transform:translate(-50%,-50%);left:${startX}px;top:${startY}px;`;
-  document.body.appendChild(head);
-
-  const defs = document.createElementNS(SVG_NS,'defs');
-  const grad = document.createElementNS(SVG_NS,'linearGradient');
-  const gid = 'bg'+Date.now()+Math.random().toString(36).slice(2);
-  grad.setAttribute('id',gid); grad.setAttribute('gradientUnits','userSpaceOnUse');
-  const s1=document.createElementNS(SVG_NS,'stop'); s1.setAttribute('offset','0%'); s1.setAttribute('stop-color',p.head); s1.setAttribute('stop-opacity','0');
-  const s2=document.createElementNS(SVG_NS,'stop'); s2.setAttribute('offset','100%'); s2.setAttribute('stop-color',p.head); s2.setAttribute('stop-opacity','0.85');
-  grad.appendChild(s1); grad.appendChild(s2); defs.appendChild(grad); svg.appendChild(defs);
-
-  const line=document.createElementNS(SVG_NS,'line');
-  line.setAttribute('x1',startX); line.setAttribute('y1',startY); line.setAttribute('x2',startX); line.setAttribute('y2',startY);
-  line.setAttribute('stroke',`url(#${gid})`); line.setAttribute('stroke-width',weapon==='stone'?'2':'3'); line.setAttribute('stroke-linecap','round');
-  svg.appendChild(line);
-
-  const t0=performance.now();
-  function easeOut(t){return 1-Math.pow(1-t,3);}
-  let impactFired=false;
-
-  function step(now){
-    const prog=Math.min((now-t0)/dur,1), e=easeOut(prog);
-    const cx=startX+(endX-startX)*e, cy=startY+(endY-startY)*e;
-    const trailProg=Math.max(0,e-0.28);
-    const tx=startX+(endX-startX)*trailProg, ty=startY+(endY-startY)*trailProg;
-    head.style.left=cx+'px'; head.style.top=cy+'px';
-    line.setAttribute('x1',tx); line.setAttribute('y1',ty); line.setAttribute('x2',cx); line.setAttribute('y2',cy);
-    grad.setAttribute('x1',tx); grad.setAttribute('y1',ty); grad.setAttribute('x2',cx); grad.setAttribute('y2',cy);
-    if(prog>=0.86&&!impactFired){ impactFired=true; spawnWaterRipple(endX,endY,weapon); onImpact(); }
-    if(prog<1) requestAnimationFrame(step);
-    else{ head.style.opacity='0'; setTimeout(()=>{head.remove();line.remove();defs.remove();},200); }
-  }
-  requestAnimationFrame(step);
-}
-
-function spawnWaterRipple(cx,cy,weapon){
-  const fx=$('fx-layer');
-  const c={torpedo:'rgba(0,229,255,',missile:'rgba(255,221,0,',stone:'rgba(180,210,240,',bomb:'rgba(255,70,80,'}[weapon];
-  [[55,0,2],[80,0.09,1.5],[115,0.2,1]].forEach(([size,delay,w])=>{
-    const r=document.createElement('div'); r.className='ripple-ring'; r.style.left=cx+'px'; r.style.top=cy+'px';
-    r.style.setProperty('--rr-size',size+'px'); r.style.setProperty('--rr-dur','0.72s'); r.style.setProperty('--rr-delay',delay+'s'); r.style.setProperty('--rr-color',c+'0.75)'); r.style.setProperty('--rr-w',w+'px');
-    fx.appendChild(r); setTimeout(()=>r.remove(),1000);
-  });
-  [[70,0.05],[105,0.16]].forEach(([size,delay])=>{
-    const e=document.createElement('div'); e.className='ripple-ellipse'; e.style.left=cx+'px'; e.style.top=cy+'px';
-    e.style.setProperty('--re-size',size+'px'); e.style.setProperty('--re-dur','0.65s'); e.style.setProperty('--re-delay',delay+'s'); e.style.setProperty('--re-color',c+'0.4)');
-    fx.appendChild(e); setTimeout(()=>e.remove(),900);
-  });
-  for(let i=0;i<8;i++){
-    const angle=(Math.PI*2*i/8)+(Math.random()-0.5)*0.6, dist=14+Math.random()*20;
-    const d=document.createElement('div'); d.className='drop'; d.style.left=cx+'px'; d.style.top=cy+'px';
-    d.style.setProperty('--d-x',Math.cos(angle)*dist+'px'); d.style.setProperty('--d-y',(Math.sin(angle)*dist-18)+'px'); d.style.setProperty('--d-dur',(0.3+Math.random()*0.2)+'s'); d.style.setProperty('--d-color',c+'0.9)');
-    fx.appendChild(d); setTimeout(()=>d.remove(),600);
-  }
-}
-
-function spawnWifiShockwave(r,c,dir){
-  const origin=getCellCenter(r,c); if(!origin) return;
-  const svg=$('beam-canvas');
-  const color=dir==='horizontal'?'#00e5ff':'#ffdd00';
-  const maxRadius=origin.w*2.0;
-  for(let side=-1;side<=1;side+=2){
-    for(let i=0;i<3;i++){
-      const delay=i*100, radius=(i+1)*(maxRadius/3);
-      setTimeout(()=>{
-        const path=document.createElementNS(SVG_NS,'path');
-        path.setAttribute('fill','none'); path.setAttribute('stroke',color);
-        path.setAttribute('stroke-width',(2.2-i*0.6).toString()); path.setAttribute('stroke-linecap','round');
-        const ox=origin.x, oy=origin.y; let d;
-        if(dir==='horizontal'){
-          const sx=ox+side*(radius*0.3), sy1=oy-radius*0.5, sy2=oy+radius*0.5, cpx=ox+side*radius;
-          d=`M ${sx} ${sy1} Q ${cpx} ${oy} ${sx} ${sy2}`;
-        } else {
-          const sy=oy+side*(radius*0.3), sx1=ox-radius*0.5, sx2=ox+radius*0.5, cpy=oy+side*radius;
-          d=`M ${sx1} ${sy} Q ${ox} ${cpy} ${sx2} ${sy}`;
-        }
-        path.setAttribute('d',d); path.setAttribute('opacity','0'); svg.appendChild(path);
-        const fadeDur=500, t0=performance.now();
-        function animArc(now){
-          const p=Math.min((now-t0)/fadeDur,1);
-          const opacity=p<0.2?(p/0.2):(1-(p-0.2)/0.8);
-          path.setAttribute('opacity',(opacity*(0.7-i*0.15)).toString());
-          if(p<1) requestAnimationFrame(animArc); else path.remove();
-        }
-        requestAnimationFrame(animArc);
-      },delay);
-    }
-  }
-}
-
-function spawnDetectBang(r,c){
-  const center=getCellCenter(r,c); if(!center) return;
-  const fx=$('fx-layer');
-  const bang=document.createElement('div'); bang.className='detect-bang'; bang.textContent='!';
-  const sz=Math.max(center.w*0.9,20);
-  bang.style.cssText=`position:fixed;pointer-events:none;z-index:600;font-size:${sz}px;width:${center.w}px;height:${center.h}px;left:${center.x-center.w/2}px;top:${center.y-center.h/2}px;display:flex;align-items:center;justify-content:center;`;
-  const ms=DIFFICULTY[difficulty].bangMs;
-  bang.style.animationDuration=ms+'ms';
-  fx.appendChild(bang); setTimeout(()=>bang.remove(),ms+500);
-}
-
-// ── GAMEPLAY ─────────────────────────────────────────────────────────
-function fire(r,c){
-  if(gameOver || firingLocked) return;
-  if(!isOpen(revealed[r][c])) return;
-
-  const weapon=selectedWeapon;
-  if(ammo[weapon]<=0){
-    addLog(`⚠ Hết ${weaponName(weapon).toUpperCase()}!`,'system');
-    const alt=['stone','torpedo','missile','bomb'].find(w=>ammo[w]>0);
-    if(alt){ addLog(` Chuyển sang: ${weaponName(alt).toUpperCase()}`,'system'); selectWeapon(alt); }
-    return;
-  }
-
-  lockFiring();
-  ammo[weapon]--;
-  shotsCount++;
-  updateAmmoButtons();
-
-  const wName = weaponName(weapon);
-  const logs={
-    sunk:[
-      ` Tuyệt đỉnh! ${wName} trúng ngay đầu não! Tiễn biệt đối thủ!`,
-      ` Cú bắn thần sầu! Một chiếc tàu địch đã chìm sâu dưới đáy biển!`,
-      ` Tuyệt vời chỉ huy! Chúng ta đã đánh chìm hoàn toàn tàu địch!`,
-      ` Bùm! Đầu tàu nổ tung, mục tiêu đã bị xóa sổ!`,
-      ` Xác nhận tiêu diệt! Đã loại bỏ một tàu chiến địch khỏi bản đồ!`
-    ],
-    hit:[
-      ` Trúng đích! ${wName} đã khiến chúng bốc cháy!`,
-      ` Khá lắm! Tàu địch đã trúng đạn, chúng không thoát được đâu!`,
-      ` Một cú va chạm mạnh! Thân tàu địch đang hư hỏng nặng!`,
-      ` Tốt! Chúng ta đã gây thiệt hại cho hạm đội địch!`,
-      ` Kim loại rách nát! ${wName} đã xuyên thủng lớp giáp của chúng!`
-    ],
-    miss:[
-      ` Chệch mục tiêu! ${wName} chỉ tạo ra một cột nước khổng lồ.`,
-      ` Trượt rồi! Chúng ta cần căn chỉnh lại thước ngắm!`,
-      ` Đạn rơi xuống biển! Một sự lãng phí tài nguyên, thưa chỉ huy.`,
-      ` Không có gì cả! Chỉ là một đàn cá vừa bơi qua.`,
-      ` Có vẻ như dòng hải lưu đã làm lệch đường đi của ${wName}.`
-    ],
-    shield:[
-      ` Trúng khiên đuôi tàu! Cần bắn thêm một lần nữa!`,
-      ` Lớp khiên đã rạn nứt! Bắn tiếp để xuyên thủng!`,
-      ` ${wName} bị khiên chặn lại! Khiên chỉ chịu được thêm một đòn!`
-    ],
-    radar_none:[
-      ` [RADAR]: Vùng biển xung quanh hoàn toàn yên tĩnh.`,
-      ` [RADAR]: Không có tín hiệu kim loại nào trong phạm vi quét.`,
-      ` [RADAR]: Sóng âm không phản hồi, không thấy mục tiêu lân cận.`,
-      ` [RADAR]: Khu vực này có vẻ sạch bóng quân thù.`,
-      ` [RADAR]: Tín hiệu phẳng lặng, không có dấu hiệu chuyển động.`
-    ]
-  };
-  const rnd=(arr)=>arr[Math.floor(Math.random()*arr.length)];
-
-  launchBeam(r,c,weapon,()=>{
-    if(weapon==='torpedo') spawnWifiShockwave(r,c,'horizontal');
-    if(weapon==='missile') spawnWifiShockwave(r,c,'vertical');
-
-    let damaged=false;   // có gây sát thương lên tàu không
-    if(weapon==='bomb'){
-      damaged=blastArea(r,c);
-    } else {
-      const result=attackCell(r,c);
-      if(result==='sunk'){ addLog(rnd(logs.sunk),'sunk'); damaged=true; }
-      else if(result==='hit'){ addLog(rnd(logs.hit),'hit'); damaged=true; }
-      else if(result==='shield'){ addLog(rnd(logs.shield),'hit'); damaged=true; }
-      else if(result!=='secret') addLog(rnd(logs.miss),'miss');
-    }
-
-    if(weapon==='torpedo'||weapon==='missile'){
-      const dirs=(weapon==='torpedo')?[[0,-1],[0,1]]:[[-1,0],[1,0]];
-      let found=false;
-      dirs.forEach(([dr,dc])=>{ const nr=r+dr,nc=c+dc; if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&(revealed[nr][nc]===''||revealed[nr][nc]==='detected')) found=true; });
-      if(found) detectCells(r,c,dirs);
-      else addLog(rnd(logs.radar_none),'detect');
-    }
-
-    if(!damaged&&!secretPending) registerMiss();
-    const finish=()=>{ checkEndGame(); unlockFiring(); };
-    if(secretPending&&shipsAlive>0){ secretPending=false; dropSecretShells(finish); }
-    else { secretPending=false; finish(); }
-  });
-}
-
-function attackCell(r,c){
-  if(secretCell&&!secretTriggered&&r===secretCell.r&&c===secretCell.c){
-    secretTriggered=true; secretPending=true;
-    revealed[r][c]='secret'; updateCell(r,c);
-    return 'secret';
-  }
-  if(board[r][c]!==null){
-    const{shipId,isHead,isTail}=board[r][c], ship=ships[shipId];
-    if(isHead&&ship.alive){
-      ship.alive=false; shipsAlive--;
-      ship.cells.forEach(({r:sr,c:sc})=>{ revealed[sr][sc]='sunk'; updateCell(sr,sc); addShipPartVisual(sr,sc,true); });
-      updateHud();
-      return 'sunk';
-    } else if(ship.alive){
-      if(isTail&&ship.shieldUp){ ship.shieldUp=false; revealed[r][c]='shield'; updateCell(r,c); return 'shield'; }
-      revealed[r][c]='hit'; ship.hit.add(`${r},${c}`); updateCell(r,c); return 'hit';
-    }
-  }
-  if(!revealed[r][c]||revealed[r][c]==='detected'){ revealed[r][c]='miss'; updateCell(r,c); }
-  return 'miss';
-}
-
-// Ô bí mật: thả 5 đạn đá xuống 5 ô chưa bắn (không tốn đạn)
-function dropSecretShells(done){
-  const g=gen;
-  const pool=[];
-  for(let r=0;r<GRID;r++) for(let c=0;c<GRID;c++){
-    const st=revealed[r][c];
-    if(st===''||st==='detected') pool.push([r,c]);   // không thả vào ô đã bắn (kể cả ô khiên)
-  }
-  for(let i=pool.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [pool[i],pool[j]]=[pool[j],pool[i]]; }
-  const targets=pool.slice(0,DIFFICULTY[difficulty].secretDrops);
-  addLog(` Ô BÍ MẬT! ${targets.length} quả đạn đá đang rơi xuống ngẫu nhiên trên bàn!`,'detect');
-  if(!targets.length){ done(); return; }
-
-  let landed=0, hits=0, sunk=0;
-  targets.forEach(([tr,tc],i)=>{
-    setTimeout(()=>{
-      if(g!==gen) return;
-      launchBeam(tr,tc,'stone',()=>{
-        if(g!==gen) return;
-        const st=revealed[tr][tc];
-        if(isOpen(st)){
-          const res=attackCell(tr,tc);
-          if(res==='sunk') sunk++; else if(res==='hit'||res==='shield') hits++;
-        }
-        if(++landed===targets.length){
-          if(sunk>0) addLog(` Mưa đạn đá đánh chìm ${sunk} tàu${hits?`, trúng thêm ${hits} ô`:''}!`,'sunk');
-          else if(hits>0) addLog(` Mưa đạn đá trúng ${hits} ô tàu địch!`,'hit');
-          else addLog(' Mưa đạn đá rơi xuống biển, không trúng tàu nào.','miss');
-          done();
-        }
-      });
-    },i*150);
-  });
-}
-
-// Bom: tấn công mọi ô chưa lộ trong vùng 3x3 quanh (r,c)
-function blastArea(r,c){
-  spawnBlast(r,c);
-  let hits=0, sunk=0;
-  for(let dr=-1;dr<=1;dr++){
-    for(let dc=-1;dc<=1;dc++){
-      const nr=r+dr, nc=c+dc;
-      if(nr<0||nr>=GRID||nc<0||nc>=GRID) continue;
-      const st=revealed[nr][nc];
-      if(!isOpen(st)) continue;
-      const res=attackCell(nr,nc);
-      if(res==='sunk') sunk++; else if(res==='hit'||res==='shield') hits++;
-    }
-  }
-  if(sunk>0) addLog(` Bom nổ tung vùng 3×3! Đánh chìm ${sunk} tàu${hits?`, trúng thêm ${hits} ô`:''}!`,'sunk');
-  else if(hits>0) addLog(` Bom trúng ${hits} ô tàu địch!`,'hit');
-  else addLog(' Bom nổ giữa biển khơi, không trúng mục tiêu nào.','miss');
-  return hits>0||sunk>0;
-}
-
-function spawnBlast(r,c){
-  const ctr=getCellCenter(r,c); if(!ctr) return;
-  const el=document.createElement('div'); el.className='blast';
-  const w=ctr.w*3, h=ctr.h*3;
-  el.style.cssText=`width:${w}px;height:${h}px;left:${ctr.x-w/2}px;top:${ctr.y-h/2}px;`;
-  $('fx-layer').appendChild(el); setTimeout(()=>el.remove(),700);
-}
-
-function addShipPartVisual(r,c,burning){
-  const cell=$(`cell-${r}-${c}`); if(!cell) return;
-  const info=board[r][c]; if(!info) return;
-  const ship=ships[info.shipId];
-  const idx=ship.cells.findIndex(p=>p.r===r&&p.c===c);
-  cell.innerHTML='';
-  const part=document.createElement('div');
-  part.className=`ship-part ${ship.isHorizontal?'h':'v'}${idx===0?' start':''}${idx===ship.cells.length-1?' end':''}${info.isHead?' head':''}`;
-  cell.appendChild(part);
-  if(burning){
-    const flame=document.createElement('div');
-    flame.className='flame';
-    cell.appendChild(flame);
-  }
-}
-
-function detectCells(r,c,dirs){
-  dirs.forEach(([dr,dc])=>{
-    const nr=r+dr,nc=c+dc;
-    if(nr>=0&&nr<GRID&&nc>=0&&nc<GRID&&board[nr][nc]!==null&&revealed[nr][nc]===''){
-      revealed[nr][nc]='detected'; spawnDetectBang(nr,nc);
-      addLog('Radar phát hiện tàu!','detect');
-    }
-  });
-}
-
-function weaponName(w){ return{torpedo:'Ngư Lôi',missile:'Tên Lửa',stone:'Đạn Đá',bomb:'Bom'}[w]; }
-
-function selectWeapon(w){
-  if(ammo[w]<=0) return;
-  selectedWeapon=w;
-  document.body.dataset.weapon=w;
-  WEAPONS.forEach(n=>{ $(`btn-${n}`).classList.toggle('active',n===w); });
-}
-
-function updateAmmoButtons(){
-  WEAPONS.forEach(w=>{
-    const btn=$(`btn-${w}`);
-    if(!btn) return;
-    const count=ammo[w];
-    $(`count-${w}`).textContent=`×${count}`;
-    btn.disabled=count<=0;
-    if(count<=0&&selectedWeapon===w){
-      const next=['torpedo','missile','stone','bomb'].find(x=>ammo[x]>0);
-      if(next) selectWeapon(next);
-    }
-  });
-  updateHud();
-}
-
-function checkEndGame(){
-  const stat=(v,l)=>`<div><b>${v}</b><span>${l}</span></div>`;
-  if(shipsAlive===0){
-    gameOver=true;
-    setTimeout(()=>{
-      $('overlay-title').textContent='CHIẾN THẮNG';
-      $('overlay-title').className='overlay-title win';
-      $('overlay-msg').innerHTML=`<div class="stats">${stat(shotsCount,'PHÁT BẮN')}${stat(getTotalAmmo(),'ĐẠN CÒN')}</div>Bạn đã tiêu diệt toàn bộ hạm đội địch!`;
-      $('overlay').classList.remove('hidden');
-    },600);
-    return;
-  }
-  if(getTotalAmmo()<=0){
-    gameOver=true;
-    revealAllShips();
-    setTimeout(()=>{
-      $('overlay-title').textContent='THẤT BẠI';
-      $('overlay-title').className='overlay-title lose';
-      $('overlay-msg').innerHTML=`<div class="stats">${stat(shotsCount,'PHÁT BẮN')}${stat(shipsAlive,'TÀU ĐỊCH CÒN')}</div>Hết đạn! Vị trí tàu đã được hiển thị trên bản đồ.`;
-      $('overlay').classList.remove('hidden');
-    },400);
-  }
-}
-
-function viewMap(){
-  $('overlay').classList.add('hidden');
-  $('floating-restart').classList.remove('hidden');
-}
-
-function revealAllShips(){
-  for(let r=0;r<GRID;r++){
-    for(let c=0;c<GRID;c++){
-      if(board[r][c]&&isOpen(revealed[r][c])){
-        addShipPartVisual(r,c,false);
-        const cell=$(`cell-${r}-${c}`);
-        if(cell){ cell.classList.add('revealed','disabled'); }
-      }
-    }
-  }
-  if(secretCell&&!secretTriggered){
-    const sc=$(`cell-${secretCell.r}-${secretCell.c}`);
-    if(sc) sc.classList.add('secret','unfound','revealed','disabled');
-  }
-}
-
-function addLog(msg,type=''){
-  const log=$('log');
-  log.querySelectorAll('.log-entry.new').forEach(e=>e.classList.remove('new'));
-  const entry=document.createElement('div');
-  entry.className=`log-entry new ${type}`; entry.textContent=msg;
-  log.appendChild(entry); log.scrollTop=log.scrollHeight;
-  while(log.children.length>50) log.removeChild(log.firstChild);
-}
-
-function clearLog(){ $('log').innerHTML=''; }
-
-openModeScreen();
-</script>
+<script src="haichien-art.js?v=1"></script>
+<script src="haichien.js?v=1"></script>
+<script src="haichien-online.js?v=1"></script>
 <script src="../activity.js?v=20261027c" defer></script>
 </body>
 </html>
