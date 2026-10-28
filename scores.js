@@ -47,7 +47,7 @@
     { id: 'fishsurvival', name: 'Cá lớn nuốt cá bé' },
     { id: 'phagach', name: 'Phá gạch' },
     { id: 'noithu', name: 'Nối thú' },
-    { id: 'xepthap', name: 'Xếp tháp', fmt: v => v.toLocaleString('vi-VN') + ' tầng' },
+    { id: 'xepthap', name: 'Xây tháp', fmt: v => v.toLocaleString('vi-VN') + ' tầng' },
     { id: 'xepgach', name: 'Xếp gạch' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
