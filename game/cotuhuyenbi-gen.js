@@ -18,7 +18,7 @@
 
   /* ---------- 9 cổ tự: 3 vuông, 3 tròn, 3 tam giác ---------- */
   const GLYPHS = [];
-  function def(shape, name, segs) { GLYPHS.push({ id: shape + GLYPHS.filter(g => g.shape === shape).length, shape, name, segs }); }
+  function def(shape, name, segs, easy) { GLYPHS.push({ id: shape + GLYPHS.filter(g => g.shape === shape).length, shape, name, segs, easy: !!easy }); }
 
   (function squares() {
     const TL = pt(12, 12), TR = pt(88, 12), BR = pt(88, 88), BL = pt(12, 88);
@@ -35,12 +35,13 @@
     const O = [], I = [];
     for (let k = 0; k < 8; k++) { const a = k * 45 * D; O.push(pt(50 + R * Math.cos(a), 50 + R * Math.sin(a))); I.push(pt(50 + r * Math.cos(a), 50 + r * Math.sin(a))); }
     const outer = () => O.map((p, k) => arc(p, O[(k + 1) % 8], C));
-    def('circle', 'tròn nan hoa', outer().concat(O.map(p => line(C, p))));
-    def('circle', 'tròn đồng tâm', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), [0, 2, 4, 6].map(k => line(I[k], O[k]))));
+    def('circle', 'tròn nan hoa', outer().concat(O.map(p => line(C, p))), true);   // kiểu đơn giản: chỉ dùng ở các màn đầu
+    def('circle', 'tròn đồng tâm', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), [0, 2, 4, 6].map(k => line(I[k], O[k])), [1, 3, 5, 7].map((k, i, a) => line(I[k], I[a[(i + 1) % 4]]))));
     def('circle', 'tròn nội tiếp', outer().concat([1, 3, 5, 7].map((k, i, a) => line(O[k], O[a[(i + 1) % 4]])), [1, 3, 5, 7].map(k => line(C, O[k]))));
     def('circle', 'tròn sao', outer().concat(O.map((p, k) => line(p, O[(k + 3) % 8]))));
-    def('circle', 'tròn bánh xe', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), I.map((p, k) => line(p, O[k]))));
-    def('circle', 'tròn chữ thập', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), [0, 2, 4, 6].map(k => line(C, I[k])), [0, 2, 4, 6].map(k => line(I[k], O[k])), [1, 3, 5, 7].map(k => line(O[k], I[k]))));
+    def('circle', 'tròn bát giác trong', outer().concat(I.map((p, k) => line(p, I[(k + 1) % 8])), [1, 3, 5, 7].map(k => line(O[k], I[k]))));
+    def('circle', 'tròn hai hình vuông', outer().concat([0, 2, 4, 6].map((k, i, a2) => line(O[k], O[a2[(i + 1) % 4]])), [1, 3, 5, 7].map((k, i, a2) => line(O[k], O[a2[(i + 1) % 4]]))));
+    def('circle', 'tròn nan hoa vuông', outer().concat(O.map(p => line(C, p)), [1, 3, 5, 7].map((k, i, a2) => line(O[k], O[a2[(i + 1) % 4]]))));
     const H = [], h = Math.PI / 3;
     for (let k = 0; k < 6; k++) H.push(pt(50 + R * Math.cos(k * h), 50 + R * Math.sin(k * h)));
     const harcs = () => H.map((p, k) => arc(p, H[(k + 1) % 6], C));
@@ -216,8 +217,8 @@
       const pool = n < 5 ? ['square', 'circle', 'triangle'] : ['square', 'circle', 'triangle', 'star', 'diamond', 'octagon', 'rhombus', 'trapezoid'];
       const shapes = shuffle(pool.slice(), rnd).slice(0, P.glyphs);
       const glyphs = shapes.map(sh => {
-        const opts = GLYPHS.filter(g => g.shape === sh);
-        const g = n <= 2 ? opts[0] : opts[Math.floor(rnd() * opts.length)];
+        const opts = GLYPHS.filter(g => g.shape === sh && (n <= 2 || !g.easy));
+        const g = n <= 2 ? GLYPHS.find(x => x.shape === sh) : opts[Math.floor(rnd() * opts.length)];
         const kmin = 2;
         const k = n <= 2 ? 2 : kmin + Math.floor(rnd() * (P.kmax - kmin + 1) + (n > 8 && rnd() < .35 ? 1 : 0));
         return { def: g, k: Math.min(k, P.kmax, Math.floor(g.segs.length / 3)) };
