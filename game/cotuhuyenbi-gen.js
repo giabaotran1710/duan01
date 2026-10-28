@@ -155,7 +155,7 @@
     return {
       glyphs: n <= 2 ? 1 : n <= 6 ? 2 : 3,
       kmax: n <= 2 ? 2 : n <= 5 ? 3 : 4,
-      decoys: Math.min(6, 1 + Math.floor((n - 1) / 2)),          // tối đa 6 mảnh giả cho mỗi cổ tự
+      decoys: n <= 2 ? 2 : Math.min(6, 1 + Math.floor((n - 1) / 2)),          // tối đa 6 mảnh giả cho mỗi cổ tự
       rotStep: n < 3 ? 90 : n < 6 ? 45 : 15,
       flip: n >= 4
     };
