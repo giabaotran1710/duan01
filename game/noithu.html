@@ -123,6 +123,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 @keyframes pop{from{transform:scale(.4)}}
 .grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 16px}
 .grid3 div{padding:8px 4px;border-radius:12px;background:rgba(0,0,0,.18);font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.06em}
+.grid3.two{grid-template-columns:repeat(2,1fr)}
 .grid3 b{display:block;font-size:20px;color:var(--ink);letter-spacing:0}
 #pause .card{display:flex;flex-direction:column}
 #pause h2{font-size:26px;letter-spacing:.1em;color:var(--ink);margin-bottom:16px}
@@ -139,7 +140,6 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 <div id="app">
   <div id="top">
     <button class="ib" id="bPause" aria-label="Tạm dừng"><i class="fa-solid fa-pause"></i></button>
-    <div class="stat"><small>MÀN</small><b id="sLevel">1</b></div>
     <div class="stat"><small>ĐIỂM</small><b id="sScore">0</b></div>
     <div class="stat"><small>CẶP CÒN</small><b id="sLeft">0</b></div>
     <button class="ib" id="bSnd" aria-label="Âm thanh"><i class="fa-solid fa-volume-high"></i></button>
@@ -183,10 +183,10 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 
 <section id="clear" class="screen">
   <div class="card">
-    <h2 id="cTitle">QUA MÀN 1</h2>
+    <h2 id="cTitle">HOÀN THÀNH</h2>
     <div class="bigNum" id="cScore">0</div>
     <div class="grid3"><div><b id="cTime">0</b>GIÂY CÒN</div><div><b id="cBonus">+0</b>THƯỞNG</div><div><b id="cCombo">0</b>CHUỖI</div></div>
-    <button class="btn" id="bNext">MÀN TIẾP</button>
+    <button class="btn" id="bNext">TIẾP TỤC</button>
   </div>
 </section>
 
@@ -195,7 +195,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     <h2>HẾT GIỜ</h2>
     <div class="bigNum" id="oScore">0</div>
     <div class="badge" id="oNew">KỶ LỤC MỚI</div>
-    <div class="grid3"><div><b id="oLevel">1</b>MÀN</div><div><b id="oPairs">0</b>CẶP</div><div><b id="oBest">0</b>KỶ LỤC</div></div>
+    <div class="grid3 two"><div><b id="oPairs">0</b>CẶP</div><div><b id="oBest">0</b>KỶ LỤC</div></div>
     <button class="btn" id="bAgain">CHƠI LẠI</button>
     <button class="btn ghost" id="bMenu">VỀ MENU</button>
   </div>
@@ -268,12 +268,16 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     cs: 44, hintPair: null,
   };
   const GRAVS = ['none', 'down', 'left', 'up', 'right', 'center'];
-  const GRAV_NAME = { none: '', down: 'Thú rơi xuống dưới', left: 'Thú dồn sang trái', up: 'Thú bay lên trên', right: 'Thú dồn sang phải', center: 'Thú dồn vào giữa' };
 
-  function levelCfg(lv) {
-    if (lv === 1) return { R: 8, C: 6, types: 12, time: 200, grav: 'none' };
-    const grav = GRAVS[(lv - 1) % GRAVS.length];
-    return { R: 10, C: 7, types: Math.min(14 + lv, ANIMALS.length), time: Math.max(150, 300 - (lv - 2) * 15), grav };
+  // Mỗi bàn có 50% là bàn thú rơi (hướng ngẫu nhiên), 50% không rơi; người chơi không được báo trước.
+  // rand: hàm ngẫu nhiên (ván online dùng bộ sinh theo seed để hai máy ra cùng kết quả)
+  function pickGrav(rand) {
+    if (rand() < .5) return 'none';
+    const dirs = GRAVS.slice(1);
+    return dirs[Math.floor(rand() * dirs.length)];
+  }
+  function boardCfg(n, rand) {
+    return { R: 10, C: 7, types: 16, time: Math.max(150, 300 - n * 15), grav: pickGrav(rand) };
   }
 
   // ---------- Dựng bàn ----------
@@ -325,6 +329,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     const cs = Math.floor(Math.min((st.width - 4) / (G.C + 1), (st.height - 4) / (G.R + 1), 72));
     G.cs = cs;
     document.documentElement.style.setProperty('--cs', cs + 'px');
+    for (const t of G.tiles) if (t.el) place(t);
     const b = $('board');
     b.style.width = (G.C * cs + cs) + 'px'; b.style.height = (G.R * cs + cs) + 'px';
     const svg = $('path'); svg.setAttribute('viewBox', `0 0 ${G.C * cs + cs} ${G.R * cs + cs}`);
@@ -332,6 +337,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     requestAnimationFrame(() => { for (const t of G.tiles) if (t.el) t.el.classList.remove('noanim'); });
   }
   addEventListener('resize', layout);
+  if (window.ResizeObserver) new ResizeObserver(() => layout()).observe($('stage'));
 
   // ---------- Tìm đường (tối đa 3 đoạn thẳng = 2 lần rẽ) ----------
   function findPath(a, b) {
@@ -485,7 +491,6 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
 
   // ---------- Chơi đơn ----------
   function syncHud() {
-    $('sLevel').textContent = G.level;
     $('sScore').textContent = G.score.toLocaleString('vi-VN');
     $('sLeft').textContent = remaining().length / 2;
     $('nHint').textContent = G.hints; $('bHint').disabled = G.hints <= 0;
@@ -498,13 +503,12 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     $('timeTxt').textContent = Math.ceil(G.time) + 's';
   }
   function startLevel(lv) {
-    const cfg = levelCfg(lv);
+    const cfg = boardCfg(lv - 1, Math.random);
     G.level = lv; G.time = G.timeMax = cfg.time; G.combo = 0; G.sel = null; G.busy = false;
     show(null);
     build(cfg);
     G.running = true; G.paused = false;
     syncTime();
-    if (GRAV_NAME[cfg.grav]) setTimeout(() => toast('Màn ' + lv + ': ' + GRAV_NAME[cfg.grav]), 500);
   }
   function startSolo() {
     Snd.init();
@@ -519,7 +523,6 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     G.score += bonus;
     G.hints++; G.shuffles++;
     Snd.win(); vibrate([20, 40, 20]);
-    $('cTitle').textContent = 'QUA MÀN ' + G.level;
     $('cScore').textContent = G.score.toLocaleString('vi-VN');
     $('cTime').textContent = left; $('cBonus').textContent = '+' + bonus; $('cCombo').textContent = G.maxCombo;
     syncHud();
@@ -535,7 +538,7 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
     if (window.Scores && G.score > 0) Scores.submit('noithu', G.score);
     $('oScore').textContent = G.score.toLocaleString('vi-VN');
     $('oNew').style.display = isNew && G.score > 0 ? 'block' : 'none';
-    $('oLevel').textContent = G.level; $('oPairs').textContent = G.pairs; $('oBest').textContent = store.best.toLocaleString('vi-VN');
+    $('oPairs').textContent = G.pairs; $('oBest').textContent = store.best.toLocaleString('vi-VN');
     setTimeout(() => show('over'), 700);
   }
   $('bHint').onclick = () => {
@@ -590,13 +593,13 @@ button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
   // ---------- Giao diện cho chế độ trực tuyến ----------
   window.NT = {
     G, show, toast, toMenu, Snd, vibrate, ANIMALS, layout,
-    // bắt đầu ván trực tuyến: bàn 10x7, không dồn ô, không giờ
+    // bắt đầu ván trực tuyến: bàn 10x7, không giờ; hướng rơi (nếu có) suy ra từ seed
     startOnline(seed) {
       G.mode = 'online'; G.seed = seed;
       document.body.classList.add('online');
       G.score = 0; G.pairs = 0; G.combo = 0; G.maxCombo = 0; G.sel = null; G.busy = false;
       show(null);
-      build({ R: 10, C: 7, types: 18, grav: 'none' }, seed);
+      build({ R: 10, C: 7, types: 18, grav: pickGrav(rng((seed * 7 + 13) % 2147483647)) }, seed);
       G.running = false;   // mở khoá sau khi đếm ngược
     },
     unlock() { G.running = true; },

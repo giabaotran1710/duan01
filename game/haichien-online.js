@@ -492,7 +492,6 @@
     B = freshBattle();
     HC.setScreen('online');
     HC.models.A = onlineModelA; HC.models.B = onlineModelB; HC.input = input;
-    HC.onTab = v => { if (!B) return; B.manualView = performance.now(); HC.showBoard(v); };
     HC.viewA.parts.clear(); HC.viewB.parts.clear();
     HC.clearLog(); HC.hideResult(); HC.floatBtn(null);
     HC.showBoard('B');
@@ -582,7 +581,7 @@
         B.myLeft = typeof p.left === 'number' ? p.left : B.myLeft;
       }
       if (p.left === 0) { endGame(B.turn === on.role ? 'me' : 'opp', 'fleet'); return; }
-      nextTurn();
+      nextTurn(p.k !== 'miss');
     } else if (ev.t === 'to') {
       if (B.phase !== 'battle' || B.tphase !== 'aim' || p.n !== B.n) return;
       const mine = B.turn === on.role;
@@ -594,16 +593,19 @@
       checkReveal(p);
     }
   }
-  function nextTurn() {
-    B.n++; B.turn = B.turn === 'host' ? 'guest' : 'host'; B.tphase = 'aim'; B.turnStart = performance.now();
-    const mine = B.turn === on.role;
+  // again = bắn trúng thì bên đó được bắn thêm một phát. Màn hình: lượt ta → biển địch, lượt đối thủ → hạm đội ta.
+  function nextTurn(again) {
+    const prevMine = B.turn === on.role;
+    B.n++; if (!again) B.turn = B.turn === 'host' ? 'guest' : 'host';
+    B.tphase = 'aim'; B.turnStart = performance.now();
+    const mine = B.turn === on.role, n = B.n;
     updateHud();
-    if (mine) {
-      SFX.turn();
-      // xem đạn đối thủ rơi xong mới quay về biển địch
-      const back = () => { if (B && B.phase === 'battle' && B.turn === on.role && performance.now() - B.manualView > 2500) HC.showBoard('A'); };
-      if (HC.shown === 'B') setTimeout(back, 1100); else back();
-    }
+    if (mine) SFX.turn();
+    // chờ hiệu ứng phát vừa rồi xong rồi mới chuyển cảnh
+    const delay = mine ? (prevMine ? 0 : 1100) : 1500;
+    const view = mine ? 'A' : 'B';
+    const go = () => { if (B && B.phase === 'battle' && B.n === n && HC.shown !== view) HC.showBoard(view); };
+    if (delay) setTimeout(go, delay); else go();
   }
 
   // Máy ta bị bắn: tự tính kết quả từ bố trí của mình rồi báo lại
