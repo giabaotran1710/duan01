@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028d';
+  const V = '20261028e';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -203,7 +203,7 @@
     if (G.need && w.indexOf(' ') < 0) w = G.need + ' ' + w;
     if (!WORD_RE.test(w)) return { err: 'Hãy nhập một từ hai tiếng.' };
     if (G.need && first(w) !== G.need) return { err: 'Từ phải bắt đầu bằng "' + G.need + '".' };
-    if (!D.all.has(w)) return { err: 'Từ này không có trong từ điển.' };
+    if (!D.all.has(w)) return { err: '"' + w + '" không có trong từ điển.' };
     if (G.used.has(w)) return { err: 'Từ này đã được dùng.' };
     return { w };
   }
