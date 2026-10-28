@@ -93,6 +93,7 @@
     // --- nắp mang, miệng
     gill(g, C, P.gill || {});
     mouth(g, C, P.mouth || {});
+    if (P.teeth) teeth(g, C, P.mouth || {}, P.teeth);
     if (P.front) P.front(g, C);
 
     // --- vây trước (đè lên thân)
@@ -295,14 +296,32 @@
     g.restore();
   }
 
+  // Miệng và răng đi theo đường viền thân, nên không bao giờ nằm ngoài thân cá.
+  function mouthPts(C, o) {
+    const { X, cy, hh, W, x0, x1 } = C, len = (o.len || .035) * W, v = o.v == null ? .22 : o.v, a = o.open || 0, pts = [];
+    for (let i = 0; i <= 10; i++) {
+      const k = i / 10, x = x1 - 1 - len * k, u = clamp((x - x0) / (x1 - x0), 0, 1);
+      pts.push([x, cy + v * hh * C.prof(u) + len * a * k * k * 1.4 + len * .06 * Math.sin(k * Math.PI)]);
+    }
+    return pts;
+  }
   function mouth(g, C, o) {
     if (o.none) return;
-    const { X, cy, hh, W, x1 } = C, u = .985;
-    const my = cy + (o.v == null ? .22 : o.v) * hh, len = (o.len || .035) * W, a = o.open || 0;
-    g.save();
-    g.lineCap = 'round'; g.lineWidth = Math.max(1, W * .0042); g.strokeStyle = 'rgba(30,10,10,.7)';
-    g.beginPath(); g.moveTo(x1 - 1, my); g.quadraticCurveTo(x1 - len * .6, my + len * (.18 + a), x1 - len, my + len * (.08 + a * 1.6)); g.stroke();
-    if (o.lip) { g.strokeStyle = rgba(o.lip, .5); g.lineWidth = W * .005; g.beginPath(); g.moveTo(x1 - 1, my - 2); g.quadraticCurveTo(x1 - len * .6, my + len * .14, x1 - len, my + len * .04); g.stroke(); }
+    const pts = mouthPts(C, o), W = C.W;
+    g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
+    g.lineWidth = Math.max(1, W * .0042); g.strokeStyle = 'rgba(30,10,10,.72)';
+    g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.stroke();
+    if (o.lip) { g.strokeStyle = rgba(o.lip, .5); g.lineWidth = W * .005; g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1] - 2) : g.moveTo(p[0], p[1] - 2)); g.stroke(); }
+    g.restore();
+  }
+  function teeth(g, C, o, t) {
+    const pts = mouthPts(C, o), W = C.W, n = t.n, size = t.size * W;
+    g.save(); g.fillStyle = t.col || '#f7f7f1'; g.strokeStyle = 'rgba(40,30,30,.45)'; g.lineWidth = Math.max(.5, W * .0012);
+    for (let i = 0; i < n; i++) {
+      const k = (i + .5) / n * (pts.length - 1), a = Math.floor(k), f = k - a, A = pts[a], B = pts[Math.min(pts.length - 1, a + 1)];
+      const x = lerp(A[0], B[0], f), y = lerp(A[1], B[1], f), bw = size * .8;
+      g.beginPath(); g.moveTo(x + bw / 2, y); g.lineTo(x - bw / 2, y); g.lineTo(x - bw * .15, y + size * (1 - (t.taper || 0) * i / n)); g.closePath(); g.fill(); g.stroke();
+    }
     g.restore();
   }
 
@@ -463,7 +482,7 @@
       pattern: [{ t: 'path', draw: (g, C) => { g.fillStyle = 'rgba(20,40,50,.55)'; for (let i = 0; i < 11; i++) { const u = .18 + i * .07, x = C.X(u); g.beginPath(); g.moveTo(x, C.topY(u)); g.lineTo(x - C.W * .016, C.cy + C.hh * .15); g.lineTo(x + C.W * .008, C.topY(u)); g.fill(); } } }],
       fins: { dorsal: [{ u1: .35, u2: .43, h: .035, col: '#4b6670', rays: 4 }, { u1: .15, u2: .24, h: .035, col: '#4b6670', rays: 4 }], anal: { u1: .16, u2: .24, h: .03, col: '#bfd0d6', rays: 4 }, pectoral: { u: .72, len: .05, wid: .02, col: '#b9c9d0', rot: .7 }, pelvic: { u: .5, w: .03, h: .03, sweep: .01, col: '#b9c9d0' } },
       caudal: { type: 'fork', spread: .075, len: .15, col: '#4b6670', rays: 9 }, eye: { u: .9, r: .016, iris: '#f2e6b0' }, gill: { u: .8 }, mouth: { len: .07, v: .25, open: .12 },
-      front: (g, C) => { g.fillStyle = '#f6f6f2'; for (let i = 0; i < 9; i++) { const x = C.x1 - C.W * .012 - i * C.W * .0085, y = C.cy + C.hh * .22 + (i % 2) * C.W * .001; g.beginPath(); g.moveTo(x, y); g.lineTo(x - C.W * .003, y + C.W * .012); g.lineTo(x - C.W * .006, y); g.fill(); } } }
+      teeth: { n: 9, size: .015, taper: .5 } }
   });
   sp('sailfish', 'Cá cờ', {
     size: [480, 560], aspect: .5, role: 'hunter', depth: [.1, .55], speed: 1.4, hit: { back: .3, front: .5, r: .08 }, sight: 7,
@@ -480,7 +499,7 @@
     paint: { tl: .26, hh: .09, a: .85, b: .72, ped: .1, snout: .0, top: '#4f6678', mid: '#8095a4', belly: '#eef2f3', stops: [0, .5, 1], sharp: .56, scales: false, gloss: false, asym: -.04,
       fins: { dorsal: [{ u1: .5, u2: .66, h: .13, col: '#4a6072', rays: 0, peak: .15, sweep: -.01, rearH: .05 }, { u1: .2, u2: .26, h: .03, col: '#4a6072', rays: 0, rearH: .1 }], anal: { u1: .22, u2: .28, h: .03, col: '#a3b3bd', rays: 0 }, pectoral: { u: .7, len: .2, wid: .06, col: '#566b7c', rot: .85, rays: 0, tipv: .05, fwd: .3 }, pelvic: { u: .48, w: .05, h: .04, sweep: .02, col: '#aab9c2' } },
       caudal: { type: 'shark', spread: .095, len: .26, col: '#4a6072', rays: 0 }, eye: { u: .9, r: .012, iris: '#14181c', v: -.2, pupil: .9, ring: 'rgba(5,8,12,.9)' }, gill: { u: .72, slits: 5, a: .5, k: .55 }, mouth: { len: .06, v: .42, open: .05 },
-      front: (g, C) => { g.fillStyle = '#fff'; for (let i = 0; i < 10; i++) { const x = C.x1 - C.W * .008 - i * C.W * .0062, y = C.cy + C.hh * .4 + C.W * .0012 * i * .3; g.beginPath(); g.moveTo(x, y); g.lineTo(x - C.W * .0025, y + C.W * .009); g.lineTo(x - C.W * .005, y); g.fill(); } } }
+      teeth: { n: 9, size: .013, taper: .3 } }
   });
   sp('whiteshark', 'Cá mập trắng', {
     size: [1000, 1180], aspect: .36, role: 'hunter', depth: [.55, 1], speed: 1.3, hit: { back: .3, front: .45, r: .11 }, sight: 8,
@@ -488,7 +507,7 @@
       pattern: [{ t: 'path', draw: (g, C) => { g.strokeStyle = 'rgba(255,255,255,.22)'; g.lineWidth = C.W * .003; for (let i = 0; i < 5; i++) { g.beginPath(); g.moveTo(C.X(.55 + i * .06), C.cy - C.hh * .6); g.lineTo(C.X(.5 + i * .06), C.cy - C.hh * .1); g.stroke(); } } }],
       fins: { dorsal: [{ u1: .5, u2: .67, h: .15, col: '#38454f', rays: 0, peak: .15, rearH: .05 }, { u1: .2, u2: .26, h: .03, col: '#38454f', rays: 0 }], anal: { u1: .22, u2: .28, h: .03, col: '#a3b3bd', rays: 0 }, pectoral: { u: .7, len: .23, wid: .065, col: '#46545f', rot: .85, rays: 0, tipv: .05, fwd: .3 }, pelvic: { u: .48, w: .05, h: .04, sweep: .02, col: '#aab9c2' } },
       caudal: { type: 'shark', spread: .1, len: .26, col: '#38454f', rays: 0 }, eye: { u: .9, r: .011, iris: '#101418', v: -.2, pupil: .95, ring: 'rgba(5,8,12,.9)' }, gill: { u: .72, slits: 5, a: .55, k: .55 }, mouth: { len: .075, v: .42, open: .06 },
-      front: (g, C) => { g.fillStyle = '#fff'; for (let i = 0; i < 12; i++) { const x = C.x1 - C.W * .008 - i * C.W * .0058, y = C.cy + C.hh * .4; g.beginPath(); g.moveTo(x, y); g.lineTo(x - C.W * .0024, y + C.W * .011); g.lineTo(x - C.W * .0048, y); g.fill(); } } }
+      teeth: { n: 11, size: .015, taper: .3 } }
   });
   // cá đuối manta: không có thân cá thông thường
   sp('manta', 'Cá đuối manta', {
@@ -578,12 +597,16 @@
     if (o.alpha != null) ctx.globalAlpha *= o.alpha;
     ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'high';
     const amp = (o.amp == null ? .045 : o.amp) * h * 1.7, ph = o.phase || 0;
-    const n = length < 24 ? 1 : Math.min(SLICES, Math.max(5, Math.ceil(length / 15))), step = sw / n, dw = length / n;
+    const n = length < 24 ? 1 : Math.min(SLICES, Math.max(6, Math.ceil(length / 12))), step = sw / n, dw = length / n;
     const ox = -length / 2, oy = -h / 2;
+    const bendAt = t => Math.sin(ph - t * 4.2) * amp * Math.pow(Math.max(0, 1 - t), 1.7);   // t: 0 = đuôi → 1 = mõm
     for (let i = 0; i < n; i++) {
-      const t = (i + .5) / n;                       // 0 = đuôi → 1 = mõm
-      const bend = Math.sin(ph - t * 4.2) * amp * Math.pow(1 - t, 1.7);
-      ctx.drawImage(src, i * step, 0, step + .6, sh, ox + i * dw, oy + bend, dw + .6, h);
+      // mỗi lát là hình bình hành: cạnh trái và phải khớp với lát bên cạnh nên thân liền mạch, không lộ khớp nối
+      const y0 = bendAt(i / n), y1 = bendAt((i + 1) / n);
+      ctx.save();
+      ctx.transform(1, (y1 - y0) / dw, 0, 1, ox + i * dw, oy + y0);
+      ctx.drawImage(src, i * step, 0, step + (i < n - 1 ? 1 : 0), sh, 0, 0, dw + (i < n - 1 ? .7 : 0), h);
+      ctx.restore();
     }
     ctx.restore();
   }

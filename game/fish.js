@@ -287,7 +287,7 @@
       facing:Math.cos(ang)>=0?1:-1, flip:Math.cos(ang)>=0?1:-1, phase:rand(0,6.3),
       mode:'wander', modeUntil:0, wanderA:ang, wanderT:rand(.2,2), energy:1, rest:0, target:null, scan:rand(0,.4),
       chomp:0, puff:0, puffCd:0, stun:0, vx:0, vy:0, ignoreUntil:0, notice:0,
-      spooked:Math.random()<.85,           // vài con ngơ ngác không biết chạy → dễ ăn hơn
+      spooked:Math.random()<.25,           // chỉ số ít con nhát biết chạy khi người chơi lại gần, còn lại cứ thản nhiên → dễ săn
       hue:Math.floor(rand(265,330)), hunting:false, born:state.clock
     };
   }
@@ -624,7 +624,7 @@
       const dx=f.x-tx, dy=f.y-ty, dd=Math.hypot(dx,dy)||1;
       if(dd<range){ const k=1-dd/range; fx+=dx/dd*(1.6+3*k); fy+=dy/dd*(1.6+3*k); flee=true; threatNear=Math.max(threatNear,k); }
     };
-    if(p && f.spooked && p.size>=f.size*CONFIG.eatRatio && f.role!=='giant')addThreat(p.x,p.y,170+f.size*3.2);
+    if(p && f.spooked && p.size>=f.size*CONFIG.eatRatio && f.role!=='giant')addThreat(p.x,p.y,110+f.size*2.2);
     if(f.role!=='giant'){
       for(const o of state.entities){
         if(o===f||!isHunter(o)||o.size<f.size*CONFIG.npcEatRatio)continue;
