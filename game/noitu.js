@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028a';
+  const V = '20261028b';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -45,7 +45,16 @@
 
   // ---------- Từ điển ----------
   const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], ready: false };
-  const norm = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim();
+  // chuẩn hoá: chữ thường, một dấu cách, dấu thanh kiểu "hòa/khỏe/thủy" (hoà/khoẻ/thuỷ cũng được chấp nhận)
+  const TONE_RE = /[\u0300\u0301\u0309\u0303\u0323]/;
+  function fixTone(syl) {
+    const d = syl.normalize('NFD'), i = d.search(TONE_RE);
+    if (i < 0 || i !== d.length - 1) return syl.normalize('NFC');
+    const base = d.slice(0, i);
+    if (!/(oa|oe|uy)$/.test(base) || /^qu/.test(base)) return syl.normalize('NFC');
+    return (base.slice(0, -1) + d[i] + base.slice(-1)).normalize('NFC');
+  }
+  const norm = s => String(s).normalize('NFC').toLowerCase().replace(/\s+/g, ' ').trim().split(' ').map(fixTone).join(' ');
   const first = w => w.slice(0, w.indexOf(' '));
   const last = w => w.slice(w.indexOf(' ') + 1);
   const WORD_RE = /^\p{L}+ \p{L}+$/u;
@@ -70,11 +79,12 @@
       fetch('noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
       fetch('noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
     ]);
-    let inList = false;
+    let inList = false, common = true;   // phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
     for (const line of a.split('\n')) {
+      if (line.startsWith('# PHẦN 2')) { common = false; continue; }
       if (line.startsWith('## ')) { inList = true; continue; }
       if (!inList || !line.trim() || line.startsWith('#')) continue;
-      for (const w of line.split(',')) addWord(w, true);
+      for (const w of line.split(',')) addWord(w, common);
     }
     for (const w of b.split('\n')) addWord(w, false);
     // từ mở đầu cho máy: còn nhiều từ để nối tiếp
