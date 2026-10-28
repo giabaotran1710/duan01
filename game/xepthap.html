@@ -90,7 +90,7 @@ body.idle #scoreBox,body.idle #hud .play-only{opacity:0}
   </div>
   <div class="card">
     <ul class="tips">
-      <li><i class="fa-solid fa-star"></i>Thả khớp hoàn hảo liên tiếp để khối to lại.</li>
+      <li><i class="fa-solid fa-star"></i>Thả khớp hoàn hảo để giữ nguyên độ rộng khối.</li>
     </ul>
     <p class="best" id="mBest"></p>
     <button class="btn" id="bPlay">BẮT ĐẦU</button>
@@ -128,7 +128,7 @@ body.idle #scoreBox,body.idle #hud .play-only{opacity:0}
   const lerp = (a, b, t) => a + (b - a) * t;
 
   // Đơn vị thế giới: khối gốc rộng BASE x BASE, mỗi tầng dày SLAB
-  const BASE = 100, SLAB = 22, PERFECT_TOL = 4.5, GROW = 6;
+  const BASE = 100, SLAB = 22, PERFECT_TOL = 4.5;
   const SAVE_KEY = 'xepthap_v1';
 
   // ---------- Lưu trữ ----------
@@ -241,10 +241,9 @@ body.idle #scoreBox,body.idle #hud .play-only{opacity:0}
 
     let placed;
     if (Math.abs(delta) <= PERFECT_TOL) {
-      // hoàn hảo: khớp đúng khối dưới; chuỗi từ 3 trở lên thì khối nở to dần (tối đa bằng khối gốc)
+      // hoàn hảo: khớp đúng khối dưới, giữ nguyên độ rộng (không bao giờ to hơn khối dưới)
       placed = Object.assign({}, m, { [a0]: t[a0], [a1]: t[a1] });
       S.combo++; S.perfects++; S.maxCombo = Math.max(S.maxCombo, S.combo);
-      if (S.combo >= 3) grow(placed);
       S.ripples.push({ b: placed, t: 0, big: S.combo >= 3 });
       Snd.perfect(S.combo - 1);
       showCombo();
@@ -267,16 +266,6 @@ body.idle #scoreBox,body.idle #hud .play-only{opacity:0}
     const sc = $('score'); sc.textContent = S.score; sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump');
     cam.ty = placed.y;
     spawn();
-  }
-
-  function grow(b) {
-    // nở thêm GROW đơn vị theo cả hai trục, nhưng không vượt khối gốc
-    for (const ax of ['x', 'z']) {
-      const w = b[ax + '1'] - b[ax + '0'];
-      if (w >= BASE) continue;
-      const add = Math.min(GROW, BASE - w) / 2;
-      b[ax + '0'] -= add; b[ax + '1'] += add;
-    }
   }
 
   function lose() {
