@@ -74,7 +74,8 @@
     noithu: ['tiles', '#0c3b34', '#1a7a62', '#ffe27a'],
     xepthap: ['diagonal', '#7b2a6b', '#e8577e', '#ffd28a'],
     xepgach: ['blinds', '#0a0b1e', '#2a2470', '#7c8cff'],
-    cotuhuyenbi: ['tiles', '#1a0c3a', '#4a1a8a', '#ffd66b']
+    cotuhuyenbi: ['tiles', '#1a0c3a', '#4a1a8a', '#ffd66b'],
+    noitu: ['curtain', '#2a0c11', '#7a1f2b', '#ffcf5a']
   };
   var t = THEMES[gameId] || ['iris', '#0f172a', '#1e293b', '#93c5fd'];
   var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
