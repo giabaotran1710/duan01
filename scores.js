@@ -49,6 +49,7 @@
     { id: 'noithu', name: 'Nối thú' },
     { id: 'xepthap', name: 'Xây tháp', fmt: v => v.toLocaleString('vi-VN') + ' tầng' },
     { id: 'xepgach', name: 'Xếp gạch' },
+    { id: 'cotuhuyenbi', name: 'Cổ tự huyền bí' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 

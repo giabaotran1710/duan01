@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js" data-game="cotuhuyenbi"></script>
+<script src="../scene.js" data-game="cotuhuyenbi"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#140a2e">
+<title>Cổ tự huyền bí</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&display=swap">
+<style>
+:root{
+  --ink:#fff7e0; --mute:rgba(255,240,205,.68); --gold:#ffd66b; --gold2:#f0a93a; --red:#ff5a6e; --ok:#7dffc4;
+  --st:env(safe-area-inset-top,0px); --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--ink);overscroll-behavior:none;touch-action:manipulation;
+  font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;
+  background:radial-gradient(ellipse 120% 70% at 50% -10%,#3b1c70 0%,transparent 60%),radial-gradient(ellipse 90% 60% at 50% 115%,#4a1a5c 0%,transparent 60%),linear-gradient(180deg,#1a0c3a,#0e0722)}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+#runes{position:fixed;inset:0;width:100%;height:100%;z-index:0;opacity:.5;pointer-events:none}
+
+/* ---------- HUD ---------- */
+#hud{position:fixed;left:0;right:0;top:0;padding:calc(8px + var(--st)) 12px 0;z-index:5;display:none}
+body.playing #hud{display:block}
+.row{display:flex;align-items:center;gap:8px}
+.ib{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:16px;flex:none;
+  background:rgba(255,230,160,.1);border:1px solid rgba(255,214,107,.35);transition:transform .1s}
+.ib:active{transform:scale(.92)}
+#hearts{display:flex;gap:5px;font-size:20px;color:var(--red);filter:drop-shadow(0 0 6px rgba(255,90,110,.5))}
+#hearts i{transition:transform .25s,opacity .25s,color .25s}
+#hearts i.lost{color:rgba(255,255,255,.2);filter:none;transform:scale(.8)}
+#hearts i.hit{animation:heartHit .5s}
+@keyframes heartHit{30%{transform:scale(1.6)}}
+#lvl{flex:1;text-align:center;font-weight:800;letter-spacing:.2em;font-size:13px;color:var(--gold)}
+#score{font-size:22px;font-weight:800;font-variant-numeric:tabular-nums;min-width:64px;text-align:right}
+#score.bump{animation:bump .25s}
+@keyframes bump{40%{transform:scale(1.18)}}
+#timebar{margin-top:8px;height:9px;border-radius:9px;background:rgba(255,255,255,.1);overflow:hidden;border:1px solid rgba(255,214,107,.25)}
+#timebar i{display:block;height:100%;width:100%;transform-origin:left;background:linear-gradient(90deg,#ffd66b,#ff9d3a);border-radius:9px;transition:background .3s}
+#timebar.low i{background:linear-gradient(90deg,#ff5a6e,#ff9d3a);animation:lowPulse .7s ease-in-out infinite}
+@keyframes lowPulse{50%{filter:brightness(1.4)}}
+
+/* ---------- bàn chơi ---------- */
+#stage{position:fixed;left:0;right:0;top:calc(78px + var(--st));bottom:26px;z-index:2;display:none;flex-direction:column;padding:0 12px;gap:10px}
+body.playing #stage{display:flex}
+#targets{flex:none;display:flex;justify-content:center;align-items:center;gap:10px}
+.tg{position:relative;border-radius:20px;background:radial-gradient(circle at 50% 40%,rgba(255,214,107,.12),rgba(255,214,107,.03) 70%);border:1px solid rgba(255,214,107,.35);
+  box-shadow:inset 0 0 22px rgba(255,214,107,.08),0 6px 22px rgba(0,0,0,.35);display:grid;place-items:center}
+.tg svg{width:90%;height:90%;overflow:visible}
+.tg .ghost{stroke:rgba(255,240,205,.3);stroke-width:2.6;fill:none;stroke-linecap:round}
+.tg .lit{stroke:var(--gold);stroke-width:3.4;fill:none;stroke-linecap:round;opacity:0;filter:drop-shadow(0 0 4px rgba(255,214,107,.9))}
+.tg .lit.on{opacity:1;animation:litIn .7s ease-out}
+@keyframes litIn{0%{opacity:0;stroke:#fff;stroke-width:7}60%{opacity:1;stroke:#fff}100%{stroke:var(--gold);stroke-width:3.4}}
+.tg.done{border-color:var(--ok);box-shadow:0 0 30px rgba(125,255,196,.35),inset 0 0 26px rgba(125,255,196,.15)}
+.tg.done .lit{stroke:var(--ok);filter:drop-shadow(0 0 5px rgba(125,255,196,.9))}
+.tg .cnt{position:absolute;right:8px;bottom:4px;font-size:12px;font-weight:800;color:var(--mute);font-variant-numeric:tabular-nums}
+
+#pool{flex:1;min-height:0;display:grid;justify-content:center;align-content:start;gap:8px;padding-top:6px}
+.pc{position:relative;border-radius:16px;overflow:hidden;
+  background:linear-gradient(160deg,#3a2a62,#221542);border:1px solid rgba(255,214,107,.28);
+  box-shadow:0 4px 0 #120a28,0 8px 14px rgba(0,0,0,.35),inset 0 1px 0 rgba(255,255,255,.1);transition:transform .12s,opacity .3s,filter .3s,box-shadow .12s}
+.pc:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #120a28}
+.pc svg{position:absolute;inset:0;width:100%;height:100%}
+.pc .st{fill:none;stroke:#f6e7bd;stroke-width:3.3;stroke-linecap:round}
+.pc .gl{fill:none;stroke:rgba(255,214,107,.35);stroke-width:7;stroke-linecap:round}
+.pc.ok{border-color:var(--ok);box-shadow:0 0 18px rgba(125,255,196,.55);animation:okPop .45s ease-out forwards;pointer-events:none}
+.pc.ok .st{stroke:var(--ok)}
+@keyframes okPop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(.9);opacity:.35}}
+.pc.bad{border-color:var(--red);animation:badShake .4s forwards;pointer-events:none}
+.pc.bad .st{stroke:var(--red)}
+@keyframes badShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}100%{opacity:.3;transform:scale(.92)}}
+.pc.fade{opacity:.2;pointer-events:none;filter:grayscale(1)}
+.pc .x{position:absolute;inset:0;display:none;place-items:center;font-size:26px;color:var(--red)}
+.pc.bad .x{display:grid}
+.float{position:fixed;z-index:30;pointer-events:none;font-weight:800;font-size:20px;color:var(--gold);text-shadow:0 2px 8px rgba(0,0,0,.6);animation:floatUp .9s ease-out forwards;transform:translate(-50%,-50%)}
+@keyframes floatUp{to{transform:translate(-50%,-90px);opacity:0}}
+
+/* ---------- màn hình ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:flex-end;
+  padding:calc(24px + var(--st)) 24px calc(54px + var(--sb));text-align:center;pointer-events:none}
+.screen.show{display:flex;animation:fade .35s ease both}
+@keyframes fade{from{opacity:0}}
+.screen > *{pointer-events:auto}
+.title{margin:0;font-size:clamp(46px,14vw,70px);font-weight:800;line-height:1.3;letter-spacing:.04em;padding:.18em .1em .1em;
+  color:#fff3cf;text-shadow:0 0 22px rgba(255,200,90,.7),0 4px 0 #6b3b0c,0 8px 22px rgba(0,0,0,.5)}
+.title small{display:block;margin-top:2px;font-size:.48em;letter-spacing:.2em;color:var(--gold);text-shadow:0 0 14px rgba(255,160,50,.6),0 3px 0 #5a2c06}
+#heroG{display:flex;gap:6px;justify-content:center;margin-top:18px}
+#heroG svg{width:clamp(76px,24vw,110px);height:clamp(76px,24vw,110px);overflow:visible;animation:glyphGlow 3.2s ease-in-out infinite}
+#heroG svg:nth-child(2){animation-delay:.5s}#heroG svg:nth-child(3){animation-delay:1s}
+#heroG path,#heroG line,#heroG circle{stroke:var(--gold);stroke-width:2.6;fill:none;stroke-linecap:round;filter:drop-shadow(0 0 4px rgba(255,214,107,.8))}
+@keyframes glyphGlow{50%{opacity:.5;transform:scale(.96)}}
+.card{width:min(100%,340px);border-radius:24px;padding:22px 20px 20px;background:rgba(255,230,160,.08);border:1px solid rgba(255,214,107,.35);
+  backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);box-shadow:0 20px 50px rgba(0,0,0,.4)}
+.btn{width:100%;height:56px;border-radius:18px;font-size:19px;font-weight:800;letter-spacing:.08em;color:#3a1c00;
+  background:linear-gradient(180deg,#ffeaa6,#f6b73c);box-shadow:0 5px 0 #8a5410,0 12px 26px rgba(0,0,0,.35);transition:transform .08s,box-shadow .08s}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #8a5410}
+.btn.ghost{background:rgba(255,230,160,.08);color:var(--ink);border:1px solid rgba(255,214,107,.4);box-shadow:none;height:46px;font-size:15px;margin-top:10px}
+.best{font-size:15px;color:var(--mute);margin:0 0 14px;font-weight:600}
+.best b{color:#fff}
+.card h2{margin:0 0 4px;font-size:16px;letter-spacing:.3em;font-weight:700;color:var(--mute)}
+.big{font-size:60px;font-weight:800;line-height:1.1;color:var(--gold);text-shadow:0 0 20px rgba(255,200,90,.5);font-variant-numeric:tabular-nums}
+.badge{display:none;margin:2px auto 8px;padding:3px 14px;border-radius:99px;background:linear-gradient(180deg,#ffeaa6,#f6b73c);color:#3a1c00;font-weight:800;font-size:13px;letter-spacing:.14em}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:10px 0 16px}
+.grid3 div{padding:8px 4px;border-radius:12px;background:rgba(0,0,0,.22);font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.06em}
+.grid3 b{display:block;font-size:20px;color:var(--ink);letter-spacing:0}
+.hint{font-size:14px;color:var(--mute);margin:0 0 14px}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+</head>
+<body>
+<footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<svg id="runes" aria-hidden="true"></svg>
+
+<div id="hud">
+  <div class="row">
+    <button class="ib" id="bPause" aria-label="Tạm dừng"><i class="fa-solid fa-pause"></i></button>
+    <div id="hearts"></div>
+    <div id="lvl">MÀN 1</div>
+    <div id="score">0</div>
+  </div>
+  <div id="timebar"><i id="timeFill"></i></div>
+</div>
+
+<div id="stage">
+  <div id="targets"></div>
+  <div id="pool"></div>
+</div>
+
+<section id="menu" class="screen show">
+  <div style="flex:1;display:flex;flex-direction:column;align-items:center;padding-top:7vh">
+    <h1 class="title">CỔ TỰ<small>HUYỀN BÍ</small></h1>
+    <div id="heroG"></div>
+  </div>
+  <div class="card">
+    <p class="hint">Chọn các mảnh ghép lại thành cổ tự</p>
+    <p class="best" id="mBest"></p>
+    <button class="btn" id="bPlay">BẮT ĐẦU</button>
+  </div>
+</section>
+
+<section id="pause" class="screen">
+  <div class="card">
+    <h2>TẠM DỪNG</h2>
+    <button class="btn" id="bResume">TIẾP TỤC</button>
+    <button class="btn ghost" id="bQuit">VỀ MENU</button>
+  </div>
+</section>
+
+<section id="clear" class="screen">
+  <div class="card">
+    <h2 id="cTitle">QUA MÀN</h2>
+    <div class="big" id="cScore">0</div>
+    <div class="grid3"><div><b id="cTime">0</b>GIÂY CÒN</div><div><b id="cBonus">+0</b>THƯỞNG</div><div><b id="cLvl">1</b>MÀN</div></div>
+    <button class="btn" id="bNext">TIẾP TỤC</button>
+  </div>
+</section>
+
+<section id="over" class="screen">
+  <div class="card">
+    <h2 id="oWhy">HẾT GIỜ</h2>
+    <div class="big" id="oScore">0</div>
+    <div class="badge" id="oNew">KỶ LỤC MỚI</div>
+    <div class="grid3"><div><b id="oLvl">1</b>MÀN</div><div><b id="oGlyph">0</b>CỔ TỰ</div><div><b id="oBest">0</b>KỶ LỤC</div></div>
+    <button class="btn" id="bAgain">CHƠI LẠI</button>
+    <button class="btn ghost" id="bMenu">VỀ MENU</button>
+  </div>
+</section>
+
+<script src="../scores.js?v=20261027ng"></script>
+<script src="cotuhuyenbi-gen.js?v=1"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const GG = window.GlyphGen;
+  const NS = 'http://www.w3.org/2000/svg';
+  const store = {
+    get(k, d) { try { const v = localStorage.getItem(k); return v === null ? d : v; } catch (e) { return d; } },
+    set(k, v) { try { localStorage.setItem(k, String(v)); } catch (e) {} }
+  };
+  const S = { mode: 'menu', level: null, n: 1, score: 0, hearts: 3, time: 0, timeMax: 1, found: 0, need: 0, combo: 0, glyphsDone: 0,
+              best: Number(store.get('cth-best', 0)) || 0, snd: store.get('cth-snd', '1') === '1', last: 0 };
+
+  /* ---------- vẽ nét ---------- */
+  function segPath(s) {
+    if (s.t === 'l') return `M${s.a[0].toFixed(2)} ${s.a[1].toFixed(2)}L${s.b[0].toFixed(2)} ${s.b[1].toFixed(2)}`;
+    const R = Math.hypot(s.a[0] - s.c[0], s.a[1] - s.c[1]);
+    const cr = (s.a[0] - s.c[0]) * (s.b[1] - s.c[1]) - (s.a[1] - s.c[1]) * (s.b[0] - s.c[0]);
+    return `M${s.a[0].toFixed(2)} ${s.a[1].toFixed(2)}A${R.toFixed(2)} ${R.toFixed(2)} 0 0 ${cr > 0 ? 1 : 0} ${s.b[0].toFixed(2)} ${s.b[1].toFixed(2)}`;
+  }
+  const pathsOf = segs => segs.map(segPath).join('');
+  function bbox(segs) {
+    let x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    const add = (x, y) => { x0 = Math.min(x0, x); y0 = Math.min(y0, y); x1 = Math.max(x1, x); y1 = Math.max(y1, y); };
+    for (const s of segs) {
+      add(s.a[0], s.a[1]); add(s.b[0], s.b[1]);
+      if (s.t === 'a') { // cung: thêm điểm giữa cung để khung ôm đủ
+        const mx = (s.a[0] + s.b[0]) / 2 - s.c[0], my = (s.a[1] + s.b[1]) / 2 - s.c[1], m = Math.hypot(mx, my) || 1, R = Math.hypot(s.a[0] - s.c[0], s.a[1] - s.c[1]);
+        add(s.c[0] + mx / m * R, s.c[1] + my / m * R);
+      }
+    }
+    return { cx: (x0 + x1) / 2, cy: (y0 + y1) / 2 };
+  }
+  function svg(vb) { const e = document.createElementNS(NS, 'svg'); e.setAttribute('viewBox', vb); return e; }
+  function path(d, cls) { const p = document.createElementNS(NS, 'path'); p.setAttribute('d', d); if (cls) p.setAttribute('class', cls); return p; }
+
+  /* ---------- âm thanh ---------- */
+  let ac = null, master = null;
+  function ctx() {
+    if (!S.snd) return null;
+    if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); master = ac.createGain(); master.gain.value = .8; master.connect(ac.destination); } catch (e) { return null; } }
+    if (ac.state === 'suspended') ac.resume();
+    return ac;
+  }
+  function tone(f0, f1, dur, vol, type, delay) {
+    const a = ctx(); if (!a) return;
+    const t = a.currentTime + (delay || 0), o = a.createOscillator(), g = a.createGain();
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f0, t); if (f1 !== f0) o.frequency.exponentialRampToValueAtTime(Math.max(30, f1), t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .012); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g); g.connect(master); o.start(t); o.stop(t + dur + .03);
+  }
+  const SND = {
+    ok: n => { const f = 520 * Math.pow(1.122, Math.min(6, n)); tone(f, f * 1.5, .16, .12, 'triangle'); tone(f * 2, f * 2, .22, .05, 'sine', .06); },
+    bad: () => { tone(200, 90, .3, .13, 'sawtooth'); },
+    glyph: () => [523, 659, 784, 1047].forEach((f, i) => tone(f, f, .3, .1, 'triangle', i * .08)),
+    win: () => [523, 659, 784, 1047, 1318].forEach((f, i) => tone(f, f, .35, .1, 'triangle', i * .09)),
+    lose: () => [392, 330, 262, 196].forEach((f, i) => tone(f, f * .98, .4, .1, 'triangle', i * .15)),
+    tick: () => tone(900, 900, .05, .05, 'square')
+  };
+  const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch (e) {} };
+
+  /* ---------- nền ký tự cổ ---------- */
+  (function runes() {
+    const r = $('runes'); r.setAttribute('viewBox', '0 0 400 800'); r.setAttribute('preserveAspectRatio', 'xMidYMid slice');
+    let s = 7; const rnd = () => { s = (s * 16807) % 2147483647; return s / 2147483647; };
+    for (let i = 0; i < 26; i++) {
+      const g = document.createElementNS(NS, 'g'), x = rnd() * 400, y = rnd() * 800, k = .25 + rnd() * .5;
+      g.setAttribute('transform', `translate(${x} ${y}) rotate(${Math.floor(rnd() * 8) * 45}) scale(${k})`);
+      const def = GG.GLYPHS[Math.floor(rnd() * GG.GLYPHS.length)];
+      const p = path(pathsOf(def.segs)); p.setAttribute('fill', 'none'); p.setAttribute('stroke', 'rgba(255,214,107,.16)'); p.setAttribute('stroke-width', '2');
+      p.setAttribute('transform', 'translate(-50 -50)'); g.appendChild(p); r.appendChild(g);
+    }
+  })();
+  // Ba cổ tự trang trí ở menu (vuông, tròn, tam giác như hình mẫu)
+  (function hero() {
+    const box = $('heroG');
+    for (const id of ['square0', 'circle0', 'triangle0']) {
+      const def = GG.GLYPHS.find(g => g.id === id), e = svg('0 0 100 100'); e.appendChild(path(pathsOf(def.segs))); box.appendChild(e);
+    }
+  })();
+
+  /* ---------- màn chơi ---------- */
+  function renderHearts() {
+    const h = $('hearts'); h.innerHTML = '';
+    for (let i = 0; i < 3; i++) { const e = document.createElement('i'); e.className = 'fa-solid fa-heart' + (i >= S.hearts ? ' lost' : ''); h.appendChild(e); }
+  }
+  function addScore(v) { S.score += v; const el = $('score'); el.textContent = S.score.toLocaleString('vi-VN'); el.classList.remove('bump'); void el.offsetWidth; el.classList.add('bump'); }
+  function floatText(text, x, y) { const e = document.createElement('div'); e.className = 'float'; e.textContent = text; e.style.left = x + 'px'; e.style.top = y + 'px'; document.body.appendChild(e); setTimeout(() => e.remove(), 950); }
+
+  function startLevel(n) {
+    S.n = n; S.level = GG.buildLevel(n);
+    S.time = S.timeMax = S.level.time; S.found = 0; S.need = S.level.cards.filter(c => c.correct).length; S.combo = 0;
+    $('lvl').textContent = 'MÀN ' + n; $('timeFill').style.transform = 'scaleX(1)'; $('timebar').classList.remove('low');
+    document.body.classList.add('playing');
+    show(null);
+    buildTargets(); buildPool();
+    S.mode = 'play';
+  }
+
+  function buildTargets() {
+    const box = $('targets'); box.innerHTML = '';
+    const L = S.level, g = L.glyphs.length;
+    const hAvail = Math.min(window.innerHeight * (g === 1 ? .3 : .22), 190);
+    const w = Math.min(hAvail, (window.innerWidth - 24 - (g - 1) * 10) / g);
+    L.glyphs.forEach((gl, gi) => {
+      const el = document.createElement('div'); el.className = 'tg'; el.style.width = el.style.height = w + 'px';
+      const s = svg('0 0 100 100');
+      s.appendChild(path(pathsOf(gl.segs), 'ghost'));
+      gl.lit = [];
+      el.appendChild(s);
+      const c = document.createElement('div'); c.className = 'cnt'; c.textContent = '0/' + gl.k; el.appendChild(c);
+      gl.el = el; gl.svg = s; gl.cnt = c; gl.found = 0;
+      box.appendChild(el);
+    });
+  }
+
+  function layoutPool() {
+    const pool = $('pool'), N = S.level.cards.length;
+    const W = pool.clientWidth, H = pool.clientHeight, gap = 8;
+    let best = 0, bc = 3;
+    for (let cols = 2; cols <= Math.min(8, N); cols++) {
+      const rows = Math.ceil(N / cols);
+      const size = Math.min((W - gap * (cols - 1)) / cols, (H - gap * (rows - 1)) / rows);
+      if (size > best) { best = size; bc = cols; }
+    }
+    best = Math.max(40, Math.min(best, 120));
+    pool.style.gridTemplateColumns = `repeat(${bc},${best}px)`;
+    pool.style.gridAutoRows = best + 'px';
+  }
+
+  function buildPool() {
+    const pool = $('pool'); pool.innerHTML = '';
+    S.level.cards.forEach((c, i) => {
+      const b = document.createElement('button'); b.className = 'pc'; b.setAttribute('aria-label', 'Mảnh ghép ' + (i + 1));
+      const s = svg('-22 -22 144 144');
+      const bb = bbox(c.segs);
+      const g = document.createElementNS(NS, 'g');
+      g.setAttribute('transform', `translate(50 50) rotate(${c.rot}) scale(${c.flip ? -1 : 1} 1) translate(${-bb.cx} ${-bb.cy})`);
+      const d = pathsOf(c.segs);
+      g.appendChild(path(d, 'gl')); g.appendChild(path(d, 'st'));
+      s.appendChild(g); b.appendChild(s);
+      const x = document.createElement('div'); x.className = 'x'; x.innerHTML = '<i class="fa-solid fa-xmark"></i>'; b.appendChild(x);
+      b.addEventListener('pointerdown', e => { e.preventDefault(); pick(i, b); });
+      c.el = b; pool.appendChild(b);
+    });
+    layoutPool();
+  }
+
+  function pick(i, el) {
+    if (S.mode !== 'play') return;
+    const c = S.level.cards[i];
+    if (c.done) return; c.done = true;
+    const r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (c.correct) {
+      el.classList.add('ok');
+      S.combo++; S.found++;
+      const gl = S.level.glyphs[c.glyph];
+      const lit = path(pathsOf(c.segs), 'lit on'); gl.svg.appendChild(lit); gl.found++;
+      gl.cnt.textContent = gl.found + '/' + gl.k;
+      const pts = 100 + Math.min(5, S.combo - 1) * 25;
+      addScore(pts); floatText('+' + pts, x, y); SND.ok(S.combo - 1); buzz(15);
+      if (gl.found === gl.k) { gl.el.classList.add('done'); S.glyphsDone++; SND.glyph(); }
+      if (S.found === S.need) levelClear();
+    } else {
+      el.classList.add('bad');
+      S.combo = 0; S.hearts--; renderHearts();
+      const hs = $('hearts').children[Math.max(0, S.hearts)]; if (hs) { hs.classList.add('hit'); setTimeout(() => hs.classList.remove('hit'), 520); }
+      SND.bad(); buzz([60, 40, 90]);
+      if (S.hearts <= 0) setTimeout(() => gameOver('HẾT TIM'), 450);
+    }
+  }
+
+  function levelClear() {
+    S.mode = 'clear';
+    S.level.cards.forEach(c => { if (!c.done) c.el.classList.add('fade'); });
+    const left = Math.ceil(S.time), bonus = left * 5 + S.n * 50;
+    addScore(bonus); SND.win(); buzz([20, 40, 20]);
+    $('cTitle').textContent = 'QUA MÀN ' + S.n; $('cScore').textContent = S.score.toLocaleString('vi-VN');
+    $('cTime').textContent = left; $('cBonus').textContent = '+' + bonus; $('cLvl').textContent = S.n;
+    setTimeout(() => { if (S.mode === 'clear') show('clear'); }, 900);
+  }
+
+  function gameOver(why) {
+    if (S.mode === 'over') return;
+    S.mode = 'over'; SND.lose();
+    const isNew = S.score > S.best;
+    if (isNew) { S.best = S.score; store.set('cth-best', S.best); }
+    if (window.Scores && S.score > 0) Scores.submit('cotuhuyenbi', S.score);
+    $('oWhy').textContent = why; $('oScore').textContent = S.score.toLocaleString('vi-VN');
+    $('oNew').style.display = isNew && S.score > 0 ? 'block' : 'none';
+    $('oLvl').textContent = S.n; $('oGlyph').textContent = S.glyphsDone; $('oBest').textContent = S.best.toLocaleString('vi-VN');
+    setTimeout(() => show('over'), 500);
+  }
+
+  /* ---------- màn hình & vòng lặp ---------- */
+  function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('show', s.id === id); }
+  function newGame() {
+    S.score = 0; S.hearts = 3; S.glyphsDone = 0; $('score').textContent = '0'; renderHearts();
+    startLevel(1);
+  }
+  function toMenu() {
+    S.mode = 'menu'; document.body.classList.remove('playing');
+    $('mBest').innerHTML = S.best ? 'Kỷ lục: <b>' + S.best.toLocaleString('vi-VN') + '</b>' : '';
+    show('menu');
+  }
+  function pause(p) {
+    if (p && S.mode === 'play') { S.mode = 'pause'; show('pause'); }
+    else if (!p && S.mode === 'pause') { S.mode = 'play'; show(null); }
+  }
+  $('bPlay').onclick = () => { ctx(); newGame(); };
+  $('bAgain').onclick = () => { ctx(); newGame(); };
+  $('bNext').onclick = () => startLevel(S.n + 1);
+  $('bMenu').onclick = toMenu;
+  $('bQuit').onclick = toMenu;
+  $('bPause').onclick = () => pause(true);
+  $('bResume').onclick = () => pause(false);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+  addEventListener('resize', () => { if (S.level && document.body.classList.contains('playing')) { buildTargetsSize(); layoutPool(); } });
+  function buildTargetsSize() {
+    const L = S.level, g = L.glyphs.length;
+    const hAvail = Math.min(window.innerHeight * (g === 1 ? .3 : .22), 190);
+    const w = Math.min(hAvail, (window.innerWidth - 24 - (g - 1) * 10) / g);
+    L.glyphs.forEach(gl => { gl.el.style.width = gl.el.style.height = w + 'px'; });
+  }
+
+  let lastTs = 0, lastTick = 0;
+  function frame(ts) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(.1, (ts - lastTs) / 1000 || 0); lastTs = ts;
+    if (S.mode === 'play') {
+      S.time -= dt;
+      $('timeFill').style.transform = `scaleX(${Math.max(0, S.time / S.timeMax)})`;
+      $('timebar').classList.toggle('low', S.time < 8);
+      if (S.time < 6 && Math.ceil(S.time) !== lastTick) { lastTick = Math.ceil(S.time); SND.tick(); }
+      if (S.time <= 0) { S.time = 0; gameOver('HẾT GIỜ'); }
+    }
+  }
+
+  window.__cth = { S, startLevel, newGame };   // chỉ để kiểm thử
+  renderHearts(); toMenu();
+  requestAnimationFrame(frame);
+})();
+</script>
+<script src="../activity.js?v=20261027c" defer></script>
+</body>
+</html>
