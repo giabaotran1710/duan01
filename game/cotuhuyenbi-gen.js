@@ -38,6 +38,14 @@
     def('circle', 'tròn nan hoa', outer().concat(O.map(p => line(C, p))));
     def('circle', 'tròn đồng tâm', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), [0, 2, 4, 6].map(k => line(I[k], O[k]))));
     def('circle', 'tròn nội tiếp', outer().concat([1, 3, 5, 7].map((k, i, a) => line(O[k], O[a[(i + 1) % 4]])), [1, 3, 5, 7].map(k => line(C, O[k]))));
+    def('circle', 'tròn sao', outer().concat(O.map((p, k) => line(p, O[(k + 3) % 8]))));
+    def('circle', 'tròn bánh xe', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), I.map((p, k) => line(p, O[k]))));
+    def('circle', 'tròn chữ thập', outer().concat(I.map((p, k) => arc(p, I[(k + 1) % 8], C)), [0, 2, 4, 6].map(k => line(C, I[k])), [0, 2, 4, 6].map(k => line(I[k], O[k])), [1, 3, 5, 7].map(k => line(O[k], I[k]))));
+    const H = [], h = Math.PI / 3;
+    for (let k = 0; k < 6; k++) H.push(pt(50 + R * Math.cos(k * h), 50 + R * Math.sin(k * h)));
+    const harcs = () => H.map((p, k) => arc(p, H[(k + 1) % 6], C));
+    def('circle', 'tròn lục giác', harcs().concat(H.map((p, k) => line(p, H[(k + 1) % 6])), H.map(p => line(C, p))));
+    def('circle', 'tròn sao sáu cánh', harcs().concat([0, 2, 4].map((k, i, a2) => line(H[k], H[a2[(i + 1) % 3]])), [1, 3, 5].map((k, i, a2) => line(H[k], H[a2[(i + 1) % 3]]))));
   })();
 
   (function triangles() {
