@@ -52,6 +52,46 @@
     def('triangle', 'tam giác lồng', outer().concat([line(a2, b2), line(b2, c2), line(c2, a2), line(A, a2), line(B, b2), line(Cc, c2)]));
   })();
 
+  /* ---------- các dạng cổ tự mở rộng ---------- */
+  const polar = (r, deg) => pt(50 + r * Math.cos(deg * D), 50 + r * Math.sin(deg * D));
+  (function stars() {
+    const C = pt(50, 50), P = [], Q = [];
+    for (let k = 0; k < 5; k++) { P.push(polar(42, -90 + 72 * k)); Q.push(polar(17, -54 + 72 * k)); }
+    const outline = () => P.flatMap((p, k) => [line(p, Q[k]), line(Q[k], P[(k + 1) % 5])]);
+    def('star', 'sao năm cánh', outline().concat(P.map(p => line(C, p))));
+    def('star', 'sao ngũ giác', P.map((p, k) => line(p, P[(k + 2) % 5])).concat(P.map((p, k) => line(p, P[(k + 1) % 5]))));
+  })();
+  (function diamonds() {
+    const TL = pt(30, 22), TR = pt(70, 22), L = pt(8, 42), R = pt(92, 42), B = pt(50, 90);
+    const G1 = pt(30, 42), G2 = pt(50, 42), G3 = pt(70, 42);
+    const base = () => [line(L, TL), line(TL, TR), line(TR, R), line(R, B), line(B, L), line(L, G1), line(G1, G2), line(G2, G3), line(G3, R)];
+    def('diamond', 'kim cương', base().concat([line(TL, G1), line(TR, G3), line(G1, B), line(G2, B), line(G3, B), line(TL, G2), line(TR, G2)]));
+    def('diamond', 'kim cương đơn', base().concat([line(B, G2), line(TL, G2), line(TR, G2)]));
+  })();
+  (function octagons() {
+    const C = pt(50, 50), O = [];
+    for (let k = 0; k < 8; k++) O.push(polar(42, 22.5 + 45 * k));
+    const edges = () => O.map((p, k) => line(p, O[(k + 1) % 8]));
+    def('octagon', 'bát giác nan hoa', edges().concat(O.map(p => line(C, p))));
+    def('octagon', 'bát giác sao', edges().concat(O.map((p, k) => line(p, O[(k + 3) % 8]))));
+  })();
+  (function rhombi() {
+    const T = pt(50, 8), R = pt(90, 50), B = pt(50, 92), L = pt(10, 50), C = pt(50, 50);
+    const mt = mid(T, R), mr = mid(R, B), mb = mid(B, L), ml = mid(L, T);
+    const outer = () => [line(T, mt), line(mt, R), line(R, mr), line(mr, B), line(B, mb), line(mb, L), line(L, ml), line(ml, T)];
+    def('rhombus', 'hình thoi chéo', outer().concat([line(T, C), line(R, C), line(B, C), line(L, C), line(ml, mt), line(mt, mr), line(mr, mb), line(mb, ml)]));
+    const sc = p => pt(50 + (p[0] - 50) * .5, 50 + (p[1] - 50) * .5);
+    const t2 = sc(T), r2 = sc(R), b2 = sc(B), l2 = sc(L);
+    def('rhombus', 'hình thoi lồng', outer().concat([line(t2, r2), line(r2, b2), line(b2, l2), line(l2, t2), line(T, t2), line(R, r2), line(B, b2), line(L, l2)]));
+  })();
+  (function trapezoids() {
+    const A = pt(28, 22), B = pt(72, 22), Cc = pt(92, 80), Dd = pt(8, 80);
+    const mt = pt(50, 22), mb = pt(50, 80), ml = mid(A, Dd), mr = mid(B, Cc), X = pt(50, 51);
+    const outer = () => [line(A, mt), line(mt, B), line(B, mr), line(mr, Cc), line(Cc, mb), line(mb, Dd), line(Dd, ml), line(ml, A)];
+    def('trapezoid', 'hình thang trụ', outer().concat([line(ml, X), line(X, mr), line(mt, X), line(X, mb)]));
+    def('trapezoid', 'hình thang chéo', outer().concat([line(A, X), line(X, Cc), line(B, X), line(X, Dd), line(ml, X), line(X, mr)]));
+  })();
+
   /* ---------- so khớp hình học ---------- */
   // số phức: [re, im]
   const sub = (p, q) => [p[0] - q[0], p[1] - q[1]];
@@ -165,13 +205,14 @@
     rnd = rnd || Math.random;
     const P = params(n);
     for (let attempt = 0; attempt < 60; attempt++) {
-      const shapes = shuffle(['square', 'circle', 'triangle'], rnd).slice(0, P.glyphs);
+      const pool = n < 5 ? ['square', 'circle', 'triangle'] : ['square', 'circle', 'triangle', 'star', 'diamond', 'octagon', 'rhombus', 'trapezoid'];
+      const shapes = shuffle(pool.slice(), rnd).slice(0, P.glyphs);
       const glyphs = shapes.map(sh => {
         const opts = GLYPHS.filter(g => g.shape === sh);
         const g = n <= 2 ? opts[0] : opts[Math.floor(rnd() * opts.length)];
         const kmin = 2;
         const k = n <= 2 ? 2 : kmin + Math.floor(rnd() * (P.kmax - kmin + 1) + (n > 8 && rnd() < .35 ? 1 : 0));
-        return { def: g, k: Math.min(k, P.kmax) };
+        return { def: g, k: Math.min(k, P.kmax, Math.floor(g.segs.length / 3)) };
       });
       const targets = glyphs.map(g => g.def.segs);
       const cards = []; let ok = true;
