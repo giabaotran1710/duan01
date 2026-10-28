@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028b';
+  const V = '20261028c';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -29,6 +29,7 @@
     },
     me() { this.tone(660, .09, 'triangle', .13); this.tone(990, .14, 'sine', .09, .06); },
     opp() { this.tone(520, .09, 'triangle', .11); this.tone(780, .14, 'sine', .08, .06); },
+    stop(i) { this.tone(500 + i * 70, .07, 'triangle', .07); },
     bad() { this.tone(200, .16, 'square', .05, 0, 150); },
     win() { [523, 659, 784, 1047, 1319].forEach((f, i) => this.tone(f, .2, 'triangle', .12, i * .09)); },
     lose() { [392, 330, 262, 196].forEach((f, i) => this.tone(f, .3, 'triangle', .13, i * .16)); },
@@ -79,16 +80,17 @@
       fetch('noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
       fetch('noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
     ]);
-    let inList = false, common = true;   // phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
+    let inList = false, common = true, starter = false;   // phần 0: từ phổ biến nhất (mở ván), phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
+    const starts = [];
     for (const line of a.split('\n')) {
-      if (line.startsWith('# PHẦN 2')) { common = false; continue; }
+      if (line.startsWith('# PHẦN')) { starter = line.startsWith('# PHẦN 0'); common = !line.startsWith('# PHẦN 2'); continue; }
       if (line.startsWith('## ')) { inList = true; continue; }
       if (!inList || !line.trim() || line.startsWith('#')) continue;
-      for (const w of line.split(',')) addWord(w, common);
+      for (const w of line.split(',')) { addWord(w, common); if (starter) starts.push(norm(w)); }
     }
     for (const w of b.split('\n')) addWord(w, false);
     // từ mở đầu cho máy: còn nhiều từ để nối tiếp
-    for (const w of D.cur) if ((D.allBy.get(last(w)) || []).length >= 4) D.starters.push(w);
+    for (const w of starts) if (D.cur.has(w) && (D.allBy.get(last(w)) || []).length >= 8) D.starters.push(w);
     D.ready = D.cur.size > 1000;
     if (!D.ready) throw new Error('empty');
   }
@@ -125,15 +127,42 @@
     $('pcOpp').innerHTML = `<div class="pcTop"><span class="pcName">${esc(G.names.opp)}</span><span class="pcWins"><i class="fa-solid fa-trophy"></i> ${G.wins.opp}</span></div>
       <div class="pcBot"><span class="pcTag">${G.mode === 'online' ? dot(!G.oppOff) : ''}${esc(G.oppOff || G.oppTag)}</span><span class="pcNum"><b>${G.theirs}</b> từ</span></div>`;
     $('sScore').textContent = score();
-    $('sChain').textContent = G.chain.length;
+    $('sChain').textContent = G.mine + G.theirs;
   }
   function syllables(w) { const p = w.split(' '); return [p[0], p[1]]; }
+  const searchUrl = w => 'https://www.google.com/search?q=' + encodeURIComponent('"' + w + '" nghĩa là gì');
   function wordEl(m, i) {
     const [a, b] = syllables(m.w);
     const el = document.createElement('div');
     el.className = 'wd ' + m.by + ' cur';
-    el.innerHTML = `<span class="sy"><span class="${i > 0 ? 'k' : ''}">${esc(a)}</span><span class="l">${esc(b)}</span></span>`;
+    el.innerHTML = `<span class="sy"><span class="${i > 0 ? 'k' : ''}">${esc(a)}</span><span class="l">${esc(b)}</span></span>` +
+      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>`;
     return el;
+  }
+  // chữ chạy lên xuống như máy quay, dừng lần lượt từng chữ (chữ chẵn chạy lên, chữ lẻ chạy xuống)
+  const REEL_POOL = 'aăâbcdđeêghiklmnoôơpqrstuưvxyáàảãạếềểễệốồổỗộớờởỡợứừửữựíìỉĩịúùủũụéèẻẽẹóòỏõọýỳỷỹỵ';
+  function reel(el, base, step, done) {
+    const spans = el.querySelectorAll('.sy > span');
+    let idx = 0, end = 0;
+    spans.forEach(sp => {
+      const chars = Array.from(sp.textContent); sp.textContent = '';
+      chars.forEach(ch => {
+        const i = idx++, up = i % 2 === 0, n = 9 + Math.floor(Math.random() * 6);
+        const rnd = () => REEL_POOL[Math.floor(Math.random() * REEL_POOL.length)];
+        const seq = []; for (let k = 0; k < n; k++) seq.push(rnd());
+        up ? seq.push(ch) : seq.unshift(ch);
+        const cell = document.createElement('span'); cell.className = 'cell';
+        const col = document.createElement('span'); col.className = 'col';
+        col.innerHTML = seq.map(c => `<i>${c}</i>`).join('');
+        cell.appendChild(col); sp.appendChild(cell);
+        const dur = base + i * step; end = Math.max(end, dur);
+        const d = n * 1.25;
+        if (col.animate) col.animate(up ? [{ transform: 'translateY(0)' }, { transform: `translateY(${-d}em)` }] : [{ transform: `translateY(${-d}em)` }, { transform: 'translateY(0)' }],
+          { duration: dur, easing: 'cubic-bezier(.12,.75,.2,1)', fill: 'forwards' });
+        setTimeout(() => { cell.replaceWith(document.createTextNode(ch)); Snd.stop(i); }, dur);
+      });
+    });
+    setTimeout(() => { el.classList.add('done'); if (done) done(); }, end + 60);
   }
   const chainIn = () => $('chainIn');
   function scrollEnd(smooth) { const s = $('chainScroll'); s.style.scrollBehavior = smooth ? 'smooth' : 'auto'; s.scrollTop = s.scrollHeight; }
@@ -145,17 +174,19 @@
     el.innerHTML = '<span><i></i><i></i><i></i></span>';
     chainIn().appendChild(el); scrollEnd(true);
   }
-  function appendWord(m) {
+  function appendWord(m, fx, done) {
     clearThink();
-    const e = $('empty'); if (e) e.remove();
     const prev = chainIn().querySelector('.wd.cur');
     if (prev) { prev.classList.remove('cur'); prev.querySelector('.l').classList.add('k'); }
-    chainIn().appendChild(wordEl(m, G.chain.length - 1));
+    const el = wordEl(m, G.chain.length - 1);
+    chainIn().appendChild(el);
     scrollEnd(true);
+    if (fx) { el.classList.add('rolling'); reel(el, fx[0], fx[1], () => { el.classList.remove('rolling'); scrollEnd(true); if (done) done(); }); }
+    else if (done) done();
   }
   function renderNeed() {
     $('need').textContent = G.need || '';
-    $('inp').placeholder = G.need ? 'tiếng thứ hai' : 'nhập một từ hai tiếng';
+    $('inp').placeholder = 'tiếng thứ hai';
   }
   function setInput(on) {
     $('inp').disabled = !on; $('bSend').disabled = !on;
@@ -178,6 +209,13 @@
   }
 
   // ---------- Lượt chơi ----------
+  const pickStart = () => pickOf(D.starters);
+  // đặt từ khởi đầu (chọn ngẫu nhiên, không thuộc về ai) rồi quay chữ; xong thì gọi done
+  function placeStart(w, done) {
+    G.chain = [{ w, by: 'sys' }]; G.used = new Set([w]); G.need = null;
+    renderNeed(); renderHud();
+    appendWord(G.chain[0], [750, 280], () => { G.need = last(w); renderNeed(); if (done) done(); });
+  }
   function startTurn(who) {
     G.turn = who;
     G.limit = (G.mode === 'solo' ? LEVELS[G.level].time : ONLINE_TIME) * 1000;
@@ -194,10 +232,10 @@
     G.chain.push({ w, by }); G.used.add(w); G.need = last(w);
     if (by === 'me') G.mine++; else G.theirs++;
     G.running = false; clearTimeout(G.aiT);
-    appendWord(G.chain[G.chain.length - 1]);
+    appendWord(G.chain[G.chain.length - 1], by === 'opp' ? [320, 110] : null);
     if (by === 'me') Snd.me(); else Snd.opp();
     renderNeed(); renderHud();
-    if (by === 'me' && G.hooks) G.hooks.move(w, G.chain.length - 1);
+    if (by === 'me' && G.hooks) G.hooks.move(w, G.mine + G.theirs - 1);
     const next = by === 'me' ? 'opp' : 'me';
     if (avail(G.need, null) === 0) { setInput(false); stuck(next); return; }
     startTurn(next);
@@ -233,7 +271,6 @@
   function aiMove() {
     if (G.mode !== 'solo' || G.turn !== 'opp' || G.paused) return;
     const lv = LEVELS[G.level];
-    if (!G.need) { applyMove('opp', pickOf(D.starters)); return; }
     let pool = (D.curBy.get(G.need) || []).filter(w => !G.used.has(w) && hashPct(w) < lv.vocab);
     if (!pool.length) {
       const full = lv.vocab >= 1 ? (D.allBy.get(G.need) || []) : (D.curBy.get(G.need) || []);
@@ -264,7 +301,7 @@
     $('oTitle').textContent = kind === 'win' ? 'BẠN THẮNG' : 'BẠN THUA';
     $('oWhy').textContent = why;
     $('oScore').textContent = sc;
-    $('oWords').textContent = G.mine; $('oChain').textContent = G.chain.length; $('oBest').textContent = store.best;
+    $('oWords').textContent = G.mine; $('oChain').textContent = G.mine + G.theirs; $('oBest').textContent = store.best;
     $('oNew').style.display = isNew && sc > 0 ? 'block' : 'none';
     setTimeout(() => { if (G.mode === 'solo' && !G.turn) show('over'); }, kind === 'win' ? 500 : 800);
   }
@@ -273,7 +310,7 @@
   function reset() {
     clearTimeout(G.aiT);
     Object.assign(G, { chain: [], used: new Set(), need: null, turn: null, running: false, paused: false, mine: 0, theirs: 0, winner: null, locked: false, hints: 3 });
-    chainIn().innerHTML = '<div id="empty"><i class="fa-solid fa-link"></i>Nhập một từ hai tiếng để bắt đầu</div>';
+    chainIn().innerHTML = '';
     $('nHint').textContent = 3; $('bHint').disabled = false;
     $('timeFill').style.transform = 'scaleX(1)'; $('timeTxt').textContent = '';
     $('timebar').className = 'idle'; say('');
@@ -290,14 +327,8 @@
     reset();
     $('menu').classList.remove('lv');
     show(null); fit();
-    if (Math.random() < .5) {
-      G.turn = 'opp'; renderHud();
-      const w = pickOf(D.starters.filter(x => hashPct(x) < Math.max(.5, LEVELS[level].vocab)));
-      // máy mở màn sau một nhịp ngắn
-      G.running = true; G.deadline = Date.now() + 1e9; G.limit = 1e9;
-      showThink();
-      G.aiT = setTimeout(() => applyMove('opp', w), rand(900, 1400));
-    } else startTurn('me');
+    const turn = Math.random() < .5 ? 'me' : 'opp';
+    placeStart(pickStart(), () => startTurn(turn));
   }
   function pause(on) {
     if (G.mode !== 'solo' || !G.turn) return;
@@ -335,12 +366,12 @@
   // ---------- Gợi ý ----------
   function hint() {
     if (G.hints <= 0 || !G.running || G.turn !== 'me' || G.mode !== 'solo') return;
-    const arr = G.need ? (D.curBy.get(G.need) || []).concat(D.allBy.get(G.need) || []) : D.starters;
+    const arr = (D.curBy.get(G.need) || []).concat(D.allBy.get(G.need) || []);
     const ok = arr.filter(w => !G.used.has(w) && avail(last(w), w) > 0);
     if (!ok.length) { toast('Không có gợi ý'); return; }
     const w = pickOf(ok);
     G.hints--; $('nHint').textContent = G.hints; if (!G.hints) $('bHint').disabled = true;
-    $('inp').value = G.need ? last(w) : w;
+    $('inp').value = last(w);
     try { $('inp').focus({ preventScroll: true }); } catch (e) {}
   }
 
@@ -371,14 +402,15 @@
 
   // ---------- Giao diện cho chế độ trực tuyến ----------
   window.NW = {
-    G, D, Snd, show, toast, toMenu, vibrate, check, avail, renderHud, say, myName,
+    G, D, Snd, pickStart, show, toast, toMenu, vibrate, check, avail, renderHud, say, myName,
     ready: () => D.ready,
     // bắt đầu ván trực tuyến; chưa tính giờ cho đến khi gọi begin()
-    startOnline(names, wins, hooks) {
+    startOnline(names, wins, hooks, startWord, done) {
       G.mode = 'online'; G.hooks = hooks; G.names = names; G.wins = wins; G.oppTag = 'ĐỐI THỦ'; G.oppOff = '';
       document.body.classList.add('online');
       $('bPause').innerHTML = '<i class="fa-solid fa-right-from-bracket"></i>';
       reset(); show(null); fit(); renderHud();
+      placeStart(startWord, done);
     },
     begin(turn) { startTurn(turn); },
     applyMove,

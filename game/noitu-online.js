@@ -3,7 +3,7 @@
  *
  * Dữ liệu: /noitu_rooms/{MÃ}
  *   host, guest : { id, name, seen }   seen = nhịp tim (giờ máy chủ)
- *   round       : ván hiện tại (g0, g1, ...); rounds/{g} = { first }  bên đi trước
+ *   round       : ván hiện tại (g0, g1, ...); rounds/{g} = { first, start }  bên đi trước và từ khởi đầu (chọn ngẫu nhiên)
  *   mv/{g}/{n}  = { r, w }             nước thứ n của ván g (chỉ ghi được một lần), w = từ hai tiếng
  *   res/{g}     = { w, why }           bên thắng và lý do ('time' | 'stuck'); chỉ ghi được một lần
  *   left        : 'host' | 'guest'     người đã thoát; người còn lại thắng và là người xoá phòng
@@ -19,7 +19,7 @@
   const ROOMS = '/noitu_rooms/', QUEUE = '/noitu_queue/';
   const ALPHA = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';   // bỏ O/0/I/1 cho khỏi nhầm khi đọc mã
   const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
-  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000, COUNT_MS = 3000, GRACE_MS = 6000;
+  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000, GRACE_MS = 6000;
 
   const on = { active: false, code: null, role: null, id: null, es: null, tree: null, round: null, started: false, closing: false,
                hb: null, watch: null, tick: null, oppSeen: null, oppSeenAt: 0, oppLost: false, connOk: true, forfeit: false,
@@ -142,7 +142,7 @@
     for (let i = 0; i < 6 && !code; i++) { const c = genCode(); if ((await http('GET', ROOMS + c + '/host')) === null) code = c; }
     if (!code) throw new Error('no_code');
     const id = rndId();
-    await http('PUT', ROOMS + code, { host: { id, name: myName(), seen: SV }, created: SV, round: 'g0', rounds: { g0: { first: coin() } } });
+    await http('PUT', ROOMS + code, { host: { id, name: myName(), seen: SV }, created: SV, round: 'g0', rounds: { g0: { first: coin(), start: NW.pickStart() } } });
     Object.assign(on, { code, id, role: 'host' });
     connect();
     return code;
@@ -354,26 +354,17 @@
 
   function startRound(g, first) {
     const t = on.tree, r = t.rounds && t.rounds[g];
-    if (!r || !r.first) return;   // chờ dữ liệu ván về đủ
+    if (!r || !r.first || !r.start) return;   // chờ dữ liệu ván về đủ
     on.round = g; on.over = false; on.playing = false;
     clearTimeout(on.countT);
     const n = names();
-    NW.startOnline({ me: n.me, opp: n.opp }, wins(), hooks);
+    // từ khởi đầu quay chữ rồi mới bắt đầu tính giờ
+    const go = () => NW.startOnline({ me: n.me, opp: n.opp }, wins(), hooks, r.start, () => {
+      if (!on.active || on.over || on.round !== g) return;
+      on.playing = true; NW.begin(r.first === on.role ? 'me' : 'opp'); render(); processMoves();
+    });
     render();
-    const go = () => countdown(r.first === on.role ? 'me' : 'opp');
     if (first) showIntro(go); else go();
-  }
-  function countdown(turn) {
-    let n = 3;
-    const step = () => {
-      if (!on.active || on.over) { count.classList.remove('show'); return; }
-      count.classList.add('show');
-      count.innerHTML = n > 0 ? `<span>${n}</span>` : '<span class="go">BẮT ĐẦU!</span>';
-      if (n > 0) NW.Snd.tone(660, .1, 'triangle', .12); else NW.Snd.tone(990, .25, 'triangle', .14);
-      if (n === 0) { on.playing = true; NW.begin(turn); render(); processMoves(); setTimeout(() => count.classList.remove('show'), 700); return; }
-      n--; on.countT = setTimeout(step, COUNT_MS / 3);
-    };
-    step();
   }
   function showIntro(done) {
     const n = names();
@@ -390,7 +381,7 @@
     if (!on.playing || on.over || !on.tree) return;
     const mv = (on.tree.mv && on.tree.mv[on.round]) || {};
     for (let guard = 0; guard < 400; guard++) {
-      const e = mv[G.chain.length];
+      const e = mv[G.mine + G.theirs];
       if (!e || e.r === on.role || typeof e.w !== 'string') break;
       const c = NW.check(e.w);
       if (!c.w) break;                     // từ không hợp lệ: coi như chưa đi
@@ -432,7 +423,7 @@
     const next = 'g' + (parseInt(on.round.slice(1), 10) + 1);
     const firstNext = cur && cur.first === 'host' ? 'guest' : 'host';   // đổi bên đi trước
     try {
-      try { await http('PUT', ROOMS + on.code + '/rounds/' + next, { first: firstNext }); } catch (e) { /* đối thủ vừa tạo xong */ }
+      try { await http('PUT', ROOMS + on.code + '/rounds/' + next, { first: firstNext, start: NW.pickStart() }); } catch (e) { /* đối thủ vừa tạo xong */ }
       await http('PUT', ROOMS + on.code + '/round', next);
     } catch (e) { NW.toast('Không tạo được ván mới. Thử lại.'); $('orAgain').disabled = false; }
   };
