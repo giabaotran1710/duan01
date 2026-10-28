@@ -5,7 +5,7 @@
  *   host, guest : { id, name, seen }   seen = nhịp tim (giờ máy chủ)
  *   round       : ván hiện tại (g0, g1, ...); rounds/{g} = { first, start }  bên đi trước và từ khởi đầu (chọn ngẫu nhiên)
  *   mv/{g}/{n}  = { r, w }             nước thứ n của ván g (chỉ ghi được một lần), w = từ hai tiếng
- *   res/{g}     = { w, why }           bên thắng và lý do ('time' | 'stuck'); chỉ ghi được một lần
+ *   res/{g}     = { w, why }           bên thắng và lý do ('time'); chỉ ghi được một lần
  *   left        : 'host' | 'guest'     người đã thoát; người còn lại thắng và là người xoá phòng
  * Mỗi máy tự kiểm từ của đối thủ bằng từ điển trước khi nhận.
  * Ghép trận nhanh (CHƠI NGAY): /noitu_queue/{id} = { name, seen, room? } giống noithu_queue.
@@ -82,6 +82,8 @@
   #orIcon.lose{color:var(--mute)}
   #orTitle{font-size:30px;font-weight:800;line-height:1.1;margin-bottom:4px}
   #orSub{font-size:13px;color:var(--mute);font-weight:600;margin-bottom:12px}
+  #orLast{font-size:13px;font-weight:600;color:var(--ink);margin:-6px 0 12px;min-height:0}
+  #orLast b{color:var(--gold)}
   #orScore{display:flex;align-items:center;justify-content:center;gap:16px;margin-bottom:16px}
   #orScore div{min-width:0;max-width:40%}
   #orScore b{display:block;font-size:40px;line-height:1}
@@ -116,7 +118,7 @@
   const count = document.createElement('div'); count.id = 'onCount'; document.body.appendChild(count);
   const intro = document.createElement('div'); intro.id = 'onIntro'; document.body.appendChild(intro);
   const result = document.createElement('section'); result.id = 'onResult'; result.className = 'screen';
-  result.innerHTML = `<div class="card"><div id="orIcon"></div><div id="orTitle"></div><div id="orSub"></div><div id="orScore"></div>
+  result.innerHTML = `<div class="card"><div id="orIcon"></div><div id="orTitle"></div><div id="orSub"></div><div id="orLast"></div><div id="orScore"></div>
     <button class="btn" id="orAgain">VÁN MỚI</button><button class="btn ghost" id="orLeave">THOÁT PHÒNG</button></div>`;
   document.body.appendChild(result);
   const confirmEl = document.createElement('section'); confirmEl.id = 'onConfirm'; confirmEl.className = 'screen';
@@ -337,7 +339,6 @@
   const hooks = {
     move(w, idx) { sendMove(w, idx, 0); },
     timeout() { writeRes(oppRole(), 'time'); },
-    stuck(who) { writeRes(who === 'me' ? oppRole() : on.role, 'stuck'); },
   };
   function sendMove(w, idx, tries) {
     if (!on.active) return;
@@ -406,9 +407,11 @@
     const icon = $('orIcon'), title = $('orTitle'), sub = $('orSub');
     icon.className = kind === 'lose' ? 'lose' : '';
     icon.innerHTML = kind === 'lose' ? '<i class="fa-solid fa-face-sad-tear"></i>' : '<i class="fa-solid fa-trophy"></i>';
-    if (kind === 'win') { title.textContent = 'BẠN THẮNG!'; sub.textContent = why === 'stuck' ? n.opp + ' hết từ để nối.' : n.opp + ' hết giờ.'; }
-    else if (kind === 'lose') { title.textContent = 'ĐỐI THỦ THẮNG'; sub.textContent = why === 'stuck' ? 'Bạn không còn từ để nối.' : 'Bạn hết giờ.'; }
+    if (kind === 'win') { title.textContent = 'BẠN THẮNG!'; sub.textContent = n.opp + ' hết giờ.'; }
+    else if (kind === 'lose') { title.textContent = 'ĐỐI THỦ THẮNG'; sub.textContent = 'Bạn hết giờ.'; }
     else { title.textContent = 'BẠN THẮNG!'; sub.textContent = 'Đối thủ đã rời phòng.'; }
+    const lw = G.chain[G.chain.length - 1];
+    $('orLast').innerHTML = lw && lw.by !== 'sys' ? (lw.by === 'opp' ? esc(n.opp) : 'Bạn') + ' đáp: <b>' + esc(lw.w) + '</b>' : '';
     $('orScore').innerHTML = `<div><b>${w.me}</b><small>${esc(n.me)}</small></div><span>:</span><div><b>${w.opp}</b><small>${esc(n.opp)}</small></div>`;
     $('orAgain').style.display = kind === 'forfeit' ? 'none' : '';
     $('orAgain').disabled = false;

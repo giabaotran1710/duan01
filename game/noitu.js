@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028c';
+  const V = '20261028d';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -110,7 +110,7 @@
     turn: null, deadline: 0, limit: 25000, running: false, paused: false, left: 0,
     mine: 0, theirs: 0, hints: 3,
     names: { me: 'Bạn', opp: 'Máy' }, wins: { me: 0, opp: 0 }, winner: null, oppTag: 'MÁY', connOk: true, oppOff: '',
-    hooks: null,             // chế độ trực tuyến: { move(w, idx), timeout(), stuck(who) }
+    hooks: null,             // chế độ trực tuyến: { move(w, idx), timeout() }
     aiT: null, lastSec: 99, locked: false,
   };
   const score = () => G.mine * (G.mode === 'solo' ? LEVELS[G.level].mult : 1);
@@ -236,14 +236,7 @@
     if (by === 'me') Snd.me(); else Snd.opp();
     renderNeed(); renderHud();
     if (by === 'me' && G.hooks) G.hooks.move(w, G.mine + G.theirs - 1);
-    const next = by === 'me' ? 'opp' : 'me';
-    if (avail(G.need, null) === 0) { setInput(false); stuck(next); return; }
-    startTurn(next);
-  }
-  function stuck(who) {
-    G.running = false;
-    if (G.hooks) { G.hooks.stuck(who); return; }
-    finishSolo(who === 'opp' ? 'win' : 'lose', who === 'opp' ? 'Máy hết từ để nối.' : 'Bạn không còn từ để nối.');
+    startTurn(by === 'me' ? 'opp' : 'me');
   }
   function timeUp() {
     G.running = false;
@@ -276,7 +269,7 @@
       const full = lv.vocab >= 1 ? (D.allBy.get(G.need) || []) : (D.curBy.get(G.need) || []);
       if (lv.vocab >= 1 || Math.random() < lv.vocab) pool = full.filter(w => !G.used.has(w));
     }
-    if (!pool.length) { finishSolo('win', 'Máy hết từ để nối.'); return; }
+    if (!pool.length) { finishSolo('win', 'Máy không nối được.'); return; }
     const sc = pool.map(w => ({ w, f: avail(last(w), w) }));
     let pick;
     if (Math.random() < lv.trap) {
@@ -300,6 +293,8 @@
     if (kind === 'win') { Snd.win(); vibrate([20, 40, 20]); } else { Snd.lose(); vibrate(60); }
     $('oTitle').textContent = kind === 'win' ? 'BẠN THẮNG' : 'BẠN THUA';
     $('oWhy').textContent = why;
+    const lw = G.chain[G.chain.length - 1];
+    $('oLast').innerHTML = lw && lw.by !== 'sys' ? (lw.by === 'opp' ? 'Máy đáp: ' : 'Bạn đáp: ') + '<b>' + esc(lw.w) + '</b>' : '';
     $('oScore').textContent = sc;
     $('oWords').textContent = G.mine; $('oChain').textContent = G.mine + G.theirs; $('oBest').textContent = store.best;
     $('oNew').style.display = isNew && sc > 0 ? 'block' : 'none';
