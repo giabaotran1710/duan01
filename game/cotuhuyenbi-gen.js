@@ -140,6 +140,48 @@
     }
     return false;
   }
+  function findSeg(set, s) { for (let i = 0; i < set.length; i++) if (sameSeg(s, set[i])) return i; return -1; }
+  // mọi cách đặt mảnh vào cổ tự: danh sách mặt nạ bit các nét của cổ tự mà mảnh phủ
+  function placements(piece, glyph) {
+    const out = new Set(), s0 = piece[0];
+    for (const reflect of [false, true]) {
+      const F = p => (reflect ? conj(p) : p), sa = F(s0.a), sb = F(s0.b), L0 = len(sa, sb);
+      for (const g of glyph) {
+        if (g.t !== s0.t || Math.abs(len(g.a, g.b) - L0) > TOL) continue;
+        for (const swap of [false, true]) {
+          const ga = swap ? g.b : g.a, gb = swap ? g.a : g.b, k = div(sub(gb, ga), sub(sb, sa));
+          const T = p => add(ga, mul(k, sub(F(p), sa)));
+          let m = 0, ok = true;
+          for (const s of piece) { const i = findSeg(glyph, mapSeg(s, T)); if (i < 0) { ok = false; break; } m |= (1 << i); }
+          if (ok) out.add(m);
+        }
+      }
+    }
+    return [...out];
+  }
+  // có cách ghép nào khác (dùng ít nhất một mảnh giả) lát kín cổ tự không?
+  function ambiguous(glyphs, cards) {
+    for (const gl of glyphs) {
+      const G = gl.segs, full = G.length >= 31 ? -1 : (1 << G.length) - 1;
+      const pl = cards.map(c => placements(c.segs, G)), usedFlag = new Array(cards.length).fill(false);
+      let nodes = 0;
+      const dfs = (cov, decoy) => {
+        if (++nodes > 30000) return true;
+        if (cov === full) return decoy;
+        let b = 0; while ((cov >> b) & 1) b++;
+        const bit = 1 << b;
+        for (let i = 0; i < cards.length; i++) {
+          if (usedFlag[i]) continue;
+          for (const m of pl[i]) {
+            if ((m & bit) && !(m & cov)) { usedFlag[i] = true; const r = dfs(cov | m, decoy || !cards[i].correct); usedFlag[i] = false; if (r) return true; }
+          }
+        }
+        return false;
+      };
+      if (dfs(0, false)) return true;
+    }
+    return false;
+  }
   function congruent(a, b) { return a.length === b.length && fitsInto(a, b); }
 
   /* ---------- chia cổ tự thành các mảnh liền ---------- */
@@ -235,8 +277,27 @@
       const want = P.decoys * glyphs.length, decoys = [];
       const others = GLYPHS.filter(g => !glyphs.some(x => x.def === g));
       for (let tries = 0; tries < 800 && decoys.length < want; tries++) {
-        let cand;
-        if (rnd() < .65) {                                  // mảnh đúng bị bóp méo một vài nét
+        let cand, near = false;
+        const nearP = Math.max(0, Math.min(.6, (n - 3) / 14));
+        if (rnd() < nearP) {                                   // càng về sau càng nhiều mảnh giả giống thật: thiếu 1-3 nét hoặc dư 1-2 nét
+          const real = cards.filter(c => c.correct);
+          const src = real[Math.floor(rnd() * real.length)], G = glyphs[src.glyph].def.segs;
+          cand = src.segs.map(x => ({ ...x }));
+          if (cand.length >= 3 && rnd() < .5) {
+            const rm = Math.min(cand.length - 2, 1 + Math.floor(rnd() * 3));
+            shuffle([...Array(cand.length).keys()], rnd).slice(0, rm).sort((a, b) => b - a).forEach(i => cand.splice(i, 1));
+          } else {
+            const nodesG = nodesOf(G), mine = nodesOf(cand), add2 = 1 + (rnd() < .4 ? 1 : 0);
+            for (let k = 0, got = 0; k < 30 && got < add2; k++) {
+              const a = mine[Math.floor(rnd() * mine.length)], b2 = nodesG[Math.floor(rnd() * nodesG.length)];
+              if (len(a, b2) < 4) continue;
+              const ns = line(a, b2);
+              if (hasSeg(G, ns) || hasSeg(cand, ns)) continue;
+              cand.push(ns); got++;
+            }
+          }
+          near = true;
+        } else if (rnd() < .65) {                                  // mảnh đúng bị bóp méo một vài nét
           const real = cards.filter(c => c.correct);
           const src = real[Math.floor(rnd() * real.length)];
           cand = mutate(src.segs, nodesOf(glyphs[src.glyph].def.segs), rnd);
@@ -247,9 +308,11 @@
           cand = parts[Math.floor(rnd() * parts.length)];
         }
         if (cand.length < 2 || Math.abs(cand.length - avg) > 3) continue;
-        if (targets.some(t => fitsInto(cand, t))) continue;                       // phải không khớp cổ tự nào
+        const fits = targets.some(t => fitsInto(cand, t));
+        if (fits && !near) continue;                                              // mảnh lạ phải không khớp cổ tự nào
+        if (fits && ambiguous(glyphs.map(g => ({ segs: g.def.segs })), cards.concat([{ segs: cand, correct: false }]))) continue;   // mảnh thiếu nét: chỉ nhận nếu không tạo cách ghép khác
         if (cards.some(c => congruent(c.segs, cand))) continue;                   // không trùng mảnh nào khác
-        decoys.push(cand); cards.push({ segs: cand, correct: false, glyph: -1 });
+        decoys.push(cand); cards.push({ segs: cand, correct: false, glyph: -1, near });
       }
       if (decoys.length < want) continue;
       cards.forEach(c => {
@@ -275,7 +338,7 @@
       for (const c of mine) { count += c.segs.length; for (const s of c.segs) if (!hasSeg(g.segs, s)) errs.push('mảnh đúng có nét lạ'); }
       if (count !== g.segs.length) errs.push('mảnh đúng không phủ kín cổ tự ' + g.id);
     });
-    for (const c of level.cards) if (!c.correct) for (const g of level.glyphs) if (fitsInto(c.segs, g.segs)) errs.push('mảnh giả khớp cổ tự ' + g.id);
+    if (ambiguous(level.glyphs, level.cards)) errs.push('có cách ghép khác dùng mảnh giả');
     return errs;
   }
 
