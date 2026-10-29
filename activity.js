@@ -279,6 +279,7 @@
     #vidModal,#vidView{position:fixed;inset:0;z-index:2147483300;display:none;align-items:center;justify-content:center;background:rgba(3,6,16,.78);
       -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:12px}
     #vidModal.show,#vidView.show{display:flex}
+    #vidView{padding:0}
     .vidCard{width:100%;max-width:520px;max-height:min(80vh,640px);display:flex;flex-direction:column;background:#0d1226;border:1px solid #2c3762;border-radius:16px;
       color:#dfe5ff;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
     .vidHead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #222c52;font-weight:800;font-size:15px}
@@ -292,9 +293,9 @@
     .vidRow b{color:#7ee0c8}.vidRow em{font-style:normal;color:#ffd35a}
     .vidRow button{flex:none;border:0;border-radius:9px;padding:6px 12px;font:700 13px system-ui,sans-serif;color:#fff;background:#e0465c;cursor:pointer;display:flex;gap:6px;align-items:center}
     #vidList .msg{color:#8f9bd0;text-align:center;padding:24px 14px}
-    #vidView .vidCard{max-width:min(96vw,480px);max-height:94vh}
-    #vidStage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center;background:#000}
-    #vidImg{max-width:100%;max-height:calc(94vh - 60px);display:block}
+    #vidView .vidCard{width:100%;max-width:100%;height:100%;max-height:100%;border-radius:0}
+    #vidStage{position:relative;flex:1;min-height:0;width:100%;display:flex;align-items:center;justify-content:center;background:#000;overflow:hidden}
+    #vidImg{max-width:100%;max-height:100%;width:auto;height:auto;object-fit:contain;display:block}
     #vidWait{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#8f9bd0;font-size:13px;text-align:center;padding:20px}
     #vidLive{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:800;color:#ff5a6e;letter-spacing:.1em}
     #vidLive i{width:7px;height:7px;border-radius:50%;background:#ff3b52;box-shadow:0 0 6px #ff3b52}`;
