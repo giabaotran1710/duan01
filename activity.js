@@ -130,8 +130,8 @@
       es.addEventListener('put', e => { try { const m = JSON.parse(e.data); apply(m.path, m.data); check(); } catch (err) {} });
       es.addEventListener('patch', e => { try { const m = JSON.parse(e.data); Object.keys(m.data || {}).forEach(k => apply(m.path.replace(/\/$/, '') + '/' + k, m.data[k])); check(); } catch (err) {} });
     }
-    // đồng bộ giờ máy chủ để biết người xem còn đang xem
-    fetch(FIREBASE_URL + '/.info/serverTimeOffset.json').then(r => r.json()).then(v => { if (typeof v === 'number') offset = v; }).catch(() => {});
+    // đồng bộ giờ máy chủ (đọc lại mốc giờ vừa ghi) để biết người xem còn đang xem dù đồng hồ máy lệch
+    setTimeout(() => fetch(FIREBASE_URL + '/live/' + id + '/t.json').then(r => r.json()).then(t => { if (typeof t === 'number') offset = t - Date.now(); }).catch(() => {}), 1200);
     setTimeout(listen, 1500);
     setInterval(check, 5000);
     function check() {
@@ -213,7 +213,7 @@
   function buildLiveAdmin() {
     if (document.getElementById('vidBtn')) return;
     const css = `
-    #vidBtn{position:fixed;top:calc(24px + env(safe-area-inset-top,0px));right:calc(24px + 152px + env(safe-area-inset-right,0px));z-index:1000;
+    #vidBtn{position:fixed;top:calc(24px + env(safe-area-inset-top,0px));right:calc(24px + 174px + env(safe-area-inset-right,0px));z-index:1000;
       color:#ff8a9a;font-size:19px;padding:0;border-radius:10px}
     #vidBtn i{filter:drop-shadow(0 0 5px rgba(255,120,140,.6))}
     #vidBtn .vidN{position:absolute;top:-7px;right:-9px;min-width:18px;height:18px;padding:0 4px;border-radius:9px;background:#2fbf71;color:#fff;
@@ -258,9 +258,12 @@
     document.body.appendChild(view);
     const list = modal.querySelector('#vidList'), sub = modal.querySelector('#vidSub'), count = btn.querySelector('.vidN');
 
-    let players = {}, offset = 0;
+    let players = {}, offset = 0, lastHtml = '';
     const me = uid();
-    fetch(FIREBASE_URL + '/.info/serverTimeOffset.json').then(r => r.json()).then(v => { if (typeof v === 'number') offset = v; }).catch(() => {});
+    // giờ máy chủ: ghi một mốc giờ rồi đọc lại
+    fetch(FIREBASE_URL + '/live_w/' + me + '/_.json', { method: 'PUT', body: JSON.stringify({ '.sv': 'timestamp' }) })
+      .then(() => fetch(FIREBASE_URL + '/live_w/' + me + '/_.json')).then(r => r.json())
+      .then(t => { if (typeof t === 'number') offset = t - Date.now(); fetch(FIREBASE_URL + '/live_w/' + me + '.json', { method: 'DELETE' }).catch(() => {}); }).catch(() => {});
     const now = () => Date.now() + offset;
     const live = () => Object.entries(players).filter(([k, p]) => p && k !== me && p.n !== ADMIN && typeof p.t === 'number' && now() - p.t < 45000)
       .sort((a, b) => String(a[1].n).localeCompare(String(b[1].n)));
@@ -269,9 +272,11 @@
       count.style.display = v.length ? 'block' : 'none'; count.textContent = v.length;
       sub.textContent = v.length + ' người';
       if (!modal.classList.contains('show')) return;
-      list.innerHTML = v.length ? v.map(([k, p]) => '<div class="vidRow"><span class="dot"></span><span class="who"><b>' + esc(p.n) + '</b> đang chơi <em>' + esc(p.g) + '</em></span>' +
+      const html = v.length ? v.map(([k, p]) => '<div class="vidRow"><span class="dot"></span><span class="who"><b>' + esc(p.n) + '</b> đang chơi <em>' + esc(p.g) + '</em></span>' +
         '<button type="button" data-u="' + esc(k) + '"><i class="fa-solid fa-eye"></i>Xem</button></div>').join('')
         : '<div class="msg">Hiện không có ai đang chơi.</div>';
+      // chỉ vẽ lại khi nội dung đổi: vẽ lại liên tục làm nút Xem bị thay mới giữa lúc bấm, mất cú chạm
+      if (html !== lastHtml) { lastHtml = html; list.innerHTML = html; }
     }
     function apply(path, data) {
       const k = path.split('/').filter(Boolean);
@@ -295,7 +300,7 @@
       view.querySelector('#vidWho').innerHTML = '<b style="color:#7ee0c8">' + esc(p.n) + '</b> <span style="color:#8f9bd0;font-weight:500">·</span> <em style="font-style:normal;color:#ffd35a">' + esc(p.g) + '</em>';
       const img = view.querySelector('#vidImg'), wait = view.querySelector('#vidWait');
       img.removeAttribute('src'); wait.textContent = 'Đang kết nối...'; wait.style.display = 'flex';
-      view.classList.add('show');
+      modal.classList.remove('show'); view.classList.add('show');
       const ping = () => fetch(FIREBASE_URL + '/live_w/' + k + '/' + me + '.json', { method: 'PUT', body: JSON.stringify({ '.sv': 'timestamp' }) }).catch(() => {});
       ping(); hb = setInterval(ping, 8000);
       wes = new EventSource(FIREBASE_URL + '/live_f/' + k + '.json');
@@ -314,7 +319,7 @@
       watching = null; lastFrame = 0;
     }
     list.addEventListener('click', e => { const b = e.target.closest('button[data-u]'); if (b) watch(b.getAttribute('data-u')); });
-    const closeView = () => { stop(); view.classList.remove('show'); };
+    const closeView = () => { stop(); view.classList.remove('show'); modal.classList.add('show'); render(); };
     view.querySelector('#vidVX').onclick = closeView;
     view.addEventListener('click', e => { if (e.target === view) closeView(); });
     const close = () => modal.classList.remove('show');
