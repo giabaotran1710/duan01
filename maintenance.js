@@ -4,7 +4,9 @@
  * Trạng thái lấy từ maintenance.json (cùng thư mục với file này). Lỗi mạng/file hỏng => chơi bình thường.
  * Theo dõi liên tục: trong lúc trang đang mở, maintenance.json được đọc lại mỗi 3 giây (1,5 giây khi chạy trên máy mình:
  * localhost / mạng nội bộ) và ngay khi quay lại tab, nên bật "on": true là game đang chơi dừng ngay; tắt bảo trì thì game tự tải lại.
- * Các lần đọc lại dùng kiểm tra điều kiện (ETag) nên khi file không đổi chỉ tốn một phản hồi 304 rất nhẹ. */
+ * Mỗi lần đọc (kể cả đọc lại) đều thêm ?t= để ép ra một URL mới và dùng cache:'no-store', vì Safari/iOS có lỗi
+ * hay trả thẳng bản đã lưu trong bộ nhớ đệm cho cùng một URL bất kể tuỳ chọn cache — nếu không ép, bật "on": true
+ * giữa chừng có thể không bao giờ tới được các máy iPhone/iPad đang mở sẵn trang. File rất nhỏ nên không đáng kể. */
 (function () {
   'use strict';
   var DEFAULT_MSG = 'Trò chơi đang được bảo trì. Vui lòng trở lại sau.';
@@ -40,15 +42,17 @@
     return DEFAULT_MSG;
   }
 
-  // Đọc maintenance.json. Lần đầu thêm ?t= và no-store để chắc chắn lấy bản mới nhất; các lần đọc lại sau đó
-  // dùng no-cache (luôn hỏi lại máy chủ bằng ETag, file không đổi thì chỉ nhận 304 nhẹ).
+  // Đọc maintenance.json. Luôn thêm ?t= (kể cả các lần đọc lại) và cache:'no-store': Safari/iOS có lỗi lâu năm
+  // (WebKit) là phớt lờ tuỳ chọn cache của fetch() và trả thẳng bản đã lưu cho cùng một URL, nên nếu lần đọc lại
+  // không đổi URL thì trên iPhone/iPad có thể không bao giờ biết maintenance.json vừa được bật — game vẫn chơi
+  // được dù đã bật bảo trì. Thêm ?t= ép mỗi lần đọc lại thành một URL khác nên luôn phải hỏi lại máy chủ.
   // Có giới hạn thời gian để một yêu cầu bị treo không làm dừng việc theo dõi. Lỗi thì giữ nguyên trạng thái đang có.
-  function load(revalidate) {
+  function load() {
     var ctl = typeof AbortController === 'function' ? new AbortController() : null;
     var timer = ctl ? nSetTimeout(function () { ctl.abort(); }, FETCH_TIMEOUT_MS) : 0;
-    var opts = { cache: revalidate ? 'no-cache' : 'no-store' };
+    var opts = { cache: 'no-store' };
     if (ctl) opts.signal = ctl.signal;
-    return fetch(revalidate ? jsonUrl : jsonUrl + '?t=' + Date.now(), opts)
+    return fetch(jsonUrl + '?t=' + Date.now(), opts)
       .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
       .then(function (j) { if (j && typeof j === 'object') cfg = j; })
       .then(function () { nClearTimeout(timer); }, function (e) { nClearTimeout(timer); throw e; });
@@ -74,7 +78,7 @@
   function check() {
     if (checking) return;
     checking = true; lastCheck = Date.now();
-    load(true).then(function () {
+    load().then(function () {
       var s = offSig();
       if (s !== lastSig) { lastSig = s; notify(); }
     }, function () {}).then(function () { checking = false; schedule(); });
