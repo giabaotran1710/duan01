@@ -323,7 +323,7 @@
       });
       shuffle(cards, rnd);
       const total = cards.length;
-      const time = Math.round((20 + total * 2.4) * (1 - Math.min(.22, (n - 1) * .018)));
+      const time = Math.round((20 + total * 2.4) * (1 - Math.min(.22, (n - 1) * .018))) + 10;
       return { n, glyphs: glyphs.map(g => ({ id: g.def.id, shape: g.def.shape, segs: g.def.segs, k: g.k })), cards, time };
     }
     throw new Error('không tạo được màn ' + n);
