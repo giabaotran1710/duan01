@@ -4,6 +4,9 @@
  * Trạng thái lấy từ maintenance.json (cùng thư mục với file này). Lỗi mạng/file hỏng => chơi bình thường.
  * Theo dõi liên tục: trong lúc trang đang mở, maintenance.json được đọc lại mỗi 3 giây (1,5 giây khi chạy trên máy mình:
  * localhost / mạng nội bộ) và ngay khi quay lại tab, nên bật "on": true là game đang chơi dừng ngay; tắt bảo trì thì game tự tải lại.
+ * Bảo trì định kỳ: mỗi ngày 00:00 - 01:30 (giờ Việt Nam) toàn bộ game tự bảo trì, không cần sửa maintenance.json; giờ lấy từ
+ * máy chủ (header Date) nên máy chơi chỉnh sai đồng hồ cũng không né được. Có thể đổi/tắt bằng khoá "schedule" trong maintenance.json
+ * (ví dụ {"on":false} hoặc {"from":"02:00","to":"03:30","message":"..."}).
  * Mỗi lần đọc (kể cả đọc lại) đều thêm ?t= để ép ra một URL mới và dùng cache:'no-store', vì Safari/iOS có lỗi
  * hay trả thẳng bản đã lưu trong bộ nhớ đệm cho cùng một URL bất kể tuỳ chọn cache — nếu không ép, bật "on": true
  * giữa chừng có thể không bao giờ tới được các máy iPhone/iPad đang mở sẵn trang. File rất nhỏ nên không đáng kể. */
@@ -18,6 +21,10 @@
   var isLocal = host === 'localhost' || host === '::1' || host === '[::1]' || /^127\./.test(host) || /^10\./.test(host) ||
     /^192\.168\./.test(host) || /^172\.(1[6-9]|2\d|3[01])\./.test(host) || /\.local$/.test(host) || location.protocol === 'file:';
   var POLL_MS = isLocal ? 1500 : 3000;
+  var VN_OFFSET_MS = 7 * 3600 * 1000;                 // giờ Việt Nam (UTC+7)
+  var SCHED_FROM = '00:00', SCHED_TO = '01:30';       // khung bảo trì định kỳ mỗi ngày
+  var SCHED_MSG = 'Hệ thống bảo trì định kỳ mỗi ngày từ 00:00 đến 01:30. Vui lòng quay lại sau 01:30.';
+  var serverSkew = 0;                                 // giờ máy chủ - giờ máy chơi (ms), lấy từ header Date
   var FETCH_TIMEOUT_MS = 8000;
   var jsonUrl = new URL('maintenance.json', src).href;
   // Giữ bản gốc của hàm hẹn giờ: khi bảo trì, game bị chặn setTimeout/rAF nhưng việc kiểm tra lại vẫn phải chạy.
@@ -26,10 +33,24 @@
   var nRAF = window.requestAnimationFrame ? window.requestAnimationFrame.bind(window) : null;
   var nCAF = window.cancelAnimationFrame ? window.cancelAnimationFrame.bind(window) : null;
 
+  function toMin(hhmm, dflt) {
+    var m = /^(\d{1,2}):(\d{2})$/.exec(String(hhmm || ''));
+    return m ? (+m[1]) * 60 + (+m[2]) : dflt;
+  }
+  // Đang trong khung bảo trì định kỳ? (cfg.schedule: {on:false} để tắt, from/to dạng "HH:MM" để đổi, from > to là qua nửa đêm)
+  function scheduled() {
+    var sc = cfg && cfg.schedule;
+    if (sc && sc.on === false) return false;
+    var from = toMin(sc && sc.from, toMin(SCHED_FROM, 0)), to = toMin(sc && sc.to, toMin(SCHED_TO, 90));
+    var d = new Date(Date.now() + serverSkew + VN_OFFSET_MS);
+    var m = d.getUTCHours() * 60 + d.getUTCMinutes();
+    return from <= to ? (m >= from && m < to) : (m >= from || m < to);
+  }
   function entry(id) {
     return cfg && cfg.games && id && cfg.games[id] ? cfg.games[id] : null;
   }
   function isOff(id) {
+    if (scheduled()) return true;
     if (!cfg) return false;
     if (cfg.all && cfg.all.on === true) return true;
     var e = entry(id);
@@ -39,6 +60,7 @@
     var e = entry(id);
     if (e && e.on === true && e.message) return String(e.message);
     if (cfg && cfg.all && cfg.all.on === true && cfg.all.message) return String(cfg.all.message);
+    if (scheduled()) return String((cfg && cfg.schedule && cfg.schedule.message) || SCHED_MSG);
     return DEFAULT_MSG;
   }
 
@@ -53,7 +75,12 @@
     var opts = { cache: 'no-store' };
     if (ctl) opts.signal = ctl.signal;
     return fetch(jsonUrl + '?t=' + Date.now(), opts)
-      .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+      .then(function (r) {
+        if (!r.ok) throw new Error('http ' + r.status);
+        var dt = Date.parse(r.headers.get('Date') || '');   // giờ máy chủ, không tin đồng hồ máy chơi
+        if (dt) serverSkew = dt - Date.now();
+        return r.json();
+      })
       .then(function (j) { if (j && typeof j === 'object') cfg = j; })
       .then(function () { nClearTimeout(timer); }, function (e) { nClearTimeout(timer); throw e; });
   }
@@ -61,6 +88,7 @@
 
   // Danh sách game đang bảo trì (để biết trạng thái có đổi hay không)
   function offSig() {
+    if (scheduled()) return '*';
     if (!cfg) return '';
     if (cfg.all && cfg.all.on === true) return '*';
     var g = cfg.games || {};
