@@ -138,7 +138,7 @@
       const on = fresh();
       badge(on);
       if (on && !loop) { loop = true; shoot(); }
-      if (!on && loop) { loop = null; put('/live_f/' + id, null); }
+      if (!on && loop) { loop = null; fast = null; domLayer = null; domDirty = true; if (mo) { mo.disconnect(); mo = null; } put('/live_f/' + id, null); }
     }
     function loadLib() {
       if (lib) return lib;
@@ -151,23 +151,81 @@
       });
       return lib;
     }
+    // Game vẽ bằng canvas phủ gần hết màn hình: lấy thẳng canvas (vài ms, ~12 khung/giây) rồi dán lớp giao diện (nút, điểm, menu...) chụp riêng,
+    // lớp này chỉ chụp lại khi giao diện đổi và tối đa ~1 lần/1,2 giây vì mỗi lần dựng trang làm đứng máy người chơi ~0,3 giây.
+    let fast = null, fastFail = 0, domLayer = null, domDirty = true, lastDom = 0, mo = null;   // fast: canvas đang dùng; null = chưa thử; false = không dùng được
+    const SC = () => Math.min(1, 360 / Math.max(1, window.innerWidth));
+    const NO_MASK = '*,*::before,*::after{-webkit-mask-image:none!important;mask-image:none!important;animation-play-state:paused!important;animation-delay:-60s!important;transition:none!important}';
+    // các canvas đang hiện (theo thứ tự trong trang); dùng đường nhanh khi có canvas phủ ≥ 50% màn hình
+    function liveCanvases() {
+      const vw = window.innerWidth, vh = window.innerHeight, list = []; let maxA = 0;
+      document.querySelectorAll('canvas').forEach(c => {
+        const r = c.getBoundingClientRect();
+        const a = Math.max(0, Math.min(r.right, vw) - Math.max(r.left, 0)) * Math.max(0, Math.min(r.bottom, vh) - Math.max(r.top, 0));
+        if (a < vw * vh * 0.12) return;
+        const st = getComputedStyle(c);
+        if (st.visibility === 'hidden' || st.display === 'none' || +st.opacity < 0.05) return;
+        list.push([c, +st.opacity]); maxA = Math.max(maxA, a);
+      });
+      return maxA >= vw * vh * 0.5 ? list : null;
+    }
+    function compose(list) {
+      const vw = Math.max(1, window.innerWidth), vh = Math.max(1, window.innerHeight), sc = SC();
+      const o = compose.o || (compose.o = document.createElement('canvas'));
+      o.width = Math.round(vw * sc); o.height = Math.round(vh * sc);
+      const x = o.getContext('2d', { willReadFrequently: true });
+      x.fillStyle = getComputedStyle(document.body).backgroundColor || '#000'; x.fillRect(0, 0, o.width, o.height);
+      list.forEach(([c, op]) => { const r = c.getBoundingClientRect(); x.globalAlpha = op; x.drawImage(c, r.left * sc, r.top * sc, r.width * sc, r.height * sc); });
+      x.globalAlpha = 1;
+      // canvas WebGL không giữ khung hình thì ra ảnh trống: kiểm tra vài điểm, trống thì bỏ đường nhanh
+      const d = x.getImageData(0, 0, o.width, o.height).data; let lit = 0;
+      for (let i = 0; i < d.length; i += 4 * 97) if (d[i] + d[i + 1] + d[i + 2] > 30) lit++;
+      if (!lit) return null;
+      if (domLayer) x.drawImage(domLayer, 0, 0, o.width, o.height);
+      return { img: o.toDataURL('image/jpeg', .5), w: vw, h: vh };
+    }
+    function snap(h2c, opts) {
+      const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight);
+      return h2c(document.body, Object.assign({ scale: SC(), width: w, height: h, x: window.scrollX, y: window.scrollY, windowWidth: w, windowHeight: h, logging: false, useCORS: true }, opts));
+    }
     async function shoot() {
       if (!loop || busy) return;
       busy = true;
+      let wait = 700;
       try {
         if (document.visibilityState === 'visible') {
-          const h2c = await loadLib();
-          const w = Math.max(1, window.innerWidth), h = Math.max(1, window.innerHeight), sc = Math.min(1, 360 / w);
-          const cv = await h2c(document.body, { scale: sc, width: w, height: h, x: window.scrollX, y: window.scrollY, windowWidth: w, windowHeight: h,
-            backgroundColor: getComputedStyle(document.body).backgroundColor || '#000', logging: false, useCORS: true,
-            ignoreElements: el => el.id === 'liveEye',
-            // bản sao để chụp: bỏ mask-image (html2canvas không vẽ được) và đưa hiệu ứng CSS về trạng thái cuối (bản sao chạy lại hiệu ứng từ đầu nên phần tử mới hiện sẽ trong suốt)
-            onclone: doc => { const st = doc.createElement('style'); st.textContent = '*,*::before,*::after{-webkit-mask-image:none!important;mask-image:none!important;animation-play-state:paused!important;animation-delay:-60s!important;transition:none!important}'; doc.head.appendChild(st); } });
-          const img = cv.toDataURL('image/jpeg', .55);
-          if (loop && img.length < 190000) await put('/live_f/' + id, { i: img, w, h, t: { '.sv': 'timestamp' } });
+          let f = null;
+          if (fast !== false || Date.now() - fastFail > 3000) {
+            const cs = liveCanvases();
+            if (cs) {
+              if (!mo) { mo = new MutationObserver(() => { domDirty = true; }); mo.observe(document.body, { subtree: true, childList: true, attributes: true, characterData: true }); }
+              if (!domLayer || (domDirty && Date.now() - lastDom > 1200)) {
+                domDirty = false; lastDom = Date.now();
+                try {
+                  const h2c = await loadLib();
+                  domLayer = await snap(h2c, { backgroundColor: null, ignoreElements: el => el.id === 'liveEye' || cs.some(p => p[0] === el),
+                    onclone: doc => { const st = doc.createElement('style'); st.textContent = NO_MASK + 'html,body{background:none!important}'; doc.head.appendChild(st); } });
+                } catch (e) { /* giao diện có kiểu CSS thư viện không đọc được: vẫn gửi hình canvas, thiếu lớp nút/điểm */ }
+              }
+              // đọc canvas ngay trong nhịp vẽ (rAF) để canvas WebGL còn giữ khung hình vừa vẽ
+              try { f = await new Promise(res => requestAnimationFrame(() => { try { res(compose(cs)); } catch (e) { res(null); } })); } catch (e) { f = null; }
+            }
+            fast = f ? true : false; if (!f) fastFail = Date.now();   // thất bại thì dùng cách dựng trang, 3 giây sau thử lại đường nhanh
+          }
+          if (f) { wait = 80; if (loop && f.img.length < 190000) await put('/live_f/' + id, { i: f.img, w: f.w, h: f.h, t: { '.sv': 'timestamp' } }); }
+          else {
+            const h2c = await loadLib(), t0 = performance.now();
+            const cv = await snap(h2c, { backgroundColor: getComputedStyle(document.body).backgroundColor || '#000', ignoreElements: el => el.id === 'liveEye',
+              // bản sao để chụp: bỏ mask-image (html2canvas không vẽ được) và đưa hiệu ứng CSS về trạng thái cuối (bản sao chạy lại hiệu ứng từ đầu nên phần tử mới hiện sẽ trong suốt)
+              onclone: doc => { const st = doc.createElement('style'); st.textContent = NO_MASK; doc.head.appendChild(st); } });
+            const img = cv.toDataURL('image/jpeg', .5);
+            if (loop && img.length < 190000) await put('/live_f/' + id, { i: img, w: Math.max(1, window.innerWidth), h: Math.max(1, window.innerHeight), t: { '.sv': 'timestamp' } });
+            // mỗi lần dựng trang làm đứng máy người chơi một chút: nghỉ gấp ~2 lần thời gian dựng để game vẫn mượt
+            wait = Math.max(450, (performance.now() - t0) * 2);
+          }
         }
         busy = false;
-        if (loop) setTimeout(shoot, 650);
+        if (loop) setTimeout(shoot, wait);
       } catch (e) { busy = false; if (loop) setTimeout(shoot, 4000); }   // lỗi tải thư viện / chụp: thử lại chậm hơn
     }
     // cho người chơi biết đang có người xem
