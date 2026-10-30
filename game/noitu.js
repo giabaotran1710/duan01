@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028e';
+  const V = '20261030e';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -45,7 +45,7 @@
   const pickOf = arr => arr[Math.floor(Math.random() * arr.length)];
 
   // ---------- Từ điển ----------
-  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], ready: false };
+  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], rare: new Set(), banned: new Set(), ready: false };
   // chuẩn hoá: chữ thường, một dấu cách, dấu thanh kiểu "hòa/khỏe/thủy" (hoà/khoẻ/thuỷ cũng được chấp nhận)
   const TONE_RE = /[\u0300\u0301\u0309\u0303\u0323]/;
   function fixTone(syl) {
@@ -61,7 +61,7 @@
   const WORD_RE = /^\p{L}+ \p{L}+$/u;
   function addWord(raw, cur) {
     const w = norm(raw);
-    if (!WORD_RE.test(w) || D.all.has(w) && !cur) return;
+    if (!WORD_RE.test(w) || D.banned.has(w) || D.all.has(w) && !cur) return;
     if (!D.all.has(w)) {
       D.all.add(w);
       const f = first(w);
@@ -76,10 +76,12 @@
     }
   }
   async function loadDict() {
-    const [a, b] = await Promise.all([
+    const [a, b, bn] = await Promise.all([
       fetch('noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
       fetch('noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
+      fetch('noitu-banned.txt?v=' + V).then(r => r.ok ? r.text() : '').catch(() => ''),
     ]);
+    for (const w of bn.split('\n')) if (w.trim() && !w.startsWith('#')) D.banned.add(norm(w));
     let inList = false, common = true, starter = false;   // phần 0: từ phổ biến nhất (mở ván), phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
     const starts = [];
     for (const line of a.split('\n')) {
@@ -88,7 +90,7 @@
       if (!inList || !line.trim() || line.startsWith('#')) continue;
       for (const w of line.split(',')) { addWord(w, common); if (starter) starts.push(norm(w)); }
     }
-    for (const w of b.split('\n')) addWord(w, false);
+    for (const w of b.split('\n')) { const n = norm(w); if (WORD_RE.test(n) && !D.all.has(n) && !D.banned.has(n)) D.rare.add(n); addWord(w, false); }
     // từ mở đầu cho máy: còn nhiều từ để nối tiếp
     for (const w of starts) if (D.cur.has(w) && (D.allBy.get(last(w)) || []).length >= 8) D.starters.push(w);
     D.ready = D.cur.size > 1000;
@@ -134,9 +136,11 @@
   function wordEl(m, i) {
     const [a, b] = syllables(m.w);
     const el = document.createElement('div');
-    el.className = 'wd ' + m.by + ' cur';
+    const rare = D.rare.has(m.w);
+    el.className = 'wd ' + m.by + ' cur' + (rare ? ' rare' : '');
     el.innerHTML = `<span class="sy"><span class="${i > 0 ? 'k' : ''}">${esc(a)}</span><span class="l">${esc(b)}</span></span>` +
-      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>`;
+      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>` +
+      (rare ? '<span class="rareTag"><i class="fa-solid fa-star"></i> TỪ HIẾM</span>' : '');
     return el;
   }
   // chữ chạy lên xuống như máy quay, dừng lần lượt từng chữ (chữ chẵn chạy lên, chữ lẻ chạy xuống)
@@ -202,6 +206,7 @@
     if (!w) return { err: '' };
     if (G.need && w.indexOf(' ') < 0) w = G.need + ' ' + w;
     if (!WORD_RE.test(w)) return { err: 'Hãy nhập một từ hai tiếng.' };
+    if (D.banned.has(w)) return { err: '"' + w + '" là từ bị cấm. Hãy dùng từ khác.', banned: true };
     if (G.need && first(w) !== G.need) return { err: 'Từ phải bắt đầu bằng "' + G.need + '".' };
     if (!D.all.has(w)) return { err: '"' + w + '" không có trong từ điển.' };
     if (G.used.has(w)) return { err: 'Từ này đã được dùng.' };
@@ -249,7 +254,7 @@
     if (!G.running || G.turn !== 'me' || G.paused) return;
     const r = check($('inp').value);
     if (!r.w) {
-      if (r.err) { say(r.err); Snd.bad(); vibrate(40); const row = $('inRow'); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
+      if (r.err) { say(r.err); if (r.banned) toast(r.err); Snd.bad(); vibrate(40); const row = $('inRow'); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
       return;
     }
     applyMove('me', r.w);
