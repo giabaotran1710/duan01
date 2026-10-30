@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261030a';
+  const V = '20261030b';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -45,7 +45,7 @@
   const pickOf = arr => arr[Math.floor(Math.random() * arr.length)];
 
   // ---------- Từ điển ----------
-  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], banned: new Set(), ready: false };
+  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], rare: new Set(), banned: new Set(), ready: false };
   // chuẩn hoá: chữ thường, một dấu cách, dấu thanh kiểu "hòa/khỏe/thủy" (hoà/khoẻ/thuỷ cũng được chấp nhận)
   const TONE_RE = /[\u0300\u0301\u0309\u0303\u0323]/;
   function fixTone(syl) {
@@ -90,7 +90,7 @@
       if (!inList || !line.trim() || line.startsWith('#')) continue;
       for (const w of line.split(',')) { addWord(w, common); if (starter) starts.push(norm(w)); }
     }
-    for (const w of b.split('\n')) addWord(w, false);
+    for (const w of b.split('\n')) { const n = norm(w); if (WORD_RE.test(n) && !D.all.has(n) && !D.banned.has(n)) D.rare.add(n); addWord(w, false); }
     // từ mở đầu cho máy: còn nhiều từ để nối tiếp
     for (const w of starts) if (D.cur.has(w) && (D.allBy.get(last(w)) || []).length >= 8) D.starters.push(w);
     D.ready = D.cur.size > 1000;
@@ -136,9 +136,11 @@
   function wordEl(m, i) {
     const [a, b] = syllables(m.w);
     const el = document.createElement('div');
-    el.className = 'wd ' + m.by + ' cur';
+    const rare = D.rare.has(m.w);
+    el.className = 'wd ' + m.by + ' cur' + (rare ? ' rare' : '');
     el.innerHTML = `<span class="sy"><span class="${i > 0 ? 'k' : ''}">${esc(a)}</span><span class="l">${esc(b)}</span></span>` +
-      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>`;
+      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>` +
+      (rare ? '<span class="rareTag"><i class="fa-solid fa-star"></i> TỪ HIẾM</span>' : '');
     return el;
   }
   // chữ chạy lên xuống như máy quay, dừng lần lượt từng chữ (chữ chẵn chạy lên, chữ lẻ chạy xuống)
