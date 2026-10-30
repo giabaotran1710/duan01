@@ -269,8 +269,8 @@
       if (document.getElementById('lbNameDlg')) return resolve(null);
       const host = document.createElement('div');
       host.id = 'lbNameDlg';
-      host.setAttribute('style', 'position:fixed;inset:0;z-index:2147483600;display:flex;align-items:center;justify-content:center;background:rgba(3,6,16,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:20px;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif');
-      host.innerHTML = '<div style="width:100%;max-width:360px;background:linear-gradient(170deg,#1a2147,#0d1226);border:1px solid #34406e;border-radius:20px;padding:22px 20px 18px;color:#eef1ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">' +
+      host.setAttribute('style', 'position:fixed;inset:0;z-index:2147483600;display:flex;overflow-y:auto;-webkit-overflow-scrolling:touch;background:rgba(3,6,16,.82);-webkit-backdrop-filter:blur(8px);backdrop-filter:blur(8px);padding:20px;box-sizing:border-box;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif');
+      host.innerHTML = '<div style="width:100%;max-width:360px;margin:auto;background:linear-gradient(170deg,#1a2147,#0d1226);border:1px solid #34406e;border-radius:20px;padding:22px 20px 18px;color:#eef1ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">' +
         '<div style="font-size:34px;text-align:center">🏆</div>' +
         '<div style="font-weight:800;font-size:19px;text-align:center;margin:6px 0 4px">Chọn tên người chơi</div>' +
         '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
@@ -280,7 +280,11 @@
         '<button id="lbNameOk" type="button" disabled style="flex:2;padding:12px;border-radius:12px;border:0;background:linear-gradient(#5ee0c8,#2bb39a);color:#052a24;font-weight:800;font-size:15px;cursor:pointer;opacity:.45">Xác nhận</button></div></div>';
       document.body.appendChild(host);
       const input = host.querySelector('#lbNameIn'), ok = host.querySelector('#lbNameOk'), rules = host.querySelector('#lbNameRules');
-      const done = v => { host.remove(); resolve(v); };
+      // Bàn phím ảo che bớt màn hình: bám theo vùng nhìn thấy và cho cuộn để nút Xác nhận luôn bấm được
+      const vv = window.visualViewport;
+      function fitDlg() { if (!vv) return; host.style.inset = 'auto'; host.style.left = '0'; host.style.width = '100%'; host.style.top = vv.offsetTop + 'px'; host.style.height = vv.height + 'px'; }
+      if (vv) { vv.addEventListener('resize', fitDlg); vv.addEventListener('scroll', fitDlg); fitDlg(); }
+      const done = v => { if (vv) { vv.removeEventListener('resize', fitDlg); vv.removeEventListener('scroll', fitDlg); } host.remove(); resolve(v); };
       function refresh() {
         const n = input.value, hasL = /[a-z]/.test(n), hasD = /[0-9]/.test(n), lenOk = n.length >= NAME_MIN && n.length <= NAME_MAX;
         const row = (good, t) => '<div style="color:' + (good ? '#5eead4' : '#8f9bd0') + '">' + (good ? '✓' : '○') + ' ' + t + '</div>';
@@ -301,6 +305,7 @@
         const e = document.createElement('div'); e.style.cssText = 'color:#ff8a8a;font-weight:700'; e.textContent = r.error; rules.appendChild(e);
       };
       const skip = host.querySelector('#lbNameSkip'); if (skip) skip.onclick = () => done(null);
+      input.addEventListener('focus', () => setTimeout(() => { try { ok.scrollIntoView({ block: 'nearest' }); } catch (e) {} }, 300));
       refresh(); setTimeout(() => { try { input.focus(); } catch (e) {} }, 60);
     });
   }
