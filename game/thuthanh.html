@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js" data-game="thuthanh"></script>
+<script src="../scene.js" data-game="thuthanh"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#1d3a1a">
+<title>Thủ thành ruộng lúa</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+<style>
+:root{
+  --ink:#fffbea;
+  --mute:#d6e2b8;
+  --line:rgba(255,255,255,.22);
+  --gold:#ffd54a;
+  --red:#ff6b5e;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;overflow:hidden;background:#1d3a1a;color:var(--ink);
+  font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior:none;touch-action:manipulation}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+button:disabled{cursor:default}
+#app{position:fixed;left:0;right:0;top:0;height:var(--h,100%);display:flex;flex-direction:column;max-width:560px;margin:0 auto;
+  padding:calc(6px + var(--st)) 8px calc(24px + var(--sb))}
+
+/* ---------- Thanh trên ---------- */
+#top{flex:none;display:flex;align-items:center;gap:6px;height:46px}
+.ib{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:18px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
+.ib:active{transform:scale(.92)}
+.chip{flex:1;min-width:0;height:40px;border-radius:13px;background:rgba(0,0,0,.28);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:6px;
+  font-size:17px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip small{font-size:10px;letter-spacing:.14em;color:var(--mute);font-weight:700}
+.chip.hit{animation:hit .4s}
+@keyframes hit{30%{background:rgba(255,80,60,.65);transform:scale(1.06)}}
+.chip.gain{animation:gain .35s}
+@keyframes gain{30%{background:rgba(255,213,74,.4);transform:scale(1.05)}}
+
+/* ---------- Sân chơi ---------- */
+#stage{position:relative;flex:1;min-height:120px;margin-top:6px;border-radius:16px;overflow:hidden;border:1px solid var(--line);background:#5a8f32}
+#cv{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
+#banner{position:absolute;left:0;right:0;top:12px;text-align:center;font-size:20px;font-weight:800;letter-spacing:.06em;color:#fff;text-shadow:0 2px 8px rgba(0,0,0,.6);opacity:0;pointer-events:none;transition:opacity .3s}
+#banner.show{opacity:1}
+
+/* ---------- Bảng điều khiển ---------- */
+#panel{flex:none;margin-top:6px;border-radius:16px;padding:8px;background:rgba(0,0,0,.34);border:1px solid var(--line);display:flex;flex-direction:column;gap:7px}
+#picks{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
+.pick{position:relative;height:60px;border-radius:12px;background:linear-gradient(180deg,rgba(255,255,255,.2),rgba(255,255,255,.08));border:1px solid var(--line);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;line-height:1.05;box-shadow:0 3px 0 rgba(0,0,0,.28)}
+.pick .em{font-size:24px}
+.pick .co{font-size:12px;font-weight:800;color:var(--gold)}
+.pick:active:not(:disabled){transform:translateY(2px);box-shadow:0 1px 0 rgba(0,0,0,.28)}
+.pick.wait{opacity:.55}
+.pick.cant .co{color:#ff9a8f}
+#info{height:60px;display:none;align-items:center;gap:8px;overflow:hidden}
+#info .em{flex:none;font-size:30px;width:44px;text-align:center}
+#info .tx{flex:1;min-width:0;font-size:11.5px;line-height:1.2;color:var(--mute);font-weight:600;max-height:58px;overflow:hidden}
+#info .tx b{display:block;font-size:15px;color:var(--ink)}
+.act{flex:none;height:46px;padding:0 10px;border-radius:12px;font-size:13px;font-weight:800;line-height:1.05;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#ffe58a,#ffb93d);color:#4a2a00;box-shadow:0 3px 0 #b57512}
+.act.sell{background:linear-gradient(180deg,#e9e9e9,#bdbdbd);color:#333;box-shadow:0 3px 0 #7d7d7d}
+.act small{font-size:11px;font-weight:700}
+.act:disabled{opacity:.45}
+.act:active:not(:disabled){transform:translateY(2px)}
+#ctl{display:flex;gap:6px}
+#bWave{flex:1;height:46px;border-radius:13px;font-size:16px;font-weight:800;letter-spacing:.04em;color:#fff;background:linear-gradient(180deg,#58c26b,#2e8f43);box-shadow:0 4px 0 #1c5e2b}
+#bWave:disabled{background:linear-gradient(180deg,#6d7d70,#4f5c52);box-shadow:0 4px 0 #343d36;opacity:.8}
+#bWave:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #1c5e2b}
+.tg{flex:none;min-width:58px;height:46px;border-radius:13px;font-size:13px;font-weight:800;background:rgba(255,255,255,.14);border:1px solid var(--line);padding:0 8px}
+.tg.on{background:rgba(255,213,74,.28);border-color:var(--gold);color:var(--gold)}
+
+/* ---------- Màn hình phủ ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding:calc(20px + var(--st)) 20px calc(30px + var(--sb));text-align:center;background:rgba(14,32,12,.72);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);overflow-y:auto}
+.screen.show{display:flex;animation:fade .3s ease both}
+@keyframes fade{from{opacity:0}}
+.card{width:min(100%,350px);margin:auto;border-radius:24px;padding:22px 20px 20px;background:linear-gradient(180deg,rgba(60,110,40,.97),rgba(28,64,24,.98));
+  border:1px solid rgba(255,255,255,.28);box-shadow:0 24px 60px rgba(0,0,0,.45)}
+.logo{display:flex;justify-content:center;gap:6px;font-size:40px;margin-bottom:2px}
+.logo span{display:inline-block;animation:bob 2.4s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.title{margin:4px 0 0;font-size:clamp(34px,10vw,44px);font-weight:800;line-height:1.1;letter-spacing:.02em;
+  background:linear-gradient(180deg,#fff 20%,#ffd54a 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:4px 0 14px;color:var(--mute);font-size:12px;letter-spacing:.3em;font-weight:700}
+.tips{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left;font-size:14px;line-height:1.3}
+.tips li{display:flex;gap:10px;align-items:center}
+.tips i{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(255,213,74,.16);font-style:normal;font-size:16px}
+.best{font-size:14px;color:var(--mute);margin:0 0 14px;font-weight:600}
+.best b{color:var(--ink)}
+.btn{width:100%;height:54px;border-radius:17px;font-size:18px;font-weight:800;letter-spacing:.08em;color:#4a2a00;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(180deg,#ffe58a,#ffb93d);box-shadow:0 5px 0 #b57512,0 12px 28px rgba(255,170,50,.22)}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b57512}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid rgba(255,255,255,.38);box-shadow:none;height:46px;font-size:15px;margin-top:10px}
+.card h2{margin:0 0 4px;font-size:15px;letter-spacing:.3em;color:var(--mute);font-weight:700}
+#pause h2{font-size:26px;letter-spacing:.1em;color:var(--ink);margin-bottom:16px}
+#pause .card{display:flex;flex-direction:column}
+#oWave{font-size:64px;font-weight:800;line-height:1.05;background:linear-gradient(180deg,#fff,#ffd54a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#oNew{display:none;margin:2px auto 8px;width:max-content;padding:4px 14px;border-radius:99px;background:var(--gold);color:#4a2a00;font-weight:800;font-size:12px;letter-spacing:.14em}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 16px}
+.grid3 div{padding:8px 4px;border-radius:12px;background:rgba(0,0,0,.22);font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.06em}
+.grid3 b{display:block;font-size:20px;color:var(--ink);letter-spacing:0}
+.why{margin:0 0 6px;font-size:13px;font-weight:600;color:var(--mute)}
+#toast{position:fixed;left:50%;bottom:calc(150px + var(--sb));transform:translateX(-50%);z-index:90;background:rgba(14,32,12,.94);color:var(--ink);border:1px solid var(--line);
+  border-radius:99px;padding:8px 16px;font-size:13px;font-weight:700;max-width:88vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+#rotate{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:#1d3a1a;font-size:18px;text-align:center;line-height:1.6}
+@media (max-height:520px){body.land #rotate{display:flex}}
+@media (max-height:640px){.pick{height:54px}.pick .em{font-size:21px}#info{height:54px}#info .em{font-size:26px}}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <button class="ib" id="bPause" aria-label="Tạm dừng">⏸</button>
+    <div class="chip" id="cLife"><span>❤️</span><b id="vLife">20</b></div>
+    <div class="chip" id="cGold"><span>🪙</span><b id="vGold">0</b></div>
+    <div class="chip" id="cWave"><small>ĐỢT</small><b id="vWave">0</b></div>
+    <button class="ib" id="bSnd" aria-label="Âm thanh">🔊</button>
+  </div>
+  <div id="stage"><canvas id="cv"></canvas><div id="banner"></div></div>
+  <div id="panel">
+    <div id="picks"></div>
+    <div id="info"></div>
+    <div id="ctl">
+      <button id="bWave">BẮT ĐẦU ĐỢT 1</button>
+      <button class="tg" id="bSpeed">x1</button>
+      <button class="tg" id="bAuto">Tự động</button>
+    </div>
+  </div>
+</div>
+
+<section id="menu" class="screen show">
+  <div class="card">
+    <div class="logo"><span style="--d:0s">🌾</span><span style="--d:.3s">🐃</span><span style="--d:.6s">🐛</span></div>
+    <h1 class="title">THỦ THÀNH<br>RUỘNG LÚA</h1>
+    <p class="sub">PHÒNG THỦ</p>
+    <ul class="tips">
+      <li><i>👆</i>Chạm ô cỏ để xây nông dân, vịt, cò, trâu bảo vệ ruộng.</li>
+      <li><i>🐛</i>Sâu bọ lọt vào kho thóc là mất 1 mạng. Hết mạng là thua.</li>
+      <li><i>🪙</i>Diệt sâu bọ để lấy xu, dùng xu xây thêm và nâng cấp.</li>
+    </ul>
+    <p class="best" id="mBest"></p>
+    <button class="btn" id="bPlay">BẮT ĐẦU</button>
+  </div>
+</section>
+
+<section id="pause" class="screen">
+  <div class="card">
+    <h2>Tạm dừng</h2>
+    <button class="btn" id="bResume">TIẾP TỤC</button>
+    <button class="btn ghost" id="bRestart">CHƠI LẠI</button>
+    <button class="btn ghost" id="bQuit">VỀ MENU</button>
+  </div>
+</section>
+
+<section id="over" class="screen">
+  <div class="card">
+    <h2>RUỘNG LÚA THẤT THU</h2>
+    <p class="why">Bạn cầm cự được</p>
+    <div id="oWave">0</div>
+    <p class="why">đợt tấn công</p>
+    <div id="oNew">KỶ LỤC MỚI</div>
+    <div class="grid3"><div><b id="oKills">0</b>ĐÃ DIỆT</div><div><b id="oTowers">0</b>TRỤ ĐÃ XÂY</div><div><b id="oBest">0</b>KỶ LỤC</div></div>
+    <button class="btn" id="bAgain">CHƠI LẠI</button>
+    <button class="btn ghost" id="bMenu">VỀ MENU</button>
+  </div>
+</section>
+
+<div id="toast"></div>
+<div id="rotate"><div><div style="font-size:40px">📱</div>Xoay dọc màn hình để chơi</div></div>
+<footer class="tbFooter">Version: D20261030000000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../scores.js?v=20261030kb"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const cv = $('cv'), ctx = cv.getContext('2d');
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const EMOJI = '"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+
+  // ---------- Lưu trữ (có thể bị chặn) ----------
+  const store = { best: 0, snd: true, auto: false };
+  try { const j = JSON.parse(localStorage.getItem('thuthanh_v1') || '{}'); Object.assign(store, j); } catch (e) {}
+  const save = () => { try { localStorage.setItem('thuthanh_v1', JSON.stringify(store)); } catch (e) {} };
+
+  // ---------- Bản đồ ----------
+  const COLS = 7, ROWS = 9;
+  // đường đi của sâu bọ (toạ độ ô, chạy từ ngoài màn hình bên trái vào kho thóc ở cuối)
+  const WP = [[-1, 1], [5, 1], [5, 3], [1, 3], [1, 5], [5, 5], [5, 7], [0, 7]].map(p => ({ x: p[0] + .5, y: p[1] + .5 }));
+  const SEG = []; let PLEN = 0;
+  for (let i = 1; i < WP.length; i++) {
+    const a = WP[i - 1], b = WP[i], len = Math.hypot(b.x - a.x, b.y - a.y);
+    SEG.push({ a, b, len, start: PLEN }); PLEN += len;
+  }
+  const isPath = new Set();
+  (function () {
+    for (let i = 1; i < WP.length; i++) {
+      const a = WP[i - 1], b = WP[i];
+      const n = Math.round(Math.max(Math.abs(b.x - a.x), Math.abs(b.y - a.y)));
+      for (let k = 0; k <= n; k++) {
+        const x = Math.floor(a.x + (b.x - a.x) * k / n), y = Math.floor(a.y + (b.y - a.y) * k / n);
+        if (x >= 0 && x < COLS && y >= 0 && y < ROWS) isPath.add(y * COLS + x);
+      }
+    }
+  })();
+  function pathPos(d) {
+    d = clamp(d, 0, PLEN);
+    for (const s of SEG) if (d <= s.start + s.len) { const t = (d - s.start) / s.len; return { x: s.a.x + (s.b.x - s.a.x) * t, y: s.a.y + (s.b.y - s.a.y) * t }; }
+    return { x: WP[WP.length - 1].x, y: WP[WP.length - 1].y };
+  }
+
+  // ---------- Dữ liệu ----------
+  const TOWERS = {
+    nongdan: { name: 'Nông dân', em: '🧑‍🌾', cost: 60, dmg: 10, range: 2.0, cd: .55, bullet: '#ffe27a', desc: 'Bắn nhanh, rẻ' },
+    cung:    { name: 'Cung tre', em: '🏹', cost: 100, dmg: 26, range: 3.4, cd: 1.0, bullet: '#d9f7ff', desc: 'Tầm xa, đau' },
+    vit:     { name: 'Đàn vịt', em: '🦆', cost: 120, dmg: 11, range: 1.7, cd: .8, pulse: true, desc: 'Đánh mọi con quanh mình' },
+    co:      { name: 'Cò trắng', em: '🦢', cost: 110, dmg: 6, range: 2.6, cd: .8, slow: .45, bullet: '#bfe3ff', desc: 'Làm chậm sâu bọ' },
+    trau:    { name: 'Trâu', em: '🐃', cost: 240, dmg: 70, range: 2.4, cd: 2.0, splash: 1.2, bullet: '#ffb066', desc: 'Giẫm nát cả bầy' },
+  };
+  const ORDER = ['nongdan', 'cung', 'vit', 'co', 'trau'];
+  const FOES = {
+    sau:   { em: '🐛', hp: 28, spd: 1.0, gold: 4, life: 1, size: .62 },
+    chau:  { em: '🦗', hp: 18, spd: 1.9, gold: 4, life: 1, size: .6 },
+    chuot: { em: '🐀', hp: 90, spd: 1.25, gold: 7, life: 1, size: .66 },
+    oc:    { em: '🐌', hp: 260, spd: .6, gold: 14, life: 2, size: .68 },
+    cua:   { em: '🦀', hp: 700, spd: .55, gold: 80, life: 5, size: .95, boss: true },
+  };
+  const upCost = (t, lvl) => Math.round(TOWERS[t.type].cost * (lvl === 1 ? .8 : 1.5));
+  function stat(t) {
+    const b = TOWERS[t.type], k = t.lvl - 1;
+    return { dmg: b.dmg * Math.pow(1.55, k), range: b.range + .3 * k, cd: b.cd * Math.pow(.88, k), slow: b.slow, splash: b.splash, pulse: b.pulse };
+  }
+
+  // ---------- Âm thanh ----------
+  let ac = null;
+  function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+  function beep(f, d, type, vol, slide) {
+    if (!store.snd) return; const a = audio(); if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d);
+      g.gain.setValueAtTime(vol || .08, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .02);
+    } catch (e) {}
+  }
+  const SFX = {
+    build: () => { beep(520, .08, 'square', .06); setTimeout(() => beep(780, .1, 'square', .06), 70); },
+    up: () => { beep(600, .08, 'triangle', .08); setTimeout(() => beep(900, .12, 'triangle', .08), 80); },
+    sell: () => beep(300, .15, 'triangle', .08, .6),
+    shot: () => beep(900, .04, 'square', .02),
+    kill: () => beep(380, .09, 'sine', .06, 1.6),
+    leak: () => beep(180, .3, 'sawtooth', .09, .5),
+    wave: () => { beep(330, .18, 'triangle', .09); setTimeout(() => beep(440, .22, 'triangle', .09), 160); },
+    over: () => { beep(300, .25, 'sawtooth', .09, .6); setTimeout(() => beep(200, .4, 'sawtooth', .09, .5), 220); },
+  };
+
+  // ---------- Trạng thái ----------
+  let S = null;            // ván hiện tại
+  let mode = 'menu';       // menu | play | pause | over
+  let view = { W: 0, H: 0, cell: 40, ox: 0, oy: 0, dpr: 1 };
+  let sel = null;          // { c, r } ô đang chọn
+  let lastT = 0, lastGold = -1, lastInfoKey = '';
+
+  function newGame() {
+    S = { lives: 20, gold: 160, wave: 0, kills: 0, built: 0, towers: [], foes: [], shots: [], fx: [], queue: [], spawnT: 0, waveOn: false,
+      speed: 1, nextAuto: 0, time: 0, shake: 0, over: false, leakFlash: 0 };
+    sel = null; lastGold = -1; lastInfoKey = '';
+    updateHud(); renderPanel(); setWaveBtn();
+  }
+
+  function genWave(n) {
+    const hpMul = 1 + .16 * (n - 1) + .012 * (n - 1) * (n - 1);
+    const cnt = Math.min(8 + Math.floor(n * 1.6), 56);
+    const pool = [['sau', 10]];
+    if (n >= 3) pool.push(['chau', 6]);
+    if (n >= 5) pool.push(['chuot', 4 + Math.min(n, 12) / 2]);
+    if (n >= 8) pool.push(['oc', 2 + Math.min(n, 20) / 4]);
+    const tot = pool.reduce((s, p) => s + p[1], 0);
+    const list = [];
+    for (let i = 0; i < cnt; i++) {
+      let r = Math.random() * tot, t = 'sau';
+      for (const p of pool) { r -= p[1]; if (r <= 0) { t = p[0]; break; } }
+      list.push(t);
+    }
+    if (n % 10 === 0) list.push('cua');
+    const gap = Math.max(.34, .95 - n * .02);
+    return { list, gap, hpMul };
+  }
+  function startWave() {
+    if (!S || S.waveOn || S.over) return;
+    S.wave++;
+    const w = genWave(S.wave);
+    S.queue = w.list.map(t => ({ type: t, hpMul: w.hpMul })); S.gap = w.gap; S.spawnT = .4; S.waveOn = true;
+    SFX.wave(); showBanner(S.wave % 10 === 0 ? '⚠ ĐỢT ' + S.wave + ': CUA CHÚA!' : 'ĐỢT ' + S.wave);
+    updateHud(); setWaveBtn();
+  }
+  function spawn(q) {
+    const f = FOES[q.type], hp = f.hp * q.hpMul * (f.boss ? 1 : 1);
+    S.foes.push({ type: q.type, hp, max: hp, d: 0, slowT: 0, slowK: 0, wob: Math.random() * 6 });
+  }
+
+  // ---------- Xây dựng ----------
+  const towerAt = (c, r) => S.towers.find(t => t.c === c && t.r === r);
+  function build(type) {
+    if (!sel || mode !== 'play') return;
+    const def = TOWERS[type];
+    if (isPath.has(sel.r * COLS + sel.c) || towerAt(sel.c, sel.r)) return;
+    if (S.gold < def.cost) { toast('Chưa đủ xu'); return; }
+    S.gold -= def.cost; S.built++;
+    const t = { c: sel.c, r: sel.r, type, lvl: 1, cd: .2, spent: def.cost, x: sel.c + .5, y: sel.r + .5, pop: 1 };
+    S.towers.push(t); sel = { c: t.c, r: t.r };
+    SFX.build(); fxRing(t.x, t.y, 1.1, '#fff'); lastInfoKey = ''; renderPanel(); updateHud();
+  }
+  function upgrade() {
+    const t = selTower(); if (!t || t.lvl >= 3) return;
+    const c = upCost(t, t.lvl); if (S.gold < c) { toast('Chưa đủ xu'); return; }
+    S.gold -= c; t.spent += c; t.lvl++; t.pop = 1;
+    SFX.up(); fxRing(t.x, t.y, 1.3, '#ffd54a'); lastInfoKey = ''; renderPanel(); updateHud();
+  }
+  function sell() {
+    const t = selTower(); if (!t) return;
+    const back = Math.round(t.spent * .7); S.gold += back;
+    S.towers.splice(S.towers.indexOf(t), 1); fxText(t.x, t.y, '+' + back, '#ffd54a');
+    SFX.sell(); lastInfoKey = ''; renderPanel(); updateHud();
+  }
+  const selTower = () => (S && sel) ? towerAt(sel.c, sel.r) : null;
+
+  // ---------- Hiệu ứng ----------
+  const fxRing = (x, y, r, color) => S.fx.push({ k: 'ring', x, y, r, color, t: 0, life: .35 });
+  const fxText = (x, y, text, color) => S.fx.push({ k: 'text', x, y, text, color, t: 0, life: .8 });
+  function fxBurst(x, y, color) { for (let i = 0; i < 6; i++) S.fx.push({ k: 'dot', x, y, vx: rand(-1.6, 1.6), vy: rand(-2, .6), color, t: 0, life: rand(.3, .55) }); }
+
+  // ---------- Cập nhật ----------
+  function step(dt) {
+    S.time += dt;
+    // sinh sâu bọ
+    if (S.waveOn && S.queue.length) {
+      S.spawnT -= dt;
+      if (S.spawnT <= 0) { spawn(S.queue.shift()); S.spawnT = S.gap; }
+    }
+    // sâu bọ di chuyển
+    for (const f of S.foes) {
+      if (f.slowT > 0) f.slowT -= dt;
+      const sp = FOES[f.type].spd * (f.slowT > 0 ? 1 - f.slowK : 1);
+      f.d += sp * dt;
+      if (f.d >= PLEN) {
+        f.gone = true; S.lives -= FOES[f.type].life; S.shake = .35; S.leakFlash = 1;
+        SFX.leak(); $('cLife').classList.remove('hit'); void $('cLife').offsetWidth; $('cLife').classList.add('hit'); updateHud();
+      }
+    }
+    // tháp bắn
+    for (const t of S.towers) {
+      t.cd -= dt; if (t.pop > 0) t.pop = Math.max(0, t.pop - dt * 4);
+      if (t.cd > 0) continue;
+      const st = stat(t);
+      if (st.pulse) {
+        let hit = false;
+        for (const f of S.foes) { if (f.gone || f.dead) continue; const p = pathPos(f.d); if (Math.hypot(p.x - t.x, p.y - t.y) <= st.range) { dmgFoe(f, st.dmg); hit = true; } }
+        if (hit) { t.cd = st.cd; fxRing(t.x, t.y, st.range, 'rgba(120,200,255,.9)'); SFX.shot(); }
+        continue;
+      }
+      let best = null, bd = -1;
+      for (const f of S.foes) {
+        if (f.gone || f.dead) continue;
+        const p = pathPos(f.d);
+        if (Math.hypot(p.x - t.x, p.y - t.y) <= st.range && f.d > bd) { best = f; bd = f.d; }
+      }
+      if (best) {
+        t.cd = st.cd; t.aim = best;
+        S.shots.push({ x: t.x, y: t.y, tgt: best, lx: t.x, ly: t.y, dmg: st.dmg, spd: t.type === 'trau' ? 6 : 10, splash: st.splash, slow: st.slow, color: TOWERS[t.type].bullet, big: t.type === 'trau' });
+        SFX.shot();
+      }
+    }
+    // đạn bay
+    for (const s of S.shots) {
+      const tgt = s.tgt && !s.tgt.dead && !s.tgt.gone ? s.tgt : null;
+      let tx = s.lx, ty = s.ly;
+      if (tgt) { const p = pathPos(tgt.d); tx = p.x; ty = p.y; s.lx = tx; s.ly = ty; }
+      const dx = tx - s.x, dy = ty - s.y, dist = Math.hypot(dx, dy), mv = s.spd * dt;
+      if (dist <= mv + .05) {
+        s.done = true;
+        if (s.splash) {
+          fxRing(tx, ty, s.splash, 'rgba(255,170,90,.95)');
+          for (const f of S.foes) { if (f.gone || f.dead) continue; const p = pathPos(f.d); if (Math.hypot(p.x - tx, p.y - ty) <= s.splash) dmgFoe(f, s.dmg); }
+        } else if (tgt) { dmgFoe(tgt, s.dmg); if (s.slow) { tgt.slowT = 1.6; tgt.slowK = s.slow; } }
+      } else { s.x += dx / dist * mv; s.y += dy / dist * mv; }
+    }
+    S.shots = S.shots.filter(s => !s.done);
+    // dọn sâu bọ
+    S.foes = S.foes.filter(f => !f.dead && !f.gone);
+    // hiệu ứng
+    for (const e of S.fx) { e.t += dt; if (e.k === 'dot') { e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 4 * dt; } }
+    S.fx = S.fx.filter(e => e.t < e.life);
+    if (S.shake > 0) S.shake = Math.max(0, S.shake - dt);
+    if (S.leakFlash > 0) S.leakFlash = Math.max(0, S.leakFlash - dt * 2.2);
+    // hết đợt
+    if (S.waveOn && !S.queue.length && !S.foes.length) {
+      S.waveOn = false;
+      const bonus = 25 + 4 * S.wave; S.gold += bonus; fxText(3.5, 4.5, '+' + bonus + ' xu thưởng đợt', '#ffd54a');
+      showBanner('Hết đợt ' + S.wave);
+      S.nextAuto = store.auto ? 2.2 : 0; setWaveBtn(); updateHud();
+    }
+    if (!S.waveOn && S.nextAuto > 0) { S.nextAuto -= dt; if (S.nextAuto <= 0) startWave(); else setWaveBtn(); }
+    if (S.lives <= 0 && !S.over) gameOver();
+  }
+  function dmgFoe(f, d) {
+    if (f.dead || f.gone) return;
+    f.hp -= d; f.hit = .12;
+    if (f.hp <= 0) {
+      f.dead = true; S.kills++; const g = FOES[f.type].gold; S.gold += g;
+      const p = pathPos(f.d); fxText(p.x, p.y - .3, '+' + g, '#ffe27a'); fxBurst(p.x, p.y, '#fff'); SFX.kill(); updateHud();
+    }
+  }
+
+  // ---------- Vẽ ----------
+  function resize() {
+    const r = $('stage').getBoundingClientRect(), dpr = Math.min(window.devicePixelRatio || 1, 2.5);
+    view.W = r.width; view.H = r.height; view.dpr = dpr;
+    cv.width = Math.max(1, Math.round(r.width * dpr)); cv.height = Math.max(1, Math.round(r.height * dpr));
+    view.cell = Math.max(10, Math.min(r.width / COLS, r.height / ROWS));
+    view.ox = (r.width - view.cell * COLS) / 2; view.oy = (r.height - view.cell * ROWS) / 2;
+  }
+  const px = x => view.ox + x * view.cell, py = y => view.oy + y * view.cell;
+  function emoji(ch, x, y, size, alpha) {
+    ctx.save(); if (alpha != null) ctx.globalAlpha = alpha;
+    ctx.font = Math.round(size) + 'px ' + EMOJI; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(ch, x, y + size * .04); ctx.restore();
+  }
+  function draw() {
+    const c = view.cell, dpr = view.dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0); ctx.globalAlpha = 1;
+    ctx.clearRect(0, 0, view.W, view.H);
+    // cỏ nền
+    ctx.fillStyle = '#5a8f32'; ctx.fillRect(0, 0, view.W, view.H);
+    ctx.save();
+    if (S && S.shake > 0) ctx.translate(rand(-3, 3) * S.shake * 2, rand(-3, 3) * S.shake * 2);
+    for (let r = 0; r < ROWS; r++) for (let q = 0; q < COLS; q++) {
+      const x = px(q), y = py(r), path = isPath.has(r * COLS + q);
+      if (path) {
+        ctx.fillStyle = (q + r) % 2 ? '#c9a066' : '#c19859'; ctx.fillRect(x, y, c + .5, c + .5);
+      } else {
+        ctx.fillStyle = (q + r) % 2 ? '#79b043' : '#70a83b'; ctx.fillRect(x, y, c + .5, c + .5);
+        ctx.fillStyle = 'rgba(255,255,255,.07)'; ctx.fillRect(x + c * .08, y + c * .08, c * .84, c * .84);
+      }
+    }
+    // viền đường đi
+    ctx.strokeStyle = 'rgba(80,50,20,.35)'; ctx.lineWidth = 2;
+    for (const k of isPath) {
+      const q = k % COLS, r = (k - q) / COLS, x = px(q), y = py(r);
+      const edge = (dq, dr, x1, y1, x2, y2) => { const nq = q + dq, nr = r + dr; if (nq < 0 || nr < 0 || nq >= COLS || nr >= ROWS || !isPath.has(nr * COLS + nq)) { ctx.beginPath(); ctx.moveTo(x1, y1); ctx.lineTo(x2, y2); ctx.stroke(); } };
+      edge(0, -1, x, y, x + c, y); edge(0, 1, x, y + c, x + c, y + c); edge(-1, 0, x, y, x, y + c); edge(1, 0, x + c, y, x + c, y + c);
+    }
+    // kho thóc
+    const end = WP[WP.length - 1], ex = px(end.x), ey = py(end.y);
+    ctx.beginPath(); ctx.arc(ex, ey, c * .44, 0, 6.2832); ctx.fillStyle = 'rgba(255,248,220,.95)'; ctx.fill(); ctx.lineWidth = 3; ctx.strokeStyle = '#8a5a2b'; ctx.stroke();
+    emoji('🏡', ex, ey, c * .62);
+    // ô đang chọn
+    if (sel) {
+      const x = px(sel.c), y = py(sel.r);
+      ctx.fillStyle = 'rgba(255,255,255,.28)'; ctx.fillRect(x, y, c, c);
+      ctx.strokeStyle = '#fff'; ctx.lineWidth = 2.5; ctx.setLineDash([6, 4]); ctx.lineDashOffset = -(performance.now() / 40) % 10;
+      ctx.strokeRect(x + 1.5, y + 1.5, c - 3, c - 3); ctx.setLineDash([]);
+      const t = S && towerAt(sel.c, sel.r);
+      if (t) {
+        const st = stat(t);
+        ctx.beginPath(); ctx.arc(px(t.x), py(t.y), st.range * c, 0, 6.2832);
+        ctx.fillStyle = 'rgba(255,255,255,.14)'; ctx.fill(); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.lineWidth = 2; ctx.stroke();
+      }
+    }
+    if (S) {
+      // tháp
+      for (const t of S.towers) {
+        const x = px(t.x), y = py(t.y), s = c * (.62 + t.pop * .12);
+        ctx.beginPath(); ctx.arc(x, y + c * .06, c * .42, 0, 6.2832); ctx.fillStyle = 'rgba(40,70,20,.55)'; ctx.fill();
+        ctx.beginPath(); ctx.arc(x, y, c * .4, 0, 6.2832); ctx.fillStyle = 'rgba(255,248,220,.92)'; ctx.fill();
+        ctx.lineWidth = 2; ctx.strokeStyle = t.lvl === 3 ? '#ffd54a' : t.lvl === 2 ? '#bfe3ff' : 'rgba(80,50,20,.6)'; ctx.stroke();
+        emoji(TOWERS[t.type].em, x, y, s);
+        if (t.lvl > 1) { ctx.fillStyle = '#ffd54a'; ctx.font = '800 ' + Math.round(c * .22) + 'px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('★'.repeat(t.lvl - 1), x, y + c * .5 - c * .04); }
+      }
+      // sâu bọ
+      for (const f of S.foes.slice().sort((a, b) => a.d - b.d)) {
+        const p = pathPos(f.d), def = FOES[f.type], x = px(p.x), y = py(p.y) + Math.sin(S.time * 8 + f.wob) * c * .03, sz = c * def.size;
+        ctx.beginPath(); ctx.ellipse(x, y + sz * .34, sz * .38, sz * .12, 0, 0, 6.2832); ctx.fillStyle = 'rgba(0,0,0,.22)'; ctx.fill();
+        emoji(def.em, x, y, sz, f.hit > 0 ? .55 : 1); if (f.hit > 0) f.hit -= .016;
+        if (f.slowT > 0) { ctx.beginPath(); ctx.arc(x, y, sz * .5, 0, 6.2832); ctx.strokeStyle = 'rgba(140,200,255,.9)'; ctx.lineWidth = 2; ctx.stroke(); }
+        const bw = sz * .9, bh = Math.max(3, c * .07), bx = x - bw / 2, by = y - sz * .62;
+        ctx.fillStyle = 'rgba(0,0,0,.55)'; ctx.fillRect(bx - 1, by - 1, bw + 2, bh + 2);
+        const k = clamp(f.hp / f.max, 0, 1); ctx.fillStyle = k > .5 ? '#6be06b' : k > .25 ? '#ffd54a' : '#ff6b5e'; ctx.fillRect(bx, by, bw * k, bh);
+      }
+      // đạn
+      for (const s of S.shots) { ctx.beginPath(); ctx.arc(px(s.x), py(s.y), c * (s.big ? .12 : .07), 0, 6.2832); ctx.fillStyle = s.color; ctx.fill(); ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = 1; ctx.stroke(); }
+      // hiệu ứng
+      for (const e of S.fx) {
+        const k = e.t / e.life;
+        if (e.k === 'ring') { ctx.beginPath(); ctx.arc(px(e.x), py(e.y), e.r * c * (.4 + .6 * k), 0, 6.2832); ctx.strokeStyle = e.color; ctx.globalAlpha = 1 - k; ctx.lineWidth = 3; ctx.stroke(); ctx.globalAlpha = 1; }
+        else if (e.k === 'text') { ctx.globalAlpha = 1 - k * k; ctx.font = '800 ' + Math.round(c * .3) + 'px "Baloo 2",sans-serif'; ctx.textAlign = 'center'; ctx.lineWidth = 3; ctx.strokeStyle = 'rgba(0,0,0,.6)'; ctx.fillStyle = e.color; const tx = px(e.x), ty = py(e.y) - k * c * .8; ctx.strokeText(e.text, tx, ty); ctx.fillText(e.text, tx, ty); ctx.globalAlpha = 1; }
+        else { ctx.globalAlpha = 1 - k; ctx.fillStyle = e.color; ctx.fillRect(px(e.x) - 2, py(e.y) - 2, 4, 4); ctx.globalAlpha = 1; }
+      }
+    }
+    ctx.restore();
+    if (S && S.leakFlash > 0) { ctx.fillStyle = 'rgba(255,40,30,' + (S.leakFlash * .28) + ')'; ctx.fillRect(0, 0, view.W, view.H); }
+  }
+
+  // ---------- Giao diện ----------
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1600); }
+  function showBanner(t) { const b = $('banner'); b.textContent = t; b.classList.add('show'); clearTimeout(showBanner.t); showBanner.t = setTimeout(() => b.classList.remove('show'), 1600); }
+  function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('show', s.id === id); }
+  function updateHud() {
+    if (!S) return;
+    $('vLife').textContent = Math.max(0, S.lives);
+    $('vWave').textContent = S.wave;
+    if (S.gold !== lastGold) { if (lastGold >= 0 && S.gold > lastGold) { const c = $('cGold'); c.classList.remove('gain'); void c.offsetWidth; c.classList.add('gain'); } lastGold = S.gold; $('vGold').textContent = S.gold; refreshAfford(); }
+  }
+  function setWaveBtn() {
+    const b = $('bWave');
+    if (!S) return;
+    if (S.waveOn) { b.disabled = true; b.textContent = 'ĐỢT ' + S.wave + ' ĐANG TẤN CÔNG'; }
+    else { b.disabled = false; b.textContent = (S.nextAuto > 0 && store.auto) ? 'ĐỢT ' + (S.wave + 1) + ' SAU ' + Math.ceil(S.nextAuto) + 's' : 'BẮT ĐẦU ĐỢT ' + (S.wave + 1); }
+    $('bAuto').classList.toggle('on', store.auto); $('bSpeed').textContent = 'x' + (S.speed || 1); $('bSpeed').classList.toggle('on', S.speed === 2);
+  }
+  // nút chọn tháp
+  const picks = $('picks');
+  picks.innerHTML = ORDER.map(k => `<button class="pick" data-t="${k}" aria-label="${TOWERS[k].name}"><span class="em">${TOWERS[k].em}</span><span class="co">${TOWERS[k].cost}</span></button>`).join('');
+  picks.addEventListener('click', e => { const b = e.target.closest('.pick'); if (!b) return; if (!sel || !S || towerAt(sel.c, sel.r)) { toast('Chạm một ô cỏ trống trên ruộng trước'); return; } build(b.dataset.t); });
+  function refreshAfford() { if (!S) return; for (const b of picks.children) b.classList.toggle('cant', S.gold < TOWERS[b.dataset.t].cost); refreshInfoBtns(); }
+  function refreshInfoBtns() { const t = selTower(), u = $('act-up'); if (t && u && t.lvl < 3) u.disabled = S.gold < upCost(t, t.lvl); }
+  function renderPanel() {
+    const t = S && selTower(), cellSel = S && sel && !t && !isPath.has(sel.r * COLS + sel.c);
+    const info = $('info');
+    if (t) {
+      const def = TOWERS[t.type], st = stat(t), key = t.type + t.lvl + t.c + t.r;
+      picks.style.display = 'none'; info.style.display = 'flex';
+      if (lastInfoKey !== key) {
+        lastInfoKey = key;
+        const dps = st.pulse ? st.dmg / st.cd : st.dmg / st.cd;
+        info.innerHTML = `<div class="em">${def.em}</div><div class="tx"><b>${def.name} · cấp ${t.lvl}</b>Sát thương ${Math.round(st.dmg)}${st.pulse ? ' (mọi con)' : st.splash ? ' (lan)' : ''} · Tầm ${st.range.toFixed(1)}${st.slow ? ' · Làm chậm' : ''}</div>` +
+          (t.lvl < 3 ? `<button class="act" id="act-up">Nâng cấp<small>🪙 ${upCost(t, t.lvl)}</small></button>` : `<button class="act" disabled>Tối đa</button>`) +
+          `<button class="act sell" id="act-sell">Bán<small>+${Math.round(t.spent * .7)}</small></button>`;
+        const up = $('act-up'); if (up) up.onclick = upgrade; $('act-sell').onclick = sell; refreshInfoBtns();
+      }
+    } else {
+      info.style.display = 'none'; info.innerHTML = ''; lastInfoKey = '';
+      picks.style.display = 'grid';
+      for (const b of picks.children) b.classList.toggle('wait', !cellSel);
+      refreshAfford();
+    }
+  }
+  $('bWave').onclick = () => { if (mode === 'play') { audio(); startWave(); } };
+  $('bSpeed').onclick = () => { if (!S) return; S.speed = S.speed === 1 ? 2 : 1; setWaveBtn(); };
+  $('bAuto').onclick = () => { store.auto = !store.auto; save(); if (S && !S.waveOn && store.auto && S.wave > 0) S.nextAuto = 1.5; if (S && !store.auto) S.nextAuto = 0; setWaveBtn(); };
+  function syncSnd() { $('bSnd').textContent = store.snd ? '🔊' : '🔇'; }
+  $('bSnd').onclick = () => { store.snd = !store.snd; save(); syncSnd(); audio(); };
+
+  // chạm vào sân
+  cv.addEventListener('pointerdown', e => {
+    if (mode !== 'play' || !S) return;
+    const r = cv.getBoundingClientRect(), x = e.clientX - r.left, y = e.clientY - r.top;
+    const q = Math.floor((x - view.ox) / view.cell), rr = Math.floor((y - view.oy) / view.cell);
+    audio();
+    if (q < 0 || rr < 0 || q >= COLS || rr >= ROWS || isPath.has(rr * COLS + q)) { sel = null; }
+    else if (sel && sel.c === q && sel.r === rr) { sel = null; }
+    else sel = { c: q, r: rr };
+    lastInfoKey = ''; renderPanel();
+  });
+
+  // ---------- Luồng game ----------
+  function begin() { audio(); newGame(); mode = 'play'; show(null); resize(); renderPanel(); }
+  function gameOver() {
+    S.over = true; mode = 'over'; SFX.over();
+    const waves = Math.max(0, S.wave - (S.waveOn ? 1 : 0)) || 0;
+    const rec = waves > store.best; if (rec) { store.best = waves; save(); }
+    $('oWave').textContent = waves; $('oKills').textContent = S.kills; $('oTowers').textContent = S.built; $('oBest').textContent = store.best;
+    $('oNew').style.display = rec && waves > 0 ? 'block' : 'none';
+    if (window.Scores && waves > 0) { try { Scores.submit('thuthanh', waves); } catch (e) {} }
+    setTimeout(() => { if (mode === 'over') show('over'); }, 700);
+  }
+  function toMenu() { mode = 'menu'; $('mBest').innerHTML = store.best > 0 ? 'Kỷ lục: <b>' + store.best + ' đợt</b>' : ''; show('menu'); }
+  function pause(on) {
+    if (on && mode === 'play') { mode = 'pause'; show('pause'); }
+    else if (!on && mode === 'pause') { mode = 'play'; show(null); lastT = performance.now(); }
+  }
+  $('bPlay').onclick = begin;
+  $('bAgain').onclick = begin;
+  $('bRestart').onclick = begin;
+  $('bPause').onclick = () => pause(true);
+  $('bResume').onclick = () => pause(false);
+  $('bQuit').onclick = toMenu;
+  $('bMenu').onclick = toMenu;
+  document.addEventListener('visibilitychange', () => { if (document.hidden) pause(true); });
+
+  function frame(now) {
+    requestAnimationFrame(frame);
+    const dt = Math.min(.05, (now - lastT) / 1000 || 0); lastT = now;
+    if (mode === 'play' && S && !S.over) {
+      const n = S.speed || 1;
+      for (let i = 0; i < n; i++) step(dt);
+      setWaveBtn();
+    }
+    draw();
+  }
+
+  // ---------- Kích thước / hướng màn hình ----------
+  function fit() {
+    const vv = window.visualViewport, h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--h', h + 'px');
+    if (vv && vv.offsetTop) window.scrollTo(0, 0);
+    resize();
+  }
+  if (window.visualViewport) { visualViewport.addEventListener('resize', fit); }
+  window.addEventListener('resize', fit);
+  function syncLand() {
+    const o = screen.orientation && screen.orientation.type;
+    const land = o ? o.indexOf('landscape') === 0 : Math.abs(window.orientation) === 90;
+    document.body.classList.toggle('land', !!land);
+  }
+  syncLand();
+  window.addEventListener('orientationchange', () => { syncLand(); setTimeout(fit, 150); });
+  window.addEventListener('resize', syncLand);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', syncLand);
+
+  window.TT = { get S() { return S; }, build, startWave, step, towers: TOWERS, setSel: (c, r) => { sel = { c, r }; renderPanel(); }, get mode() { return mode; } };
+  syncSnd(); fit(); toMenu(); requestAnimationFrame(frame);
+})();
+</script>
+<script src="../activity.js?v=20261029nolive" defer></script>
+</body>
+</html>
