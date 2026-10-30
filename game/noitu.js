@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261030x';
+  const V = '20261030y';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -385,6 +385,16 @@
   }
   if (window.visualViewport) { visualViewport.addEventListener('resize', fit); visualViewport.addEventListener('scroll', () => { if (visualViewport.offsetTop) window.scrollTo(0, 0); }); }
   window.addEventListener('resize', fit);
+  // Báo xoay màn hình theo hướng thật của thiết bị (không theo kích thước vùng hiển thị, vì bàn phím ảo làm vùng này thấp hơn rộng)
+  function syncLand() {
+    const o = screen.orientation && screen.orientation.type;
+    const land = o ? o.startsWith('landscape') : Math.abs(window.orientation) === 90;
+    document.body.classList.toggle('land', !!land);
+  }
+  syncLand();
+  window.addEventListener('orientationchange', syncLand);
+  window.addEventListener('resize', syncLand);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', syncLand);
 
   $('bSend').onclick = submit;
   $('inp').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); submit(); } });
