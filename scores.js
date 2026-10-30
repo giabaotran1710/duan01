@@ -51,7 +51,6 @@
     { id: 'xepgach', name: 'Xếp gạch' },
     { id: 'cotuhuyenbi', name: 'Cổ tự huyền bí' },
     { id: 'noitu', name: 'Nối từ' },
-    { id: 'thuthanh', name: 'Thủ thành ruộng lúa', fmt: v => v + ' đợt' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
