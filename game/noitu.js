@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261028e';
+  const V = '20261030a';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -45,7 +45,7 @@
   const pickOf = arr => arr[Math.floor(Math.random() * arr.length)];
 
   // ---------- Từ điển ----------
-  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], ready: false };
+  const D = { cur: new Set(), all: new Set(), curBy: new Map(), allBy: new Map(), starters: [], banned: new Set(), ready: false };
   // chuẩn hoá: chữ thường, một dấu cách, dấu thanh kiểu "hòa/khỏe/thủy" (hoà/khoẻ/thuỷ cũng được chấp nhận)
   const TONE_RE = /[\u0300\u0301\u0309\u0303\u0323]/;
   function fixTone(syl) {
@@ -61,7 +61,7 @@
   const WORD_RE = /^\p{L}+ \p{L}+$/u;
   function addWord(raw, cur) {
     const w = norm(raw);
-    if (!WORD_RE.test(w) || D.all.has(w) && !cur) return;
+    if (!WORD_RE.test(w) || D.banned.has(w) || D.all.has(w) && !cur) return;
     if (!D.all.has(w)) {
       D.all.add(w);
       const f = first(w);
@@ -76,10 +76,12 @@
     }
   }
   async function loadDict() {
-    const [a, b] = await Promise.all([
+    const [a, b, bn] = await Promise.all([
       fetch('noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
       fetch('noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
+      fetch('noitu-banned.txt?v=' + V).then(r => r.ok ? r.text() : '').catch(() => ''),
     ]);
+    for (const w of bn.split('\n')) if (w.trim() && !w.startsWith('#')) D.banned.add(norm(w));
     let inList = false, common = true, starter = false;   // phần 0: từ phổ biến nhất (mở ván), phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
     const starts = [];
     for (const line of a.split('\n')) {
@@ -202,6 +204,7 @@
     if (!w) return { err: '' };
     if (G.need && w.indexOf(' ') < 0) w = G.need + ' ' + w;
     if (!WORD_RE.test(w)) return { err: 'Hãy nhập một từ hai tiếng.' };
+    if (D.banned.has(w)) return { err: '"' + w + '" là từ bị cấm. Hãy dùng từ khác.', banned: true };
     if (G.need && first(w) !== G.need) return { err: 'Từ phải bắt đầu bằng "' + G.need + '".' };
     if (!D.all.has(w)) return { err: '"' + w + '" không có trong từ điển.' };
     if (G.used.has(w)) return { err: 'Từ này đã được dùng.' };
@@ -249,7 +252,7 @@
     if (!G.running || G.turn !== 'me' || G.paused) return;
     const r = check($('inp').value);
     if (!r.w) {
-      if (r.err) { say(r.err); Snd.bad(); vibrate(40); const row = $('inRow'); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
+      if (r.err) { say(r.err); if (r.banned) toast(r.err); Snd.bad(); vibrate(40); const row = $('inRow'); row.classList.remove('shake'); void row.offsetWidth; row.classList.add('shake'); }
       return;
     }
     applyMove('me', r.w);
