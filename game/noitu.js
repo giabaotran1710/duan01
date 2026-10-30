@@ -1,11 +1,11 @@
 /* Nối từ tiếng Việt: hai người thay phiên nói một từ hai tiếng, tiếng đầu của từ mới phải là tiếng cuối của từ trước, không được lặp từ.
  * Chơi với máy (3 mức) hoặc trực tuyến (noitu-online.js dùng window.NW).
- * Từ điển: noitu-words.md (bộ từ chọn lọc, máy dùng) + noitu-extra.txt (từ ít gặp hơn, chỉ để chấp nhận khi người chơi nhập). */
+ * Từ điển (thư mục noitu-data/): noitu-words.md (bộ từ chọn lọc, máy dùng) + noitu-extra.txt (từ ít gặp hơn, chỉ để chấp nhận khi người chơi nhập). */
 (() => {
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261030j';
+  const V = '20261030k';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -77,9 +77,9 @@
   }
   async function loadDict() {
     const [a, b, bn] = await Promise.all([
-      fetch('noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
-      fetch('noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
-      fetch('noitu-banned.txt?v=' + V).then(r => r.ok ? r.text() : '').catch(() => ''),
+      fetch('noitu-data/noitu-words.md?v=' + V).then(r => { if (!r.ok) throw new Error('md'); return r.text(); }),
+      fetch('noitu-data/noitu-extra.txt?v=' + V).then(r => { if (!r.ok) throw new Error('extra'); return r.text(); }),
+      fetch('noitu-data/noitu-banned.txt?v=' + V).then(r => r.ok ? r.text() : '').catch(() => ''),
     ]);
     for (const w of bn.split('\n')) if (w.trim() && !w.startsWith('#')) D.banned.add(norm(w));
     let inList = false, common = true, starter = false;   // phần 0: từ phổ biến nhất (mở ván), phần 1: từ thông dụng (máy ưu tiên), phần 2: từ ít gặp (chỉ để chấp nhận)
