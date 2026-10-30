@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261030w';
+  const V = '20261030x';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -347,6 +347,7 @@
     $('menu').classList.remove('onl', 'lv');
     $('mBest').innerHTML = store.best > 0 ? `Kỷ lục: <b>${store.best}</b>` : '';
     show('menu');
+    if ($('bDev')) syncDev();
   }
 
   // ---------- Vòng lặp ----------
@@ -419,6 +420,30 @@
     setBanner(cls, html) { const b = $('banner'); b.className = cls || ''; b.innerHTML = html; },
     setConn(ok, oppOff) { G.connOk = ok; G.oppOff = oppOff || ''; renderHud(); },
   };
+
+  // ---------- Developed Mode: chỉ tài khoản admin thấy nút; tra từ trong toàn bộ từ điển ----------
+  const ADMIN = 'giabao1710';
+  const isAdmin = () => { try { return !!(window.Scores && Scores.getName() === ADMIN && localStorage.getItem('lb_name_claimed') === ADMIN); } catch (e) { return false; } };
+  function syncDev() { $('bDev').classList.toggle('on', isAdmin()); }
+  function devCheck() {
+    const raw = $('devIn').value, w = norm(raw), out = $('devOut');
+    if (!w) { out.textContent = 'Nhập một từ (hai tiếng) để kiểm tra trong từ điển.'; return; }
+    const head = `<b class="w">${esc(w)}</b>`;
+    if (!D.ready) { out.innerHTML = head + 'Từ điển chưa tải xong.'; return; }
+    if (!WORD_RE.test(w)) { out.innerHTML = head + '<span class="tag no">SAI ĐỊNH DẠNG</span><br>Mỗi từ gồm đúng hai tiếng, chỉ có chữ cái.'; return; }
+    const nxt = (D.allBy.get(last(w)) || []).length;
+    const tail = `<br>Sau từ này nối được <b style="color:var(--ink)">${nxt}</b> từ bắt đầu bằng "${esc(last(w))}".`;
+    if (D.banned.has(w)) out.innerHTML = head + '<span class="tag ban">TỪ BỊ CẤM</span><br>Có trong danh sách từ cấm, game không chấp nhận.';
+    else if (D.rare.has(w)) out.innerHTML = head + '<span class="tag rare"><i class="fa-solid fa-star"></i> TỪ HIẾM</span><br>Có trong từ điển (nhóm từ hiếm).' + tail;
+    else if (D.cur.has(w)) out.innerHTML = head + '<span class="tag common">TỪ THÔNG DỤNG</span><br>Có trong từ điển' + (D.starters.includes(w) ? ' (từ mở ván).' : '.') + tail;
+    else if (D.all.has(w)) out.innerHTML = head + '<span class="tag less">TỪ ÍT GẶP</span><br>Có trong từ điển (nhóm ít gặp).' + tail;
+    else out.innerHTML = head + '<span class="tag no">KHÔNG CÓ</span><br>Từ này chưa có trong từ điển.';
+  }
+  $('bDev').onclick = () => { if (!isAdmin()) return; $('devIn').value = ''; $('devOut').textContent = 'Nhập một từ (hai tiếng) để kiểm tra trong từ điển.'; show('dev'); setTimeout(() => { try { $('devIn').focus(); } catch (e) {} }, 60); };
+  $('devBack').onclick = () => { $('devIn').blur(); toMenu(); };
+  $('devGo').onclick = devCheck;
+  $('devIn').addEventListener('keydown', e => { e.stopPropagation(); if (e.key === 'Enter' && !e.isComposing) { e.preventDefault(); devCheck(); } });
+  if (window.Scores && Scores.ready) Scores.ready.then(syncDev).catch(() => {});
 
   syncSnd();
   toMenu();
