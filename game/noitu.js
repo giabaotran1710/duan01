@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261031c';
+  const V = '20261031d';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -35,7 +35,12 @@
     lose() { [392, 330, 262, 196].forEach((f, i) => this.tone(f, .3, 'triangle', .13, i * .16)); },
     tick() { this.tone(1400, .03, 'square', .03); }
   };
-  function syncSnd() { $('bSnd').innerHTML = `<i class="fa-solid ${store.snd ? 'fa-volume-high' : 'fa-volume-xmark'}"></i>`; }
+  const ICO = {
+    pause: '<path d="M8 5v14M16 5v14"/>', exit: '<path d="M9 4H5v16h4M14 8l5 4-5 4M19 12H9"/>', search: '<circle cx="11" cy="11" r="6"/><path d="M16 16l5 5"/>',
+    snd: '<path d="M4 9v6h4l5 4V5L8 9zM16 9a4 4 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>', mute: '<path d="M4 9v6h4l5 4V5L8 9zM17 9l5 6M22 9l-5 6"/>',
+    star: '<path d="M12 2l3 6 6 1-4.5 4 1 6-5.5-3-5.5 3 1-6L3 9l6-1z"/>', cup: '<path d="M7 4h10v5a5 5 0 0 1-10 0zM7 6H4v2a3 3 0 0 0 3 3M17 6h3v2a3 3 0 0 1-3 3M12 14v4M8 20h8"/>' };
+  const ic = (n, c) => `<svg class="ic${c ? ' ' + c : ''}" viewBox="0 0 24 24" aria-hidden="true">${ICO[n]}</svg>`;
+  function syncSnd() { $('bSnd').innerHTML = ic(store.snd ? 'snd' : 'mute'); }
   function vibrate(p) { try { if (navigator.vibrate) navigator.vibrate(p); } catch (e) {} }
   let toastT = null;
   function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toastT); toastT = setTimeout(() => el.classList.remove('show'), 2200); }
@@ -124,9 +129,9 @@
     $('pcMe').className = 'pc me' + (turn === 'me' ? ' turn' : '') + (G.winner === 'me' ? ' win' : '');
     $('pcOpp').className = 'pc opp' + (turn === 'opp' ? ' turn' : '') + (G.winner === 'opp' ? ' win' : '');
     const dot = ok => `<i class="d${ok ? '' : ' off'}"></i>`;
-    $('pcMe').innerHTML = `<div class="pcTop"><span class="pcName">${esc(G.names.me)}</span><span class="pcWins"><i class="fa-solid fa-trophy"></i> ${G.wins.me}</span></div>
+    $('pcMe').innerHTML = `<div class="pcTop"><span class="pcName">${esc(G.names.me)}</span><span class="pcWins">${ic('cup')} ${G.wins.me}</span></div>
       <div class="pcBot"><span class="pcTag">${G.mode === 'online' ? dot(G.connOk) : ''}BẠN</span><span class="pcNum"><b>${G.mine}</b> từ</span></div>`;
-    $('pcOpp').innerHTML = `<div class="pcTop"><span class="pcName">${esc(G.names.opp)}</span><span class="pcWins"><i class="fa-solid fa-trophy"></i> ${G.wins.opp}</span></div>
+    $('pcOpp').innerHTML = `<div class="pcTop"><span class="pcName">${esc(G.names.opp)}</span><span class="pcWins">${ic('cup')} ${G.wins.opp}</span></div>
       <div class="pcBot"><span class="pcTag">${G.mode === 'online' ? dot(!G.oppOff) : ''}${esc(G.oppOff || G.oppTag)}</span><span class="pcNum"><b>${G.theirs}</b> từ</span></div>`;
     $('sScore').textContent = score();
     $('sChain').textContent = G.mine + G.theirs;
@@ -139,8 +144,8 @@
     const rare = D.rare.has(m.w);
     el.className = 'wd ' + m.by + ' cur' + (rare ? ' rare' : '');
     el.innerHTML = `<span class="sy"><span class="${i > 0 ? 'k' : ''}">${esc(a)}</span><span class="l">${esc(b)}</span></span>` +
-      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}"><i class="fa-solid fa-magnifying-glass"></i></a>` +
-      (rare ? '<span class="rareTag"><i class="fa-solid fa-star"></i> TỪ HIẾM</span>' : '');
+      `<a class="mg" href="${searchUrl(m.w)}" target="_blank" rel="noopener noreferrer" aria-label="Tra từ ${esc(m.w)}">${ic('search')}</a>` +
+      (rare ? `<span class="rareTag">${ic('star', 'fill')}TỪ HIẾM</span>` : '');
     return el;
   }
   // chữ chạy lên xuống như máy quay, dừng lần lượt từng chữ (chữ chẵn chạy lên, chữ lẻ chạy xuống)
@@ -323,7 +328,7 @@
     document.body.classList.remove('online');
     G.names = { me: myName(), opp: 'Máy' }; G.oppTag = 'MÁY · ' + LEVELS[level].name; G.oppOff = '';
     G.wins = { me: 0, opp: 0 };
-    $('bPause').innerHTML = '<i class="fa-solid fa-pause"></i>';
+    $('bPause').innerHTML = ic('pause');
     reset();
     $('menu').classList.remove('lv');
     show(null); fit();
@@ -419,7 +424,7 @@
     startOnline(names, wins, hooks, startWord, done) {
       G.mode = 'online'; G.hooks = hooks; G.names = names; G.wins = wins; G.oppTag = 'ĐỐI THỦ'; G.oppOff = '';
       document.body.classList.add('online');
-      $('bPause').innerHTML = '<i class="fa-solid fa-right-from-bracket"></i>';
+      $('bPause').innerHTML = ic('exit');
       reset(); show(null); fit(); renderHud();
       placeStart(startWord, done);
     },
@@ -444,7 +449,7 @@
     const nxt = (D.allBy.get(last(w)) || []).length;
     const tail = `<br>Sau từ này nối được <b style="color:var(--ink)">${nxt}</b> từ bắt đầu bằng "${esc(last(w))}".`;
     if (D.banned.has(w)) out.innerHTML = head + '<span class="tag ban">TỪ BỊ CẤM</span><br>Có trong danh sách từ cấm, game không chấp nhận.';
-    else if (D.rare.has(w)) out.innerHTML = head + '<span class="tag rare"><i class="fa-solid fa-star"></i> TỪ HIẾM</span><br>Có trong từ điển (nhóm từ hiếm).' + tail;
+    else if (D.rare.has(w)) out.innerHTML = head + '<span class="tag rare">' + ic('star', 'fill') + ' TỪ HIẾM</span><br>Có trong từ điển (nhóm từ hiếm).' + tail;
     else if (D.cur.has(w)) out.innerHTML = head + '<span class="tag common">TỪ THÔNG DỤNG</span><br>Có trong từ điển' + (D.starters.includes(w) ? ' (từ mở ván).' : '.') + tail;
     else if (D.all.has(w)) out.innerHTML = head + '<span class="tag less">TỪ ÍT GẶP</span><br>Có trong từ điển (nhóm ít gặp).' + tail;
     else out.innerHTML = head + '<span class="tag no">KHÔNG CÓ</span><br>Từ này chưa có trong từ điển.';
