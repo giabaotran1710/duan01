@@ -67,6 +67,7 @@ Dựa trên nguyên tắc của skill Frontend Design (Anthropic), viết lại 
 - Mỗi game có nhận diện riêng, không dùng chung khung với game khác (menu, nút, bảng phụ khác nhau).
 - Logo trên trang chủ là biểu tượng nhỏ có chuyển động nhẹ, dùng màu phẳng, bo theo khung nút chung của trang.
 - Mọi game phải có: chân trang phiên bản `.tbFooter`, chế độ bảo trì (`maintenance.js`), xử lý xoay màn hình, và chạy tốt ở màn hình nhỏ.
+- Hình minh họa mới (bài, quái, cổ vật) chỉ cần **khác một chút** so với hình có sẵn (đổi màu, đổi chi tiết, đổi tư thế) là đạt; không bắt buộc vẽ lại từ đầu.
 - Sau khi đổi giao diện: chụp ảnh preview gửi cho chủ dự án trước khi xem là xong.
 
 ## Những điều cần tránh (tự kiểm tra cuối cùng)
