@@ -1,0 +1,578 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js" data-game="dauba"></script>
+<script src="../scene.js" data-game="dauba"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#2a1410">
+<title>Đấu bài Thạch Sanh</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap">
+<style>
+:root{
+  --ink:#fff6e4;
+  --mute:#e0c9a6;
+  --line:rgba(255,224,170,.24);
+  --gold:#ffd25a;
+  --red:#ff6b5e;
+  --blue:#7cc4ff;
+  --st:env(safe-area-inset-top,0px);
+  --sb:env(safe-area-inset-bottom,0px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+html,body{margin:0;height:100%;overflow:hidden;color:var(--ink);background:#2a1410;
+  font-family:"Baloo 2",system-ui,-apple-system,"Segoe UI",Roboto,Arial,sans-serif;overscroll-behavior:none;touch-action:manipulation}
+body{background:radial-gradient(90% 50% at 50% 0%,rgba(255,150,70,.22),transparent 70%),linear-gradient(180deg,#4a2418 0%,#2a1410 60%,#1c0c09 100%) fixed}
+button{font:inherit;color:inherit;border:0;cursor:pointer;background:none}
+#app{position:fixed;left:0;right:0;top:0;height:var(--h,100%);display:flex;flex-direction:column;max-width:560px;margin:0 auto;padding:calc(6px + var(--st)) 8px calc(24px + var(--sb))}
+
+/* ---------- Thanh trên ---------- */
+#top{flex:none;display:flex;align-items:center;gap:6px;height:44px}
+.ib{flex:none;width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-size:17px;background:rgba(0,0,0,.28);border:1px solid var(--line)}
+.ib:active{transform:scale(.92)}
+.chip{flex:1;min-width:0;height:40px;border-radius:13px;background:rgba(0,0,0,.28);border:1px solid var(--line);display:flex;align-items:center;justify-content:center;gap:6px;font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+.chip small{font-size:10px;letter-spacing:.14em;color:var(--mute);font-weight:700}
+
+/* ---------- Kẻ địch ---------- */
+#foes{flex:1;min-height:150px;display:flex;align-items:center;justify-content:center;gap:8px;padding:4px 0}
+.foe{position:relative;flex:1;max-width:150px;min-width:0;display:flex;flex-direction:column;align-items:center;gap:3px;padding:6px 4px 8px;border-radius:16px;border:2px solid transparent;transition:transform .15s,border-color .15s}
+.foe.sel{border-color:rgba(255,210,90,.85);background:rgba(255,255,255,.07)}
+.foe.dead{opacity:0;pointer-events:none;animation:die .45s both}
+@keyframes die{from{opacity:1;transform:scale(1)}to{opacity:0;transform:scale(.6)}}
+.foe .intent{height:28px;display:flex;align-items:center;gap:4px;padding:2px 10px;border-radius:99px;background:rgba(0,0,0,.4);font-size:14px;font-weight:800;white-space:nowrap}
+.foe .face{font-size:58px;line-height:1.05;filter:drop-shadow(0 4px 0 rgba(0,0,0,.3))}
+.foe.boss .face{font-size:78px}
+.foe .nm{font-size:12px;font-weight:700;color:var(--mute);text-align:center;line-height:1.1}
+.bar{position:relative;width:92%;height:12px;border-radius:99px;background:rgba(0,0,0,.5);overflow:hidden;border:1px solid rgba(255,255,255,.18)}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(180deg,#ff8a7c,#d93a2c);transition:width .3s}
+.bar b{position:absolute;inset:0;display:grid;place-items:center;font-size:10px;font-weight:800;text-shadow:0 1px 2px rgba(0,0,0,.8)}
+.st{display:flex;flex-wrap:wrap;gap:3px;justify-content:center;min-height:18px}
+.st span{font-size:11px;font-weight:800;padding:0 6px;border-radius:99px;background:rgba(0,0,0,.45);white-space:nowrap}
+.blk{display:inline-flex;align-items:center;gap:2px;font-size:13px;font-weight:800;color:var(--blue)}
+.shake{animation:shake .32s}
+@keyframes shake{20%{transform:translateX(-7px)}40%{transform:translateX(7px)}60%{transform:translateX(-5px)}80%{transform:translateX(4px)}}
+.lunge{animation:lunge .35s}
+@keyframes lunge{40%{transform:translateY(18px) scale(1.1)}}
+.flash{animation:flash .3s}
+@keyframes flash{50%{filter:brightness(2.2)}}
+
+/* ---------- Mình ---------- */
+#me{flex:none;display:flex;align-items:center;gap:10px;padding:4px 6px}
+#me .face{font-size:50px;line-height:1;filter:drop-shadow(0 4px 0 rgba(0,0,0,.3))}
+#me .col{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+#me .row{display:flex;align-items:center;gap:8px}
+#me .bar{width:100%;height:16px}
+#me .bar b{font-size:11px}
+#energy{flex:none;width:58px;height:58px;border-radius:50%;display:grid;place-items:center;font-size:24px;font-weight:800;color:#3a2000;background:radial-gradient(circle at 35% 30%,#fff0a6,#ffc02e 70%);border:3px solid #b57512;box-shadow:0 0 14px rgba(255,200,60,.5)}
+#energy small{display:block;font-size:10px;line-height:1;margin-top:-4px;font-weight:700;letter-spacing:.08em}
+#energy.empty{filter:grayscale(.8) brightness(.8);box-shadow:none}
+
+/* ---------- Thông tin + tay bài ---------- */
+#info{flex:none;min-height:46px;display:flex;align-items:center;justify-content:center;text-align:center;font-size:13px;line-height:1.25;color:var(--mute);font-weight:600;padding:2px 10px}
+#info b{color:var(--ink);font-size:15px}
+#hand{flex:none;display:flex;gap:4px;justify-content:center;align-items:flex-end;height:104px;padding:0 2px}
+.card{position:relative;flex:1 1 0;min-width:0;max-width:78px;height:96px;border-radius:11px;padding:4px 2px 3px;display:flex;flex-direction:column;align-items:center;justify-content:space-between;
+  background:linear-gradient(180deg,#fff6e0,#f0d9a6);color:#3a1f10;border:2px solid #b58a4a;box-shadow:0 3px 0 rgba(0,0,0,.35);transition:transform .15s;text-align:center}
+.card.atk{border-color:#c9473a;background:linear-gradient(180deg,#ffeceb,#f3c4be)}
+.card.def{border-color:#3d84c9;background:linear-gradient(180deg,#eaf4ff,#bfdcf6)}
+.card.skl{border-color:#4aa760;background:linear-gradient(180deg,#eaffee,#bfe8c8)}
+.card .co{position:absolute;left:-6px;top:-7px;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;font-size:12px;font-weight:800;color:#3a2000;background:radial-gradient(circle at 35% 30%,#fff0a6,#ffc02e 70%);border:2px solid #b57512}
+.card .em{font-size:28px;line-height:1;margin-top:8px}
+.card .nm{font-size:9.5px;font-weight:800;line-height:1.05;padding:0 1px;min-height:21px;display:flex;align-items:center}
+.card .nu{font-size:10px;font-weight:800;color:#6a3b12}
+.card.sel{transform:translateY(-16px) scale(1.06);z-index:3;box-shadow:0 8px 14px rgba(0,0,0,.45)}
+.card.no{opacity:.45;filter:grayscale(.4)}
+.card.deal{animation:deal .25s both}
+@keyframes deal{from{transform:translateY(40px);opacity:0}}
+#bar{flex:none;display:flex;align-items:center;gap:8px;margin-top:6px}
+.pile{flex:none;min-width:58px;height:44px;border-radius:12px;background:rgba(0,0,0,.3);border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;font-weight:700;color:var(--mute);line-height:1.05}
+.pile b{font-size:17px;color:var(--ink)}
+#bEnd{flex:1;height:46px;border-radius:14px;font-size:16px;font-weight:800;letter-spacing:.05em;color:#4a2000;background:linear-gradient(180deg,#ffe58a,#ffb93d);box-shadow:0 4px 0 #b57512}
+#bEnd:active:not(:disabled){transform:translateY(3px);box-shadow:0 1px 0 #b57512}
+#bEnd:disabled{opacity:.45}
+#fx{position:fixed;inset:0;pointer-events:none;z-index:15;overflow:hidden}
+.fl{position:absolute;font-size:24px;font-weight:800;text-shadow:0 2px 0 rgba(0,0,0,.7),0 0 6px rgba(0,0,0,.6);animation:flt .9s ease-out forwards;white-space:nowrap;transform:translateX(-50%)}
+@keyframes flt{from{transform:translate(-50%,0) scale(.7);opacity:1}30%{transform:translate(-50%,-14px) scale(1.15)}to{transform:translate(-50%,-52px) scale(1);opacity:0}}
+
+/* ---------- Màn hình phủ ---------- */
+.screen{position:fixed;inset:0;z-index:20;display:none;flex-direction:column;align-items:center;justify-content:center;gap:12px;
+  padding:calc(20px + var(--st)) 16px calc(30px + var(--sb));text-align:center;background:rgba(28,10,6,.78);backdrop-filter:blur(7px);-webkit-backdrop-filter:blur(7px);overflow-y:auto}
+.screen.show{display:flex;animation:fade .3s ease both}
+@keyframes fade{from{opacity:0}}
+.panel{width:min(100%,360px);margin:auto;border-radius:24px;padding:22px 18px 18px;background:linear-gradient(180deg,rgba(120,50,30,.97),rgba(58,20,12,.98));border:1px solid rgba(255,224,170,.3);box-shadow:0 24px 60px rgba(0,0,0,.5)}
+.logo{display:flex;justify-content:center;gap:6px;font-size:40px;margin-bottom:2px}
+.logo span{display:inline-block;animation:bob 2.4s ease-in-out infinite;animation-delay:var(--d)}
+@keyframes bob{50%{transform:translateY(-6px)}}
+.title{margin:4px 0 0;font-size:clamp(32px,9.5vw,42px);font-weight:800;line-height:1.1;background:linear-gradient(180deg,#fff 20%,#ffd25a 100%);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{margin:4px 0 14px;color:var(--mute);font-size:12px;letter-spacing:.3em;font-weight:700}
+.tips{list-style:none;margin:0 0 14px;padding:0;display:flex;flex-direction:column;gap:8px;text-align:left;font-size:14px;line-height:1.3}
+.tips li{display:flex;gap:10px;align-items:center}
+.tips i{flex:none;width:30px;height:30px;border-radius:10px;display:grid;place-items:center;background:rgba(255,210,90,.16);font-style:normal;font-size:16px}
+.best{font-size:14px;color:var(--mute);margin:0 0 14px;font-weight:600}
+.best b{color:var(--ink)}
+.btn{width:100%;height:54px;border-radius:17px;font-size:18px;font-weight:800;letter-spacing:.08em;color:#4a2000;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#ffe58a,#ffb93d);box-shadow:0 5px 0 #b57512,0 12px 28px rgba(255,170,50,.2)}
+.btn:active{transform:translateY(4px);box-shadow:0 1px 0 #b57512}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid rgba(255,224,170,.4);box-shadow:none;height:46px;font-size:15px;margin-top:10px}
+.panel h2{margin:0 0 6px;font-size:15px;letter-spacing:.28em;color:var(--mute);font-weight:700}
+.panel p{margin:0 0 10px;font-size:13px;color:var(--mute);font-weight:600;line-height:1.35}
+#pause h2{font-size:26px;letter-spacing:.1em;color:var(--ink);margin-bottom:16px}
+#pause .panel{display:flex;flex-direction:column}
+/* chọn bài thưởng */
+#picks{display:flex;gap:8px;justify-content:center;margin:6px 0 12px}
+.pk{flex:1;max-width:104px;border-radius:14px;padding:8px 5px 10px;display:flex;flex-direction:column;align-items:center;gap:3px;background:linear-gradient(180deg,#fff6e0,#f0d9a6);color:#3a1f10;border:2px solid #b58a4a;box-shadow:0 4px 0 rgba(0,0,0,.35);position:relative;text-align:center}
+.pk.atk{border-color:#c9473a;background:linear-gradient(180deg,#ffeceb,#f3c4be)}
+.pk.def{border-color:#3d84c9;background:linear-gradient(180deg,#eaf4ff,#bfdcf6)}
+.pk.skl{border-color:#4aa760;background:linear-gradient(180deg,#eaffee,#bfe8c8)}
+.pk:active{transform:translateY(3px);box-shadow:0 1px 0 rgba(0,0,0,.35)}
+.pk .co{position:absolute;left:-6px;top:-8px;width:24px;height:24px;border-radius:50%;display:grid;place-items:center;font-size:13px;font-weight:800;color:#3a2000;background:radial-gradient(circle at 35% 30%,#fff0a6,#ffc02e 70%);border:2px solid #b57512}
+.pk .em{font-size:34px;line-height:1.1;margin-top:6px}
+.pk .nm{font-size:13px;font-weight:800;line-height:1.1}
+.pk .ds{font-size:11px;font-weight:600;line-height:1.2;color:#6a3b12}
+.grid3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:8px 0 14px}
+.grid3 div{padding:8px 4px;border-radius:12px;background:rgba(0,0,0,.22);font-size:11px;color:var(--mute);font-weight:700;letter-spacing:.06em}
+.grid3 b{display:block;font-size:20px;color:var(--ink);letter-spacing:0}
+#oBig{font-size:60px;font-weight:800;line-height:1.05;background:linear-gradient(180deg,#fff,#ffd25a);-webkit-background-clip:text;background-clip:text;color:transparent}
+#oNew{display:none;margin:2px auto 8px;width:max-content;padding:4px 14px;border-radius:99px;background:var(--gold);color:#4a2a00;font-weight:800;font-size:12px;letter-spacing:.14em}
+#toast{position:fixed;left:50%;bottom:calc(150px + var(--sb));transform:translateX(-50%);z-index:90;background:rgba(28,10,6,.94);color:var(--ink);border:1px solid var(--line);border-radius:99px;padding:8px 16px;font-size:13px;font-weight:700;max-width:88vw;text-align:center;opacity:0;pointer-events:none;transition:opacity .25s}
+#toast.show{opacity:1}
+#banner{position:fixed;left:0;right:0;top:34%;z-index:12;text-align:center;font-size:30px;font-weight:800;letter-spacing:.05em;color:#fff;text-shadow:0 3px 12px rgba(0,0,0,.7);pointer-events:none;opacity:0}
+#banner.show{animation:ban 1.2s ease both}
+@keyframes ban{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1.05)}80%{opacity:1}100%{opacity:0}}
+#rotate{position:fixed;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:#2a1410;font-size:18px;text-align:center;line-height:1.6}
+@media (max-height:520px){body.land #rotate{display:flex}}
+@media (max-height:690px){.foe .face{font-size:46px}.foe.boss .face{font-size:62px}#me .face{font-size:40px}#energy{width:50px;height:50px;font-size:21px}.card{height:88px}#hand{height:96px}.card .em{font-size:24px}#foes{min-height:120px}}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+</head>
+<body>
+<div id="app">
+  <div id="top">
+    <button class="ib" id="bPause" aria-label="Tạm dừng">⏸</button>
+    <div class="chip"><small>TẦNG</small><b id="vFloor">1</b><small id="vFloorMax">/11</small></div>
+    <div class="chip"><span>🂠</span><b id="vDeck">10</b></div>
+    <button class="ib" id="bSnd" aria-label="Âm thanh">🔊</button>
+  </div>
+  <div id="foes"></div>
+  <div id="me">
+    <div class="face">🦸</div>
+    <div class="col">
+      <div class="row"><div class="bar" id="pBar"><i></i><b></b></div></div>
+      <div class="row"><span id="pBlk" class="blk"></span><div class="st" id="pSt"></div></div>
+    </div>
+    <div id="energy"><div id="eN">3<small>NĂNG</small></div></div>
+  </div>
+  <div id="info">Chạm một lá bài để xem, chạm lần nữa để đánh.</div>
+  <div id="hand"></div>
+  <div id="bar">
+    <div class="pile"><b id="nDraw">0</b>BỐC</div>
+    <button id="bEnd">KẾT THÚC LƯỢT</button>
+    <div class="pile"><b id="nDisc">0</b>BỎ</div>
+  </div>
+</div>
+<div id="fx"></div>
+<div id="banner"></div>
+
+<section id="menu" class="screen show">
+  <div class="panel">
+    <div class="logo"><span style="--d:0s">🦸</span><span style="--d:.3s">🃏</span><span style="--d:.6s">👹</span></div>
+    <h1 class="title">ĐẤU BÀI<br>THẠCH SANH</h1>
+    <p class="sub">ROGUELIKE ĐẤU BÀI</p>
+    <ul class="tips">
+      <li><i>🃏</i>Mỗi lượt có 3 năng lượng để đánh bài. Chạm bài xem, chạm lần nữa để đánh.</li>
+      <li><i>👹</i>Xem ý định của kẻ địch trên đầu rồi chọn đánh hay đỡ.</li>
+      <li><i>✨</i>Thắng trận được chọn thêm 1 lá bài mới. Vượt 11 tầng để thắng!</li>
+    </ul>
+    <p class="best" id="mBest"></p>
+    <button class="btn" id="bPlay">BẮT ĐẦU</button>
+  </div>
+</section>
+
+<section id="reward" class="screen">
+  <div class="panel">
+    <h2>CHIẾN THẮNG</h2>
+    <p id="rwTxt">Chọn một lá bài để thêm vào bộ bài.</p>
+    <div id="picks"></div>
+    <button class="btn ghost" id="bSkip" style="margin-top:0">BỎ QUA</button>
+  </div>
+</section>
+
+<section id="rest" class="screen">
+  <div class="panel">
+    <div class="logo"><span style="--d:0s">⛺</span></div>
+    <h2>NGHỈ CHÂN</h2>
+    <p>Dừng lại bên đường, uống ngụm nước, băng bó vết thương.</p>
+    <button class="btn" id="bHeal">HỒI 30% MÁU</button>
+  </div>
+</section>
+
+<section id="pause" class="screen">
+  <div class="panel">
+    <h2>Tạm dừng</h2>
+    <button class="btn" id="bResume">TIẾP TỤC</button>
+    <button class="btn ghost" id="bRestart">CHƠI LẠI</button>
+    <button class="btn ghost" id="bQuit">VỀ MENU</button>
+  </div>
+</section>
+
+<section id="over" class="screen">
+  <div class="panel">
+    <h2 id="oTitle">THẤT BẠI</h2>
+    <p id="oWhy"></p>
+    <div id="oBig">0</div>
+    <p>trận thắng</p>
+    <div id="oNew">KỶ LỤC MỚI</div>
+    <div class="grid3"><div><b id="oFloor">0</b>TẦNG</div><div><b id="oDeck">0</b>LÁ BÀI</div><div><b id="oBest">0</b>KỶ LỤC</div></div>
+    <button class="btn" id="bAgain">CHƠI LẠI</button>
+    <button class="btn ghost" id="bMenu">VỀ MENU</button>
+  </div>
+</section>
+
+<div id="toast"></div>
+<div id="rotate"><div><div style="font-size:40px">📱</div>Xoay dọc màn hình để chơi</div></div>
+<footer class="tbFooter">Version: D20261031000000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../scores.js?v=20261030kb"></script>
+<script>
+(() => {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const rand = (a, b) => a + Math.random() * (b - a);
+  const rint = n => Math.floor(Math.random() * n);
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = rint(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // ---------- Lưu trữ (có thể bị chặn) ----------
+  const store = { best: 0, snd: true };
+  try { Object.assign(store, JSON.parse(localStorage.getItem('dauba_v1') || '{}')); } catch (e) {}
+  const save = () => { try { localStorage.setItem('dauba_v1', JSON.stringify(store)); } catch (e) {} };
+
+  // ---------- Bài ----------
+  // t: atk (đánh) | def (đỡ) | skl (kỹ năng). c: năng lượng. d: sát thương, hits: số lần, all: mọi kẻ địch,
+  // blk: giáp, draw: rút bài, en: năng lượng, heal: hồi máu, weak/vuln: yếu/lộ sơ hở cho địch, burn: bỏng, str: sức mạnh
+  const CARDS = {
+    chem:    { n: 'Chém',          e: '🗡️', t: 'atk', c: 1, d: 6, r: 0 },
+    do:      { n: 'Đỡ',            e: '🛡️', t: 'def', c: 1, blk: 5, r: 0 },
+    dan:     { n: 'Đàn thần',      e: '🎶', t: 'atk', c: 1, d: 5, all: 1, r: 0 },
+    dam:     { n: 'Đâm xuyên',     e: '🔱', t: 'atk', c: 1, d: 9, r: 1 },
+    lien:    { n: 'Chém liên hoàn',e: '⚔️', t: 'atk', c: 1, d: 4, hits: 2, r: 1 },
+    bua:     { n: 'Búa tạ',        e: '🔨', t: 'atk', c: 2, d: 16, r: 1 },
+    lua:     { n: 'Lửa thiêu',     e: '🔥', t: 'atk', c: 1, d: 4, burn: 3, r: 1 },
+    loc:     { n: 'Cơn lốc',       e: '🌪️', t: 'atk', c: 2, d: 9, all: 1, r: 1 },
+    hiem:    { n: 'Đòn hiểm',      e: '🏹', t: 'atk', c: 0, d: 4, r: 1 },
+    nolong:  { n: 'Nộ long',       e: '🐉', t: 'atk', c: 2, d: 11, vuln: 2, r: 2 },
+    khien:   { n: 'Khiên gỗ',      e: '🪵', t: 'def', c: 1, blk: 8, r: 1 },
+    thanh:   { n: 'Thành đồng',    e: '🏯', t: 'def', c: 2, blk: 15, r: 1 },
+    ne:      { n: 'Né tránh',      e: '💨', t: 'def', c: 0, blk: 3, draw: 1, r: 1 },
+    phan:    { n: 'Phản đòn',      e: '🤺', t: 'def', c: 2, blk: 9, d: 9, r: 2 },
+    tukhi:   { n: 'Tụ khí',        e: '🧘', t: 'skl', c: 0, en: 1, r: 1 },
+    hoisuc:  { n: 'Cơm Thạch Sanh',e: '🍚', t: 'skl', c: 1, heal: 6, r: 1 },
+    thau:    { n: 'Nhìn thấu',     e: '👁️', t: 'skl', c: 1, weak: 2, draw: 1, r: 1 },
+    tinh:    { n: 'Bình tĩnh',     e: '🍃', t: 'skl', c: 1, draw: 2, r: 1 },
+    ngo:     { n: 'Ngộ đạo',       e: '💪', t: 'skl', c: 1, str: 2, r: 2 },
+    suy:     { n: 'Làm yếu',       e: '🌀', t: 'skl', c: 1, weak: 2, vuln: 2, r: 2 },
+  };
+  function desc(k) {
+    const c = CARDS[k], p = [];
+    if (c.d) p.push('Gây ' + c.d + (c.hits ? ' x' + c.hits : '') + ' sát thương' + (c.all ? ' mọi kẻ địch' : ''));
+    if (c.burn) p.push('Bỏng ' + c.burn);
+    if (c.vuln) p.push('Lộ sơ hở ' + c.vuln);
+    if (c.weak) p.push('Làm yếu ' + c.weak);
+    if (c.blk) p.push('Nhận ' + c.blk + ' giáp');
+    if (c.draw) p.push('Rút ' + c.draw);
+    if (c.en) p.push('+' + c.en + ' năng lượng');
+    if (c.heal) p.push('Hồi ' + c.heal + ' máu');
+    if (c.str) p.push('+' + c.str + ' sức mạnh');
+    return p.join('. ') + '.';
+  }
+  const STARTER = ['chem', 'chem', 'chem', 'chem', 'chem', 'do', 'do', 'do', 'do', 'dan'];
+  const POOL = Object.keys(CARDS).filter(k => CARDS[k].r > 0);
+
+  // ---------- Kẻ địch ----------
+  const FOES = {
+    soi:     { n: 'Sói rừng',        e: '🐺', hp: 24, mv: [{ k: 'atk', v: 6 }, { k: 'atk', v: 7 }, { k: 'atk', v: 10 }] },
+    madoi:   { n: 'Ma đói',          e: '👻', hp: 13, mv: [{ k: 'atk', v: 4 }, { k: 'atk', v: 5 }, { k: 'atk', v: 6 }] },
+    cao:     { n: 'Cáo tinh',        e: '🦊', hp: 22, mv: [{ k: 'atk', v: 5, weak: 1 }, { k: 'blk', v: 7 }, { k: 'atk', v: 8 }] },
+    ran:     { n: 'Rắn độc',         e: '🐍', hp: 20, mv: [{ k: 'atk', v: 4 }, { k: 'deb', vuln: 2 }, { k: 'atk', v: 9 }] },
+    chan:    { n: 'Chằn tinh',       e: '👹', hp: 56, mv: [{ k: 'atk', v: 10 }, { k: 'buff', str: 2 }, { k: 'atk', v: 12 }] },
+    bang:    { n: 'Đại bàng',        e: '🦅', hp: 44, mv: [{ k: 'blk', v: 9 }, { k: 'atk', v: 12 }, { k: 'atk', v: 7, hits: 2 }] },
+    thuy:    { n: 'Thủy quái',       e: '🐙', hp: 54, mv: [{ k: 'atk', v: 9 }, { k: 'blk', v: 11 }, { k: 'atk', v: 15 }] },
+    chua:    { n: 'Chằn tinh chúa',  e: '👹', hp: 105, boss: 1, mv: [{ k: 'atk', v: 11 }, { k: 'buff', str: 2, blk: 8 }, { k: 'atk', v: 7, hits: 2 }, { k: 'atk', v: 17 }] },
+    ho:      { n: 'Hồ ly chín đuôi', e: '🦊', hp: 140, boss: 1, mv: [{ k: 'atk', v: 6, hits: 3 }, { k: 'deb', weak: 2, vuln: 2 }, { k: 'blk', v: 14 }, { k: 'atk', v: 22 }] },
+  };
+  // mỗi tầng: trận đánh (danh sách kẻ địch) hoặc 'rest'
+  const FLOORS = [['soi'], ['madoi', 'madoi'], ['cao', 'ran'], ['chan'], 'rest', ['chua'], ['bang'], ['madoi', 'madoi', 'madoi'], ['thuy', 'ran'], 'rest', ['ho']];
+  const NF = FLOORS.length;
+
+  // ---------- Âm thanh ----------
+  let ac = null;
+  function audio() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+  function beep(f, d, type, vol, slide) {
+    if (!store.snd) return; const a = audio(); if (!a) return;
+    try {
+      const o = a.createOscillator(), g = a.createGain(), t = a.currentTime;
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (slide) o.frequency.exponentialRampToValueAtTime(Math.max(30, f * slide), t + d);
+      g.gain.setValueAtTime(vol || .08, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + d + .02);
+    } catch (e) {}
+  }
+  const SFX = {
+    hit: () => beep(220, .12, 'square', .07, .5), blk: () => beep(520, .08, 'triangle', .07), card: () => beep(700, .05, 'sine', .05),
+    hurt: () => beep(150, .22, 'sawtooth', .09, .5), win: () => { beep(520, .12, 'triangle', .09); setTimeout(() => beep(780, .2, 'triangle', .09), 120); },
+    lose: () => { beep(300, .25, 'sawtooth', .09, .6); setTimeout(() => beep(200, .4, 'sawtooth', .09, .5), 220); }, heal: () => beep(660, .18, 'sine', .07, 1.4),
+  };
+
+  // ---------- Trạng thái ----------
+  let R = null;      // một lượt chơi (run)
+  let C = null;      // trận đánh hiện tại
+  let mode = 'menu'; // menu | battle | busy | pause | over
+  let busy = false;
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  function newRun() {
+    R = { deck: STARTER.slice(), hp: 70, max: 70, floor: 0, wins: 0 };
+    nextFloor();
+  }
+  function nextFloor() {
+    if (R.floor >= NF) return finish(true);
+    const f = FLOORS[R.floor];
+    if (f === 'rest') { mode = 'busy'; show('rest'); return; }
+    startBattle(f);
+  }
+
+  function startBattle(list) {
+    C = { foes: list.map((k, i) => ({ id: i, k, hp: FOES[k].hp, max: FOES[k].hp, blk: 0, str: 0, weak: 0, vuln: 0, burn: 0, i: 0, dead: false })),
+      blk: 0, str: 0, weak: 0, vuln: 0, energy: 3, draw: shuffle(R.deck.slice()), hand: [], disc: [], target: 0, sel: -1, over: false, turns: 0 };
+    mode = 'battle'; show(null); startTurn(true);
+  }
+  function drawCards(n) {
+    for (let i = 0; i < n; i++) {
+      if (C.hand.length >= 7) break;
+      if (!C.draw.length) { if (!C.disc.length) break; C.draw = shuffle(C.disc); C.disc = []; }
+      C.hand.push(C.draw.pop());
+    }
+  }
+  function startTurn(first) {
+    C.blk = 0; C.energy = 3; C.turns++; C.sel = -1; busy = false;
+    drawCards(5);
+    if (first) banner(FLOORS[R.floor].some(k => FOES[k].boss) ? 'TRÙM XUẤT HIỆN!' : 'TẦNG ' + (R.floor + 1));
+    render(true);
+  }
+
+  // ---------- Tính sát thương ----------
+  function calcAtk(base, str, weak, targetVuln) {
+    let v = base + str; if (weak > 0) v = Math.floor(v * .75); if (targetVuln > 0) v = Math.floor(v * 1.5); return Math.max(0, v);
+  }
+  function hurtFoe(f, dmg) {
+    const ab = Math.min(f.blk, dmg); f.blk -= ab; const real = dmg - ab; f.hp -= real;
+    flashEl('foe' + f.id, 'shake'); SFX.hit(); floatAt('foe' + f.id, '-' + dmg, '#ffd25a');
+    if (f.hp <= 0) { f.hp = 0; f.dead = true; }
+  }
+  function hurtMe(dmg) {
+    const ab = Math.min(C.blk, dmg); C.blk -= ab; const real = dmg - ab; R.hp -= real;
+    if (real > 0) { SFX.hurt(); flashEl('me', 'shake'); floatAt('me', '-' + real, '#ff6b5e'); } else { SFX.blk(); floatAt('me', 'Đỡ!', '#7cc4ff'); }
+    if (R.hp < 0) R.hp = 0;
+  }
+
+  // ---------- Đánh bài ----------
+  const alive = () => C.foes.filter(f => !f.dead);
+  function curTarget() { let f = C.foes[C.target]; if (!f || f.dead) { f = alive()[0]; if (f) C.target = f.id; } return f; }
+  function tapCard(i) {
+    if (busy || mode !== 'battle' || C.over) return;
+    audio();
+    const k = C.hand[i], c = CARDS[k];
+    if (C.sel !== i) { C.sel = i; showInfo(k); render(); return; }
+    if (c.c > C.energy) { toast('Không đủ năng lượng'); return; }
+    playCard(i);
+  }
+  async function playCard(i) {
+    const k = C.hand[i], c = CARDS[k], tgt = curTarget();
+    C.energy -= c.c; C.hand.splice(i, 1); C.disc.push(k); C.sel = -1; SFX.card();
+    if (c.d) {
+      const hits = c.hits || 1, list = c.all ? alive() : (tgt ? [tgt] : []);
+      for (let h = 0; h < hits; h++) for (const f of list) { if (!f.dead) hurtFoe(f, calcAtk(c.d, C.str, C.weak, f.vuln)); }
+    }
+    if (c.burn && tgt && !tgt.dead) tgt.burn += c.burn;
+    if (c.vuln && tgt && !tgt.dead) tgt.vuln += c.vuln;
+    if (c.weak && tgt && !tgt.dead) tgt.weak += c.weak;
+    if (c.blk) { C.blk += c.blk; SFX.blk(); floatAt('me', '+' + c.blk + ' giáp', '#7cc4ff'); }
+    if (c.en) C.energy += c.en;
+    if (c.heal) { R.hp = Math.min(R.max, R.hp + c.heal); SFX.heal(); floatAt('me', '+' + c.heal, '#7dff9a'); }
+    if (c.str) { C.str += c.str; floatAt('me', '+' + c.str + ' sức mạnh', '#ffb066'); }
+    if (c.draw) drawCards(c.draw);
+    $('info').innerHTML = 'Chạm một lá bài để xem, chạm lần nữa để đánh.';
+    render();
+    if (!alive().length) { busy = true; await wait(650); victory(); }
+  }
+
+  // ---------- Lượt kẻ địch ----------
+  async function endTurn() {
+    if (busy || mode !== 'battle' || C.over) return;
+    audio(); busy = true; C.sel = -1;
+    C.disc.push(...C.hand); C.hand = []; render();
+    for (const f of C.foes) {
+      if (f.dead) continue;
+      f.blk = 0;
+      if (f.burn > 0) { f.hp -= f.burn; floatAt('foe' + f.id, '-' + f.burn + '🔥', '#ff9a3c'); f.burn--; if (f.hp <= 0) { f.hp = 0; f.dead = true; render(); await wait(400); continue; } }
+      const def = FOES[f.k], m = def.mv[f.i % def.mv.length]; f.i++;
+      await wait(350);
+      if (m.k === 'atk') {
+        flashEl('foe' + f.id, 'lunge');
+        for (let h = 0; h < (m.hits || 1); h++) {
+          await wait(160);
+          let v = m.v + f.str; if (f.weak > 0) v = Math.floor(v * .75); if (C.vuln > 0) v = Math.floor(v * 1.5);
+          hurtMe(v); if (m.weak) C.weak += m.weak; if (m.vuln) C.vuln += m.vuln;
+          render(); if (R.hp <= 0) break;
+        }
+      } else if (m.k === 'blk') { f.blk += m.v; SFX.blk(); floatAt('foe' + f.id, '+' + m.v + ' giáp', '#7cc4ff'); }
+      else if (m.k === 'buff') { f.str += m.str || 0; if (m.blk) f.blk += m.blk; floatAt('foe' + f.id, '+' + (m.str || 0) + ' sức mạnh', '#ffb066'); }
+      else if (m.k === 'deb') { if (m.weak) C.weak += m.weak; if (m.vuln) C.vuln += m.vuln; floatAt('me', 'Bị yếu đi!', '#c9a0ff'); }
+      render();
+      if (R.hp <= 0) break;
+    }
+    if (R.hp <= 0) { await wait(500); return finish(false); }
+    if (!alive().length) { await wait(400); return victory(); }
+    // hết vòng: hiệu ứng giảm dần
+    for (const f of C.foes) { if (f.weak > 0) f.weak--; if (f.vuln > 0) f.vuln--; }
+    if (C.weak > 0) C.weak--; if (C.vuln > 0) C.vuln--;
+    await wait(250);
+    startTurn(false);
+  }
+
+  // ---------- Kết thúc trận ----------
+  function victory() {
+    C.over = true; R.wins++; R.floor++; SFX.win();
+    R.hp = Math.min(R.max, R.hp + 6);
+    if (R.floor >= NF) return finish(true);
+    const boss = FLOORS[R.floor - 1].some(k => FOES[k].boss);
+    const opts = []; const pool = shuffle(POOL.slice());
+    for (const k of pool) { if (opts.length >= 3) break; if (boss || CARDS[k].r < 2 || Math.random() < .5) opts.push(k); }
+    while (opts.length < 3) { const k = POOL[rint(POOL.length)]; if (!opts.includes(k)) opts.push(k); }
+    $('rwTxt').textContent = boss ? 'Hạ được trùm! Chọn một lá bài để thêm vào bộ bài.' : 'Chọn một lá bài để thêm vào bộ bài (hồi thêm 6 máu).';
+    $('picks').innerHTML = opts.map(k => cardHTML(k, 'pk')).join('');
+    for (const b of $('picks').children) b.onclick = () => { R.deck.push(b.dataset.k); nextFloor(); };
+    mode = 'busy'; show('reward');
+  }
+  function finish(win) {
+    mode = 'over'; busy = true; if (C) C.over = true;
+    win ? SFX.win() : SFX.lose();
+    const wins = R.wins, rec = wins > store.best; if (rec) { store.best = wins; save(); }
+    $('oTitle').textContent = win ? 'CHIẾN THẮNG!' : 'THẤT BẠI';
+    $('oWhy').textContent = win ? 'Thạch Sanh đã trừ diệt yêu quái, cứu công chúa!' : 'Thạch Sanh gục ngã ở tầng ' + (R.floor + 1) + '.';
+    $('oBig').textContent = wins; $('oFloor').textContent = Math.min(R.floor + (win ? 0 : 1), NF); $('oDeck').textContent = R.deck.length; $('oBest').textContent = store.best;
+    $('oNew').style.display = rec && wins > 0 ? 'block' : 'none';
+    if (window.Scores && wins > 0) { try { Scores.submit('dauba', wins); } catch (e) {} }
+    setTimeout(() => { if (mode === 'over') show('over'); }, 600);
+  }
+
+  // ---------- Hiển thị ----------
+  function cardHTML(k, cls) {
+    const c = CARDS[k], tc = c.t;
+    if (cls === 'pk') return `<button class="pk ${tc}" data-k="${k}"><span class="co">${c.c}</span><span class="em">${c.e}</span><span class="nm">${c.n}</span><span class="ds">${desc(k)}</span></button>`;
+    return '';
+  }
+  function intentOf(f) {
+    const def = FOES[f.k], m = def.mv[f.i % def.mv.length];
+    if (m.k === 'atk') {
+      let v = m.v + f.str; if (f.weak > 0) v = Math.floor(v * .75); if (C.vuln > 0) v = Math.floor(v * 1.5);
+      return '⚔️ ' + v + (m.hits ? '×' + m.hits : '') + (m.weak ? ' 🌀' : '');
+    }
+    if (m.k === 'blk') return '🛡️ ' + m.v;
+    if (m.k === 'buff') return '💢 Tăng sức';
+    return '☠️ Làm yếu';
+  }
+  function stChips(o) {
+    const a = [];
+    if (o.str) a.push(`<span>💪${o.str}</span>`);
+    if (o.weak > 0) a.push(`<span>🌀Yếu ${o.weak}</span>`);
+    if (o.vuln > 0) a.push(`<span>🎯Hở ${o.vuln}</span>`);
+    if (o.burn > 0) a.push(`<span>🔥Bỏng ${o.burn}</span>`);
+    return a.join('');
+  }
+  let lastHandKey = '';
+  function render(deal) {
+    if (!C) return;
+    $('vFloor').textContent = R.floor + 1; $('vFloorMax').textContent = '/' + NF; $('vDeck').textContent = R.deck.length;
+    // kẻ địch
+    const tgt = curTarget();
+    $('foes').innerHTML = C.foes.map(f => {
+      const def = FOES[f.k];
+      return `<div class="foe${def.boss ? ' boss' : ''}${f.dead ? ' dead' : ''}${tgt && tgt.id === f.id && alive().length > 1 ? ' sel' : ''}" id="foe${f.id}" data-i="${f.id}">
+        <div class="intent">${f.dead ? '&nbsp;' : intentOf(f)}</div>
+        <div class="face">${def.e}</div>
+        <div class="nm">${def.n}</div>
+        <div class="bar"><i style="width:${Math.max(0, f.hp / f.max * 100)}%"></i><b>${f.hp}/${f.max}</b></div>
+        <div class="st">${f.blk > 0 ? `<span class="blk">🛡️${f.blk}</span>` : ''}${stChips(f)}</div></div>`;
+    }).join('');
+    for (const el of $('foes').children) el.onclick = () => { const f = C.foes[+el.dataset.i]; if (f && !f.dead && !busy) { C.target = f.id; render(); } };
+    // mình
+    $('pBar').firstElementChild.style.width = Math.max(0, R.hp / R.max * 100) + '%'; $('pBar').lastElementChild.textContent = R.hp + '/' + R.max;
+    $('pBlk').innerHTML = C.blk > 0 ? '🛡️ ' + C.blk : '';
+    $('pSt').innerHTML = stChips({ str: C.str, weak: C.weak, vuln: C.vuln, burn: 0 });
+    $('eN').firstChild.textContent = C.energy; $('energy').classList.toggle('empty', C.energy <= 0);
+    $('nDraw').textContent = C.draw.length; $('nDisc').textContent = C.disc.length;
+    // tay bài
+    const key = C.hand.join(',') + '|' + C.sel + '|' + C.energy;
+    if (key !== lastHandKey || deal) {
+      lastHandKey = key;
+      $('hand').innerHTML = C.hand.map((k, i) => { const c = CARDS[k];
+        return `<button class="card ${c.t}${C.sel === i ? ' sel' : ''}${c.c > C.energy ? ' no' : ''}${deal ? ' deal' : ''}" data-i="${i}" style="${deal ? 'animation-delay:' + i * 50 + 'ms' : ''}"><span class="co">${c.c}</span><span class="em">${c.e}</span><span class="nm">${c.n}</span><span class="nu">${c.d ? (c.hits ? c.d + '×' + c.hits : c.d) : c.blk ? '🛡' + c.blk : ''}</span></button>`; }).join('');
+      for (const el of $('hand').children) el.onclick = () => tapCard(+el.dataset.i);
+    }
+    $('bEnd').disabled = busy || C.over;
+    while (pendingFlash.length) { const f = pendingFlash.shift(), el = $(f[0]); if (el) { el.classList.remove(f[1]); void el.offsetWidth; el.classList.add(f[1]); } }
+  }
+  function showInfo(k) {
+    const c = CARDS[k];
+    $('info').innerHTML = `<div><b>${c.e} ${c.n}</b> · ${c.c} năng lượng<br>${desc(k)}${c.c > C.energy ? ' <span style="color:#ff9a8f">(không đủ năng lượng)</span>' : ' Chạm lần nữa để đánh.'}</div>`;
+  }
+  function floatAt(id, text, color) {
+    const el = $(id); if (!el) return; const r = el.getBoundingClientRect(), d = document.createElement('div');
+    d.className = 'fl'; d.textContent = text; d.style.color = color; d.style.left = (r.left + r.width / 2 + rand(-12, 12)) + 'px'; d.style.top = (r.top + r.height * .25) + 'px';
+    $('fx').appendChild(d); setTimeout(() => d.remove(), 950);
+  }
+  const pendingFlash = [];
+  function flashEl(id, cls) {
+    if (id.indexOf('foe') === 0) { pendingFlash.push([id, cls]); return; }   // kẻ địch được dựng lại mỗi lần render, áp dụng sau
+    const el = $(id); if (!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls);
+  }
+  function banner(t) { const b = $('banner'); b.textContent = t; b.classList.remove('show'); void b.offsetWidth; b.classList.add('show'); }
+  function toast(t) { const el = $('toast'); el.textContent = t; el.classList.add('show'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('show'), 1500); }
+  function show(id) { for (const s of document.querySelectorAll('.screen')) s.classList.toggle('show', s.id === id); }
+
+  // ---------- Sự kiện ----------
+  $('bEnd').onclick = endTurn;
+  $('bPlay').onclick = () => { audio(); newRun(); };
+  $('bAgain').onclick = () => { newRun(); };
+  $('bRestart').onclick = () => { if (C) C.over = true; newRun(); };
+  $('bSkip').onclick = () => { nextFloor(); };
+  $('bHeal').onclick = () => { const h = Math.round(R.max * .3); R.hp = Math.min(R.max, R.hp + h); SFX.heal(); R.floor++; nextFloor(); };
+  function toMenu() { if (C) C.over = true; mode = 'menu'; busy = false; $('mBest').innerHTML = store.best > 0 ? 'Kỷ lục: <b>' + store.best + ' trận thắng</b>' : ''; show('menu'); }
+  $('bQuit').onclick = toMenu; $('bMenu').onclick = toMenu;
+  $('bPause').onclick = () => { if (mode === 'battle') { show('pause'); mode = 'pause'; } };
+  $('bResume').onclick = () => { if (mode === 'pause') { mode = 'battle'; show(null); } };
+  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'battle' && !busy) { show('pause'); mode = 'pause'; } });
+  function syncSnd() { $('bSnd').textContent = store.snd ? '🔊' : '🔇'; }
+  $('bSnd').onclick = () => { store.snd = !store.snd; save(); syncSnd(); audio(); };
+
+  // ---------- Kích thước / hướng màn hình ----------
+  function fit() {
+    const vv = window.visualViewport, h = vv ? vv.height : window.innerHeight;
+    document.documentElement.style.setProperty('--h', h + 'px');
+    if (vv && vv.offsetTop) window.scrollTo(0, 0);
+  }
+  if (window.visualViewport) visualViewport.addEventListener('resize', fit);
+  window.addEventListener('resize', fit);
+  function syncLand() {
+    const o = screen.orientation && screen.orientation.type;
+    const land = o ? o.indexOf('landscape') === 0 : Math.abs(window.orientation) === 90;
+    document.body.classList.toggle('land', !!land);
+  }
+  syncLand(); window.addEventListener('orientationchange', syncLand); window.addEventListener('resize', syncLand);
+  if (screen.orientation && screen.orientation.addEventListener) screen.orientation.addEventListener('change', syncLand);
+
+  window.DB = { get R() { return R; }, get C() { return C; }, CARDS, FOES, FLOORS, POOL, STARTER, tapCard, endTurn, playCard, startBattle, newRun, nextFloor,
+    get mode() { return mode; }, get busy() { return busy; }, victory, curTarget, setTarget: id => { C.target = id; }, alive, drawCards, render };
+  syncSnd(); fit(); toMenu();
+})();
+</script>
+<script src="../activity.js?v=20261029nolive" defer></script>
+</body>
+</html>

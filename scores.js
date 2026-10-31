@@ -51,6 +51,7 @@
     { id: 'xepgach', name: 'Xếp gạch' },
     { id: 'cotuhuyenbi', name: 'Cổ tự huyền bí' },
     { id: 'noitu', name: 'Nối từ' },
+    { id: 'dauba', name: 'Đấu bài Thạch Sanh', fmt: v => v + ' trận thắng' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
