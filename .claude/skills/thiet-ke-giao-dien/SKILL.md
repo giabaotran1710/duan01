@@ -77,3 +77,9 @@ Dựa trên nguyên tắc của skill Frontend Design (Anthropic), viết lại 
 - [ ] Có hiệu ứng nào không phản hồi hành động nào?
 - [ ] Có chữ thừa lặp lại điều đã rõ?
 - [ ] Đã kiểm tra bằng ảnh chụp thật chưa?
+
+## Đấu bài: quy ước chữ trên thẻ (nhớ khi thêm thẻ mới)
+- Thẻ dùng xong bị bỏ khỏi trận đang đánh nhưng trận sau vẫn còn (thuộc tính `exh`): mô tả kết thúc bằng dấu chấm rồi chữ **Xoá** tô đỏ. Không viết "dùng một lần mỗi trận", "hết trận trở lại như cũ" hay các câu tương tự.
+- Thẻ dùng xong bị bỏ khỏi bộ bài vĩnh viễn (thuộc tính `gone`): mô tả kết thúc bằng dấu chấm rồi chữ **Loại bỏ** tô đỏ. Không viết "biến mất vĩnh viễn".
+- Chữ này do hàm mô tả tự thêm theo `exh`/`gone`, không gõ tay vào từng thẻ.
+
