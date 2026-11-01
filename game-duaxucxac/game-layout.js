@@ -21,8 +21,8 @@ function resize(){
 }
 
 function computeBoard(){
-  const topSafe=Math.max(98,Math.min(132,H*.18));
-  const bottomSafe=Math.max(130,Math.min(170,H*.23));
+  const topSafe=Math.max(112,Math.min(150,H*.205));
+  const bottomSafe=Math.max(146,Math.min(186,H*.24));
 
   let available=H-topSafe-bottomSafe;
   let size=Math.min(W*.92,available,640);
