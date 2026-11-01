@@ -387,7 +387,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
 
 <div id="toast"></div>
 <div id="rotate"><div>Xoay dọc màn hình để chơi</div></div>
-<footer class="tbFooter">Version: D20261104150000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261104180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261030kb"></script>
 <script>
 (() => {
@@ -1813,9 +1813,14 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     return auraOf('blk') + (hasR('non') ? 2 : 0) + c.blk + (c.blkHand || 0) * handN + (c.blkFoe || 0) * alive().length + (c.blkSolo && alive().length === 1 ? c.blkSolo : 0) + (bonus || 0) + (c.el === 'tho' && hasR('tho') ? 2 : 0);
   }
   const healVal = c => c.heal + (c.healFoe || 0) * alive().length + (hasR('holo') ? 3 : 0);
+  // THỨ TỰ TÍNH SÁT THƯƠNG LÊN ĐỊCH:
+  //  1) ATK cơ bản = chỉ số thẻ + Sức mạnh (+ tương sinh, khắc hành, bị yếu của bạn)  -> atkVal
+  //  2) trừ giáp cứng, rồi giáp đang có của địch                                        -> hurtFoe
+  //  3) phần còn lại nhân thêm do địch lộ sơ hở (×1,5) / có điểm yếu (×2)               -> hurtFoe
+  const critMul = f => (f.vuln > 0 ? 1.5 : 1) * (f.crit > 0 ? 2 : 1);
   function atkVal(c, base, tgt, bonus) {
     let v = base + C.str + bonus; if (c.el === 'kim' && hasR('kim')) v += 2; if (c.el === 'tho' && hasR('tho')) v += 2;
-    if (C.weak > 0) v = Math.floor(v * .75); if (tgt.vuln > 0) v = Math.floor(v * 1.5); if (tgt.crit > 0) v *= 2;
+    if (C.weak > 0) v = Math.floor(v * .75);
     return Math.max(0, Math.floor(v * elMul(c.el, tgt)));
   }
   // bài X: nhân hiệu ứng theo số năng lượng đang có
@@ -1825,7 +1830,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     curCi = ci;
     const c = xOf(stats(ci)); if (c.curse) return null; const b = sinhBonus(c), t = tgt || curTarget();
     const arm = t && !c.pierce ? (t.tr.armor || 0) : 0, hn = Math.max(0, C.hand.length - 1);
-    if (isAtkCard(c)) { if (!t) return null; return { v: Math.max(0, atkVal(c, rawDmg(c, t, hn), t, c.dmgBlock || c.dmgBurn ? 0 : b) - arm), t: 'd', m: elMul(c.el, t), tear: needsTear(c) }; }
+    if (isAtkCard(c)) { if (!t) return null; return { v: Math.floor(Math.max(0, atkVal(c, rawDmg(c, t, hn), t, c.dmgBlock || c.dmgBurn ? 0 : b) - arm) * critMul(t)), base: atkVal(c, rawDmg(c, t, hn), t, c.dmgBlock || c.dmgBurn ? 0 : b), t: 'd', m: elMul(c.el, t), tear: needsTear(c) }; }
     if (c.blk) return { v: blkVal(c, hn, b), t: 'b' };
     return null;
   }
@@ -1837,9 +1842,15 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (f.tr.evade && !f.evaded) { f.evaded = true; raw = Math.floor(raw / 2); fxText(p.x, p.y - 20, 'Né một nửa!', '#c9e8ff'); fxRing(p.x, p.y, '#c9e8ff', 50); }
     let dmg = raw;
     if (!pierce && f.tr.armor) dmg = Math.max(0, dmg - f.tr.armor);
-    let real = dmg;
+    let real = dmg, ab = 0;
     const hadBlk = f.blk;
-    if (!pierce) { const ab = Math.min(f.blk, dmg); f.blk -= ab; real = dmg - ab; }
+    if (!pierce) { ab = Math.min(f.blk, dmg); f.blk -= ab; real = dmg - ab; }
+    // sau cùng: lộ sơ hở / điểm yếu làm phần sát thương còn lại nặng hơn
+    if (real > 0 && (f.vuln > 0 || f.crit > 0)) {
+      const wasCrit = f.crit > 0; real = Math.floor(real * critMul(f));
+      if (wasCrit) { f.crit--; fxText(p.x, p.y - 84, 'CHÍ MẠNG!', '#ff4a3a', true); fxBurst(p.x, p.y, '#ff4a3a', 16, 280, 5); }
+    }
+    dmg = real + ab;
     f.hp -= real; f.hit = 1;
     if (f.tr.bulwark && hadBlk > 0 && f.blk <= 0 && !f.rest) { f.rest = 2; fxText(p.x, p.y - 70, 'VỠ KHIÊN!', '#ffe27a', true); fxBurst(p.x, p.y, '#c99556', 24, 300, 6); }
     if (f.chg > 0) { f.chgT = (f.chgT || 0) + dmg; if (f.chgT >= f.chg) { f.chg = 0; f.stag = true; fxText(p.x, p.y - 70, 'PHÁ THẾ!', '#7dff9a', true); fxRing(p.x, p.y, '#7dff9a', 90); } }
@@ -1944,8 +1955,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
         for (const f of list) {
           if (f.dead) continue; const mul = elMul(c.el, f), s = foeSprite(f), q = s ? center(s) : null;
           if (h === 0 && q) { if (mul === 0) fxText(q.x, q.y - 62, 'Kháng!', '#c9c9c9', true); else if (mul > 1) { fxText(q.x, q.y - 62, 'KHẮC!', '#7dff9a', true); SFX.khac(); } else if (mul < 1) fxText(q.x, q.y - 62, 'Bị khắc', '#ff9a8f'); }
-          const crit = f.crit > 0, base = atkVal(c, rawDmg(c, f, hn) + tearAdd, f, h === 0 && !c.dmgBlock && !c.dmgBurn ? bonus : 0);
-          if (crit && base > 0 && mul > 0) { f.crit--; if (q) { fxText(q.x, q.y - 84, 'CHÍ MẠNG!', '#ff4a3a', true); fxBurst(q.x, q.y, '#ff4a3a', 16, 280, 5); } }
+          const base = atkVal(c, rawDmg(c, f, hn) + tearAdd, f, h === 0 && !c.dmgBlock && !c.dmgBurn ? bonus : 0);
           if (c.dmgBurn) { if (f.burn > 0 && q) fxFlames(q.x, q.y); f.burn = 0; }
           dealt += hurtFoe(f, base, c.pierce, c.el);
           if (R.hp <= 0) break;
@@ -2227,7 +2237,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     const t = [];
     // chỉ số phụ thuộc số kẻ địch / số lá trên tay / lá bị xé thì hiện "?"
     const qa = !!(c.perHand || c.perFoe || c.solo || c.tearR || c.tearP), qb = !!(c.blkHand || c.blkFoe || c.blkSolo), qh = !!c.healFoe;
-    if (isAtkCard(c)) { const v = qa ? '?' : pv && pv.t === 'd' ? pv.v : (c.d || 0), m = pv && pv.t === 'd' ? pv.m : 1;
+    if (isAtkCard(c)) { const v = qa ? '?' : pv && pv.t === 'd' ? (c.d ? c.d + (C ? C.str || 0 : 0) : pv.v) : (c.d || 0), m = pv && pv.t === 'd' ? pv.m : 1;
       if (qa || v || c.d) t.push(`<span class="tg${!qa && m > 1 ? ' up' : !qa && m < 1 ? ' dn' : ''}">${v}${c.xc ? '×X' : c.hits ? '×' + c.hits : ''}${!qa && pv && pv.tear ? '+' : ''}${ic('swd', 'fl')}</span>`); }
     if (c.blk) t.push(`<span class="tg">${qb ? '?' : c.xc ? c.blk + '×X' : pv && pv.bv != null ? pv.bv : c.blk}${ic('shd', 'fl')}</span>`);
     if (c.heal) t.push(`<span class="tg">${qh ? '?' : c.xc ? c.heal + '×X' : c.heal}${ic('hrt', 'fl')}</span>`);
