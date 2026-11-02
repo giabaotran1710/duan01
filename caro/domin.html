@@ -5,7 +5,7 @@
 <script src="../maintenance.js?v=20261101a" data-game="domin"></script>
 <script src="../scene.js" data-game="domin"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>DÒ MÌN</title>
+<title>Dò mìn</title>
 <style>
   @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Be+Vietnam+Pro:wght@500;600;700;800&display=swap');
 
@@ -39,7 +39,7 @@
     display: flex;
     flex-direction: column;
     align-items: center;
-    padding: calc(14px + env(safe-area-inset-top)) 12px calc(18px + env(safe-area-inset-bottom));
+    padding: calc(14px + env(safe-area-inset-top)) 12px calc(30px + env(safe-area-inset-bottom));
     overflow-x: hidden;
     user-select: none;
     -webkit-user-select: none;
@@ -119,6 +119,16 @@
   .status-dot.red { background: var(--danger); box-shadow: 0 0 8px var(--danger); animation: pulse 1s infinite; }
   .status-dot.gold { background: var(--gold); box-shadow: 0 0 8px var(--gold); animation: none; }
   @keyframes pulse { 50% { opacity: .25; } }
+
+  /* ---------- cỡ bàn ---------- */
+  .sizes { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 14px; background: var(--panel); border: 1px solid var(--line); }
+  .sizes button {
+    min-height: 40px; border: 0; border-radius: 10px; font: inherit; font-size: 14px; font-weight: 800; color: var(--dim);
+    background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px;
+  }
+  .sizes button small { font-size: 11px; font-weight: 600; opacity: .8; }
+  .sizes button.on { color: var(--text); background: rgba(46, 245, 154, .14); box-shadow: inset 0 0 0 1px rgba(46, 245, 154, .45); }
+  .sizes button:focus-visible, .mode button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
   /* ---------- bàn mìn ---------- */
   .grid-container {
@@ -228,6 +238,12 @@
     <div class="status"><div class="status-dot" id="status-dot"></div><span id="status-text">SẴN SÀNG</span></div>
   </div>
 
+  <div class="sizes" role="radiogroup" aria-label="Cỡ bàn">
+    <button type="button" data-size="de" role="radio">Dễ <small>10 mìn</small></button>
+    <button type="button" data-size="vua" role="radio">Vừa <small>30 mìn</small></button>
+    <button type="button" data-size="kho" role="radio">Khó <small>80 mìn</small></button>
+  </div>
+
   <div class="grid-container" id="grid-container">
     <div class="grid-blur-wrapper" id="grid-blur-wrapper"><div id="grid"></div></div>
     <div class="overlay" id="overlay">
@@ -248,12 +264,16 @@
     <span><b>Giữ lâu</b> hoặc chế độ <i class="fa-solid fa-flag" aria-hidden="true"></i> để cắm cờ</span>
     <span><b>Chạm số</b> đã đủ cờ để mở nhanh xung quanh</span>
   </div>
-  <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+  <footer class="tbFooter">Version: D20261102090000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 </div>
 
 <script>
 // Bàn 22×16 (80 mìn); màn hình dọc thì xoay thành 16×22 cho vừa chiều ngang
-const MINES = 80;
+// Ba cỡ bàn: [cột, hàng] khi xoay ngang, màn dọc thì đảo lại; nhớ lựa chọn của người chơi
+const SIZES = { de: { w: 9, h: 9, mines: 10 }, vua: { w: 16, h: 12, mines: 30 }, kho: { w: 22, h: 16, mines: 80 } };
+let sizeKey = 'kho';
+try { const k = localStorage.getItem('domin_size'); if (SIZES[k]) sizeKey = k; } catch (_) {}
+let MINES = SIZES[sizeKey].mines;
 let COLS = 22, ROWS = 16;
 let board = [], revealed = [], flagged = [];
 let gameOver = false, gameWon = false, firstClick = true;
@@ -296,15 +316,35 @@ document.querySelectorAll('.mode button').forEach(b => {
 // ── Khởi tạo ───────────────────────────────────────────────
 function pickLayout() {
   const portrait = window.innerHeight > window.innerWidth && window.innerWidth < 700;
-  COLS = portrait ? 16 : 22;
-  ROWS = portrait ? 22 : 16;
+  const sz = SIZES[sizeKey];
+  MINES = sz.mines;
+  COLS = portrait ? sz.h : sz.w;
+  ROWS = portrait ? sz.w : sz.h;
 }
+
+function markSize() {
+  document.querySelectorAll('.sizes button').forEach(b => {
+    const on = b.dataset.size === sizeKey;
+    b.classList.toggle('on', on);
+    b.setAttribute('aria-checked', on ? 'true' : 'false');
+  });
+}
+document.querySelectorAll('.sizes button').forEach(b => {
+  b.addEventListener('click', () => {
+    if (b.dataset.size === sizeKey) return;
+    sizeKey = b.dataset.size;
+    try { localStorage.setItem('domin_size', sizeKey); } catch (_) {}
+    markSize();
+    initGame();
+  });
+});
+markSize();
 
 function fitCells() {
   const box = document.getElementById('grid-container');
   const grid = document.getElementById('grid');
   const avail = box.clientWidth - 20;
-  const size = Math.max(16, Math.min(34, Math.floor((avail - (COLS - 1) * 2) / COLS)));
+  const size = Math.max(16, Math.min(44, Math.floor((avail - (COLS - 1) * 2) / COLS)));
   grid.style.setProperty('--cell', size + 'px');
 }
 
