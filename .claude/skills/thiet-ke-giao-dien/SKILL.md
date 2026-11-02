@@ -82,4 +82,5 @@ Dựa trên nguyên tắc của skill Frontend Design (Anthropic), viết lại 
 - Thẻ dùng xong bị bỏ khỏi trận đang đánh nhưng trận sau vẫn còn (thuộc tính `exh`): mô tả kết thúc bằng dấu chấm rồi chữ **Xoá** tô đỏ. Không viết "dùng một lần mỗi trận", "hết trận trở lại như cũ" hay các câu tương tự.
 - Thẻ dùng xong bị bỏ khỏi bộ bài vĩnh viễn (thuộc tính `gone`): mô tả kết thúc bằng dấu chấm rồi chữ **Loại bỏ** tô đỏ. Không viết "biến mất vĩnh viễn".
 - Chữ này do hàm mô tả tự thêm theo `exh`/`gone`, không gõ tay vào từng thẻ.
-
+- Thẻ buộc bỏ bài khác trên tay xuống chồng bỏ (`disc`, `discR`, `discAll`): chữ **Bỏ bài** tô đỏ ngay trong mô tả, cùng kiểu với Xoá và Loại bỏ. Bỏ bài không làm mất lá khỏi bộ bài; lá bị bỏ quay lại khi xáo bài.
+- Thẻ May rủi (`luck`): mô tả luôn viết dạng "x% Hên/Rất tốt: ... y% Xui/Tốt: ...". Hại gây cho bản thân (`selfWeak`, `selfVuln`, `selfStr`, `junk`) tô tím như hiệu ứng có hại; lợi tô xanh.
