@@ -13,6 +13,9 @@ thuộc về đúng mã người chơi của máy (`/names/giabao1710` trên Fir
 
 Chưa làm bước 1–2 thì bảng vẫn mở nhưng không tải được danh sách hoặc báo "Bị từ chối" khi cấm.
 
+Nếu báo "Bị từ chối": (1) Publish lại luật mới nhất; (2) mở `admin/key` trong Data, xem giá trị có thừa dấu cách / xuống dòng / ngoặc kép không
+rồi lưu lại, dán lại đúng mã đó vào bảng quản lý. Nên dùng mã khoảng 32–64 ký tự (luật cũ từ chối mã dài từ 100 ký tự trở lên).
+
 ## Cách hoạt động
 
 - Danh sách người chơi lấy từ `/names` (tên → mã người chơi).

@@ -255,7 +255,7 @@
         if (r.ok) { bans[p.uid] = on; say((on ? 'Đã cấm ' : 'Đã bỏ cấm ') + p.name + '.'); }
         else {
           bans[p.uid] = !on;
-          if (r.status === 401 || r.status === 403) { say('Bị từ chối: mã quản trị sai, hoặc luật Firebase / admin/key chưa được cài. Kiểm tra lại rồi thử.', true); showKeyRow(true); }
+          if (r.status === 401 || r.status === 403) { say('Bị từ chối. Kiểm tra: (1) đã Publish luật Firebase mới nhất chưa; (2) admin/key trên Firebase khớp từng ký tự với mã đã lưu (không thừa dấu cách, xuống dòng hay ngoặc kép).', true); showKeyRow(true); }
           else say('Lỗi máy chủ (' + r.status + '). Thử lại sau.', true);
         }
       } catch (e) { bans[p.uid] = !on; say('Không kết nối được máy chủ.', true); }
