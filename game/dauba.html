@@ -129,6 +129,7 @@ svg.ic.fl{fill:currentColor;stroke:none}
 .card.curse{background:linear-gradient(180deg,#5a3b5e,#2a1830);color:#e9d6ff;border-color:#9a6ab8}
 .card.deal{animation:deal .32s both}
 @keyframes deal{from{transform:translate(60px,30px) rotate(12deg) scale(.6);opacity:0}}
+.cback{position:fixed;z-index:41;pointer-events:none;box-sizing:border-box;border-radius:8px;border:2.5px solid #d8b864;box-shadow:0 3px 0 #000;background:radial-gradient(circle at 50% 50%,#e8c870 0 9px,#7a1d14 10px 13px,transparent 14px),repeating-linear-gradient(45deg,#8a2418 0 6px,#5a1008 6px 12px)}
 .ghost{position:fixed;z-index:41;pointer-events:none;transition:transform .24s cubic-bezier(.5,0,.8,.4),opacity .24s}
 #draw1{flex:none;width:52px;height:96px;border-radius:8px;position:relative;border:2.5px solid #d8b864;background:#3a1810;box-shadow:0 3px 0 #000;overflow:hidden}
 #draw1 canvas{width:100%;height:100%;display:block}
@@ -402,7 +403,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
 
 <div id="toast"></div>
 <div id="rotate"><div>Xoay dọc màn hình để chơi</div></div>
-<footer class="tbFooter">Version: D20261102200000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103100000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261030kb"></script>
 <script>
 (() => {
@@ -2179,13 +2180,61 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (!C.draw.length && !C.disc.length) { toast('Hết bài để rút'); return; }
     C.energy -= cost; if (!cost) C.freeDraw--; C.drew = true; drawCards(1); C.sel = -1; lastHandKey = ''; render();
   }
-  async function flyCard(i, tgtEl) {
+  // ---------- hiệu ứng rời bài ----------
+  // nhân bản lá bài ra ngoài màn hình để hoạt họa độc lập với bộ bài đang vẽ lại
+  function cardGhost(el, clip) {
+    const r = el.getBoundingClientRect(), g = el.cloneNode(true);
+    g.classList.remove('sel', 'sinh', 'deal', 'tearing', 'off'); g.classList.add('ghost');
+    g.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px;margin:0;transition:none;visibility:visible;opacity:1;transform:none` + (clip ? ';clip-path:' + clip : '');
+    document.body.appendChild(g); return { g, r };
+  }
+  const gdone = (a, ...els) => { const rm = () => els.forEach(e => e.remove()); a.onfinish = rm; a.oncancel = rm; };
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  // Xoá: xé lá bài làm hai mảnh
+  function fxTearCard(el) {
+    const L = cardGhost(el, 'polygon(0 0,54% 0,47% 14%,55% 30%,46% 47%,54% 63%,46% 80%,52% 100%,0 100%)').g;
+    const R2 = cardGhost(el, 'polygon(54% 0,100% 0,100% 100%,52% 100%,46% 80%,54% 63%,46% 47%,55% 30%,47% 14%)').g;
+    L.style.transformOrigin = '0% 100%'; R2.style.transformOrigin = '100% 100%';
+    const f = (sx, a) => [{ transform: 'none', opacity: 1 }, { transform: `translate(${sx * 5}px,2px) rotate(${a * .15}deg)`, opacity: 1, offset: .22 }, { transform: `translate(${sx * 38}px,${rnd(80, 110)}px) rotate(${a}deg)`, opacity: 0 }];
+    const o = { duration: 700, easing: 'cubic-bezier(.5,0,.9,.6)', fill: 'forwards' };
+    gdone(L.animate(f(-1, -34), o), L); gdone(R2.animate(f(1, 30), o), R2);
+    const q = center(el); fxBurst(q.x, q.y, '#f3e3c0', 14, 180, 3); noise(.18, .3, 3000);
+  }
+  // Loại bỏ: rã lá bài thành nhiều mảnh
+  function fxShatterCard(el) {
+    const C0 = 4, R0 = 5, r = el.getBoundingClientRect();
+    for (let y = 0; y < R0; y++) for (let x = 0; x < C0; x++) {
+      const { g } = cardGhost(el, `inset(${y * 100 / R0}% ${100 - (x + 1) * 100 / C0}% ${100 - (y + 1) * 100 / R0}% ${x * 100 / C0}%)`);
+      const cx = (x + .5) / C0 - .5, cy = (y + .5) / R0 - .5, d = rnd(.8, 1.3);
+      gdone(g.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${cx * 190 * d}px,${cy * 150 * d + rnd(90, 170)}px) rotate(${rnd(-160, 160)}deg) scale(${rnd(.3, .7)})`, opacity: 0 }],
+        { duration: rnd(560, 820), easing: 'cubic-bezier(.2,.6,.5,1)', fill: 'forwards', delay: rnd(0, 60) }), g);
+    }
+    fxBurst(r.left + r.width / 2, r.top + r.height / 2, '#ffd25a', 22, 260, 4); fxRing(r.left + r.width / 2, r.top + r.height / 2, '#ffd25a', 70); noise(.25, .4, 1600);
+  }
+  // Bỏ bài: úp lá bài lại rồi quăng đi
+  function fxFlipToss(el, delay) {
+    const { g, r } = cardGhost(el), b = document.createElement('div'); b.className = 'cback'; b.style.cssText = `left:${r.left}px;top:${r.top}px;width:${r.width}px;height:${r.height}px`; document.body.appendChild(b);
+    const dx = rnd(-170, -90), dy = rnd(-190, -120), rot = rnd(-200, -120), o = { duration: 820, fill: 'both', delay: delay || 0 };
+    gdone(g.animate([{ transform: 'scaleX(1)' }, { transform: 'scaleX(0)', offset: .18 }, { transform: 'scaleX(0)' }], o), g);
+    gdone(b.animate([{ transform: 'scaleX(0)', opacity: 1 }, { transform: 'scaleX(0)', opacity: 1, offset: .18 }, { transform: 'scaleX(1)', opacity: 1, offset: .32 }, { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(.7)`, opacity: 0 }], Object.assign({ easing: 'cubic-bezier(.3,.1,.6,1)' }, o)), b);
+  }
+  // cuối lượt: quăng các lá còn trên tay ra chỗ khác
+  function fxTossCard(el, i, n) {
+    const { g } = cardGhost(el), mid = (n - 1) / 2, dx = rnd(120, 200) + (i - mid) * 18, dy = rnd(-230, -150), rot = rnd(140, 260) * (i % 2 ? 1 : -1);
+    gdone(g.animate([{ transform: 'none', opacity: 1 }, { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(.5)`, opacity: 0 }], { duration: 560, delay: i * 45, easing: 'cubic-bezier(.3,.1,.7,1)', fill: 'both' }), g);
+  }
+  async function flyCard(i, tgtEl, kind) {
     const el = $('hand').children[i]; if (!el || !tgtEl) return;
     const r = el.getBoundingClientRect(), q = tgtEl.getBoundingClientRect();
     const g = el.cloneNode(true); g.classList.remove('sel', 'sinh', 'deal'); g.classList.add('ghost'); g.style.left = r.left + 'px'; g.style.top = r.top + 'px'; g.style.width = r.width + 'px'; g.style.height = r.height + 'px';
     document.body.appendChild(g); el.style.visibility = 'hidden';
     const dx = q.left + q.width / 2 - (r.left + r.width / 2), dy = q.top + q.height / 2 - (r.top + r.height / 2);
-    void g.offsetWidth; g.style.transform = `translate(${dx}px,${dy}px) scale(.35) rotate(${dx > 0 ? 25 : -25}deg)`; g.style.opacity = '.2';
+    void g.offsetWidth;
+    if (kind) {   // Xoá / Loại bỏ: lá bài trượt tới gần mục tiêu rồi bị xé hoặc rã ra
+      g.style.transform = `translate(${dx * .4}px,${dy * .4}px)`; await wait(200);
+      kind === 'gone' ? fxShatterCard(g) : fxTearCard(g); g.remove(); return;
+    }
+    g.style.transform = `translate(${dx}px,${dy}px) scale(.35) rotate(${dx > 0 ? 25 : -25}deg)`; g.style.opacity = '.2';
     await wait(220); g.remove();
   }
   async function playCard(i, tj, mode) {
@@ -2196,15 +2245,15 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     const isAtk = isAtkCard(c);
     let torn = null;
     if (needsTear(c)) { const others = C.hand.filter(x => x !== ci); torn = c.tearP && tj != null && C.hand[tj] && C.hand[tj] !== ci ? C.hand[tj] : pick(others); }
-    if (torn) { const el = $('hand').children[C.hand.indexOf(torn)]; if (el) { const q = center(el); fxBurst(q.x, q.y, '#f3e3c0', 18, 200, 4); fxText(q.x, q.y - 30, 'Xé!', '#ffb08a', true); el.style.visibility = 'hidden'; } noise(.18, .3, 3000); }
+    if (torn) { const el = $('hand').children[C.hand.indexOf(torn)]; if (el) { const q = center(el); fxTearCard(el); fxText(q.x, q.y - 30, 'Xé!', '#ffb08a', true); el.style.visibility = 'hidden'; } }
     // cất bài: chọn các lá khác trên tay sẽ bị bỏ (lá được bỏ khi thẻ rời tay)
     let dcards = [];
     if (needsDisc(c)) {
       const others = C.hand.filter(x => x !== ci);
       dcards = c.discAll ? others : c.discR ? shuffle(others.slice()).slice(0, c.discR) : (tj != null && C.hand[tj] && C.hand[tj] !== ci ? [C.hand[tj]] : [pick(others)]);
-      dcards.forEach(x => { const el = $('hand').children[C.hand.indexOf(x)]; if (el) { const q = center(el); fxBurst(q.x, q.y, '#d8c8a8', 12, 160, 3); fxText(q.x, q.y - 30, 'Bỏ bài', '#ff8a7a', true); } });
+      dcards.forEach(x => { const el = $('hand').children[C.hand.indexOf(x)]; if (el) { const q = center(el); fxFlipToss(el); el.style.visibility = 'hidden'; fxText(q.x, q.y - 30, 'Bỏ bài', '#ff8a7a', true); } });
     }
-    await flyCard(i, isAtk ? (c.all ? $('foes') : (tgt ? foeSprite(tgt) : $('foes'))) : $('heroCv'));
+    await flyCard(i, isAtk ? (c.all ? $('foes') : (tgt ? foeSprite(tgt) : $('foes'))) : $('heroCv'), c.gone ? 'gone' : c.exh ? 'exh' : null);
     C.energy -= c.c; C.hand = C.hand.filter(x => x !== ci && x !== torn && !dcards.includes(x)); C.sel = -1; SFX.card();
     dcards.forEach(x => (x.tmp ? C.exh : C.disc).push(x));
     if (lk) { const q = center($('heroCv')), nm = lk.t === 'tt' ? (lk.win ? 'RẤT TỐT!' : 'Tốt') : (lk.win ? 'HÊN!' : 'Xui...'); fxText(q.x, q.y - 90, nm, lk.win ? '#ffe27a' : '#c9a0ff', true); if (lk.win) fxBurst(q.x, q.y, '#ffe27a', 18, 240, 4); }
@@ -2327,6 +2376,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   async function endTurn() {
     if (busy || mode !== 'battle' || C.over) return;
     audio(); busy = true; C.sel = -1; C.tearSel = null; C.last = null; C.chain = 0;
+    { const els = [...$('hand').children]; els.forEach((el, i) => fxTossCard(el, i, els.length)); }
     C.hand.forEach(ci => { if (CARDS[ci.k].curse && !CARDS[ci.k].perm) C.exh.push(ci); else C.disc.push(ci); }); C.hand = []; lastHandKey = ''; render();
     if (C.energy > 0 && R.hp < R.max) { const v = Math.min(R.max - R.hp, C.energy * 2), hp = center($('heroCv')); R.hp += v; SFX.heal(); fxRise(hp.x, hp.y, '#7dff9a', 10); fxText(hp.x, hp.y - 50, '+' + v, '#7dff9a'); render(); await wait(450); }
     banner('LƯỢT KẺ ĐỊCH'); await wait(450);
