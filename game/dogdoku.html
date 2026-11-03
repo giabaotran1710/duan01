@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261101a" data-game="dogdoku"></script>
 <script src="../scene.js" data-game="dogdoku"></script>
+<script src="../fx.js?v=20261103b"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
 <title>Dogdoku</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
@@ -193,6 +194,18 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
 }
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
+
+<style id="fx-dogdoku">
+@keyframes dogPop{0%{transform:scale(.3) rotate(-25deg)}45%{transform:scale(1.35) rotate(8deg) translateY(-8px)}70%{transform:scale(.92) rotate(-3deg)}100%{transform:none}}
+.cell.dogPop .pup{animation:dogPop .6s cubic-bezier(.3,1.5,.5,1)}
+@keyframes dogHop{0%,100%{transform:none}35%{transform:translateY(-14px) scale(1.1)}}
+.cell.hop .pup{animation:dogHop .5s ease-out both;animation-delay:calc(var(--hd,0) * 110ms)}
+@keyframes cellWrong{20%{transform:translateX(-5px) rotate(-3deg)}60%{transform:translateX(5px) rotate(3deg)}}
+.cell.wrongHit{animation:cellWrong .35s ease-in-out}
+@keyframes boneBreak{0%{transform:rotate(135deg) scale(1)}40%{transform:rotate(150deg) scale(1.5)}100%{transform:rotate(135deg) scale(1)}}
+.lives i.breaking{animation:boneBreak .5s ease-out}
+@media (prefers-reduced-motion:reduce){.cell.dogPop .pup,.cell.hop .pup,.cell.wrongHit,.lives i.breaking{animation:none}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -251,7 +264,7 @@ footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1
   </div>
 </div>
 
-    <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+    <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script>
 const N=6;
 const REGION_COLORS=['#ff5c6c','#ffd93d','#4fd07a','#4fa8f7','#c084f5','#ff9d4d'];
@@ -864,6 +877,34 @@ function handleSingle(r,c){
     render();
 }
 
+/* ---- hiệu ứng ---- */
+function cellEl(r,c){ return board.children[r*N+c]; }
+function fxDogFound(r,c){
+    try{
+        const el = cellEl(r,c); if(!el) return; el.classList.add('dogPop');
+        const q = FX.center(el);
+        FX.burst(q.x, q.y, { n: 18, colors:['#ffd25a','#ffffff','#c98a4b','#ff9ab4'], shapes:['star','circle'], speed: 300, gravity: 380, size: 8, life: .9 });
+        FX.ring(q.x, q.y, '#ffd25a', 58, 4);
+        FX.text(q.x, q.y - 34, 'Gâu!', { color:'#ffffff', font:'900 24px system-ui,sans-serif', shadow:'0 2px 0 #8a5a1a' });
+    }catch(e){}
+}
+function fxDogWrong(r,c){
+    try{
+        const el = cellEl(r,c); if(!el) return; el.classList.add('wrongHit');
+        const q = FX.center(el);
+        FX.burst(q.x, q.y, { n: 12, colors:['#8a95a8','#ffffff','#4a5568'], shapes:['tri','square'], speed: 220, gravity: 520, size: 6, life: .6 });
+        FX.shake(board, 5, 280);
+        const lost = livesEl.querySelectorAll('i')[Math.max(0, lives)];
+        if(lost){ lost.classList.add('breaking'); const lq = FX.center(lost); FX.burst(lq.x, lq.y, { n: 10, colors:['#f3ead0','#c9b98a'], shapes:['line','square'], speed: 200, gravity: 500, size: 7, life: .7 }); }
+    }catch(e){}
+}
+function fxDogWin(){
+    try{
+        const cells = [...board.querySelectorAll('.cell.found')];
+        cells.forEach((el,k)=>{ el.style.setProperty('--hd', k); el.classList.remove('dogPop'); void el.offsetWidth; el.classList.add('hop'); });
+        FX.rain({ n: 60, colors:['#f3ead0','#c98a4b','#ffd25a','#ff9ab4'], shapes:['square','star'], size: 11 });
+    }catch(e){}
+}
 function handleDouble(r,c){
     if(gameOver) return;
     const cell = cellState[r][c];
@@ -874,7 +915,9 @@ function handleDouble(r,c){
         cell.locked = true;
         found++;
         render();
+        fxDogFound(r,c);
         if(found === N){
+            setTimeout(fxDogWin, 300);
             finishGame(true, 'Bạn đã tìm đủ 6 chú chó! Nhấn nút bên dưới để chơi ván mới.');
         }
     }else{
@@ -884,6 +927,7 @@ function handleDouble(r,c){
         soundWrong();
         updateLives();
         render();
+        fxDogWrong(r,c);
         if(lives <= 0){
             finishGame(false, 'Bạn đã hết mạng. Nhấn nút bên dưới để chơi ván mới.');
         }

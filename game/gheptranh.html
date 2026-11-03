@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <script src="../maintenance.js?v=20261101a" data-game="gheptranh"></script>
 <script src="../scene.js" data-game="gheptranh"></script>
+<script src="../fx.js?v=20261103b"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
 <title>Ghép tranh</title>
 <style>
@@ -43,6 +44,19 @@ footer{position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:.7;
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style id="fx-gheptranh">
+/* mảnh trượt có quán tính (vượt nhẹ rồi về chỗ) */
+.t{transition:left .24s cubic-bezier(.3,1.35,.5,1),top .24s cubic-bezier(.3,1.35,.5,1),box-shadow .2s,opacity .5s !important}
+@keyframes tileSquash{0%{transform:scale(1)}40%{transform:scale(1.07,.93)}100%{transform:none}}
+.t.slid{animation:tileSquash .3s .18s ease-out}
+@keyframes tileOk{0%{filter:none}40%{filter:brightness(1.35)}100%{filter:none}}
+.t.ok{animation:tileOk .5s ease-out}
+@keyframes tileShine{0%{transform:none;filter:none}40%{transform:scale(1.1);filter:brightness(1.5) saturate(1.3)}100%{transform:none;filter:none}}
+#board.done .t{animation:tileShine .6s ease-out both;animation-delay:calc(var(--sd,0) * 70ms)}
+@keyframes tileDeal{from{opacity:0}}
+@media (prefers-reduced-motion:reduce){.t.slid,.t.ok,#board.done .t{animation:none}.t{transition:none !important}}
+</style>
 </head>
 <body>
 <h1>GHÉP TRANH</h1>
@@ -72,7 +86,7 @@ footer{position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:.7;
 
 <script>
 /* ===== CONFIG ===== */
-const CFG={SHUFFLE_FACTOR:30,REVEAL_MS:700,PIC_SIZE:720,PICS:15,KEY:'ghepTranh.best.'};
+const CFG={SHUFFLE_FACTOR:30,REVEAL_MS:1500,PIC_SIZE:720,PICS:15,KEY:'ghepTranh.best.'};
 
 /* ===== STATE (single source of truth) ===== */
 const S={n:4,grid:[],er:0,ec:0,moves:0,elapsed:0,last:0,status:'ready',pic:Math.floor(Math.random()*CFG.PICS),tiles:[],urls:[]};
@@ -281,12 +295,21 @@ function moveTile(r,c){
   const n=S.n;
   if(r<0||c<0||r>=n||c>=n||(r===S.er&&c===S.ec)||(r!==S.er&&c!==S.ec))return false;
   if(S.status==='ready'){S.status='playing';S.last=performance.now()}
+  const before=S.grid.slice();
   const sr=Math.sign(r-S.er),sc=Math.sign(c-S.ec);
   while(S.er!==r||S.ec!==c){
     const nr=S.er+sr,nc=S.ec+sc,a=S.er*n+S.ec,b=nr*n+nc;
     [S.grid[a],S.grid[b]]=[S.grid[b],S.grid[a]];S.er=nr;S.ec=nc;
   }
   S.moves++;place();ui();
+  try{
+    S.grid.forEach((id,idx)=>{
+      if(before[idx]===id)return;
+      const t=S.tiles[id];t.classList.remove('slid','ok');void t.offsetWidth;t.classList.add('slid');
+      if(id===idx)t.classList.add('ok');   // về đúng chỗ thì sáng lên
+      setTimeout(()=>{const q=FX.center(t);FX.burst(q.x,q.y+t.offsetHeight*.35,{n:4,colors:['#ffffff','#d8c8a8'],speed:70,spread:2.2,angle:-1.57,gravity:60,drag:2,size:5,life:.4});if(id===idx)FX.ring(q.x,q.y,'#ffe27a',t.offsetWidth*.7,3)},210);
+    });
+  }catch(e){}
   if(isSolved())finish();
   return true;
 }
@@ -296,6 +319,11 @@ function moveDir(dx,dy){moveTile(S.er-dy,S.ec-dx)}
 function finish(){
   S.status='revealing';
   const t=S.tiles[LAST()];t.classList.remove('miss');board.classList.add('done');
+  try{
+    const n=S.n;S.tiles.forEach((tt,id)=>{tt.style.setProperty('--sd',(id%n)+Math.floor(id/n));});
+    const q=FX.center(board);
+    setTimeout(()=>{FX.ring(q.x,q.y,'#ffe27a',Math.max(board.offsetWidth,board.offsetHeight)*.7,6);FX.burst(q.x,q.y,{n:46,colors:['#ffe27a','#ffffff','#7dd3fc','#f9a8d4'],shapes:['star','circle'],speed:440,gravity:300,size:10,life:1.1});FX.rain({n:60,colors:['#ffe27a','#7dd3fc','#f9a8d4','#a7f3d0'],shapes:['square','tri'],size:10});},(n*2-2)*70+100);
+  }catch(e){}
   winTimer=setTimeout(showWin,CFG.REVEAL_MS);
 }
 function showWin(){
@@ -359,7 +387,7 @@ document.addEventListener('dblclick',e=>e.preventDefault());
 
 newGame();
 </script>
-<footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../activity.js?v=20261029nolive" defer></script>
 </body>
 </html>

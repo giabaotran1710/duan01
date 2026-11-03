@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
 <script src="../maintenance.js?v=20261101a" data-game="sudoku"></script>
 <script src="../scene.js" data-game="sudoku"></script>
+<script src="../fx.js?v=20261103b"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Sudoku</title>
   <style>
@@ -400,6 +401,19 @@
   </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+
+<style id="fx-sudoku">
+/* hoạt ảnh không tiết lộ đáp án: chỉ phản hồi theo luật (đủ hàng/cột/khối không trùng số) */
+@keyframes cellPop{0%{transform:scale(.4);opacity:.3}60%{transform:scale(1.18)}100%{transform:none;opacity:1}}
+.cell.pop{animation:cellPop .26s cubic-bezier(.3,1.6,.5,1)}
+@keyframes cellWave{0%{transform:none;filter:none}40%{transform:scale(1.22);filter:brightness(1.5) saturate(1.3)}100%{transform:none;filter:none}}
+.cell.wave{animation:cellWave .5s ease-out both;animation-delay:calc(var(--wd,0) * 55ms)}
+@keyframes cellIn{from{opacity:0;transform:scale(.6) translateY(6px)}}
+.cell-wrap.intro{animation:cellIn .35s cubic-bezier(.3,1.4,.5,1) both;animation-delay:calc(var(--id,0) * 22ms)}
+@keyframes cellBad{25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.cell.bad{animation:cellBad .3s ease-in-out}
+@media (prefers-reduced-motion:reduce){.cell.pop,.cell.wave,.cell-wrap.intro,.cell.bad{animation:none}}
+</style>
 </head>
 <body>
 <div class="app">
@@ -476,7 +490,7 @@
     </div>
   </div>
 </div>
-  <footer class="tbFooter">Version: D20261102090000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+  <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script>
 (() => {
@@ -894,7 +908,8 @@
     for (let r = 0; r < state.size; r++) {
       for (let c = 0; c < state.size; c++) {
         const wrap = document.createElement('div');
-        wrap.className = 'cell-wrap';
+        wrap.className = 'cell-wrap intro';
+        wrap.style.setProperty('--id', r + c);
         const cell = document.createElement('div');
         cell.className = 'cell';
         if (r % state.boxRows === 0) cell.classList.add('subgrid-bold-top');
@@ -937,6 +952,22 @@
     state.cells[r][c].classList.add("selected");
   }
 
+  // đủ hàng / cột / khối (không trùng số) thì sóng sáng chạy qua
+  function unitWaves(r, c) {
+    try {
+      const n = state.size, units = [];
+      const row = [], col = [], box = [];
+      for (let i = 0; i < n; i++) { row.push([r, i]); col.push([i, c]); }
+      const br = Math.floor(r / state.boxRows) * state.boxRows, bc = Math.floor(c / state.boxCols) * state.boxCols;
+      for (let i = 0; i < state.boxRows; i++) for (let j = 0; j < state.boxCols; j++) box.push([br + i, bc + j]);
+      [row, col, box].forEach(u => {
+        const vals = u.map(([a, b]) => getCellValue(a, b));
+        if (vals.some(v => !v) || new Set(vals).size !== vals.length) return;
+        u.forEach(([a, b], k) => { const el = state.cells[a][b]; el.style.setProperty("--wd", k); el.classList.remove("wave"); void el.offsetWidth; el.classList.add("wave"); });
+        const q = FX.center(state.cells[u[(u.length / 2) | 0][0]][u[(u.length / 2) | 0][1]]); FX.ring(q.x, q.y, "#7dd3fc", 60, 3);
+      });
+    } catch (e) {}
+  }
   function setCellValue(r, c, val, record = true) {
     if (state.fixed[r][c]) return false;
     const cell = state.cells[r][c];
@@ -951,6 +982,9 @@
       cell.textContent = "";
     } else {
       cell.textContent = String(val);
+      cell.classList.remove("pop"); void cell.offsetWidth; cell.classList.add("pop");
+      try { const q = FX.center(cell); FX.burst(q.x, q.y, { n: 4, colors: ["#ffffff", "#9ad0ff"], speed: 90, gravity: 0, drag: 3, size: 5, life: .35 }); } catch (e) {}
+      unitWaves(r, c);
     }
     renderHighlights();
     checkCompletion();
@@ -1010,11 +1044,13 @@
     const wrong = badCells.size;
     if (wrong === 0) {
       showToast("✓ Không phát hiện lỗi.");
+      try { for (let r = 0; r < state.size; r++) for (let c = 0; c < state.size; c++) { const el = state.cells[r][c]; if (!state.fixed[r][c] && getCellValue(r, c)) { el.style.setProperty("--wd", r + c); el.classList.remove("wave"); void el.offsetWidth; el.classList.add("wave"); } } } catch (e) {}
       clearTimeout(panelTimer);
       clearInterval(blinkTimer);
       panelTimer = setTimeout(() => { restoreModePanel(); }, 1500);
     } else {
       showToast("Có " + wrong + " ô sai.");
+      try { FX.shake(el.board, 5, 300); } catch (e) {}
       setTimeout(() => { showWrongPanel(wrong); }, 1500);
     }
   }
@@ -1093,6 +1129,13 @@
     }
     state.won = true;
     stopTimer();
+    try {
+      for (let r = 0; r < state.size; r++) for (let c = 0; c < state.size; c++) { const e = state.cells[r][c]; e.style.setProperty("--wd", r + c); e.classList.remove("wave"); void e.offsetWidth; e.classList.add("wave"); }
+      const q = FX.center(el.board);
+      FX.ring(q.x, q.y, "#7dd3fc", 200, 6);
+      FX.burst(q.x, q.y, { n: 50, colors: ["#7dd3fc", "#ffffff", "#fcd34d", "#f472b6"], shapes: ["star", "circle"], speed: 460, gravity: 320, size: 10, life: 1.2 });
+      setTimeout(() => FX.rain({ n: 80, colors: ["#7dd3fc", "#fcd34d", "#f472b6", "#a7f3d0"], shapes: ["square", "tri"], size: 10 }), 500);
+    } catch (e) {}
     if (el.statusText) el.statusText.textContent = 'Đã giải xong!';
     if (el.winText) el.winText.textContent = `Thời gian: ${fmtTime(state.elapsedSec)}`;
     openWinModal();

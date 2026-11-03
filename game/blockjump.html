@@ -184,6 +184,15 @@ footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; 
 }
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
+
+<style id="fx-blockjump">
+@keyframes scoreBump{0%{transform:scale(1)}40%{transform:scale(1.5)}100%{transform:scale(1)}}
+#score.bump{animation:scoreBump .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes redFlash{0%{opacity:.55}100%{opacity:0}}
+#deathFlash{position:fixed;inset:0;pointer-events:none;z-index:50;background:radial-gradient(ellipse at center,transparent 40%,rgba(255,60,60,.8));opacity:0}
+#deathFlash.on{animation:redFlash .7s ease-out}
+@media (prefers-reduced-motion:reduce){#score.bump,#deathFlash.on{animation:none}}
+</style>
 </head>
 
 <body>
@@ -203,15 +212,17 @@ footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; 
   <div id="toast">Perfect!</div>
 </div>
 
+<div id="deathFlash"></div>
 <div id="gameOver">
   <h1>RƠI RỒI!</h1>
   <div id="finalScore">Điểm: 0</div>
   <button id="restartBtn">CHƠI LẠI</button>
 </div>
-    <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+    <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
+<script src="../fx.js?v=20261103b"></script>
 
 <script src="../scores.js?v=20261030kb"></script>
 <script>
@@ -241,6 +252,7 @@ const maxJump = 7.3;
 
 let jumpData = null;
 let fallData = null;
+let perfectStreak = 0, chargeFxT = 0, trailFxT = 0, camKick = 0;
 let targetAnimalRotY = 0;
 let viewMode = false;
 let cameraDragging = false;
@@ -622,8 +634,10 @@ function releaseJump(e){
   }
 
   if(state !== "charging") return;
+  updateGame.maxed = false;
 
   const power = THREE.MathUtils.clamp(charge / chargeMax, 0, 1);
+  fxAtAnimal({ n: 8 + Math.round(power * 10), colors:["#ffffff","#7dffb2","#60d8ff"], speed:180 + power * 160, spread:2.6, angle:-1.57, gravity:300, size:6, life:.5 }, 0);
 
   const start = new THREE.Vector3(
     animal.position.x,
@@ -716,11 +730,25 @@ function updateGame(dt){
     animal.scale.x = 1 + power * .08;
     animal.scale.z = 1 + power * .08;
 
+    // bụi bốc quanh chân khi dồn lực, nhiều dần theo lực
+    chargeFxT -= dt;
+    if(chargeFxT <= 0){
+      chargeFxT = .14 - power * .08;
+      fxAtAnimal({ n: 2 + Math.round(power * 3), colors:["#bfe9ff","#ffffff"], speed:60 + power * 90, gravity:-20, drag:2.5, size:5, life:.45 }, 0);
+    }
+    if(power >= 1 && !updateGame.maxed){
+      updateGame.maxed = true;
+      const q = scr(new THREE.Vector3(animal.position.x, animal.position.y + .6, animal.position.z));
+      FX.ring(q.x, q.y, "#ffe27a", 70, 4); FX.text(q.x, q.y - 50, "MAX", { color:"#ffe27a", font:"900 22px system-ui,sans-serif" });
+    }
+
     
   }
 
  if(state === "jumping" && jumpData){
   const prevJumpPos = animal.position.clone();
+  trailFxT -= dt;
+  if(trailFxT <= 0){ trailFxT = .045; fxAtAnimal({ n:2, colors:["#60d8ff","#7dffb2","#ffffff"], speed:30, gravity:0, drag:3, size:7, life:.4 }, .35); }
 
   setBlockCompression(
     currentBlock,
@@ -883,6 +911,16 @@ function landSuccess(){
   burstParticles(
     new THREE.Vector3(targetBlock.x, getBlockTopY(targetBlock) + .08, targetBlock.z)
   );
+  try{
+    const perfect = centerError < .20;
+    perfectStreak = perfect ? perfectStreak + 1 : 0;
+    const q = scr(new THREE.Vector3(targetBlock.x, getBlockTopY(targetBlock) + .1, targetBlock.z));
+    FX.ring(q.x, q.y, perfect ? "#ffe27a" : "#bfe9ff", perfect ? 90 : 60, perfect ? 5 : 3);
+    FX.burst(q.x, q.y, { n: perfect ? 22 : 10, colors: perfect ? ["#ffe27a","#fff","#7dffb2"] : ["#bfe9ff","#fff"], shapes:["star","circle"], speed: perfect ? 300 : 200, gravity:260, size:8, life:.8 });
+    FX.text(q.x, q.y - 40, perfect ? (perfectStreak > 1 ? "x" + perfectStreak + " HOÀN HẢO" : "+2") : "+1", { color: perfect ? "#ffe27a" : "#fff", font:"900 " + (22 + Math.min(perfectStreak, 6) * 3) + "px system-ui,sans-serif" });
+    camKick = perfect ? .45 : .22;
+    bumpScore();
+  }catch(e){}
 
   currentBlock = targetBlock;
 
@@ -927,6 +965,12 @@ function orientAnimalToTarget(){
 
 function showGameOver(){
   state = "dead";
+  perfectStreak = 0;
+  try{
+    const f = document.getElementById("deathFlash"); f.classList.remove("on"); void f.offsetWidth; f.classList.add("on");
+    FX.shake(document.body, 8, 420);
+    fxAtAnimal({ n:26, colors:["#ff6a6a","#ffffff","#ffb04a"], shapes:["square","tri"], speed:340, gravity:520, size:8, life:.9 }, .3);
+  }catch(e){}
   if (window.Scores) Scores.submit("blockjump", Math.floor(score));
   finalScoreEl.textContent = "Điểm: " + score;
   gameOverEl.classList.add("show");
@@ -949,9 +993,24 @@ function updateCamera(dt){
   );
 
   camera.position.lerp(desired, 1 - Math.pow(.001, dt));
+  if(camKick > .001){ camera.position.y -= camKick * Math.sin(camKick * 14); camKick *= Math.pow(.02, dt); }
   camera.lookAt(lookAt);
 }
 
+/* ----- hiệu ứng màn hình ----- */
+function scr(v){
+  const p = v.clone().project(camera);
+  return { x:(p.x * .5 + .5) * innerWidth, y:(-p.y * .5 + .5) * innerHeight };
+}
+function fxAtAnimal(opts, dy){
+  try{
+    const q = scr(new THREE.Vector3(animal.position.x, animal.position.y + (dy == null ? .1 : dy), animal.position.z));
+    FX.burst(q.x, q.y, opts);
+  }catch(e){}
+}
+function bumpScore(){
+  scoreEl.classList.remove("bump"); void scoreEl.offsetWidth; scoreEl.classList.add("bump");
+}
 function burstParticles(pos){
   for(let i = 0; i < 18; i++){
     const geo = new THREE.SphereGeometry(THREE.MathUtils.randFloat(.035, .075), 10, 8);

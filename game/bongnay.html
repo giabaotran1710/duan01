@@ -8,6 +8,7 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261101a" data-game="bongnay"></script>
 <script src="../scene.js" data-game="bongnay"></script>
+<script src="../fx.js?v=20261103b"></script>
 <meta name="viewport"
 content="width=device-width,
 initial-scale=1,
@@ -393,6 +394,16 @@ canvas{
 }
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
+
+<style id="fx-bongnay">
+@keyframes hudBump{40%{transform:scale(1.4)}}
+.hudBump{display:inline-block;animation:hudBump .35s cubic-bezier(.3,1.6,.5,1)}
+@keyframes lose{0%{transform:scale(1)}30%{transform:scale(1.5) rotate(-8deg);color:#ff4d68}100%{transform:scale(1)}}
+.hudLose{display:inline-block;animation:lose .5s ease-out}
+#feedback.show{animation:fbPop .45s cubic-bezier(.3,1.7,.5,1)}
+@keyframes fbPop{from{transform:translate(-50%,-50%) scale(.2) rotate(-15deg)}}
+@media (prefers-reduced-motion:reduce){.hudBump,.hudLose,#feedback.show{animation:none}}
+</style>
 </head>
 
 <body>
@@ -474,7 +485,7 @@ canvas{
   </div>
 </div>
 </div>
-    <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+    <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 
 <script src="../scores.js?v=20261030kb"></script>
@@ -907,6 +918,31 @@ function updateUI(){
 
 
 
+/* ---- hiệu ứng ---- */
+function ballScreen(n){
+  const b = balls.find(x => x.id === n); if(!b) return null;
+  const r = canvas.getBoundingClientRect();
+  return { x: r.left + b.x * (r.width / W), y: r.top + b.y * (r.height / H), r: b.radius };
+}
+const BALL_COLS = ["#ff7aa2","#6fc8ff","#ffd25a","#7be07b","#c79bff","#ff9a5a"];
+function bumpEl(id, cls){ const el = document.getElementById(id); if(!el) return; el.classList.remove(cls); void el.offsetWidth; el.classList.add(cls); }
+function fxCorrect(num, earned){
+  try{
+    const q = ballScreen(num); if(!q) return;
+    FX.ring(q.x, q.y, "#19c96b", q.r * 2.4, 5);
+    FX.burst(q.x, q.y, { n: 26, colors: BALL_COLS.concat(["#ffffff"]), shapes:["circle","star"], speed: 320, gravity: 420, size: 9, life: 1 });
+    FX.text(q.x, q.y - q.r - 10, "+" + earned, { color:"#ffffff", font:"900 30px system-ui,sans-serif", shadow:"0 3px 0 #0a8a47" });
+    bumpEl("scoreText","hudBump");
+  }catch(e){}
+}
+function fxWrong(chosen, correct){
+  try{
+    const a = ballScreen(chosen), c = ballScreen(correct);
+    if(a){ FX.burst(a.x, a.y, { n: 14, colors:["#ff4d68","#ffffff","#7a1530"], shapes:["tri","square"], speed: 260, gravity: 520, size: 7, life:.7 }); FX.text(a.x, a.y - a.r - 8, "✕", { color:"#ff4d68", font:"900 34px system-ui,sans-serif" }); }
+    if(c){ FX.ring(c.x, c.y, "#19c96b", c.r * 2.2, 4); setTimeout(() => FX.ring(c.x, c.y, "#19c96b", c.r * 2.8, 3), 220); }
+    FX.shake(canvas, 7, 360); bumpEl("wrongText","hudLose");
+  }catch(e){}
+}
 function chooseAnswer(num){
   if(!running || locked) return;
 
@@ -935,6 +971,7 @@ function chooseAnswer(num){
     playCorrectSound();
 
     const earnedScore = getRoundScore();
+    fxCorrect(num, earnedScore);
 
 score += earnedScore;
 level++;
@@ -956,6 +993,7 @@ level++;
 
   }else{
     playWrongSound();
+    fxWrong(num, correctNumber);
 
     wrong++;
 questionBox.innerHTML =
@@ -1030,6 +1068,7 @@ function startGame(){
 
 function endGame(){
   running = false;
+  try{ FX.shake(canvas, 10, 500); FX.burst(innerWidth/2, innerHeight*.4, { n: 30, colors:["#ff4d68","#ffffff","#ffd25a"], shapes:["tri","square"], speed: 360, gravity: 600, size: 8, life: 1 }); }catch(e){}
   if (window.Scores) Scores.submit('bongnay', Math.floor(score));
 
   finalScore.textContent = score;
