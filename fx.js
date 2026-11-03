@@ -102,8 +102,10 @@
     shake: function (el, amp, dur) {
       if (mq.matches) return; el = el || document.body; amp = amp || 6; dur = dur || 320;
       if (!el.animate) return;
-      var f = [], n = 8; for (var i = 0; i <= n; i++) { var k = 1 - i / n; f.push({ transform: 'translate(' + (i % 2 ? -1 : 1) * amp * k + 'px,' + (i % 3 ? 1 : -1) * amp * .5 * k + 'px)' }); }
-      f.push({ transform: 'none' }); el.animate(f, { duration: dur, easing: 'ease-out' });
+      // dùng thuộc tính `translate` riêng (không phải `transform`): phần tử đã có transform (căn giữa, xoay...) không bị ghi đè nên không nhích vị trí khi rung
+      var f = [], n = 8; for (var i = 0; i <= n; i++) { var k = 1 - i / n; f.push({ translate: (i % 2 ? -1 : 1) * amp * k + 'px ' + (i % 3 ? 1 : -1) * amp * .5 * k + 'px' }); }
+      f.push({ translate: '0px 0px' });
+      try { el.animate(f, { duration: dur, easing: 'ease-out' }); } catch (e) {}
     },
     /* chữ nổi bay lên rồi mờ dần */
     text: function (x, y, str, o) {

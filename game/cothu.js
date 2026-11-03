@@ -423,6 +423,7 @@ piece.y = move.y;
     aiThinking = false;
     positionHistory = [];
     CothuAI.newGame();
+    aiEpoch++; if (aiWorker) aiWorker.postMessage({ type: 'new' });   // huỷ nước AI đang tính dở và xoá bảng chuyển vị trong Worker
     state = {
       pieces: buildPiecesForMode(),
       turn: 'blue',
@@ -699,6 +700,31 @@ lastRedMove = null;
     positionHistory.push(CothuAI.positionKey(toAIPosition(state)));
   }
 
+  // AI chạy trong Web Worker để luồng chính vẫn vẽ hoạt ảnh mượt (trước đây AI nghĩ 1 giây ngay trên luồng chính làm đứng hình)
+  let aiWorker = null, aiReqId = 0, aiEpoch = 0;
+  try {
+    const url = new URL('cothu-ai.js', document.baseURI).href;
+    const src = 'importScripts(' + JSON.stringify(url) + ');onmessage=function(e){var d=e.data;if(d.type==="new"){CothuAI.newGame();return;}var r=null;try{r=CothuAI.chooseMove(d.pos,{timeMs:d.timeMs});}catch(x){}postMessage({id:d.id,res:r});};';
+    aiWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+    aiWorker.onerror = () => { aiWorker = null; };
+  } catch (e) { aiWorker = null; }
+  function moveFromResult(st, res) {
+    if (!res) return null;
+    if (res.kind === 'reveal') return { kind: 'reveal', pieceId: res.pieceId };
+    const piece = st.pieces.find(p => p.id === res.pieceId);
+    const move = piece && legalMoves(piece).find(m => m.x === res.x && m.y === res.y);
+    return move ? { ...move, pieceId: piece.id } : null;
+  }
+  function chooseAIMoveAsync(st) {
+    return new Promise(resolve => {
+      if (!aiWorker) { resolve(chooseAIMove(st)); return; }
+      const pos = toAIPosition(st); pos.history = positionHistory.slice();
+      const id = ++aiReqId, w = aiWorker;
+      const onMsg = e => { if (e.data && e.data.id === id) { w.removeEventListener('message', onMsg); resolve(moveFromResult(st, e.data.res)); } };
+      w.addEventListener('message', onMsg);
+      w.postMessage({ id, pos, timeMs: AI_THINK_MS });
+    });
+  }
   function chooseAIMove(st) {
     const pos = toAIPosition(st);
     pos.history = positionHistory;
@@ -780,8 +806,9 @@ lastRedMove = null;
     aiThinking = true;
     recordPosition();
     setStatus('AI đang suy nghĩ...');
-    aiTimer = setTimeout(() => {
-      const move = chooseAIMove(state);
+    const epoch = aiEpoch, started = performance.now();
+    aiTimer = setTimeout(() => { chooseAIMoveAsync(state).then(move => setTimeout(() => {
+      if (epoch !== aiEpoch || !state || state.winner || state.turn !== AI_SIDE) return;
       if (!move) {
         aiThinking = false;
         state.winner = HUMAN_SIDE;
@@ -791,7 +818,7 @@ lastRedMove = null;
         render(); return;
       }
       executeAIMove(move);
-    }, 260);
+    }, Math.max(0, 450 - (performance.now() - started)))); }, 260);
   }
 
   function setStatus(text) { statusEl.textContent = text; }
