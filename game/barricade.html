@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
 <script src="../maintenance.js?v=20261101a" data-game="barricade"></script>
 <script src="../scene.js" data-game="barricade"></script>
+<script src="../fx.js?v=20261103b"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -363,7 +364,7 @@
     <div class="footer">
       <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
       <div class="help"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Chạm vào khe tường (giữa hai ô) để xem trước, rồi bấm "Xác nhận đặt tường". Tường không được chặn toàn bộ đường đi của bên nào.</div>
-      <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+      <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
     </div>
   </div>
 
@@ -501,6 +502,32 @@
           w: cellSize,
           h: cellSize
         };
+      }
+
+      // ===== hiệu ứng (toạ độ màn hình) =====
+      const TEAM = ['#5aa9ff', '#ff6a6a'];
+      function toScreen(px, py) { const r = canvas.getBoundingClientRect(); return { x: r.left + px * (r.width / (canvas.clientWidth || r.width)), y: r.top + py * (r.height / (canvas.clientHeight || r.height)) }; }
+      function fxWall(orientation, x, y, player) {
+        try {
+          const r = orientation === 'H' ? hWallRect(x, y) : vWallRect(x, y), q = toScreen(r.x + r.w / 2, r.y + r.h / 2), col = TEAM[player];
+          // tia lửa bắn dọc theo thanh tường khi nó đóng xuống
+          FX.burst(q.x, q.y, { n: 16, colors: [col, '#ffffff', '#ffd25a'], shapes: ['square', 'line'], speed: 260, spread: 3.14, angle: orientation === 'H' ? -1.57 : 0, gravity: 360, size: 6, life: .6 });
+          FX.ring(q.x, q.y, col, 70, 4); FX.shake(canvas, 4, 260);
+        } catch (e) {}
+      }
+      function fxStep(px, py, player) {
+        try { const q = toScreen(px, py); FX.burst(q.x, q.y, { n: 2, colors: [TEAM[player], '#ffffff'], speed: 40, gravity: 0, drag: 3, size: 6, life: .35 }); } catch (e) {}
+      }
+      function fxLand(nx, ny, player) {
+        try { const r = cellRect(nx, ny), q = toScreen(r.x + r.w / 2, r.y + r.h / 2); FX.ring(q.x, q.y, TEAM[player], r.w * 1.1, 3); FX.burst(q.x, q.y, { n: 8, colors: [TEAM[player], '#ffffff'], speed: 160, gravity: 240, size: 5, life: .5 }); } catch (e) {}
+      }
+      function fxWin(player) {
+        try {
+          const r = canvas.getBoundingClientRect(), col = TEAM[player];
+          FX.rain({ n: 80, colors: [col, '#ffffff', '#ffd25a'], shapes: ['square', 'tri'], size: 10 });
+          for (let i = 0; i < 5; i++) setTimeout(() => FX.burst(r.left + r.width * (.15 + .175 * i), r.top + r.height * (player === 0 ? .1 : .9), { n: 22, colors: [col, '#ffffff', '#ffd25a'], shapes: ['star'], speed: 320, gravity: 300, size: 9, life: 1 }), i * 140);
+          FX.shake(canvas, 8, 420);
+        } catch (e) {}
       }
 
       function hWallRect(x, y) {
@@ -756,9 +783,14 @@
         const data = state.animData;
         const steps = 12;
         data.progress += 1 / steps;
+        if (data.progress < 1) {
+          const a = cellRect(data.fromX, data.fromY), b = cellRect(data.toX, data.toY), k = data.progress;
+          fxStep(a.x + (b.x - a.x) * k + a.w / 2, a.y + (b.y - a.y) * k + a.h / 2, data.player);
+        }
 
         if (data.progress >= 1) {
           data.progress = 1;
+          fxLand(data.toX, data.toY, data.player);
           if (data.callback) data.callback();
           return;
         }
@@ -1175,6 +1207,7 @@
         if (action.type === 'wall') {
           const ok = placeWall(action.o, action.x, action.y);
           if (ok) {
+            fxWall(action.o, action.x, action.y, 1);
             setMessage('AI.GiaBao đặt tường chiến thuật.');
             updateUI();
             render();
@@ -1248,6 +1281,7 @@
           progress: 0
         };
         setMessage(winner === 0 ? 'Xanh thắng!' : 'Đỏ thắng!');
+        fxWin(winner);
         animateEndEffect();
       }
 
@@ -1367,6 +1401,7 @@
         clearPendingWall();
         const ok = placeWall(pw.orientation, pw.x, pw.y);
         if (ok) {
+          fxWall(pw.orientation, pw.x, pw.y, state.current);
           setMessage('Đặt tường thành công.');
           updateUI();
           render();

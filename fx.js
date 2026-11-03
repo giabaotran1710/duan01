@@ -15,7 +15,8 @@
     if (cv) return true;
     cv = document.createElement('canvas');
     cv.setAttribute('aria-hidden', 'true');
-    cv.style.cssText = 'position:fixed;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:99997';
+    // !important: một số game có CSS chung cho mọi thẻ canvas (nền, viền, kích thước), không được ảnh hưởng lớp hiệu ứng
+    cv.style.cssText = 'position:fixed!important;left:0!important;top:0!important;right:auto!important;bottom:auto!important;width:100%!important;height:100%!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;border:0!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;filter:none!important;opacity:1!important;transform:none!important;aspect-ratio:auto!important;pointer-events:none!important;z-index:99997!important';
     document.body.appendChild(cv);
     cx = cv.getContext('2d');
     size();

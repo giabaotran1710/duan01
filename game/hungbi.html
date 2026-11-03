@@ -492,6 +492,18 @@ footer{bottom:calc(4px + env(safe-area-inset-bottom));opacity:.45}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
+<script src="../fx.js?v=20261103b"></script>
+<style id="fx-hungbi">
+@keyframes gateHit{0%{transform:scale(1)}35%{transform:scale(1.18,.85)}70%{transform:scale(.95,1.1)}100%{transform:scale(1)}}
+.gate.hit{animation:gateHit .3s ease-out}
+@keyframes gateMiss{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.gate.miss{animation:gateMiss .25s ease-in-out}
+@keyframes ballIn{from{transform:scale(.2);opacity:0}}
+.ball{animation:ballIn .25s ease-out}
+@keyframes scoreBump{40%{transform:scale(1.4)}}
+#score.bump{display:inline-block;animation:scoreBump .3s cubic-bezier(.3,1.6,.5,1)}
+@media (prefers-reduced-motion:reduce){.gate.hit,.gate.miss,.ball,#score.bump{animation:none}}
+</style>
 </head>
 
 <body>
@@ -534,7 +546,7 @@ footer{bottom:calc(4px + env(safe-area-inset-bottom));opacity:.45}
     </div>
   </div>
 </div>
-  <footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+  <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
   
 
 <script src="../scores.js?v=20261030kb"></script>
@@ -958,9 +970,37 @@ function transformAllBalls(){
   showToast("Bi Trắng đặc biệt: toàn bộ bi đã đổi màu!");
 }
 
+const BALLCOL={red:'#ff2b3d',green:'#1fe15e',purple:'#a43cff',yellow:'#ffcf26',blue:'#2f7bff',white:'#ffffff',brown:'#8b5a2b'};
+let combo = 0;
+function popGate(g, cls){ if(!g) return; g.classList.remove('hit','miss'); void g.offsetWidth; g.classList.add(cls); }
+function fxCatch(ball, ok, gate){
+  try{
+    const r = ball.getBoundingClientRect(), x = r.left + r.width/2, y = r.top + r.height/2, col = BALLCOL[ball.dataset.color] || '#fff';
+    if(ok){
+      combo++;
+      FX.burst(x, y, { n: 12 + Math.min(combo, 12), colors:[col,'#ffffff'], shapes:['circle','star'], speed: 220, spread: 3.14, angle: -1.57, gravity: 420, size: 7, life:.7 });
+      FX.ring(x, y, col, 46, 3); popGate(gate,'hit');
+      if(combo > 0 && combo % 10 === 0){
+        FX.text(innerWidth/2, innerHeight*.35, 'x' + combo + ' COMBO', { color:'#ffd25a', font:'900 34px system-ui,sans-serif', shadow:'0 3px 0 #7a4a00', dur:1100 });
+        FX.burst(innerWidth/2, innerHeight*.35, { n: 30, colors:['#ffd25a','#ffffff','#ff6aa2','#6fc8ff'], shapes:['star'], speed:340, gravity:300, size:9, life:1 });
+      }
+      const sc = document.getElementById('score'); if(sc){ sc.classList.remove('bump'); void sc.offsetWidth; sc.classList.add('bump'); }
+    }else{
+      combo = 0;
+      FX.burst(x, y, { n: 12, colors:['#ff4d68','#ffffff','#7a1530'], shapes:['tri','square'], speed: 240, gravity: 560, size: 6, life:.6 });
+      popGate(gate,'miss'); FX.shake(game, 5, 240);
+      const wb = document.getElementById('wrongBar'); if(wb){ FX.pulse(wb, 'rgba(255,77,104,.9)', 500); }
+    }
+  }catch(e){}
+}
 function checkBall(ball){
 
   if(ball.dataset.specialWhite === "true"){
+    try{
+      const r = ball.getBoundingClientRect();
+      ['#ff2b3d','#ffcf26','#1fe15e','#2f7bff','#a43cff'].forEach((c,i)=>setTimeout(()=>FX.ring(r.left+r.width/2, r.top+r.height/2, c, 120 + i*60, 5), i*90));
+      FX.burst(r.left+r.width/2, r.top+r.height/2, { n: 40, colors:['#ff2b3d','#ffcf26','#1fe15e','#2f7bff','#a43cff','#ffffff'], shapes:['star','circle'], speed: 420, gravity: 100, size: 9, life: 1.1 });
+    }catch(e){}
     transformAllBalls();
     return;
   }
@@ -969,6 +1009,7 @@ function checkBall(ball){
   const validGate = ball.dataset.validGate;
   const gateColor = gates[laneIndex].dataset.color;
 
+  fxCatch(ball, validGate === gateColor, gates[laneIndex]);
   if(validGate === gateColor){
     score++;
     checkSpecialUnlock();
@@ -995,6 +1036,7 @@ function checkBall(ball){
 
 function endGame(){
   running = false;
+  try{ FX.shake(game, 10, 500); FX.burst(innerWidth/2, innerHeight*.45, { n: 34, colors:['#ff4d68','#ffffff','#ffcf26'], shapes:['tri','square'], speed: 380, gravity: 600, size: 8, life: 1 }); }catch(e){}
   if (window.Scores) Scores.submit('hungbi', Math.floor(score));
   gameOverBox.style.display = "flex";
   finalScore.textContent = `Điểm của bạn: ${score}`;
