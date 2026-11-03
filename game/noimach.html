@@ -78,6 +78,7 @@
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
 </head>
+<script src="../fx.js?v=20261103"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&display=swap" rel="stylesheet">
 <style id="theme-pcb">
@@ -157,6 +158,16 @@ button.ctl:focus-visible,.tier:focus-visible,.modal button:focus-visible{outline
 .toast{font-family:'Chakra Petch',sans-serif; background:var(--chip); border:1px solid var(--gold); border-radius:4px; font-size:13px}
 @media (max-width:400px){.brand .title{font-size:18px;letter-spacing:1px;padding:3px 7px;white-space:nowrap}.brand .title::after{content:''}.stat{min-width:52px}}
 footer{color:#a9c4b4}
+
+/* ===== hoạt ảnh: dòng điện ===== */
+@keyframes powerOn{0%{opacity:0;transform:scale(.8)}20%{opacity:1}100%{opacity:0;transform:scale(1.6)}}
+.stat .val.tick{animation:chipTick .25s ease-out}
+@keyframes chipTick{from{transform:translateY(-6px);opacity:.3}}
+.board-frame.live{animation:boardLive 1s ease-out}
+@keyframes boardLive{0%{box-shadow:0 0 0 3px var(--gold),0 0 0 7px var(--mask-2),0 0 0 rgba(227,181,90,0)}40%{box-shadow:0 0 0 3px #fff2c4,0 0 0 7px var(--mask-2),0 0 50px rgba(255,230,150,.9)}100%{box-shadow:0 0 0 3px var(--gold),0 0 0 7px var(--mask-2),0 18px 34px rgba(0,0,0,.55)}}
+.modal-layer.show .modal{animation:modalPop .5s cubic-bezier(.3,1.5,.5,1)}
+@keyframes modalPop{from{transform:scale(.7) rotate(-3deg);opacity:0}}
+@media (prefers-reduced-motion:reduce){.stat .val.tick,.board-frame.live,.modal-layer.show .modal{animation:none}}
 </style>
 <body>
 <canvas id="bgfield"></canvas>
@@ -204,7 +215,7 @@ footer{color:#a9c4b4}
 </div>
 
 <div class="toast" id="toast">Không thể đi qua mạch khác</div>
-<footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script type="text/plain" id="puzzleWorkerSource">
 "use strict";
@@ -573,6 +584,9 @@ function renderAll(){
 }
 function hexToRgba(hex,a){const v=hex.replace('#','');return `rgba(${parseInt(v.substring(0,2),16)},${parseInt(v.substring(2,4),16)},${parseInt(v.substring(4,6),16)},${a})`;}
 
+function cellScreen(r,c){const [x,y]=cellCenter(r,c);const pt=svg.createSVGPoint();pt.x=x;pt.y=y;const q=pt.matrixTransform(svg.getScreenCTM());return {x:q.x,y:q.y};}
+function fxStep(r,c,color){try{const q=cellScreen(r,c);FX.burst(q.x,q.y,{n:3,colors:[color,'#fff'],shapes:['line'],speed:90,gravity:0,drag:3,size:7,life:.3});}catch(e){}}
+function fxLed(r,c,color,big){try{const q=cellScreen(r,c);FX.ring(q.x,q.y,color,big?70:46,big?5:3);FX.burst(q.x,q.y,{n:big?16:10,colors:[color,'#fff','#e3b55a'],shapes:['star','circle'],speed:big?300:200,gravity:100,size:big?8:6,life:big?.9:.6});}catch(e){}}
 function spawnSpark(r,c,color){
   const [cx,cy]=cellCenter(r,c);
   for(let i=0;i<8;i++){
@@ -649,10 +663,12 @@ function extendDraw(r,c){
     path.push([r,c]);owner[r][c]=k;colorSolved[k]=true;moves++;
     actionStack.push({color:k,cell:[r,c]});
     spawnSpark(r,c,PALETTE[k].c);spawnSpark(path[0][0],path[0][1],PALETTE[k].c);
+    fxLed(r,c,PALETTE[k].c,false);fxLed(path[0][0],path[0][1],PALETTE[k].c,false);
     SFX.connect();renderAll();drawing=false;activeColor=-1;checkWin();return;
   }
 
   path.push([r,c]);owner[r][c]=k;moves++;actionStack.push({color:k,cell:[r,c]});
+  fxStep(r,c,PALETTE[k].c);
   SFX.step();renderAll();
 }
 
@@ -667,7 +683,15 @@ svg.addEventListener('pointerup',endDraw);svg.addEventListener('pointercancel',e
 function checkWin(){
   const allSolved=colorSolved.every(Boolean);let filled=0;for(let r=0;r<N;r++)for(let c=0;c<N;c++)if(owner[r][c]>=0)filled++;
   const fullBoard=filled===N*N;
-  if(allSolved&&fullBoard){gameWon=true;updateCostLabels();clearInterval(timerInterval);SFX.win();flashEl.classList.remove('go');void flashEl.offsetWidth;flashEl.classList.add('go');setTimeout(showWinModal,550);}
+  if(allSolved&&fullBoard){gameWon=true;updateCostLabels();clearInterval(timerInterval);SFX.win();fxWinCircuit();flashEl.classList.remove('go');void flashEl.offsetWidth;flashEl.classList.add('go');setTimeout(showWinModal,550);}
+}
+function fxWinCircuit(){
+  try{
+    const fr=document.querySelector('.board-frame');fr.classList.remove('live');void fr.offsetWidth;fr.classList.add('live');
+    for(let k=0;k<K;k++)endpoints[k].forEach(([r,c],j)=>setTimeout(()=>fxLed(r,c,PALETTE[k].c,true),k*110+j*40));
+    const q=cellScreen(Math.floor(N/2),Math.floor(N/2));
+    setTimeout(()=>{FX.text(q.x,q.y,'MẠCH THÔNG!',{color:'#fff2c4',font:"700 30px 'Chakra Petch',sans-serif",shadow:'0 0 14px #e3b55a,0 2px 0 #7a4a0a',dur:1300,rise:40});FX.rain({n:50,colors:['#e3b55a','#fff2c4','#c88a3e'],shapes:['circle','square'],size:9});},K*110);
+  }catch(e){}
 }
 function showWinModal(){
   const tier=TIERS[tierIndex];document.getElementById('modalTier').textContent=`${tier.name} · LƯỚI ${tier.N}×${tier.N}`;

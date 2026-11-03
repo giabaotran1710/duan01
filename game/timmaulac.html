@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261101a" data-game="timmaulac"></script>
 <script src="../scene.js" data-game="timmaulac"></script>
+<script src="../fx.js?v=20261103"></script>
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
     <title>Tìm màu lạc</title>
     <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -159,6 +160,20 @@
         .btn:focus-visible { outline: 3px solid var(--yellow); outline-offset: 3px; }
         @media (prefers-reduced-motion: reduce) { .tile, .btn, .toast { transition: none; } .tile.correct-pulse, .tile.wrong-shake, .drop.lost { animation: none; } }
         footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #c9a982; opacity: 0.7; font-family: Tahoma; }
+        /* ===== hoạt ảnh: sơn ===== */
+        @keyframes paintIn { 0% { transform: scale(0) rotate(-20deg); opacity: 0; } 60% { transform: scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: none; } }
+        .tile { animation: paintIn .42s cubic-bezier(.3,1.5,.5,1) both; }
+        .tile.correct-pulse { animation: smear .5s cubic-bezier(.3,1.4,.5,1); }
+        @keyframes smear { 0% { transform: scale(1); } 35% { transform: scale(1.35, .8); } 65% { transform: scale(.88, 1.15); } 100% { transform: scale(1); } }
+        .tile.wrong-shake { animation: badshake 0.4s ease; }
+        .splash { position: fixed; pointer-events: none; z-index: 5; border-radius: 50%; mix-blend-mode: multiply; transform: translate(-50%,-50%) scale(0); animation: splash .55s ease-out forwards; }
+        @keyframes splash { 0% { transform: translate(-50%,-50%) scale(0); opacity: .9; } 60% { opacity: .75; } 100% { transform: translate(-50%,-50%) scale(1); opacity: 0; } }
+        .card.rollout::after { content: ''; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,.55), transparent); animation: wipe .5s ease-out forwards; pointer-events: none; border-radius: inherit; }
+        @keyframes wipe { from { transform: translateX(-110%); } to { transform: translateX(110%); } }
+        #scoreNum { display: inline-block; }
+        .overlay:not(.hidden) .big, .overlay:not(.hidden) .resultscore { animation: paintIn .55s .05s cubic-bezier(.3,1.5,.5,1) both; }
+        @media (prefers-reduced-motion: reduce) { .tile, .tile.correct-pulse, .splash, .card.rollout::after, .overlay .big, .overlay .resultscore { animation: none; } }
+
     </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -201,7 +216,7 @@
     </div>
 
  </div>
-      <footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+      <footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 
 <script>
@@ -340,6 +355,7 @@ function animateScore(addScore){
 
             busy = false;
             gridEl.innerHTML = '';
+            try { const cd = document.querySelector('.card'); cd.classList.remove('rollout'); void cd.offsetWidth; cd.classList.add('rollout'); } catch (e) {}
             const cols = gridSizeForLevel(level);
             const total = cols * cols;
             oddIndex = Math.floor(Math.random() * total);
@@ -362,6 +378,7 @@ const oddHue = (hue + hueOffset + 360) % 360;
                 btn.className = 'tile';
                 btn.setAttribute('aria-label', i === oddIndex ? 'ô màu khác' : 'ô màu thường');
                 btn.style.background = `hsl(${i === oddIndex ? oddHue : hue} ${i === oddIndex ? oddSat : sat}% ${i === oddIndex ? oddL : baseL}%)`;
+                btn.style.animationDelay = ((Math.floor(i / cols) + (i % cols)) * 35) + 'ms';
                 btn.addEventListener('click', () => handlePick(i, btn));
                 gridEl.appendChild(btn);
             }
@@ -403,6 +420,8 @@ const oddHue = (hue + hueOffset + 360) % 360;
         earned = Math.max(MIN_SCORE, Math.min(MAX_SCORE, Math.round(earned)));
 
         btn.classList.add("correct-pulse");
+        paintSplash(btn, true);
+        try { const q = FX.center(btn); FX.text(q.x, q.y - btn.offsetWidth * .5, '+' + earned, { color: '#fff6e6', font: "400 28px Pacifico,cursive", shadow: '0 2px 0 #8f1f19' }); } catch (e) {}
         playCorrectSound();
 
         animateScore(earned);
@@ -418,6 +437,8 @@ const oddHue = (hue + hueOffset + 360) % 360;
 
         // Ô bấm sai
         btn.classList.add("wrong-shake");
+        paintSplash(btn, false);
+        try { FX.shake(gridEl, 6, 320); const lv = livesEl.children[Math.max(0, lives - 1)]; if (lv) { const q = FX.center(lv); FX.burst(q.x, q.y, { n: 8, colors: ['#c8322a', '#8f1f19'], shapes: ['drop'], speed: 150, gravity: 600, size: 7, life: .7 }); } } catch (e) {}
         playWrongSound();
 
         // Highlight ô đúng
@@ -442,6 +463,17 @@ const oddHue = (hue + hueOffset + 360) % 360;
 }
                 
 
+        // vệt sơn loang ra từ ô được chạm
+        function paintSplash(btn, ok) {
+            try {
+                const q = FX.center(btn), col = btn.style.background || '#c8322a', size = btn.offsetWidth * 2.4;
+                const d = document.createElement('div'); d.className = 'splash';
+                d.style.cssText = `left:${q.x}px;top:${q.y}px;width:${size}px;height:${size}px;background:radial-gradient(circle,${col} 0 45%,transparent 70%)`;
+                document.body.appendChild(d); setTimeout(() => d.remove(), 650);
+                FX.burst(q.x, q.y, { n: ok ? 16 : 10, colors: [col, '#fff6e6'], shapes: ['drop', 'circle'], speed: ok ? 280 : 160, gravity: 520, size: 9, life: .8 });
+                if (ok) FX.ring(q.x, q.y, '#fff6e6', btn.offsetWidth, 5);
+            } catch (e) {}
+        }
         function gameOver() {
             best = Math.max(best, score);
             bestNumEl.textContent = best;
