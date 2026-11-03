@@ -118,10 +118,171 @@
 
     const isAdmin = () => myName() === ADMIN && safeGet('lb_name_claimed') === ADMIN;
     const ready = (window.Scores && Scores.ready) || Promise.resolve();
-    ready.then(() => { if (isAdmin()) buildAdmin(); });
+    ready.then(() => { if (isAdmin()) { buildAdmin(); buildManager(); } });
     // vừa đặt tên xong (hộp hỏi tên) thì kiểm tra lại
-    const recheck = setInterval(() => { if (isAdmin()) { clearInterval(recheck); buildAdmin(); } }, 2000);
+    const recheck = setInterval(() => { if (isAdmin()) { clearInterval(recheck); buildAdmin(); buildManager(); } }, 2000);
     setTimeout(() => clearInterval(recheck), 600000);
+  }
+
+
+  // ================= Nút quản trị: danh sách người chơi + cấm =================
+  // Chỉ hiện khi tên admin (giabao1710) thuộc về đúng mã người chơi của máy này trên máy chủ (/names/giabao1710 == uid).
+  // Cấm = ghi /bans/{uid} = { k, b: { on, n, t } }. Luật Firebase chỉ nhận khi k bắt đầu bằng "{admin/key}:" (admin/key là
+  // một chuỗi bí mật bạn tự đặt trong Firebase Console → Data, tối thiểu 16 ký tự) và k phải khác giá trị cũ ở mỗi lần ghi.
+  // Mã quản trị nhập một lần, chỉ lưu trên máy admin (localStorage adm_key), không nằm trong mã nguồn.
+  // Người bị cấm: maintenance.js chặn mọi trò chơi; scores.js + luật Firebase chặn đổi tên và ghi điểm.
+  function buildManager() {
+    if (document.getElementById('mgrBtn') || buildManager.pending) return;
+    buildManager.pending = true;
+    fetch(FIREBASE_URL + '/names/' + ADMIN + '.json', { cache: 'no-store' }).then(r => r.json()).then(owner => {
+      buildManager.pending = false;
+      if (owner && owner === uid()) mountManager();
+    }).catch(() => { buildManager.pending = false; });
+  }
+  function mountManager() {
+    if (document.getElementById('mgrBtn')) return;
+    const css = `
+    #mgrBtn{position:fixed;top:calc(24px + env(safe-area-inset-top,0px));right:calc(24px + 174px + env(safe-area-inset-right,0px));z-index:1000;
+      color:#ffb3c0;font-size:19px;padding:0;border-radius:10px}
+    #mgrBtn i{filter:drop-shadow(0 0 5px rgba(255,120,150,.6))}
+    #mgrModal{position:fixed;inset:0;z-index:2147483300;display:none;align-items:center;justify-content:center;background:rgba(3,6,16,.72);
+      -webkit-backdrop-filter:blur(6px);backdrop-filter:blur(6px);padding:12px}
+    #mgrModal.show{display:flex}
+    #mgrCard{width:100%;max-width:560px;height:min(82vh,680px);display:flex;flex-direction:column;background:#0d1226;border:1px solid #2c3762;border-radius:16px;
+      color:#dfe5ff;box-shadow:0 24px 60px rgba(0,0,0,.55);overflow:hidden;font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif}
+    #mgrHead{display:flex;align-items:center;gap:8px;padding:12px 14px;border-bottom:1px solid #222c52;font-weight:800;font-size:15px}
+    #mgrHead .sub{font-weight:500;font-size:12px;color:#8f9bd0;margin-left:auto}
+    #mgrX,#mgrReload,#mgrKeyBtn{background:none;border:0;color:#9aa6d8;font-size:16px;cursor:pointer;padding:6px 8px;min-width:36px;min-height:36px}
+    #mgrTools{display:flex;gap:6px;align-items:center;padding:8px 10px;border-bottom:1px solid #1b2347}
+    #mgrSearch,#mgrKey{flex:1;min-width:0;background:#141b3a;border:1px solid #2c3762;border-radius:10px;color:#e8ecff;padding:9px 12px;font:14px system-ui,sans-serif;outline:none}
+    #mgrSearch:focus,#mgrKey:focus{border-color:#6d7cff}
+    #mgrKeyRow{display:none;gap:6px;padding:8px 10px;background:#1a1530;border-bottom:1px solid #3a2a5a;align-items:center}
+    #mgrKeyRow.show{display:flex}
+    #mgrKeyRow span{font-size:12px;color:#d9b8ff;flex:none}
+    #mgrKeySave{flex:none;border:0;border-radius:10px;padding:9px 14px;background:#7c5cff;color:#fff;font-weight:700;cursor:pointer;min-height:38px}
+    #mgrList{flex:1;overflow:auto;padding:4px 0}
+    #mgrList .r{display:flex;align-items:center;gap:10px;padding:8px 14px;min-height:48px}
+    #mgrList .r:nth-child(odd){background:rgba(255,255,255,.025)}
+    #mgrList .nm{font:700 14px ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;color:#7ee0c8;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    #mgrList .tag{font-size:11px;font-weight:800;color:#fff;background:#d6294a;border-radius:999px;padding:3px 9px;flex:none}
+    #mgrList .me{font-size:12px;color:#8f9bd0;flex:none}
+    #mgrList .r.banned .nm{color:#ff8a98;text-decoration:line-through;text-decoration-thickness:1.5px}
+    #mgrList button.bn{flex:none;min-width:84px;min-height:38px;border-radius:10px;border:1px solid #6a2a3a;background:#3a1220;color:#ff9aaa;font-weight:700;font-size:13px;cursor:pointer}
+    #mgrList button.bn.un{border-color:#2a6a4a;background:#0f2a1f;color:#7ee0a8}
+    #mgrList button.bn:disabled{opacity:.5;cursor:default}
+    #mgrList .msg{color:#8f9bd0;text-align:center;padding:26px 14px;white-space:normal;font-size:14px}
+    #mgrToast{padding:8px 14px;font-size:13px;color:#ffd35a;border-top:1px solid #222c52;min-height:34px}
+    #mgrToast.err{color:#ff8a98}`;
+    const st = document.createElement('style'); st.textContent = css; document.head.appendChild(st);
+
+    const btn = document.createElement('button');
+    btn.id = 'mgrBtn'; btn.type = 'button'; btn.className = 'toggle-btn'; btn.title = 'Quản lý người chơi';
+    btn.innerHTML = '<i class="fa-solid fa-user-shield"></i>';
+    document.body.appendChild(btn);
+    const modal = document.createElement('div');
+    modal.id = 'mgrModal';
+    modal.innerHTML = '<div id="mgrCard"><div id="mgrHead"><i class="fa-solid fa-user-shield"></i> Quản lý người chơi<span class="sub" id="mgrSub"></span>' +
+      '<button id="mgrX" type="button" aria-label="Đóng"><i class="fa-solid fa-xmark"></i></button></div>' +
+      '<div id="mgrTools"><input id="mgrSearch" type="search" placeholder="Tìm tên người chơi..." autocomplete="off" autocapitalize="off" spellcheck="false">' +
+      '<button id="mgrKeyBtn" type="button" title="Mã quản trị" aria-label="Mã quản trị"><i class="fa-solid fa-key"></i></button>' +
+      '<button id="mgrReload" type="button" title="Tải lại" aria-label="Tải lại"><i class="fa-solid fa-rotate"></i></button></div>' +
+      '<div id="mgrKeyRow"><span>Mã quản trị</span><input id="mgrKey" type="password" autocomplete="off" placeholder="giá trị admin/key trong Firebase"><button id="mgrKeySave" type="button">Lưu</button></div>' +
+      '<div id="mgrList"></div><div id="mgrToast"></div></div>';
+    document.body.appendChild(modal);
+    const $ = id => modal.querySelector('#' + id);
+    const list = $('mgrList'), sub = $('mgrSub'), toast = $('mgrToast'), search = $('mgrSearch'), keyRow = $('mgrKeyRow'), keyIn = $('mgrKey');
+    const esc = t => String(t == null ? '' : t).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    const say = (t, err) => { toast.textContent = t || ''; toast.className = err ? 'err' : ''; };
+
+    let people = [], bans = {}, loadId = 0;   // people: [{ name, uid }]; bans: uid -> true | false (chưa biết = undefined)
+    const me = uid();
+    const hasKey = () => !!safeGet('adm_key');
+    function showKeyRow(on) { keyRow.classList.toggle('show', on); if (on) setTimeout(() => keyIn.focus(), 30); }
+
+    function render() {
+      const q = search.value.trim().toLowerCase();
+      const rows = people.filter(p => !q || p.name.includes(q));
+      const nBan = people.filter(p => bans[p.uid] === true).length;
+      sub.textContent = people.length + ' người' + (nBan ? ' · ' + nBan + ' bị cấm' : '');
+      if (!people.length) { list.innerHTML = '<div class="msg">Chưa có người chơi nào.</div>'; return; }
+      if (!rows.length) { list.innerHTML = '<div class="msg">Không có tên nào khớp.</div>'; return; }
+      list.innerHTML = rows.map(p => {
+        const self = p.name === ADMIN || p.uid === me, b = bans[p.uid] === true;
+        return '<div class="r' + (b ? ' banned' : '') + '" data-u="' + esc(p.uid) + '"><span class="nm">' + esc(p.name) + '</span>' +
+          (b ? '<span class="tag">ĐÃ CẤM</span>' : '') +
+          (self ? '<span class="me">quản trị</span>' : '<button type="button" class="bn' + (b ? ' un' : '') + '" data-a="' + (b ? 'un' : 'ban') + '"' + (bans[p.uid] === undefined ? ' disabled' : '') + '>' + (b ? 'Bỏ cấm' : 'Cấm') + '</button>') + '</div>';
+      }).join('');
+    }
+
+    async function loadBans(id) {
+      const queue = people.slice(), workers = Array.from({ length: 8 }, async () => {
+        while (queue.length && id === loadId) {
+          const p = queue.shift();
+          try {
+            const r = await fetch(FIREBASE_URL + '/bans/' + p.uid + '/b.json?t=' + Date.now(), { cache: 'no-store' });
+            const b = r.ok ? await r.json() : null;
+            bans[p.uid] = !!(b && b.on === true);
+          } catch (e) { bans[p.uid] = false; }
+          if (id === loadId) render();
+        }
+      });
+      await Promise.all(workers);
+    }
+    async function load() {
+      const id = ++loadId; bans = {}; say('');
+      list.innerHTML = '<div class="msg">Đang tải danh sách...</div>';
+      try {
+        const r = await fetch(FIREBASE_URL + '/names.json?t=' + Date.now(), { cache: 'no-store' });
+        if (!r.ok) throw new Error('http ' + r.status);
+        const data = (await r.json()) || {};
+        people = Object.keys(data).filter(n => typeof data[n] === 'string').sort().map(n => ({ name: n, uid: data[n] }));
+      } catch (e) {
+        list.innerHTML = '<div class="msg">Không tải được danh sách. Nếu vừa cập nhật mã nguồn, hãy dán luật mới (database.rules.json) vào Firebase Console rồi nhấn Xuất bản.</div>'; return;
+      }
+      render();
+      loadBans(id);
+    }
+
+    async function setBan(p, on) {
+      const key = safeGet('adm_key');
+      if (!key) { showKeyRow(true); say('Hãy nhập mã quản trị trước.', true); return; }
+      if (on && !confirm('Cấm "' + p.name + '"?\nNgười này sẽ không vào được mọi trò chơi và không đổi tên được.')) return;
+      const nonce = Date.now().toString(36) + Math.random().toString(36).slice(2, 10);
+      const body = { k: key + ':' + nonce, b: { on, n: p.name, t: { '.sv': 'timestamp' } } };
+      bans[p.uid] = undefined; render(); say((on ? 'Đang cấm ' : 'Đang bỏ cấm ') + p.name + '...');
+      try {
+        const r = await fetch(FIREBASE_URL + '/bans/' + p.uid + '.json', { method: 'PUT', body: JSON.stringify(body) });
+        if (r.ok) { bans[p.uid] = on; say((on ? 'Đã cấm ' : 'Đã bỏ cấm ') + p.name + '.'); }
+        else {
+          bans[p.uid] = !on;
+          if (r.status === 401 || r.status === 403) { say('Bị từ chối: mã quản trị sai, hoặc luật Firebase / admin/key chưa được cài. Kiểm tra lại rồi thử.', true); showKeyRow(true); }
+          else say('Lỗi máy chủ (' + r.status + '). Thử lại sau.', true);
+        }
+      } catch (e) { bans[p.uid] = !on; say('Không kết nối được máy chủ.', true); }
+      render();
+    }
+
+    list.addEventListener('click', e => {
+      const b = e.target.closest('button.bn'); if (!b || b.disabled) return;
+      const u = b.closest('.r').getAttribute('data-u'), p = people.find(x => x.uid === u);
+      if (p) setBan(p, b.getAttribute('data-a') === 'ban');
+    });
+    search.addEventListener('input', render);
+    ['keydown', 'keyup', 'keypress'].forEach(t => modal.addEventListener(t, e => { if (e.key !== 'Escape') e.stopPropagation(); }));
+    $('mgrReload').onclick = load;
+    $('mgrKeyBtn').onclick = () => showKeyRow(!keyRow.classList.contains('show'));
+    $('mgrKeySave').onclick = () => {
+      const v = keyIn.value.trim();
+      if (v.length < 16) { say('Mã quản trị tối thiểu 16 ký tự.', true); return; }
+      try { localStorage.setItem('adm_key', v); } catch (e) {}
+      keyIn.value = ''; showKeyRow(false); say('Đã lưu mã quản trị trên máy này.');
+    };
+    const open = () => { modal.classList.add('show'); search.value = ''; showKeyRow(!hasKey()); load(); };
+    const close = () => modal.classList.remove('show');
+    btn.onclick = open;
+    $('mgrX').onclick = close;
+    modal.addEventListener('click', e => { if (e.target === modal) close(); });
+    document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
   }
 
   function buildAdmin() {

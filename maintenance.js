@@ -128,6 +128,72 @@
     check: check
   };
 
+  // ---- Cấm tài khoản ----
+  // Quản trị viên đặt lệnh cấm ở Firebase: /bans/{uid}/b = { on, n, t }. Người bị cấm không vào được mọi trò chơi (và
+  // scores.js không cho đổi tên). Kết quả được nhớ trong localStorage (lb_banned) để chặn ngay cả khi mất mạng; chỉ khi
+  // máy chủ trả lời "không bị cấm" thì mới gỡ. Lỗi mạng => giữ nguyên trạng thái đang có.
+  var FB_URL = (window.SCORE_FIREBASE_URL || 'https://giabao-f4854-default-rtdb.firebaseio.com').replace(/\/+$/, '');
+  function lsGet(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
+  function lsSet(k, v) { try { if (v == null) localStorage.removeItem(k); else localStorage.setItem(k, v); } catch (e) {} }
+  var banShown = false, banHost = null;
+  var BAN_CSS = [
+    ':host{all:initial}*{box-sizing:border-box;margin:0;padding:0}',
+    '.wrap{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:20px;font-family:"Segoe UI",system-ui,-apple-system,Roboto,Arial,sans-serif;color:#ffe9ec;',
+    'background:radial-gradient(900px 600px at 20% 10%,#7f1d1d66,transparent 60%),radial-gradient(800px 600px at 90% 95%,#4c1d9544,transparent 60%),linear-gradient(160deg,#12060a,#0b0a1c 60%,#050510)}',
+    '.card{width:min(440px,100%);padding:34px 26px 26px;text-align:center;border-radius:26px;background:linear-gradient(160deg,#ffffff1a,#ffffff06);border:1px solid #ff6b7d44;box-shadow:0 30px 80px #000a}',
+    '.ico{font-size:54px;line-height:1;margin-bottom:10px}',
+    'h1{font-size:clamp(24px,7vw,31px);font-weight:800;line-height:1.2;margin-bottom:10px;color:#ff8a98}',
+    'p{font-size:16px;line-height:1.6;color:#e6cdd3;max-width:34ch;margin:0 auto}',
+    '.btns{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:22px}',
+    '.btn{display:inline-flex;align-items:center;justify-content:center;min-width:130px;padding:12px 20px;border-radius:13px;font:inherit;font-size:15px;font-weight:700;text-decoration:none;cursor:pointer;color:#ffe9ec;background:#ffffff12;border:1px solid #ffffff2a}',
+    '.btn:focus-visible{outline:2px solid #ff8a98;outline-offset:3px}'
+  ].join('');
+  function showBan() {
+    if (banShown) return;
+    if (!document.body) { document.addEventListener('DOMContentLoaded', showBan, { once: true }); return; }
+    banShown = true;
+    var host = document.createElement('div');
+    host.setAttribute('role', 'alertdialog'); host.setAttribute('aria-live', 'assertive');
+    host.style.cssText = 'position:fixed;inset:0;z-index:2147483647;display:block;';
+    var root = host.attachShadow ? host.attachShadow({ mode: 'open' }) : host;
+    var st = document.createElement('style'); st.textContent = BAN_CSS;
+    var wrap = document.createElement('div'); wrap.className = 'wrap';
+    wrap.innerHTML = '<div class="card"><div class="ico">🚫</div><h1>Tài khoản đã bị cấm</h1>' +
+      '<p>Bạn không thể truy cập các trò chơi và không thể đổi tên. Nếu cho rằng đây là nhầm lẫn, hãy liên hệ giabao1710.</p><div class="btns"></div></div>';
+    var btns = wrap.querySelector('.btns');
+    if (gameId) {
+      var home = document.createElement('a'); home.className = 'btn'; home.href = new URL('./', src).href; home.textContent = '🏠 Về trang chủ'; btns.appendChild(home);
+    }
+    var re = document.createElement('button'); re.type = 'button'; re.className = 'btn'; re.textContent = '↻ Kiểm tra lại';
+    re.addEventListener('click', function () { location.reload(); }); btns.appendChild(re);
+    root.appendChild(st); root.appendChild(wrap);
+    document.documentElement.appendChild(host);
+    banHost = host;
+    document.documentElement.style.overflow = 'hidden'; document.body.style.overflow = 'hidden';
+    try { document.body.inert = true; } catch (e) {}   // chặn cả thao tác bàn phím vào trang bên dưới
+    if (gameId && window.gameMaintenance && gameMaintenance.freeze) gameMaintenance.freeze(host);   // dừng hẳn game đang chạy
+  }
+  function onBanState(on) {
+    if (on) { lsSet('lb_banned', '1'); showBan(); }
+    else if (lsGet('lb_banned') === '1') { lsSet('lb_banned', null); if (banShown) location.reload(); }
+  }
+  var banTimer = 0;
+  function pollBan() {
+    var id = lsGet('lb_uid');
+    if (/^[a-f0-9]{24,40}$/.test(id || '')) {
+      var ctl = typeof AbortController === 'function' ? new AbortController() : null;
+      var t = ctl ? nSetTimeout(function () { ctl.abort(); }, FETCH_TIMEOUT_MS) : 0;
+      fetch(FB_URL + '/bans/' + id + '/b.json?t=' + Date.now(), { cache: 'no-store', signal: ctl ? ctl.signal : undefined })
+        .then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.json(); })
+        .then(function (b) { onBanState(!!(b && b.on === true)); }, function () {})
+        .then(function () { nClearTimeout(t); });
+    }
+    if (!banShown) { nClearTimeout(banTimer); banTimer = nSetTimeout(pollBan, 30000); }
+  }
+  if (lsGet('lb_banned') === '1') Promise.resolve().then(showBan);   // đã biết là bị cấm: chặn ngay
+  pollBan();
+  window.gameMaintenance.isBanned = function () { return lsGet('lb_banned') === '1'; };
+
   if (!gameId) return; // trang chủ: chỉ cung cấp dữ liệu
 
   // ---- Chế độ trong game ----
@@ -197,6 +263,9 @@
     document.querySelectorAll('audio,video').forEach(function (m) { try { m.pause(); } catch (e) {} });
     HTMLMediaElement.prototype.play = function () { return Promise.resolve(); };
   }
+
+  // cho phần cấm tài khoản (ở trên) dừng game rồi đặt lớp phủ của nó làm vùng được phép thao tác
+  window.gameMaintenance.freeze = function (ov) { if (ov) overlay = ov; freeze(); };
 
   var CSS = [
     ':host{all:initial}',

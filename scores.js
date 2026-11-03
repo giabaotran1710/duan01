@@ -90,7 +90,11 @@
   }
   // Dùng để hiển thị tên của người khác trên bảng (tên cũ có thể không theo quy tắc mới)
   function cleanName(name) { return String(name || '').replace(/[<>"'`\\]/g, '').replace(/\s+/g, ' ').trim().slice(0, 20); }
+  // Tài khoản bị quản trị viên cấm (maintenance.js ghi lb_banned): không được đổi tên
+  const isBanned = () => safeGet('lb_banned') === '1';
+  const BANNED_MSG = 'Tài khoản của bạn đã bị cấm, không thể đổi tên.';
   function setName(name) {
+    if (isBanned()) return getName();
     const v = validateName(name);
     if (v.ok) { safeSet(NAME_KEY, v.name); renameOnServer(v.name); }
     return getName();
@@ -102,6 +106,7 @@
   async function claimName(raw) {
     const v = validateName(raw);
     if (!v.ok) return v;
+    if (isBanned()) return { ok: false, banned: true, name: v.name, error: BANNED_MSG };
     if (apiBase()) { setName(v.name); return v; }
     const uid = getUid(), path = '/names/' + v.name;
     try {
@@ -119,7 +124,7 @@
   // Người chơi cũ đã có tên nhưng chưa giữ chỗ: giữ chỗ ngay; nếu tên đã bị người khác lấy thì xoá để hỏi lại.
   const ready = (async () => {
     const n = (safeGet(NAME_KEY) || '').trim();
-    if (!n || safeGet(CLAIMED_KEY) === n) return;
+    if (!n || safeGet(CLAIMED_KEY) === n || isBanned()) return;
     const r = await claimName(n);
     if (r.taken) { try { localStorage.removeItem(NAME_KEY); localStorage.removeItem(ASKED_KEY); } catch (e) {} }
   })().catch(() => {});
@@ -320,7 +325,7 @@
     setTimeout(() => { askName({ required: false }).then(() => { asking = false; }); }, 900);
   }
 
-  window.Scores = { submit, top, getName, setName, hasName, localTop, flushPending, games: GAMES, format, getUid, askName, validateName, normalizeName, claimName, ready };
+  window.Scores = { submit, top, getName, setName, hasName, isBanned, localTop, flushPending, games: GAMES, format, getUid, askName, validateName, normalizeName, claimName, ready };
 
   // Gửi lại các điểm còn chờ khi trang mở lại hoặc có mạng trở lại.
   if (readJson(PENDING_KEY, []).length) setTimeout(flushPending, 1500);
