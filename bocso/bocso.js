@@ -481,12 +481,15 @@
   function scratchAt(a, b) {
     var c = scr.c, dx = b.x - a.x, dy = b.y - a.y, dist = Math.sqrt(dx * dx + dy * dy), steps = Math.max(1, Math.ceil(dist / 3));
     c.globalCompositeOperation = 'destination-out';
-    var R = Math.max(11, scr.h * .2);
+    // đầu cào nhỏ và mỏng: mỗi lượt chỉ bóc một phần lớp bạc, phải cào đi cào lại nhiều lần mới lộ hết
+    var R = Math.max(8, scr.h * .1);
+    c.fillStyle = '#000'; c.globalAlpha = .16;
     for (var i = 0; i <= steps; i++) {
       var x = a.x + dx * i / steps, y = a.y + dy * i / steps;
-      c.beginPath(); c.arc(x, y, R * (.85 + Math.random() * .3), 0, 6.2832); c.fill();
-      if (Math.random() < .5) { var ox = (Math.random() - .5) * R * 2.2, oy = (Math.random() - .5) * R * 2.2; c.beginPath(); c.arc(x + ox, y + oy, 2 + Math.random() * 4, 0, 6.2832); c.fill(); }   // mép xước lởm chởm
+      c.beginPath(); c.arc(x, y, R * (.8 + Math.random() * .4), 0, 6.2832); c.fill();
+      if (Math.random() < .45) { var ox = (Math.random() - .5) * R * 2, oy = (Math.random() - .5) * R * 2; c.beginPath(); c.arc(x + ox, y + oy, 1.5 + Math.random() * 3, 0, 6.2832); c.fill(); }   // mép xước lởm chởm
     }
+    c.globalAlpha = 1;
     c.globalCompositeOperation = 'source-over';
     // vụn bạc
     scr.acc += dist;
@@ -520,12 +523,10 @@
     try { d = c.getImageData(0, 0, w, h).data; } catch (e) { return; }
     var tot = 0, clear = 0;
     for (var y = 0; y < h; y += 6) for (var x = 0; x < w; x += 6) { tot++; if (d[(y * w + x) * 4 + 3] < 40) clear++; }
-    if (clear / tot > .62) {
+    if (clear / tot > .88) {   // đã cào gần hết: chỉ chúc mừng, không tự xoá phần còn lại
       scr.cleared = true;
-      var bt = $('bt'); bt.classList.add('shine');
+      $('bt').classList.add('shine');
       var ce = FX.center($('foil')); FX.burst(ce.x, ce.y, { n: 24, colors: ['#f2c14e', '#fff3d3', '#fff'], shapes: ['star', 'circle'], speed: 260, gravity: 200, size: 6, life: 1 }); FX.ring(ce.x, ce.y, '#f2c14e', 120, 4);
-      c.globalCompositeOperation = 'destination-out';
-      var step = 0; (function fade() { c.globalAlpha = .25; c.fillRect(0, 0, scr.w, scr.h); if (++step < 8) setTimeout(fade, 40); else { c.globalAlpha = 1; c.clearRect(0, 0, scr.w, scr.h); c.globalCompositeOperation = 'source-over'; } })();
     }
   }
 
