@@ -31,6 +31,7 @@
   const GAMES = [
     { id: 'nedan', name: 'Né đạn' },
     { id: 'neonreflex', name: 'Neon Reflex' },
+    { id: 'biendoithichung', name: 'Biến đổi thích ứng' },
     { id: 'dapquai', name: 'Đập chuột chũi' },
     { id: 'comet', name: 'Trốn khỏi thiên thạch' },
     { id: 'ganangdong', name: 'Gà năng động' },
