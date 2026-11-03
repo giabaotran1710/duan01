@@ -224,6 +224,7 @@ let score = 0;
 let best = Number(localStorage.getItem('colorshift_best') || 0);
 let combo = 0, comboTimer = 0;
 let elapsed = 0, spawnTimer = 0;
+let idleUntil = 0, idleBoost = 1;
 let shake = 0, overTimer = 0, swapCd = 0;
 let overlayShown = false;
 
@@ -366,7 +367,7 @@ function startGame(){
   trail.length = 0;
 
   score = 0; combo = 0; comboTimer = 0;
-  elapsed = 0;
+  elapsed = 0; idleUntil = 0; idleBoost = 1;
   spawnTimer = 1.2;           // cũ 1.6 — áp lực đến sớm hơn
   shake = 0; overTimer = 0; swapCd = 0;
   overlayShown = false;
@@ -415,6 +416,10 @@ function swap(){
   if (swapCd > 0) return;
   swapCd = SWAP_CD;
   player.pol = 1 - player.pol;
+  if (state === 'playing' && Math.hypot(player.vx, player.vy) < MAX_SPEED * 0.15){
+    idleUntil = elapsed + 8;
+    idleBoost = Math.min(idleBoost + 0.04, 1.3);
+  }
   waves.push({
     x: player.x, y: player.y, r: player.r,
     maxR: player.r * 5.5, life: 1, pol: player.pol, speed: 520
@@ -472,7 +477,7 @@ function destroyEnemy(index, e){
   comboTimer = 2.0;
 
   const mult = Math.min(1 + Math.floor(combo / 4), 9);
-  score += 10 * mult;
+  score += elapsed < idleUntil ? Math.max(1, Math.round(10 * mult * 0.1)) : 10 * mult;
 
   shake = Math.min(shake + 3.5, 13);
   burst(e.x, e.y, e.pol, 13);
@@ -563,8 +568,8 @@ function update(dt){
     // cũ 0.18 → giờ 0.32: khó đoán hơn
     const wob = Math.sin(elapsed * 1.8 + e.wobble) * 0.32;
 
-    e.x += (nx - ny * wob) * e.speed * dt;
-    e.y += (ny + nx * wob) * e.speed * dt;
+    e.x += (nx - ny * wob) * e.speed * idleBoost * dt;
+    e.y += (ny + nx * wob) * e.speed * idleBoost * dt;
     e.spin += e.spinSpeed * dt;
 
     const hitDist = Math.hypot(player.x - e.x, player.y - e.y);
