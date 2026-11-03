@@ -364,7 +364,7 @@
     <div class="footer">
       <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
       <div class="help"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Chạm vào khe tường (giữa hai ô) để xem trước, rồi bấm "Xác nhận đặt tường". Tường không được chặn toàn bộ đường đi của bên nào.</div>
-      <footer class="tbFooter">Version: D20261103180000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+      <footer class="tbFooter">Version: D20261103220000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
     </div>
   </div>
 
@@ -440,6 +440,7 @@
 
       function resetGame(keepMode = true) {
         if (state.aiTimer) clearTimeout(state.aiTimer);
+        state.aiEpoch = (state.aiEpoch || 0) + 1;   // huỷ nước AI đang tính dở
         state.current = 0;
         state.gameOver = false;
         state.blue = { x: 4, y: 0, walls: WALLS_PER_PLAYER };
@@ -1189,6 +1190,33 @@
 
       const aiEngine = createAIEngine();
 
+      // AI tính trong Web Worker để luồng chính vẫn vẽ hoạt ảnh mượt (trước đây AI chạy tới 0,9 giây trên luồng chính làm giật sau mỗi nước đi/đặt tường)
+      let aiWorker = null, aiReqId = 0;
+      try {
+        const src = `const AI_TIME_LIMIT_MS=${AI_TIME_LIMIT_MS};const AI_MAX_DEPTH=${AI_MAX_DEPTH};const AI_WALL_BUDGET_ROOT=${AI_WALL_BUDGET_ROOT};const AI_WALL_BUDGET_NODE=${AI_WALL_BUDGET_NODE};const AI_WIN=${AI_WIN};const AI_REPEAT_PENALTY=${AI_REPEAT_PENALTY};const AI_DECIDED=${AI_DECIDED};const AI_WALL_VALUE=${JSON.stringify(AI_WALL_VALUE)};\n${createAIEngine.toString()}\nconst E=createAIEngine();onmessage=function(e){var a=null;try{a=E.choose(e.data.snap);}catch(x){}postMessage({id:e.data.id,action:a});};`;
+        aiWorker = new Worker(URL.createObjectURL(new Blob([src], { type: 'text/javascript' })));
+        aiWorker.onerror = () => { aiWorker = null; };
+      } catch (e) { aiWorker = null; }
+      function aiSnapshot() {
+        return {
+          red: { x: state.red.x, y: state.red.y, walls: state.red.walls },
+          blue: { x: state.blue.x, y: state.blue.y, walls: state.blue.walls },
+          hWalls: [...state.hWalls],
+          vWalls: [...state.vWalls],
+          hOrigin: [...state.blueH, ...state.redH],
+          vOrigin: [...state.blueV, ...state.redV],
+          history: state.redHistory.slice(-4).map(p => ({ x: p.x, y: p.y })),
+        };
+      }
+      function chooseAIActionAsync() {
+        return new Promise(resolve => {
+          if (!aiWorker) { resolve(chooseAIAction()); return; }
+          const id = ++aiReqId, w = aiWorker;
+          const onMsg = e => { if (e.data && e.data.id === id) { w.removeEventListener('message', onMsg); resolve(e.data.action); } };
+          w.addEventListener('message', onMsg);
+          w.postMessage({ id, snap: aiSnapshot() });
+        });
+      }
       function chooseAIAction() {
         return aiEngine.choose({
           red: state.red,
@@ -1263,13 +1291,21 @@
             return;
           }
 
-          const action = chooseAIAction();
-          if (action) {
-            executeAIAction(action);
-          } else {
-            const mv = findBestAIMoveFallback();
-            if (mv) movePiece(mv.x, mv.y);
-          }
+          const epoch = state.aiEpoch || 0, started = performance.now();
+          chooseAIActionAsync().then(action => {
+            // chờ đủ một nhịp ngắn để người chơi kịp nhìn nước vừa đi, nhưng không chặn luồng chính
+            const wait = Math.max(0, 450 - (performance.now() - started));
+            setTimeout(() => {
+              if (epoch !== (state.aiEpoch || 0) || state.gameOver || state.current !== 1) return;
+              if (state.animating) { scheduleAI(); return; }
+              if (action) {
+                executeAIAction(action);
+              } else {
+                const mv = findBestAIMoveFallback();
+                if (mv) movePiece(mv.x, mv.y);
+              }
+            }, wait);
+          });
         }, 220);
       }
 
