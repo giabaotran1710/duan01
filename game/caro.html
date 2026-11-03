@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261101a" data-game="gamecaro"></script>
 <script src="../scene.js" data-game="gamecaro"></script>
+<script src="../fx.js?v=20261103"></script>
 <title>Cờ Caro</title>
 <link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
@@ -328,6 +329,22 @@ button:focus-visible{outline:2px solid var(--x)}
 #draw-popup .popup-btn{border:2px solid var(--line-strong); min-width:52px}
 @media (prefers-reduced-motion:reduce){.pan-edge span,#pan-tip .pan-ico,#offscreen-hint{animation:none}}
 footer{color:#7a82a0}
+
+/* ===== hoạt ảnh: nét bút trên trang vở ===== */
+@keyframes inkIn{0%{clip-path:inset(0 100% 0 0);transform:rotate(-14deg) scale(1.35)}55%{clip-path:inset(0 0 0 0);transform:rotate(3deg) scale(1.08)}100%{clip-path:inset(0 0 0 0);transform:none}}
+.cell.X.ink,.cell.O.ink{animation:inkIn .3s cubic-bezier(.3,.7,.3,1) both}
+.cell.O.ink{animation-duration:.34s}
+@keyframes lastDot{0%{box-shadow:inset 0 0 0 0 rgba(255,224,50,.9)}100%{box-shadow:inset 0 0 0 14px rgba(255,224,50,0)}}
+.cell.last{animation:lastDot .6s ease-out}
+#winline{position:absolute;left:0;top:0;width:100%;height:100%;pointer-events:none;z-index:4;overflow:visible}
+#winline path{fill:none;stroke:#cf2d2d;stroke-width:5;stroke-linecap:round;mix-blend-mode:multiply;stroke-dasharray:var(--len);stroke-dashoffset:var(--len);animation:drawLine .55s .1s cubic-bezier(.5,0,.2,1) forwards;filter:drop-shadow(0 1px 0 rgba(207,45,45,.25))}
+@keyframes drawLine{to{stroke-dashoffset:0}}
+.win-cell{animation:winHop .5s cubic-bezier(.3,1.6,.5,1) both;animation-delay:calc(var(--wi,0) * 70ms)}
+@keyframes winHop{0%{transform:translateY(0)}40%{transform:translateY(-35%) scale(1.25)}100%{transform:none}}
+#overlay .mode-btn,#overlay .overlay-title{animation:menuIn .5s cubic-bezier(.2,.9,.3,1.2) both}
+#overlay .mode-btn:nth-of-type(1){animation-delay:.12s}#overlay .mode-btn:nth-of-type(2){animation-delay:.2s}#overlay .mode-btn:nth-of-type(3){animation-delay:.28s}
+@keyframes menuIn{from{opacity:0;transform:translateY(22px) rotate(-3deg)}}
+@media (prefers-reduced-motion:reduce){.cell.X.ink,.cell.O.ink,.cell.last,.win-cell,#overlay .mode-btn,#overlay .overlay-title{animation:none}#winline path{animation:none;stroke-dashoffset:0}}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -428,7 +445,7 @@ footer{color:#7a82a0}
 </div>
 
 <canvas id="confettiCanvas"></canvas>
-<footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script id="caro-ai-worker-source" type="text/plain">
 // ============================================================
 // AI CỜ CARO — tự do (5 quân trở lên là thắng)
@@ -1910,14 +1927,30 @@ function place(r, c, player) {
   const cell = cells[r][c];
   cell.textContent = player;
   cell.classList.add(player);
+  cell.classList.remove("ink"); void cell.offsetWidth; cell.classList.add("ink");
+  try { const q = FX.center(cell); FX.burst(q.x, q.y, { n: 5, colors: [player === "X" ? "#1b4fc4" : "#cf2d2d"], shape: "drop", speed: 110, gravity: 260, life: .45, size: 5 }); } catch (e) {}
   if (lastCell) lastCell.classList.remove("last");
-  cell.classList.add("last");
+  void cell.offsetWidth; cell.classList.add("last");
   lastCell = cell;
   try { showComment(r, c, player); } catch (e) {}
   onMovePlaced();
   scheduleHintUpdate();
 }
 
+// nét bút đỏ gạch ngang chuỗi thắng
+function drawWinLine(line) {
+  const old = document.getElementById("winline"); if (old) old.remove();
+  const a = cells[line[0][0]][line[0][1]], b = cells[line[line.length - 1][0]][line[line.length - 1][1]];
+  const ax = a.offsetLeft + a.offsetWidth / 2, ay = a.offsetTop + a.offsetHeight / 2, bx = b.offsetLeft + b.offsetWidth / 2, by = b.offsetTop + b.offsetHeight / 2;
+  const dx = bx - ax, dy = by - ay, L = Math.hypot(dx, dy) || 1, ext = a.offsetWidth * .45, ux = dx / L, uy = dy / L;
+  const x1 = ax - ux * ext, y1 = ay - uy * ext, x2 = bx + ux * ext, y2 = by + uy * ext;
+  const mx = (x1 + x2) / 2 - uy * 3, my = (y1 + y2) / 2 + ux * 3;
+  const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg"); svg.id = "winline";
+  const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
+  path.setAttribute("d", `M${x1} ${y1} Q${mx} ${my} ${x2} ${y2}`);
+  const len = Math.ceil(Math.hypot(x2 - x1, y2 - y1)) + 12; path.style.setProperty("--len", len);
+  svg.appendChild(path); boardDiv.appendChild(svg);
+}
 function highlightWin(r, c, player) {
   const dirs = [[1, 0], [0, 1], [1, 1], [1, -1]];
   for (const [dr, dc] of dirs) {
@@ -1926,7 +1959,12 @@ function highlightWin(r, c, player) {
     while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { line.push([i, j]); i += dr; j += dc; }
     i = r - dr; j = c - dc;
     while (i >= 0 && i < SIZE && j >= 0 && j < SIZE && board[i][j] === player) { line.push([i, j]); i -= dr; j -= dc; }
-    if (line.length >= 5) { line.forEach(([row, col]) => cells[row][col].classList.add("win-cell")); return; }
+    if (line.length >= 5) {
+      line.sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]));
+      line.forEach(([row, col], k) => { const el = cells[row][col]; el.style.setProperty("--wi", k); el.classList.add("win-cell"); });
+      try { drawWinLine(line); FX.shake(document.getElementById("board-view"), 4, 300); } catch (e) {}
+      return;
+    }
   }
 }
 
@@ -2451,7 +2489,7 @@ const canvas = document.getElementById("confettiCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 let confetti = [];
-function randomColor() { return ["#ff4d4d","#00d4ff","#00ff88","#ffd700","#ff00ff","#ff8800","#ffffff","#a855f7"][Math.floor(Math.random()*8)]; }
+function randomColor() { return ["#1b4fc4","#cf2d2d","#e0a400","#2c8a4c","#1d2a4a","#f0b8c8"][Math.floor(Math.random()*6)]; }  // màu bút trên trang vở
 function launchConfetti() {
   confetti = [];
   for (let i = 0; i < 200; i++) {

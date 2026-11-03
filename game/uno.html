@@ -851,6 +851,7 @@ canvas#sf{position:fixed;top:0;left:0;width:100%;height:100%;z-index:0;pointer-e
 
 }
 </style>
+<script src="../fx.js?v=20261103"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;700;800&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style id="theme-felt">
@@ -922,6 +923,17 @@ canvas#sf{display:none}
 #toast{font-family:'Baloo 2',sans-serif; background:rgba(9,40,29,.95); border:2px solid var(--cream)}
 @media (prefers-reduced-motion:reduce){.logo{animation:none}}
 footer{color:#bcd6c9}
+
+/* ===== hoạt ảnh: bàn bài ===== */
+@keyframes unoStamp{0%{opacity:0;transform:translate(-50%,-50%) scale(3) rotate(-20deg)}55%{opacity:1;transform:translate(-50%,-50%) scale(.9) rotate(-8deg)}70%{transform:translate(-50%,-50%) scale(1.08) rotate(-8deg)}100%{opacity:0;transform:translate(-50%,-62%) scale(1) rotate(-8deg)}}
+.uno-stamp{position:fixed;left:50%;top:44%;z-index:99998;pointer-events:none;font:400 3.2rem 'Lilita One',cursive;color:#fff;background:var(--c-red);padding:.1em .45em;border-radius:50%/40%;border:5px solid #fff;box-shadow:0 0 0 5px var(--c-yellow),0 10px 24px rgba(0,0,0,.5);text-shadow:3px 3px 0 #7a1010;animation:unoStamp 1.1s ease-out forwards}
+@keyframes dirSpin{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+#turn-arrow.spin{animation:dirSpin .6s cubic-bezier(.3,1.4,.5,1)}
+@keyframes tableThump{0%,100%{transform:none}30%{transform:scale(1.02) translateY(2px)}}
+#table.thump{animation:tableThump .3s ease-out}
+.pzone.active .pz-av{animation:avPulse 1.2s ease-in-out infinite}
+@keyframes avPulse{50%{transform:scale(1.12)}}
+@media (prefers-reduced-motion:reduce){.uno-stamp{animation:none;opacity:1;transform:translate(-50%,-50%)}#table.thump,.pzone.active .pz-av{animation:none}}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -1062,7 +1074,7 @@ footer{color:#bcd6c9}
   </div>
 </div>
 <div id="toast"></div>
-<footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script>
 "use strict";
@@ -1440,6 +1452,35 @@ function pzoneCenter(p){
 }
 
 /* ── FLYING CARD ANIMATIONS ── */
+/* ── hiệu ứng riêng cho từng loại lá ── */
+var UCOL={red:'#d32f2f',green:'#2e7d32',blue:'#1565c0',yellow:'#f9a825',wild:'#ffffff'};
+var URAINBOW=['#d32f2f','#1565c0','#2e7d32','#f9a825'];
+function fxPileCenter(){var r=$('discard-pile').getBoundingClientRect();return {x:r.left+r.width/2,y:r.top+r.height/2};}
+function fxLand(card){
+  try{
+    var c=fxPileCenter(), wild=(card.type==='wild'||card.type==='wild4'), col=UCOL[card.color]||'#fff';
+    FX.ring(c.x,c.y,wild?'#ffd700':'#fff',58,4);
+    FX.burst(c.x,c.y,{n:wild?18:9,colors:wild?URAINBOW:[col,'#fff'],shapes:['square','tri'],speed:210,gravity:260,size:6,life:.65});
+    var big=(card.value==='wild4'||card.value==='draw2'||card.value==='reflect');
+    var t=$('table'); if(big&&t){t.classList.remove('thump');void t.offsetWidth;t.classList.add('thump');FX.shake(t,5,280);}
+  }catch(e){}
+}
+/* lá chức năng: mỗi loại một kiểu bay tới người bị ảnh hưởng */
+function fxAction(card,fp,nx){
+  try{
+    var from=fxPileCenter(), to=pzoneCenter(nx), col=UCOL[card.effectColor||card.color]||'#fff';
+    if(card.value==='skip'){FX.ring(to.x,to.y,'#fff',50,5);FX.burst(to.x,to.y,{n:10,colors:['#fff','#b0bec5'],shapes:['line'],speed:240,gravity:0,size:10,life:.45});}
+    else if(card.value==='rev'){var arr=$('turn-arrow');if(arr){arr.classList.remove('spin');void arr.offsetWidth;arr.classList.add('spin');}
+      for(var k=0;k<14;k++){var a=k/14*6.2832;FX.burst(from.x+Math.cos(a)*46,from.y+Math.sin(a)*46,{n:1,colors:[col,'#fff'],speed:120,angle:a+1.57,spread:.3,gravity:0,size:6,life:.7});}}
+    else if(card.value==='draw2'||card.value==='wild4'||card.value==='reflect'){
+      var n=card.value==='wild4'?22:14, ang=Math.atan2(to.y-from.y,to.x-from.x);
+      FX.burst(from.x,from.y,{n:n,colors:card.value==='wild4'?URAINBOW.concat(['#111']):[col,'#fff'],shapes:['tri','square'],speed:380,angle:ang,spread:.9,gravity:0,size:7,life:.55});
+      setTimeout(function(){FX.ring(to.x,to.y,col,64,5);FX.shake(document.body,4,240);},380);}
+    else if(card.type==='wild'){FX.burst(from.x,from.y,{n:24,colors:URAINBOW,shapes:['star','circle'],speed:260,gravity:140,size:8,life:.9});}
+  }catch(e){}
+}
+function fxUnoStamp(){try{var d=document.createElement('div');d.className='uno-stamp';d.textContent='UNO!';document.body.appendChild(d);setTimeout(function(){d.remove();},1200);FX.burst(innerWidth/2,innerHeight*.44,{n:22,colors:['#d32f2f','#f9a825','#fff'],shapes:['star'],speed:320,gravity:260,size:9,life:.9});}catch(e){}}
+function fxWin(){try{FX.rain({n:90,colors:URAINBOW.concat(['#fff']),shapes:['square','tri'],size:11,gravity:220});FX.burst(innerWidth/2,innerHeight*.35,{n:36,colors:URAINBOW,shapes:['star'],speed:420,gravity:300,size:10,life:1.1});}catch(e){}}
 function animThrow(srcX, srcY, card, cb){
   setLock(true);
   var dp=$('discard-pile');
@@ -4961,6 +5002,7 @@ function doPlay(p,idx,chosenColor){
     // render sau khi animation xong
    gDiscard.push(card);
 renderAll();
+    fxLand(card);
 
     if(!gHands[p].length){
       renderAll();
@@ -5226,6 +5268,7 @@ function applyEffect(fp,card){
   var ec=card.effectColor||card.color;
   var iconBg=colorBg[ec]||'rgba(40,20,80,.92)';
   var iconStroke=colorStroke[ec]||'#fff';
+  fxAction(card,fp,(card.value==='rev')?nextPlayer(fp,1):nx);
 
   if(card.value==='rev'){
     gDir*=-1;
@@ -5683,6 +5726,7 @@ function callUno(){
   gUnoCalled[0] = true;
 
   $('uno-btn').style.display = 'none';
+  fxUnoStamp();
 
   showToast('✋ UNO!',1500);
 }
@@ -5887,6 +5931,7 @@ var data = buildTeamResults(winningTeam);
 }
   
 function showScoreModal(results,deltaMap,isTimeout){
+  if(results&&results[0]&&results[0].player===0)fxWin();
 
   var html='<div class="result-list">';
 

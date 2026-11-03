@@ -241,6 +241,7 @@
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
+<script src="../fx.js?v=20261103"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Coiny&family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
 <style id="theme-gachbong">
@@ -321,6 +322,21 @@ h1{
 @media (prefers-reduced-motion:reduce){.card{transition:none} #target-emoji{animation:none}}
 @media (max-width:420px){#scoreboard{gap:7px;padding:8px 10px;flex-wrap:nowrap}.stat-val{font-size:19px}.stat-label{font-size:10px}.mode-btn{padding:7px 8px;font-size:11px}.divider{display:none}}
 footer{color:#8fb0aa}
+
+/* ===== hoạt ảnh: lát gạch ===== */
+@keyframes tileDrop{0%{opacity:0;transform:translateY(-26px) rotate(-6deg) scale(.7)}60%{opacity:1;transform:translateY(3px) rotate(1deg) scale(1.03)}100%{transform:none}}
+.card-wrap{animation:tileDrop .5s cubic-bezier(.3,1.4,.5,1) both}
+@keyframes foundFade{0%{filter:brightness(1.6)}100%{filter:none}}
+.card-wrap.found .card-front{animation:foundFade .6s ease-out}
+.card-wrap.correct-reveal .card-front::after{content:'';position:absolute;inset:0;border-radius:3px;background:linear-gradient(115deg,transparent 30%,rgba(255,255,255,.85) 48%,transparent 66%);transform:translateX(-120%);animation:glaze .7s .1s ease-out forwards;pointer-events:none}
+@keyframes glaze{to{transform:translateX(120%)}}
+#grid-wrap.crack{animation:gridKnock .4s ease-out}
+@keyframes gridKnock{0%,100%{transform:none}25%{transform:translate(-5px,2px) rotate(-.4deg)}50%{transform:translate(5px,-2px) rotate(.4deg)}75%{transform:translate(-3px,1px)}}
+#target-emoji.hop{animation:emojiHop .6s cubic-bezier(.3,1.6,.5,1)}
+@keyframes emojiHop{0%{transform:scale(.4) rotate(-20deg)}60%{transform:scale(1.2) rotate(6deg)}100%{transform:none}}
+.streak-badge{animation:streakPop .45s cubic-bezier(.3,1.7,.5,1)}
+@keyframes streakPop{from{transform:scale(.3) rotate(-12deg)}}
+@media (prefers-reduced-motion:reduce){.card-wrap,.card-wrap.found .card-front,.card-wrap.correct-reveal .card-front::after,#grid-wrap.crack,#target-emoji.hop,.streak-badge{animation:none}}
 </style>
 <body>
 
@@ -365,7 +381,7 @@ footer{color:#8fb0aa}
   <button class="btn" id="btn-skip"  onclick="skipMemorize()">BỎ QUA</button>
 </div>
 
-<footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script>
 // ── Emoji sets ────────────────────────────────────────────────────────────────
@@ -630,6 +646,7 @@ function buildGrid(emojis) {
       const idx = r*N+c;
       const cw = document.createElement('div');
       cw.className = 'card-wrap';
+      cw.style.animationDelay = ((r + c) * 28) + 'ms';
       const card = document.createElement('div');
       card.className = 'card flipped';
       const front = document.createElement('div');
@@ -651,11 +668,15 @@ function buildGrid(emojis) {
 
 // ── Animations ────────────────────────────────────────────────────────────────
 function revealAllAnimated(onDone) {
+  const N = gridSize();
   cardWraps.forEach((cw,i) => {
-    setTimeout(() => cw.querySelector('.card').classList.remove('flipped'), i*40);
+    const d = (Math.floor(i/N) + i%N) * 55;   // sóng chéo từ góc trên trái
+    setTimeout(() => { cw.querySelector('.card').classList.remove('flipped'); puff(cw, 2, ['#e8dcc0','#c9c0ad']); }, d);
   });
-  setTimeout(onDone, (cardWraps.length-1)*40+600);
+  setTimeout(onDone, (N*2-2)*55+650);
 }
+// bụi vữa bốc lên khi viên gạch lật
+function puff(cw, n, colors) { try { const q = FX.center(cw); FX.burst(q.x, q.y, { n: n || 3, colors: colors || ['#e8dcc0'], speed: 70, gravity: -30, drag: 2.2, size: 7, life: .5, shape: 'circle' }); } catch (e) {} }
 
 function hideAllAnimated(onDone) {
   const order = [...Array(cardWraps.length).keys()];
@@ -664,8 +685,7 @@ function hideAllAnimated(onDone) {
   }
   order.forEach((idx,step) => {
     setTimeout(() => {
-      if (!foundIndices.has(idx))
-        cardWraps[idx].querySelector('.card').classList.add('flipped');
+      if (!foundIndices.has(idx)) { cardWraps[idx].querySelector('.card').classList.add('flipped'); puff(cardWraps[idx], 2, ['#e8dcc0','#c9c0ad']); }
     }, step*30);
   });
   setTimeout(onDone, (order.length-1)*30+600);
@@ -786,6 +806,11 @@ function handleCardClick(clickedIdx) {
     cw.querySelector('.card').classList.remove('flipped');
     cw.classList.add('correct-reveal');
     foundIndices.add(clickedIdx);
+    try { const q = FX.center(cw); FX.ring(q.x, q.y, '#2f9e6e', 60, 5);
+      FX.burst(q.x, q.y, { n: 14, colors: ['#d9a441','#1f6f6b','#b23a2c','#fbf8f1'], shapes: ['star','square'], speed: 260, gravity: 420, size: 8, life: .9 });
+      FX.text(q.x, q.y - 26, streak > 1 ? 'x' + streak : '+1', { color: streak > 2 ? '#d9a441' : '#fbf8f1', font: "400 " + (22 + Math.min(streak, 8) * 2) + "px Coiny,sans-serif", shadow: '0 2px 0 #15514e' });
+      if (streak >= 3) FX.burst(innerWidth / 2, 120, { n: 20, colors: ['#d9a441','#b23a2c','#1f6f6b'], shapes: ['star'], speed: 300, spread: 1.6, angle: 1.57, gravity: 300, life: 1 });
+      const te = document.getElementById('target-emoji'); te.classList.remove('hop'); void te.offsetWidth; te.classList.add('hop'); } catch (e) {}
     document.getElementById('result-msg').innerHTML=
       `✅ <span style="color:var(--correct)">Chính xác!</span>`+
       (streak>1?`<span class="streak-badge">🔥 ${streak} CHUỖI</span>`:'');
@@ -799,6 +824,8 @@ function handleCardClick(clickedIdx) {
     streak=0; wrongCount++; updateStats();
     const cwWrong=cardWraps[clickedIdx];
     cwWrong.classList.add('wrong-shake');
+    try { const q = FX.center(cwWrong); FX.burst(q.x, q.y, { n: 9, colors: ['#c8442f','#7e2419','#c9c0ad'], shapes: ['tri','square'], speed: 200, gravity: 520, size: 7, life: .7 });
+      const gw = document.getElementById('grid-wrap'); gw.classList.remove('crack'); void gw.offsetWidth; gw.classList.add('crack'); FX.shake(gw, 4, 260); } catch (e) {}
     setTimeout(()=>cwWrong.classList.remove('wrong-shake'),500);
     document.getElementById('result-msg').innerHTML=
       `❌ <span style="color:var(--wrong)">Sai rồi!</span>`;
@@ -841,6 +868,7 @@ function endGame() {
   const btn=document.getElementById('btn-start');
   btn.style.display='inline-block'; btn.textContent='🔄 CHƠI LẠI';
   phase='idle';
+  try { FX.rain({ n: 70, colors: ['#d9a441','#1f6f6b','#b23a2c','#fbf8f1'], shapes: ['square','tri'], size: 11 }); } catch (e) {}
   document.getElementById('btn-mode').style.pointerEvents='auto';
   document.getElementById('btn-mode').style.opacity='1';
 }

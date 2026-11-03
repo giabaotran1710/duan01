@@ -424,6 +424,7 @@ button{font:inherit;color:inherit}
     footer { position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:1;font-family:Tahoma;z-index:99999; }
 
 </style>
+<script src="../fx.js?v=20261103"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Pangolin&display=swap" rel="stylesheet">
 <style id="theme-chalk">
@@ -515,6 +516,25 @@ body{
 }
 @media (prefers-reduced-motion:reduce){.targetTrack,.targetNumber,.number{transition:none}}
 footer{color:#c9a982}
+
+/* ===== hoạt ảnh: bảng phấn ===== */
+@keyframes chalkCircle{from{clip-path:polygon(50% 50%,50% 0,50% 0,50% 0,50% 0,50% 0,50% 0)}to{clip-path:polygon(50% 50%,50% 0,100% 0,100% 100%,0 100%,0 0,50% 0)}}
+.number.good::after{content:'';position:absolute;inset:3px;border:2.5px solid var(--chalk-y);border-radius:50%;animation:chalkCircle .28s ease-out both;transform:rotate(-8deg)}
+.number.done{filter:blur(2px);transition:opacity .35s ease,transform .35s ease,filter .35s ease}
+@keyframes boardIn{from{opacity:0;transform:translateY(8px)}}
+.number{animation:chalkWrite .35s ease-out both}
+@keyframes chalkWrite{from{opacity:0;transform:translate(-50%,-50%) scale(1.6) rotate(-12deg);filter:blur(3px)}}
+.boardShell.hurry{animation:hurry .8s ease-in-out infinite}
+@keyframes hurry{50%{box-shadow:inset 0 0 40px rgba(0,0,0,.45),inset 0 0 0 3px rgba(255,155,143,.7),0 14px 0 -4px var(--wood-2),0 18px 26px rgba(0,0,0,.5)}}
+.eraser{position:absolute;top:8%;bottom:8%;left:-30%;width:26%;z-index:12;pointer-events:none;border-radius:10px;background:linear-gradient(180deg,#e8d9b0 0 70%,#2a2a2a 70%);box-shadow:0 8px 14px rgba(0,0,0,.5);animation:eraserSweep .9s cubic-bezier(.5,0,.3,1) forwards}
+@keyframes eraserSweep{to{left:106%}}
+.eraseTrail{position:absolute;inset:0;z-index:11;pointer-events:none;background:linear-gradient(90deg,rgba(26,43,34,.95),rgba(26,43,34,.95));transform-origin:left;transform:scaleX(0);animation:trail .9s cubic-bezier(.5,0,.3,1) forwards;border-radius:4px}
+@keyframes trail{to{transform:scaleX(1)}}
+.chalkScrawl{position:absolute;left:50%;top:44%;z-index:13;transform:translate(-50%,-50%) rotate(-6deg);font:400 54px Pangolin,sans-serif;color:var(--chalk-y);pointer-events:none;white-space:nowrap;animation:scrawl .8s .75s ease-out both}
+@keyframes scrawl{from{clip-path:inset(0 100% 0 0)}to{clip-path:inset(0 0 0 0)}}
+.card .icon,.card h1{animation:boardIn .45s ease-out both}
+#target-flash{animation:none}
+@media (prefers-reduced-motion:reduce){.number,.number.good::after,.boardShell.hurry,.eraser,.eraseTrail,.chalkScrawl,.card .icon,.card h1{animation:none}.chalkScrawl{clip-path:none}}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -586,7 +606,7 @@ footer{color:#c9a982}
         </section>
     </main>
 </div>
-<footer class="tbFooter">Version: D20261103120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script>
 (() => {
@@ -950,6 +970,7 @@ updateBest();
 
         if (n === target) {
             btn.classList.add('good');
+            try { const q = FX.center(btn); FX.burst(q.x, q.y, { n: 9, colors: ['#f4f1e6', '#c9cfc2', '#ffe17a'], speed: 120, gravity: 120, drag: 2.5, size: 6, life: .6, shape: 'circle' }); FX.ring(q.x, q.y, '#ffe17a', 30, 2.5); } catch (e) {}
 
             idx++;
 
@@ -969,6 +990,7 @@ updateBest();
             btn.classList.remove('bad');
             void btn.offsetWidth;
             btn.classList.add('bad');
+            try { const q = FX.center(btn); FX.text(q.x, q.y - 16, '✕', { color: '#ff9b8f', font: "400 30px Pangolin,sans-serif", dur: 600, rise: 26 }); FX.shake(document.querySelector('.boardShell'), 3, 220); } catch (e) {}
         }
     }
 
@@ -979,6 +1001,7 @@ updateBest();
         const pct = Math.max(0, Math.min(1, left / limit));
 
         timeBar.style.width = (pct * 100) + '%';
+        document.querySelector('.boardShell').classList.toggle('hurry', pct < 0.25);
         if (pct < 0.25) {
             timeBar.style.background = 'repeating-linear-gradient(90deg,#ff9b8f 0 14px,#ffb3a8 14px 16px)';
         } else {
@@ -1047,6 +1070,21 @@ if (!best || elapsedMs < best) {
             resultMeta.textContent = '';
         }
 
+        document.querySelector('.boardShell').classList.remove('hurry');
+        const shell = document.querySelector('.boardShell');
+        shell.querySelectorAll('.eraser,.eraseTrail,.chalkScrawl').forEach(e => e.remove());
+        if (won) {
+            // lau bảng: giẻ lau quét ngang rồi viết lời khen bằng phấn
+            const tr = document.createElement('div'); tr.className = 'eraseTrail';
+            const er = document.createElement('div'); er.className = 'eraser';
+            const sc = document.createElement('div'); sc.className = 'chalkScrawl'; sc.textContent = 'Giỏi lắm!';
+            shell.append(tr, er, sc);
+            try { const r = shell.getBoundingClientRect(); FX.burst(r.left, r.top + r.height / 2, { n: 30, colors: ['#f4f1e6', '#c9cfc2'], speed: 320, spread: 1.4, angle: 0, gravity: 40, drag: 2, size: 8, life: .9 });
+              setTimeout(() => FX.rain({ n: 46, colors: ['#f4f1e6', '#ffe17a', '#ffb3c1', '#a9d8ff'], shapes: ['line', 'star'], size: 9, gravity: 140 }), 900); } catch (e) {}
+            setTimeout(() => { sc.remove(); resultScreen.classList.remove('hidden'); }, 1700);
+            return;
+        }
+        try { const r = shell.getBoundingClientRect(); FX.burst(r.left + r.width / 2, r.top + 20, { n: 40, colors: ['#f4f1e6', '#c9cfc2'], speed: 140, spread: 3, angle: 1.57, gravity: 520, shapes: ['line', 'square'], size: 6, life: 1.1 }); FX.shake(shell, 7, 400); } catch (e) {}
         resultScreen.classList.remove('hidden');
     }
 
