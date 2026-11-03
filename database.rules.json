@@ -578,6 +578,84 @@
           ".validate": false
         }
       }
+    },
+    "bocso_t": {
+      "$id": {
+        ".read": false,
+        ".write": "$id.matches(/^[a-f0-9]{24,40}$/)",
+        ".validate": "newData.isNumber() && newData.val() == now"
+      }
+    },
+    "bocso": {
+      ".read": true,
+      ".indexOn": ["created"],
+      "$code": {
+        ".write": "!data.exists() || !newData.exists()",
+        ".validate": "$code.matches(/^[A-HJ-NP-Z2-9]{5}$/) && newData.hasChild('created')",
+        "created": {
+          ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+        },
+        "p": {
+          "$slot": {
+            ".write": "!data.exists() || !newData.exists() || data.child('seen').val() < now - 40000 || data.child('id').val() == newData.child('id').val()",
+            ".validate": "$slot.matches(/^[0-9]$/) && newData.hasChildren(['id', 'name', 'at', 'seen']) && (!root.child('bocso').child($code).child('go').exists() || data.child('id').val() == newData.child('id').val())",
+            "id": {
+              ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{24,40}$/)"
+            },
+            "name": {
+              ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20"
+            },
+            "at": {
+              ".validate": "newData.isNumber() && (newData.val() == now || (data.exists() && newData.val() == data.val()))"
+            },
+            "seen": {
+              ".validate": "newData.isNumber() && newData.val() <= now + 60000"
+            },
+            "$other": {
+              ".validate": false
+            }
+          }
+        },
+        "go": {
+          ".write": "!data.exists() || !newData.exists()",
+          ".validate": "newData.hasChildren(['t', 'n', 'lay', 'by'])",
+          "t": {
+            ".validate": "newData.isNumber() && newData.val() == now"
+          },
+          "n": {
+            ".validate": "newData.isNumber() && newData.val() >= 1 && newData.val() <= 10"
+          },
+          "lay": {
+            ".validate": "newData.isString() && newData.val().length <= 400"
+          },
+          "by": {
+            ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{24,40}$/)"
+          },
+          "$other": {
+            ".validate": false
+          }
+        },
+        "claims": {
+          ".write": "!newData.exists()",
+          "$i": {
+            ".write": "(!data.exists() && root.child('bocso').child($code).child('go').exists()) || !newData.exists()",
+            ".validate": "$i.matches(/^[0-9]$/) && newData.hasChildren(['id', 'name']) && newData.parent().parent().child('picks').child(newData.child('id').val()).val() + '' == $i",
+            "id": { ".validate": "newData.isString() && newData.val().matches(/^[a-f0-9]{24,40}$/)" },
+            "name": { ".validate": "newData.isString() && newData.val().length >= 1 && newData.val().length <= 20" },
+            "$other": { ".validate": false }
+          }
+        },
+        "picks": {
+          ".write": "!newData.exists()",
+          "$id": {
+            ".write": "(!data.exists() && root.child('bocso').child($code).child('go').exists()) || !newData.exists()",
+            ".validate": "$id.matches(/^[a-f0-9]{24,40}$/) && newData.isNumber() && newData.val() >= 0 && newData.val() <= 9 && newData.parent().parent().child('claims').child(newData.val() + '').child('id').val() == $id"
+          }
+        },
+        "$other": {
+          ".validate": false
+        }
+      }
     }
   }
 }
