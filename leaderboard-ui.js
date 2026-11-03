@@ -247,6 +247,7 @@
   function renderMe() {
     const name = Scores.hasName() ? Scores.getName() : 'Người chơi';
     $('lbMeName').firstElementChild.textContent = name;
+    $('lbEditBtn').style.display = Scores.isBanned() ? 'none' : '';   // tài khoản bị cấm: không đổi tên
     const av = avatar(name); $('lbMeAv').replaceWith(av); av.id = 'lbMeAv';
   }
 
@@ -260,7 +261,7 @@
   $('lbClose').onclick = close;
   modal.addEventListener('click', e => { if (e.target === modal) close(); else if (!e.target.closest('#lbPick')) $('lbPick').classList.remove('open'); });
   $('lbRefresh').onclick = () => { const i = $('lbRefresh').firstElementChild; i.style.transition = 'transform .6s'; i.style.transform = 'rotate(360deg)'; setTimeout(() => { i.style.transition = 'none'; i.style.transform = ''; }, 650); load(); };
-  $('lbEditBtn').onclick = () => { $('lbMe').classList.add('editing'); $('lbName').value = Scores.hasName() ? Scores.getName() : ''; setTimeout(() => $('lbName').focus(), 30); };
+  $('lbEditBtn').onclick = () => { if (Scores.isBanned()) return; $('lbMe').classList.add('editing'); $('lbName').value = Scores.hasName() ? Scores.getName() : ''; setTimeout(() => $('lbName').focus(), 30); };
   $('lbCancel').onclick = () => $('lbMe').classList.remove('editing');
   $('lbName').addEventListener('input', e => { const p = Scores.normalizeName(e.target.value); if (p !== e.target.value) e.target.value = p; e.target.style.borderColor = ''; });
   $('lbSave').onclick = () => {
