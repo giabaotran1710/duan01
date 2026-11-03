@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <script src="../maintenance.js?v=20261101a" data-game="codam"></script>
+<script src="../fx.js?v=20261103b"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Cờ đam</title>
 <link href="https://fonts.googleapis.com/css2?family=Cinzel+Decorative:wght@700&family=Playfair+Display:wght@800&family=Crimson+Text:ital,wght@0,400;0,600;1,400&display=swap" rel="stylesheet"/>
@@ -1063,10 +1064,35 @@ function animateMove(piece, fromR, fromC, toR, toC, victimPiece, victimR, victim
         }
       }
       if (tRaw < 1) { requestAnimationFrame(frame); }
-      else { ghost.remove(); if (victim) victim.remove(); resolve(); }
+      else { ghost.remove(); if (victim) victim.remove(); fxDamLand(piece, toR, toC, victimR, victimC, victimPiece); resolve(); }
     }
     requestAnimationFrame(frame);
   });
+}
+/* ---- hiệu ứng (toạ độ màn hình) ---- */
+let damCombo = 0;
+function damScreen(r, c) {
+  const ov = document.getElementById('anim-overlay').getBoundingClientRect(), p = cellCenter(r, c);
+  return { x: ov.left + p.x, y: ov.top + p.y };
+}
+function fxDamLand(piece, toR, toC, victimR, victimC, victimPiece) {
+  try {
+    const q = damScreen(toR, toC), sz = cellSize(), warm = piece.color === WHITE;
+    FX.ring(q.x, q.y, warm ? '#f0d080' : '#b0b0b0', sz * .9, 3);
+    FX.burst(q.x, q.y + sz * .3, { n: 5, colors: ['#d8b070', '#8a5a2a'], speed: 80, spread: 2.4, angle: -1.57, gravity: 240, size: 5, life: .4 });
+    if (victimPiece) {
+      damCombo++;
+      const v = damScreen(victimR, victimC);
+      FX.burst(v.x, v.y, { n: 16, colors: victimPiece.color === WHITE ? ['#f0d080', '#ffffff', '#c89a3a'] : ['#555', '#222', '#999'], shapes: ['circle', 'tri'], speed: 280, gravity: 480, size: 8, life: .8 });
+      FX.ring(v.x, v.y, '#ffb347', sz * 1.2, 5);
+      FX.shake(document.getElementById('board'), 4, 240);
+      if (damCombo > 1) FX.text(v.x, v.y - sz * .6, 'x' + damCombo, { color: '#ffd25a', font: '900 ' + (22 + damCombo * 4) + 'px serif', shadow: '0 2px 0 #5a2a00' });
+    } else damCombo = 0;
+    if (!piece.king && ((piece.color === WHITE && toR === 0) || (piece.color === BLACK && toR === BS - 1))) {
+      FX.burst(q.x, q.y, { n: 30, colors: ['#ffd25a', '#ffffff', '#ff9f43'], shapes: ['star'], speed: 380, gravity: 240, size: 10, life: 1 });
+      FX.text(q.x, q.y - sz * .7, 'VUA!', { color: '#ffd25a', font: '900 24px serif', shadow: '0 2px 0 #5a2a00', dur: 1100 });
+    }
+  } catch (e) {}
 }
 function spawnSparks(overlay, r, c, color, sz) {
   const center = cellCenter(r, c);
@@ -1267,6 +1293,13 @@ async function executeMove(fromR, fromC, move, isJump) {
   finishTurn(nb, fromR, fromC, move.toR, move.toC, s.turn);
 }
 
+function fxDamEnd(winner) {
+  try {
+    const mine = state.screen !== 'ai' || winner === WHITE;
+    if (mine) { FX.rain({ n: 80, colors: ['#ffd25a', '#f0d080', '#ffffff', '#c0392b'], shapes: ['circle', 'star'], size: 11 }); FX.burst(innerWidth / 2, innerHeight * .4, { n: 40, colors: ['#ffd25a', '#ffffff', '#c0392b'], shapes: ['star'], speed: 440, gravity: 320, size: 10, life: 1.1 }); }
+    else { FX.burst(innerWidth / 2, innerHeight * .45, { n: 44, colors: ['#222', '#555', '#999'], shapes: ['circle', 'square'], speed: 260, gravity: 200, size: 9, life: 1.3 }); FX.shake(document.getElementById('board'), 8, 420); }
+  } catch (e) {}
+}
 function finishTurn(newBoard, fromR, fromC, toR, toC, curColor) {
   const s = state;
   s.lastMove = {fromR, fromC, toR, toC};
@@ -1276,9 +1309,9 @@ function finishTurn(newBoard, fromR, fromC, toR, toC, curColor) {
   s.board = newBoard;
   s.selected = null;
   s.mustJumpFrom = null;
-  if (counts.white===0) { s.winner=BLACK; renderBoard(); return; }
-  if (counts.black===0) { s.winner=WHITE; renderBoard(); return; }
-  if (nextMoves.length===0) { s.winner=curColor; renderBoard(); return; }
+  if (counts.white===0) { s.winner=BLACK; damCombo=0; fxDamEnd(BLACK); renderBoard(); return; }
+  if (counts.black===0) { s.winner=WHITE; damCombo=0; fxDamEnd(WHITE); renderBoard(); return; }
+  if (nextMoves.length===0) { s.winner=curColor; damCombo=0; fxDamEnd(curColor); renderBoard(); return; }
   s.turn = next;
   renderBoard();
   if (s.screen==='ai' && s.turn===BLACK && !s.winner) scheduleAI();
@@ -1365,6 +1398,6 @@ function newGame() { startGame(state.screen); }
 showMenu();
 </script>
 <script src="../activity.js?v=20261029nolive" defer></script>
-<footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103200000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 </body>
 </html>

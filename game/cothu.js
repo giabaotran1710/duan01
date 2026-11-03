@@ -797,6 +797,18 @@ lastRedMove = null;
   function setStatus(text) { statusEl.textContent = text; }
   function sideName(side) { return side === 'blue' ? 'Xanh' : 'Đỏ'; }
 
+  // ----- hiệu ứng: mỗi kiểu va chạm một kiểu riêng -----
+  function fxCothu(fx, cell) {
+    if (!window.FX || !cell || fx._shown) return; fx._shown = true;
+    try {
+      const q = FX.center(cell), w = cell.offsetWidth || 40;
+      if (fx.icon === '🔄') { FX.ring(q.x, q.y, '#5fd7e8', w * 1.2, 4); setTimeout(() => FX.ring(q.x, q.y, '#5fd7e8', w * .8, 3), 150); FX.burst(q.x, q.y, { n: 12, colors: ['#5fd7e8', '#ffffff'], shapes: ['circle'], speed: 180, gravity: 0, drag: 2, size: 6, life: .6 }); }
+      else if (fx.icon === '💫') { FX.burst(q.x, q.y, { n: 16, colors: ['#fcd34d', '#ffffff', '#93c5fd'], shapes: ['star'], speed: 220, gravity: 80, size: 9, life: .9 }); FX.text(q.x, q.y - w * .6, 'CHOÁNG!', { color: '#fcd34d', font: '900 20px system-ui,sans-serif', shadow: '0 2px 0 #7a4a00' }); }
+      else if (fx.icon === '💀') { FX.burst(q.x, q.y, { n: 24, colors: ['#222', '#555', '#999', '#ef4444'], shapes: ['circle', 'square'], speed: 280, gravity: 120, size: 9, life: 1.1 }); FX.ring(q.x, q.y, '#ef4444', w * 1.4, 5); FX.text(q.x, q.y - w * .6, 'ĐỒNG QUY!', { color: '#fff', font: '900 20px system-ui,sans-serif', shadow: '0 2px 0 #7a1010' }); FX.shake(boardEl, 7, 320); }
+      else { FX.burst(q.x, q.y, { n: 20, colors: ['#ef4444', '#fcd34d', '#ffffff', '#b45309'], shapes: ['tri', 'square', 'star'], speed: 320, gravity: 420, size: 9, life: .8 }); FX.ring(q.x, q.y, '#ef4444', w * 1.2, 5); FX.shake(boardEl, 5, 260); }
+    } catch (e) {}
+  }
+  let lastWinnerText = '';
   function render() {
     cellMap.clear();
     grassMap.clear();
@@ -837,6 +849,7 @@ lastRedMove = null;
           const icon = captureFx.icon || '<i class="fa-solid fa-skull"></i>';
           cell.innerHTML = `<div class="captureFx">${icon}</div>`;
           boardEl.appendChild(cell);
+          (function (fx, c) { setTimeout(() => fxCothu(fx, c), 30); })(captureFx, cell);
           continue;
         }
         if (piece) {
@@ -1051,6 +1064,18 @@ lastRedMove = null;
   closeRulesBtn.addEventListener('click', closeRules);
   rulesModal.addEventListener('click', (e) => { if (e.target === rulesModal) closeRules(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape') closeRules(); });
+
+  // thắng / thua: theo dõi dòng thông báo kết quả
+  try {
+    new MutationObserver(() => {
+      const t = winnerEl.textContent || '';
+      if (!t || t === lastWinnerText || !window.FX) { if (!t) lastWinnerText = ''; return; }
+      lastWinnerText = t;
+      const human = t.indexOf('Bạn') === 0;
+      if (human) { FX.rain({ n: 80, colors: ['#ef4444', '#fcd34d', '#4ade80', '#60a5fa'], shapes: ['square', 'star'], size: 11 }); FX.burst(innerWidth / 2, innerHeight * .4, { n: 40, colors: ['#fcd34d', '#ffffff', '#ef4444'], shapes: ['star'], speed: 440, gravity: 320, size: 10, life: 1.1 }); }
+      else { FX.burst(innerWidth / 2, innerHeight * .45, { n: 44, colors: ['#222', '#555', '#999'], shapes: ['circle', 'square'], speed: 260, gravity: 200, size: 9, life: 1.3 }); FX.shake(boardEl, 8, 420); }
+    }).observe(winnerEl, { childList: true, characterData: true, subtree: true });
+  } catch (e) {}
 
   reset();
 })();

@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <script src="../maintenance.js?v=20261101a" data-game="covua"></script>
 <script src="../scene.js" data-game="covua"></script>
+<script src="../fx.js?v=20261103b"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#101315">
 <title>Cờ Vua</title>
@@ -452,7 +453,7 @@ footer{position:fixed;bottom:5px;left:10px;z-index:2;font-size:10px;color:#aaa;o
 </div>
 
 <div class="toast" id="toast"></div>
-<footer class="tbFooter">Version: D20261027174003 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261103200000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 
 <script>
 function ChessCore(){
@@ -1696,6 +1697,10 @@ function ExplainVi(){
     save(); renderAll();
     const win = result.winner===game.human, draw = result.winner<0;
     if(result.reason==='checkmate') banner('CHIẾU HẾT!');
+    try{
+      if(!draw && win){ FX.rain({n:80,colors:['#ffd25a','#ffffff','#7dd3fc','#f6f1e4'],shapes:['square','star'],size:11}); FX.burst(innerWidth/2,innerHeight*.4,{n:40,colors:['#ffd25a','#ffffff','#7dd3fc'],shapes:['star'],speed:440,gravity:320,size:10,life:1.1}); }
+      else if(!draw){ FX.burst(innerWidth/2,innerHeight*.45,{n:44,colors:['#2a2f3a','#4a5568','#8a94a6'],shapes:['circle','square'],speed:260,gravity:200,size:9,life:1.3}); FX.shake(boardEl,8,420); }
+    }catch(e){}
     setTimeout(() => {
       sfx(draw ? 'draw' : win ? 'win' : 'lose');
       $('endTitle').textContent = resultTitle();
@@ -1710,6 +1715,25 @@ function ExplainVi(){
   function save(){
     try { localStorage.setItem(SAVE_KEY, JSON.stringify({ human:game.human, level:game.level, moves:game.moves, over:game.over, result:game.result })); } catch(e) {}
   }
+  // ----- hiệu ứng nước đi -----
+  function fxChess(played){
+    try{
+      const sq = squares[played.to]; if(!sq) return;
+      const q = FX.center(sq), dark = !!(played.piece>>3), cols = dark ? ['#2a2f3a','#4a5568','#8a94a6'] : ['#f6f1e4','#d8c8a0','#ffffff'];
+      setTimeout(()=>{
+        FX.ring(q.x,q.y,dark?'#4a5568':'#f6f1e4',sq.offsetWidth*.9,3);
+        if(played.cap){
+          FX.burst(q.x,q.y,{n:20,colors:cols.concat(['#e0a020']),shapes:['tri','square'],speed:300,gravity:520,size:8,life:.8});
+          FX.ring(q.x,q.y,'#e0a020',sq.offsetWidth*1.4,5); FX.shake(boardEl,5,260);
+        } else FX.burst(q.x,q.y+sq.offsetHeight*.3,{n:5,colors:['#d8c8a0','#8a8a8a'],speed:80,spread:2.4,angle:-1.57,gravity:240,size:5,life:.4});
+        if(played.promo){
+          FX.burst(q.x,q.y,{n:30,colors:['#ffd25a','#ffffff','#7dd3fc'],shapes:['star'],speed:380,gravity:260,size:10,life:1});
+          FX.text(q.x,q.y-40,'Phong cấp!',{color:'#ffd25a',font:'900 22px system-ui,sans-serif',shadow:'0 2px 0 #7a4a00'});
+        }
+        if(played.flag===3||played.flag===4){ const base=played.from&0x70, rt=base+(played.flag===3?5:3), rs=squares[rt]; if(rs){ const rq=FX.center(rs); FX.ring(rq.x,rq.y,'#b98a52',rs.offsetWidth*.9,3); FX.burst(rq.x,rq.y+rs.offsetHeight*.3,{n:6,colors:['#d8c8a0','#8a8a8a'],speed:90,spread:2.4,angle:-1.57,gravity:240,size:5,life:.4}); } }
+      }, 230);
+    }catch(e){}
+  }
   function playMove(m, fromDrag){
     const legal = C.moves();
     const san = C.san(m, legal, settings.lang), sanEn = C.san(m, legal, 'en');
@@ -1718,6 +1742,7 @@ function ExplainVi(){
     game.selected = -1; game.hint = null;
     if(fromDrag) renderPieces(); else animateMove(played);
     sfx(played.promo ? 'promote' : played.flag===3||played.flag===4 ? 'castle' : played.cap ? 'capture' : 'move');
+    fxChess(played);
     afterMove(true);
     return true;
   }
@@ -1727,7 +1752,10 @@ function ExplainVi(){
     renderMoves();
     if(game.status.over){ game.thinking = false; requestEval(); finish(game.status); return; }
     if(game.started) save();
-    if(fresh && game.status.inCheck){ setTimeout(()=>sfx('check'), 110); }
+    if(fresh && game.status.inCheck){
+      setTimeout(()=>sfx('check'), 110);
+      try{ const ks = squares[C.kingSquare(C.turn)]; if(ks){ const q = FX.center(ks); setTimeout(()=>{ FX.ring(q.x,q.y,'#ff3b2a',ks.offsetWidth*1.3,6); FX.shake(boardEl,6,300); },260); } }catch(e){}
+    }
     requestEval();
     if(C.turn !== game.human && game.started && !game.engineError) aiMove();
     renderMarks(); renderInfo(); renderAnalysis();
