@@ -604,6 +604,7 @@ function clampTargets(){
   for (const o of obstacles){
     o.x = Math.max(0, Math.min(W-o.w, o.x));
     o.y = Math.max(0, Math.min(groundY()-o.h, o.y));
+    if (o.mv){ o.mv.bx = o.x; o.mv.by = o.y; o.mv.ph = 0; }
   }
 }
 
@@ -743,40 +744,71 @@ function computeDifficulty(){
     else d += 1;
   }
   d += obstacles.length * 2.5;
+  for (const o of obstacles) if (o.mv) d += 1.5;
   d += Math.abs(wind) / 30;
   return Math.round(d * 10) / 10;
+}
+
+/* Cấu hình từng giai đoạn: số bia (tối đa 6), số tường, khoảng gió, tỉ lệ tường di chuyển */
+function levelSpec(n){
+  if (n <= 10){
+    return {
+      targets: [2,2,2,3,3,3,3,4,4,4][n-1] || 2,
+      walls: n >= 8 ? 2 : (n >= 3 ? 1 : 0),
+      windMin: 0, windMax: n <= 1 ? 0 : Math.min(50, 8 + (n - 2) * 5),   // gió nhẹ, tăng dần đến 50
+      move: 0
+    };
+  }
+  if (n <= 15) return { targets: 5, walls: 3, windMin: 51, windMax: 120, move: 0 };
+  if (n <= 22) return { targets: 6, walls: 3, windMin: 75, windMax: 160, move: 0.5 };
+  return { targets: 6, walls: 4, windMin: 100, windMax: 200, move: 0.6 };
 }
 
 function generateLevelRaw(n, obsLimit){
   targets = [];
   obstacles = [];
 
-  const count = Math.min(2 + Math.floor(n / 2), 7);
+  const spec = levelSpec(n);
+  const count = Math.min(spec.targets, 6);
 
-  wind = n <= 1 ? 0 : (Math.random() * 2 - 1) * Math.min((n - 1) * 32, 170);
-  if (Math.abs(wind) < 12) wind = 0;
+  wind = (spec.windMin + Math.random() * (spec.windMax - spec.windMin)) * (Math.random() < 0.5 ? -1 : 1);
+  if (Math.abs(wind) < 4) wind = 0;
 
   const gy = groundY();
   const minX = W * 0.42, maxX = W - 70;
   const minY = H * 0.10, maxY = gy - 70;
 
-  // số tường tăng dần theo màn (tối đa 6): một nửa là tường ngang, nửa còn lại là tường dọc
-  const totalObs = n <= 2 ? 0 : Math.min(n - 1, 6, obsLimit === undefined ? 6 : obsLimit);
-  const horizCount = Math.min(Math.ceil(totalObs / 2), 3);
-  const vertCount = totalObs - horizCount;
-
-  for (let i = 0; i < vertCount; i++){
-    const w = 18 + Math.random() * 26;
-    const h = Math.min(H * 0.35, 60 + Math.random() * 100);
-    const pos = tryPlaceObstacle(w, h, Math.max(W*0.42,130), W*0.80, H*0.15, gy-50);
+  // mỗi tường là ngang hoặc dọc, chọn ngẫu nhiên
+  const totalObs = Math.min(spec.walls, obsLimit === undefined ? 99 : obsLimit);
+  for (let i = 0; i < totalObs; i++){
+    let pos = null, horiz = Math.random() < 0.5;
+    for (let k = 0; k < 2 && !pos; k++, horiz = !horiz){
+      if (horiz){
+        const w = Math.min(W*0.32, 90 + Math.random()*70), h = 28 + Math.random()*14;
+        // tường ngang: nằm lơ lửng giữa sân, không sát khẩu pháo
+        pos = tryPlaceObstacle(w, h, Math.max(W*0.30,110), W - 20, H*0.20, gy - H*0.18);
+      } else {
+        const w = 18 + Math.random() * 26, h = Math.min(H * 0.35, 60 + Math.random() * 100);
+        pos = tryPlaceObstacle(w, h, Math.max(W*0.42,130), W*0.80, H*0.15, gy-50);
+      }
+    }
     if (pos) obstacles.push(pos);
   }
-  for (let i = 0; i < horizCount; i++){
-    const w = Math.min(W*0.32, 90 + Math.random()*70);
-    const h = 28 + Math.random()*14;
-    // tường ngang: nằm lơ lửng giữa sân, không sát khẩu pháo
-    const pos = tryPlaceObstacle(w, h, Math.max(W*0.30,110), W - 20, H*0.20, gy - H*0.18);
-    if (pos) obstacles.push(pos);
+
+  // tường biết di chuyển: qua lại hoặc lên xuống quanh vị trí gốc (không vẽ quỹ đạo)
+  const xLo = Math.max(W*0.30, 110), xHi = W - 20, yLo = H*0.14, yHi = gy - H*0.12;
+  for (const o of obstacles){
+    if (Math.random() >= spec.move) continue;
+    const axes = Math.random() < 0.5 ? ['x','y'] : ['y','x'];
+    for (const ax of axes){
+      const amp = ax === 'x'
+        ? Math.min(50 + Math.random()*45, o.x - xLo, xHi - (o.x + o.w))
+        : Math.min(50 + Math.random()*45, o.y - yLo, yHi - (o.y + o.h));
+      if (amp >= 22){
+        o.mv = { ax, amp, sp: 0.7 + Math.random()*0.8, ph: 0, bx: o.x, by: o.y };
+        break;
+      }
+    }
   }
 
   function place(r){
@@ -970,12 +1002,18 @@ function canHit(t){
   targets.forEach((o, i) => { o.hit = saved[i]; });
   return ok;
 }
+function obstacleBounds(o){   // vùng tường quét qua khi di chuyển
+  if (!o.mv) return { l: o.x, r: o.x + o.w, t: o.y, b: o.y + o.h };
+  const a = o.mv.amp, h = o.mv.ax === 'x';
+  return { l: o.mv.bx - (h ? a : 0), r: o.mv.bx + o.w + (h ? a : 0), t: o.mv.by - (h ? 0 : a), b: o.mv.by + o.h + (h ? 0 : a) };
+}
 function levelSolvable(){
-  // mục tiêu không được dính vào tường, và phải có đường bắn tới
+  // mục tiêu không được dính vào tường (kể cả vùng tường quét qua), và phải có đường bắn tới
   for (const t of targets){
     for (const o of obstacles){
-      if (getTargetRightX(t) + 12 > o.x && getTargetLeftX(t) - 12 < o.x + o.w &&
-          getTargetBottomY(t) + 12 > o.y && getTargetTopY(t) - 12 < o.y + o.h) return false;
+      const q = obstacleBounds(o);
+      if (getTargetRightX(t) + 12 > q.l && getTargetLeftX(t) - 12 < q.r &&
+          getTargetBottomY(t) + 12 > q.t && getTargetTopY(t) - 12 < q.b) return false;
     }
   }
   return targets.every(canHit);
@@ -984,8 +1022,8 @@ function levelSolvable(){
 function generateLevel(n){
   // thử đủ số tường của màn; không sinh được màn bắn trúng hết mục tiêu thì bớt dần từng tường
   let ok = false;
-  for (let lim = 6; lim >= 0 && !ok; lim--){
-    for (let k = 0; k < 25 && !ok; k++){ generateLevelRaw(n, lim); ok = levelSolvable(); }
+  for (let lim = levelSpec(n).walls; lim >= 0 && !ok; lim--){
+    for (let k = 0; k < 70 && !ok; k++){ generateLevelRaw(n, lim); ok = levelSolvable(); }
   }
   if (difficulty > bestDiff){
     bestDiff = difficulty;
@@ -1364,6 +1402,16 @@ function updateBallStep(dt){
   }
 }
 
+function updateObstacles(dt){
+  for (const o of obstacles){
+    const m = o.mv;
+    if (!m) continue;
+    m.ph += m.sp * dt;
+    const off = Math.sin(m.ph) * m.amp;
+    if (m.ax === 'x') o.x = m.bx + off; else o.y = m.by + off;
+  }
+}
+
 function updateTargets(dt){
   const gy = groundY();
   for (const t of targets){
@@ -1456,6 +1504,7 @@ function update(dt){
 
   updateParticles(dt);
   updateShockwaves(dt);
+  updateObstacles(dt);
   updateTargets(dt);
 
   if (state === 'flying') updateBall(dt);
