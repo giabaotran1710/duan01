@@ -747,7 +747,7 @@ function computeDifficulty(){
   return Math.round(d * 10) / 10;
 }
 
-function generateLevelRaw(n, noObstacles){
+function generateLevelRaw(n, obsLimit){
   targets = [];
   obstacles = [];
 
@@ -760,7 +760,8 @@ function generateLevelRaw(n, noObstacles){
   const minX = W * 0.42, maxX = W - 70;
   const minY = H * 0.10, maxY = gy - 70;
 
-  const totalObs = (noObstacles || n <= 2) ? 0 : Math.min(n - 1, 5);
+  // số tường tăng dần theo màn (tối đa 6): một nửa là tường ngang, nửa còn lại là tường dọc
+  const totalObs = n <= 2 ? 0 : Math.min(n - 1, 6, obsLimit === undefined ? 6 : obsLimit);
   const horizCount = Math.min(Math.ceil(totalObs / 2), 3);
   const vertCount = totalObs - horizCount;
 
@@ -773,9 +774,8 @@ function generateLevelRaw(n, noObstacles){
   for (let i = 0; i < horizCount; i++){
     const w = Math.min(W*0.32, 90 + Math.random()*70);
     const h = 28 + Math.random()*14;
-    const pos = tryPlaceObstacle(w, h, Math.max(W*0.28,110),
-      Math.max(W*0.28,110) + (W*0.72 - w) - Math.max(W*0.28,110),
-      H*0.22, gy - h - H*0.20);
+    // tường ngang: nằm lơ lửng giữa sân, không sát khẩu pháo
+    const pos = tryPlaceObstacle(w, h, Math.max(W*0.30,110), W - 20, H*0.20, gy - H*0.18);
     if (pos) obstacles.push(pos);
   }
 
@@ -982,9 +982,11 @@ function levelSolvable(){
 }
 
 function generateLevel(n){
+  // thử đủ số tường của màn; không sinh được màn bắn trúng hết mục tiêu thì bớt dần từng tường
   let ok = false;
-  for (let k = 0; k < 40 && !ok; k++){ generateLevelRaw(n, false); ok = levelSolvable(); }
-  for (let k = 0; k < 40 && !ok; k++){ generateLevelRaw(n, true); ok = levelSolvable(); }   // dự phòng: bỏ tường
+  for (let lim = 6; lim >= 0 && !ok; lim--){
+    for (let k = 0; k < 25 && !ok; k++){ generateLevelRaw(n, lim); ok = levelSolvable(); }
+  }
   if (difficulty > bestDiff){
     bestDiff = difficulty;
     localStorage.setItem('dbvt_maxdiff6', bestDiff);
