@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<script>
+/* Nếu trình duyệt chặn lưu trữ (chế độ riêng tư, webview hạn chế) thì dùng bộ nhớ tạm để game không bị lỗi */
+(function(){['localStorage','sessionStorage'].forEach(function(n){try{window[n].getItem('__t')}catch(e){var m={};try{Object.defineProperty(window,n,{configurable:true,value:{getItem:function(k){return k in m?m[k]:null},setItem:function(k,v){m[k]=String(v)},removeItem:function(k){delete m[k]},clear:function(){m={}}}})}catch(_){}}})})();
+</script>
+<meta charset="UTF-8">
+<script src="../maintenance.js?v=20261106a" data-game="timochu"></script>
+<script src="../scene.js" data-game="timochu"></script>
+<script src="../fx.js?v=20261103c"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f2a3d">
+<title>Tìm ô chữ</title>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#0f2a3d;--bg2:#143a52;--panel:#1b4a66;--ink:#f3f8fb;--muted:#9cc3d6;--cell:#fdfcf6;--cell-line:#7fa9bf;--black:#0b1d29;
+  --ok:#3fcf74;--bad:#ff5d6c;--gold:#ffd166;--key:#ffb020;--shadow:0 8px 20px rgba(0,0,0,.35)}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:linear-gradient(180deg,var(--bg2),var(--bg) 60%);color:var(--ink);font-family:'Be Vietnam Pro',system-ui,sans-serif;overflow-x:hidden}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
+.app{min-height:100%;display:flex;flex-direction:column;padding:calc(12px + env(safe-area-inset-top,0px)) 16px calc(36px + env(safe-area-inset-bottom,0px));max-width:560px;margin:0 auto}
+.top{display:flex;align-items:center;gap:10px;min-height:40px}
+.back{width:40px;height:40px;border-radius:12px;background:rgba(255,255,255,.08);font-size:18px;display:grid;place-items:center}
+.title{flex:1;text-align:center;font-weight:900;font-size:20px;letter-spacing:1.5px;color:var(--gold)}
+.spacer{width:40px}
+.view{display:none;flex:1;flex-direction:column;gap:12px;animation:vin .3s ease both}
+.view.on{display:flex}
+@keyframes vin{from{opacity:0;transform:translateY(8px)}}
+
+/* ---- menu ---- */
+.sizes{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:6px}
+.size{padding:12px 4px;border-radius:14px;background:rgba(255,255,255,.07);text-align:center;border:1.5px solid transparent;transition:transform .15s,border-color .15s}
+.size b{display:block;font-size:17px;font-weight:900}
+.size small{font-size:11px;color:var(--muted)}
+.size.on{border-color:var(--gold);background:rgba(255,209,102,.12)}
+.size:active{transform:scale(.97)}
+.grid-mini{display:grid;gap:2px;justify-content:center;margin:0 auto 4px}
+.grid-mini i{width:6px;height:6px;border-radius:1px;background:rgba(255,255,255,.35)}
+.grid-mini i.k{background:var(--key)}
+.levels{display:grid;gap:10px}
+.level{display:flex;align-items:center;gap:12px;padding:14px;border-radius:16px;background:var(--panel);box-shadow:var(--shadow);text-align:left;width:100%}
+.level .no{width:42px;height:42px;border-radius:12px;background:rgba(255,255,255,.1);display:grid;place-items:center;font-weight:900;font-size:17px;flex:none}
+.level .txt{flex:1;min-width:0}
+.level .txt b{display:block;font-size:16px}
+.level .txt small{color:var(--muted);font-size:12px}
+.level .done{color:var(--ok);font-size:20px}
+.level:active{transform:scale(.98)}
+.hint-line{color:var(--muted);font-size:13px;line-height:1.5;margin-top:4px}
+
+/* ---- bàn chơi ---- */
+.status{display:flex;justify-content:space-between;align-items:center;font-size:14px;color:var(--muted);font-weight:600}
+.status b{color:var(--ink);font-variant-numeric:tabular-nums}
+.board{display:grid;gap:4px;margin:4px auto 0;width:min(100%,420px)}
+.cell{position:relative;aspect-ratio:1/1;border-radius:8px;background:var(--cell);box-shadow:inset 0 -3px 0 rgba(0,0,0,.12),0 2px 0 rgba(0,0,0,.25);
+  font-weight:900;color:#143146;text-align:center;font-size:clamp(16px,5.4vw,26px);text-transform:uppercase;outline:none;width:100%;min-width:0;
+  caret-color:transparent;transition:background .2s,transform .12s}
+.cell.black{background:var(--black);box-shadow:none;pointer-events:none}
+.cell.key{background:#ffe9b0;box-shadow:inset 0 0 0 2px var(--key),0 2px 0 rgba(0,0,0,.25)}
+.cell.given{background:#dfeef7;color:#0d2b3f}
+.cell.sel{box-shadow:inset 0 0 0 3px #2f8fd8,0 2px 0 rgba(0,0,0,.25)}
+.cell.key.sel{box-shadow:inset 0 0 0 3px var(--key),0 0 0 3px rgba(255,176,32,.35)}
+.cell.ok{background:#cdf5dc;color:#11642e}
+.cell.bad{animation:shake .4s;background:#ffd5d9;color:#8c1020}
+.cell.hintc{background:#fff1c2}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-4px)}75%{transform:translateX(4px)}}
+.cell.pop{animation:pop .35s cubic-bezier(.2,1.6,.4,1)}
+@keyframes pop{from{transform:scale(.7)}}
+.cell .n{position:absolute;left:4px;top:2px;font-size:9px;font-weight:700;color:#4f7d94;letter-spacing:.2px}
+.cell input{position:absolute;inset:0;width:100%;height:100%;border:0;background:transparent;text-align:center;font:inherit;color:inherit;text-transform:uppercase;outline:none;padding:0}
+.cell input:disabled{opacity:1}
+
+.clue-box{background:var(--panel);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-height:64px;display:flex;flex-direction:column;justify-content:center}
+.clue-box .k{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.8px;text-transform:uppercase}
+.clue-box .t{font-size:16px;font-weight:700;margin-top:2px;line-height:1.35}
+.clues{display:grid;gap:6px}
+.clue{display:flex;gap:10px;align-items:flex-start;padding:9px 11px;border-radius:12px;background:rgba(255,255,255,.05);text-align:left;font-size:14px;line-height:1.35;width:100%}
+.clue b{flex:none;width:24px;height:24px;border-radius:8px;background:rgba(255,255,255,.12);display:grid;place-items:center;font-size:12px}
+.clue.on{background:rgba(47,143,216,.22);box-shadow:inset 0 0 0 1.5px #2f8fd8}
+.clue.keyc{background:rgba(255,176,32,.12)}
+.clue.keyc.on{background:rgba(255,176,32,.25);box-shadow:inset 0 0 0 1.5px var(--key)}
+.clue.done{opacity:.55}
+.clue.done span{text-decoration:line-through}
+.actions{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px}
+.btn{padding:13px 8px;border-radius:14px;background:rgba(255,255,255,.1);font-weight:800;font-size:14px;text-align:center}
+.btn.p{background:linear-gradient(180deg,#ffe07a,#f5a524);color:#3a2300;box-shadow:0 4px 0 #a86a00}
+.btn:active{transform:translateY(2px)}
+.btn[disabled]{opacity:.45}
+.foot{font-size:12px;color:var(--muted);text-align:center}
+
+/* ---- kết thúc ---- */
+#win{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:rgba(5,18,28,.78);z-index:50;padding:20px}
+#win.on{display:flex}
+.win-box{width:min(100%,340px);background:linear-gradient(170deg,#21557a,#15364f);border-radius:22px;padding:24px 20px;text-align:center;box-shadow:0 20px 50px rgba(0,0,0,.5);animation:vin .35s ease both}
+.win-box h2{font-size:26px;font-weight:900;color:var(--gold)}
+.win-box .kw{margin:12px 0 4px;font-size:13px;color:var(--muted)}
+.win-box .kwv{font-size:22px;font-weight:900;letter-spacing:4px}
+.win-box .sc{font-size:44px;font-weight:900;margin:14px 0 2px;font-variant-numeric:tabular-nums}
+.win-box .det{font-size:13px;color:var(--muted)}
+.win-box .row{display:grid;gap:10px;margin-top:18px}
+#toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translate(-50%,20px);opacity:0;background:rgba(0,0,0,.85);padding:10px 16px;border-radius:12px;font-weight:700;font-size:14px;transition:.25s;pointer-events:none;z-index:60;max-width:90vw;text-align:center}
+#toast.on{opacity:1;transform:translate(-50%,0)}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important;animation-iteration-count:1!important;transition-duration:.01s!important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <header class="top">
+    <button class="back" id="btnBack" aria-label="Quay lại" data-no-scene>←</button>
+    <h1 class="title">TÌM Ô CHỮ</h1>
+    <span class="spacer" aria-hidden="true"></span>
+  </header>
+
+  <!-- MENU: chọn cỡ lưới và màn -->
+  <section class="view on" id="vMenu">
+    <p class="hint-line">Điền chữ theo gợi ý từng hàng. Cột <b style="color:var(--key)">màu vàng</b> ghép thành từ khóa: đọc từ trên xuống.</p>
+    <div class="sizes" id="sizes"></div>
+    <div class="levels" id="levels"></div>
+  </section>
+
+  <!-- BÀN CHƠI -->
+  <section class="view" id="vPlay">
+    <div class="status"><span id="lvName"></span><span>⏱ <b id="clock">0:00</b></span></div>
+    <div class="board" id="board"></div>
+    <div class="clue-box" id="clueBox"><span class="k" id="clueK"></span><span class="t" id="clueT"></span></div>
+    <div class="clues" id="clues"></div>
+    <div class="actions">
+      <button class="btn" id="btnCheck">Kiểm tra</button>
+      <button class="btn" id="btnHint">Gợi ý<span id="hintLeft"></span></button>
+      <button class="btn p" id="btnNext" style="display:none">Màn sau</button>
+    </div>
+    <p class="foot" id="foot">Chạm vào ô để nhập. Chạm vào gợi ý để chọn hàng.</p>
+  </section>
+</div>
+
+<div id="win" role="dialog" aria-modal="true">
+  <div class="win-box">
+    <h2>Đúng rồi!</h2>
+    <div class="kw">Từ khóa</div>
+    <div class="kwv" id="winKw"></div>
+    <div class="sc" id="winScore">0</div>
+    <div class="det" id="winDet"></div>
+    <div class="row">
+      <button class="btn p" id="winNext">Màn sau</button>
+      <button class="btn" id="winMenu">Về chọn màn</button>
+    </div>
+  </div>
+</div>
+<div id="toast"></div>
+
+<footer class="tbFooter">Version: D20261106200000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+<script src="timochu-data/puzzles.js?v=20261106a"></script>
+<script src="../scores.js?v=20261103ban"></script>
+<script src="../activity.js?v=20261103ban" defer></script>
+<script>
+(function () {
+  'use strict';
+  var DATA = window.TIMOCHU_DATA || { sizes: {} };
+  var SIZES = [4, 5, 6, 7];
+  var KEY_STORE = 'timochu_progress_v1';
+  var reduced = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+  var $ = function (id) { return document.getElementById(id); };
+  function norm(s) { return String(s || '').normalize('NFC').toUpperCase(); }
+  function load() { try { return JSON.parse(localStorage.getItem(KEY_STORE)) || {}; } catch (e) { return {}; } }
+  function save(p) { try { localStorage.setItem(KEY_STORE, JSON.stringify(p)); } catch (e) {} }
+  function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 1800); }
+  function show(id) { ['vMenu', 'vPlay'].forEach(function (v) { $(v).classList.toggle('on', v === id); }); }
+
+  var progress = load();
+  var curN = 4;
+  var cur = null;        // ô chữ đang chơi
+  var S = null;          // trạng thái ván
+  var clockTimer = null;
+
+  /* ---------- menu ---------- */
+  function puzzlesOf(n) { return (DATA.sizes && DATA.sizes[n]) || []; }
+  function renderMenu() {
+    $('sizes').innerHTML = SIZES.map(function (n) {
+      var list = puzzlesOf(n), done = list.filter(function (p) { return progress[p.id]; }).length;
+      var mini = '';
+      for (var i = 0; i < n; i++) for (var j = 0; j < n; j++) mini += '<i class="' + (j === Math.floor((n - 1) / 2) ? 'k' : '') + '" style="visibility:' + (((i + j) % 3) ? 'visible' : 'hidden') + '"></i>';
+      return '<button class="size' + (n === curN ? ' on' : '') + '" data-n="' + n + '" aria-pressed="' + (n === curN) + '">' +
+        '<div class="grid-mini" style="grid-template-columns:repeat(' + n + ',5px)">' + mini + '</div>' +
+        '<b>' + n + '×' + n + '</b><small>' + done + '/' + list.length + ' màn</small></button>';
+    }).join('');
+    var list = puzzlesOf(curN);
+    $('levels').innerHTML = list.length ? list.map(function (p, i) {
+      var pr = progress[p.id];
+      return '<button class="level" data-id="' + p.id + '">' +
+        '<span class="no">' + (i + 1) + '</span>' +
+        '<span class="txt"><b>Màn ' + (i + 1) + ' · ' + curN + '×' + curN + '</b><small>' + (pr ? 'Điểm tốt nhất: ' + pr.best : 'Chưa chơi') + '</small></span>' +
+        (pr ? '<span class="done" aria-label="đã hoàn thành">✓</span>' : '') + '</button>';
+    }).join('') : '<p class="hint-line">Cỡ này chưa có màn nào.</p>';
+  }
+
+  /* ---------- xây ván ---------- */
+  function buildState(p) {
+    var N = p.n, c = p.keyCol;
+    var cells = [];     // cells[i][j] = {ans, black, given, key, row}
+    for (var i = 0; i < N; i++) {
+      cells[i] = [];
+      for (var j = 0; j < N; j++) cells[i][j] = { black: true, ans: '', given: false, key: j === c, row: i };
+    }
+    p.rows.forEach(function (r, i) {
+      for (var k = 0; k < r.word.length; k++) {
+        var cell = cells[i][r.start + k];
+        cell.black = false; cell.ans = norm(r.word.charAt(k));
+      }
+    });
+    var given = {};
+    (p.reveal || []).forEach(function (rc) { var cell = cells[rc[0]] && cells[rc[0]][rc[1]]; if (cell && !cell.black && !cell.key) { cell.given = true; given[rc[0] + ',' + rc[1]] = 1; } });
+    var values = [];
+    for (i = 0; i < N; i++) { values[i] = []; for (j = 0; j < N; j++) values[i][j] = cells[i][j].given ? cells[i][j].ans : ''; }
+    return { p: p, N: N, cells: cells, values: values, sel: { row: 0, col: null }, hints: 0, wrong: 0, t0: Date.now(), elapsed: 0, won: false,
+      kwRow: null, checked: {} };
+  }
+  function answerAt(i, j) { return S.cells[i][j].ans; }
+  function rowCols(i) { var out = []; for (var j = 0; j < S.N; j++) if (!S.cells[i][j].black) out.push(j); return out; }
+  // các ô của hàng không tính cột từ khóa (cột từ khóa điền riêng ở cuối)
+  function rowChk(i) { return rowCols(i).filter(function (j) { return j !== S.p.keyCol; }); }
+  function rowDone(i) { return rowChk(i).every(function (j) { return norm(S.values[i][j]) === answerAt(i, j); }); }
+  function allRowsDone() { for (var i = 0; i < S.N; i++) if (!rowDone(i)) return false; return true; }
+  function keyCellOk(i) { return norm(S.values[i][S.p.keyCol]) === norm(S.p.keyword.word.charAt(i)); }
+  function keyDone() { for (var i = 0; i < S.N; i++) if (!keyCellOk(i)) return false; return true; }
+
+  /* ---------- vẽ bàn ---------- */
+  function renderBoard() {
+    var b = $('board');
+    b.style.gridTemplateColumns = 'repeat(' + S.N + ',1fr)';
+    var html = '';
+    for (var i = 0; i < S.N; i++) for (var j = 0; j < S.N; j++) {
+      var cell = S.cells[i][j];
+      var cls = 'cell' + (cell.black ? ' black' : '') + (cell.key && !cell.black ? ' key' : '') + (cell.given ? ' given' : '');
+      if (cell.black) { html += '<div class="' + cls + '"></div>'; continue; }
+      var first = (j === rowCols(i)[0]);
+      html += '<div class="' + cls + '" data-i="' + i + '" data-j="' + j + '">' +
+        (first ? '<span class="n">' + (i + 1) + '</span>' : '') +
+        '<input inputmode="text" autocomplete="off" autocapitalize="characters" spellcheck="false" maxlength="2" aria-label="Hàng ' + (i + 1) + (cell.key ? ', từ khóa' : '') + '" ' +
+        (cell.given ? 'disabled value="' + cell.ans + '"' : 'value="' + (S.values[i][j] || '') + '"') + '></div>';
+    }
+    b.innerHTML = html;
+    paintCells();
+  }
+  function paintCells() {
+    var b = $('board');
+    b.querySelectorAll('.cell:not(.black)').forEach(function (el) {
+      var i = +el.dataset.i, j = +el.dataset.j, cell = S.cells[i][j];
+      var v = norm(S.values[i][j]);
+      el.classList.toggle('sel', S.sel.row === i && (S.sel.col === j || (S.sel.col === null && j === rowCols(i)[0])) && !cell.given);
+      if (!cell.given) el.classList.toggle('ok', v !== '' && v === cell.ans);
+      var inp = el.querySelector('input');
+      if (inp && !cell.given && inp.value !== (S.values[i][j] || '')) inp.value = S.values[i][j] || '';
+      if (inp && cell.given) inp.value = cell.ans;
+    });
+    renderClues();
+  }
+  function renderClues() {
+    var rows = S.p.rows, html = '';
+    rows.forEach(function (r, i) {
+      html += '<button class="clue' + (S.sel.row === i ? ' on' : '') + (rowDone(i) ? ' done' : '') + '" data-row="' + i + '"><b>' + (i + 1) + '</b><span>' + r.clue + '</span></button>';
+    });
+    html += '<button class="clue keyc' + (S.sel.row === 'key' ? ' on' : '') + (keyDone() ? ' done' : '') + '" data-row="key"><b>🔑</b><span>Từ khóa: ' + S.p.keyword.clue + '</span></button>';
+    $('clues').innerHTML = html;
+    var sel = S.sel.row === 'key' ? { k: 'TỪ KHÓA', t: S.p.keyword.clue } : { k: 'HÀNG ' + (S.sel.row + 1), t: rows[S.sel.row].clue };
+    $('clueK').textContent = sel.k; $('clueT').textContent = sel.t;
+    $('hintLeft').textContent = S.hints ? ' (' + S.hints + ')' : '';
+    $('clues').querySelectorAll('.clue').forEach(function (el) { el.classList.toggle('on', el.dataset.row === String(S.sel.row)); });
+  }
+
+  /* ---------- nhập liệu ---------- */
+  function focusCell(i, j) {
+    var el = $('board').querySelector('.cell[data-i="' + i + '"][data-j="' + j + '"] input');
+    if (el && !S.cells[i][j].given) { el.focus(); try { el.select(); } catch (e) {} }
+  }
+  function nextCell(i, j, dir) {
+    // đi tới ô kế tiếp trong hàng (hoặc hàng kế nếu cuối hàng); cột từ khóa coi như một ô của hàng
+    var cols = rowCols(i), k = cols.indexOf(j) + dir;
+    if (k >= 0 && k < cols.length) return [i, cols[k]];
+    var ni = i + dir;
+    if (ni >= 0 && ni < S.N) { var nc = rowCols(ni); return [ni, dir > 0 ? nc[0] : nc[nc.length - 1]]; }
+    return null;
+  }
+  function setSel(i, j) { S.sel = { row: i, col: j }; paintCells(); }
+  function onInput(e) {
+    // bộ gõ tiếng Việt (Telex, bàn phím điện thoại) đang ghép chữ: chờ compositionend rồi mới xử lý
+    if (e.isComposing) return;
+    handleValue(e.target);
+  }
+  function handleValue(el) {
+    if (!el || el.tagName !== 'INPUT') return;
+    var cellEl = el.parentElement, i = +cellEl.dataset.i, j = +cellEl.dataset.j;
+    if (S.won || S.cells[i][j].given) return;
+    var raw = norm(el.value).replace(/\s/g, '');
+    var ch = raw.slice(-1);
+    S.values[i][j] = ch;
+    el.value = ch;
+    setSel(i, j);
+    if (ch) {
+      cellEl.classList.remove('bad');
+      var nxt = nextCell(i, j, 1);
+      if (nxt) focusCell(nxt[0], nxt[1]);
+      autoCheckRow(i);
+    }
+    paintCells();
+    updateFoot();
+  }
+  function onKeydown(e) {
+    var el = e.target; if (el.tagName !== 'INPUT') return;
+    var cellEl = el.parentElement, i = +cellEl.dataset.i, j = +cellEl.dataset.j;
+    if (e.key === 'Backspace' && !el.value) {
+      var prv = nextCell(i, j, -1);
+      if (prv && !S.cells[prv[0]][prv[1]].given) { S.values[prv[0]][prv[1]] = ''; focusCell(prv[0], prv[1]); setSel(prv[0], prv[1]); paintCells(); e.preventDefault(); }
+    }
+    if (e.key === 'ArrowRight' || e.key === 'ArrowLeft') { var n = nextCell(i, j, e.key === 'ArrowRight' ? 1 : -1); if (n) { focusCell(n[0], n[1]); setSel(n[0], n[1]); e.preventDefault(); } }
+  }
+  // Tự xác nhận khi điền đủ một hàng
+  function autoCheckRow(i) {
+    var cols = rowChk(i);
+    var full = cols.every(function (j) { return norm(S.values[i][j]) !== ''; });
+    if (!full) return;
+    var ok = cols.every(function (j) { return norm(S.values[i][j]) === answerAt(i, j); });
+    if (!ok) {
+      S.wrong++;
+      cols.forEach(function (j) {
+        if (norm(S.values[i][j]) !== answerAt(i, j)) {
+          var el = $('board').querySelector('.cell[data-i="' + i + '"][data-j="' + j + '"]');
+          if (el && !reduced) { el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); }
+        }
+      });
+      if (!reduced) { var kb = $('board'); kb.animate && kb.animate([{ transform: 'translateX(0)' }, { transform: 'translateX(-5px)' }, { transform: 'translateX(5px)' }, { transform: 'translateX(0)' }], { duration: 260 }); }
+      return;
+    }
+    cols.forEach(function (j) {
+      var el = $('board').querySelector('.cell[data-i="' + i + '"][data-j="' + j + '"]');
+      if (el && !S.cells[i][j].given) { el.classList.remove('bad'); el.classList.add('ok', 'pop'); }
+    });
+    if (!reduced) { var c = FX.center($('board').querySelector('.cell[data-i="' + i + '"][data-j="' + cols[Math.floor(cols.length / 2)] + '"]')); FX.burst(c.x, c.y, { n: 12, colors: ['#3fcf74', '#ffd166', '#fff'], speed: 200, gravity: 300, size: 5, life: .7 }); }
+    checkWin();
+  }
+  // Kiểm tra toàn bộ
+  function checkAll() {
+    if (S.won) return;
+    var bad = 0, empty = 0;
+    for (var i = 0; i < S.N; i++) rowChk(i).forEach(function (j) {
+      if (S.cells[i][j].given) return;
+      var v = norm(S.values[i][j]);
+      if (!v) { empty++; return; }
+      if (v !== answerAt(i, j)) {
+        bad++;
+        var el = $('board').querySelector('.cell[data-i="' + i + '"][data-j="' + j + '"]');
+        if (el && !reduced) { el.classList.remove('bad'); void el.offsetWidth; el.classList.add('bad'); }
+      }
+    });
+    if (bad) { S.wrong += bad; toast('Còn ' + bad + ' ô sai'); }
+    else if (empty) toast('Còn ' + empty + ' ô chưa điền');
+    else toast('Các hàng đều đúng. Hãy thử đoán từ khóa!');
+    checkWin();
+  }
+  function hint() {
+    if (S.won) return;
+    // mở một ô chưa đúng của hàng đang chọn (nếu không có thì hàng đầu tiên còn sai)
+    var rows = S.sel.row === 'key' ? [] : [S.sel.row];
+    for (var i = 0; i < S.N; i++) if (!rows.includes(i)) rows.push(i);
+    for (var r = 0; r < rows.length; r++) {
+      var ri = rows[r], cols = rowCols(ri);
+      var j = rowChk(ri).find(function (jj) { return !S.cells[ri][jj].given && norm(S.values[ri][jj]) !== answerAt(ri, jj); });
+      if (j !== undefined) {
+        S.values[ri][j] = answerAt(ri, j); S.hints++;
+        toast('Gợi ý: đã mở một ô (−30 điểm)');
+        paintCells(); updateFoot(); checkWin(); return;
+      }
+    }
+    toast('Không còn ô nào cần gợi ý');
+  }
+  function checkWin() {
+    if (S.won) return;
+    if (!allRowsDone()) { updateFoot(); return; }
+    // hàng đã đúng hết: cột từ khóa tự kiểm tra khi người chơi điền đủ
+    if (!keyDone()) { updateFoot(); return; }
+    S.won = true;
+    clearInterval(clockTimer);
+    var secs = Math.floor((Date.now() - S.t0) / 1000);
+    var score = Math.max(100, 1000 - secs - 30 * S.hints - 15 * S.wrong);
+    var pr = progress[S.p.id] || { best: 0, plays: 0 };
+    pr.best = Math.max(pr.best, score); pr.plays = (pr.plays || 0) + 1; pr.last = score;
+    progress[S.p.id] = pr; save(progress);
+    if (window.Scores) Scores.submit('timochu', score);
+    $('winKw').textContent = S.p.keyword.word;
+    $('winScore').textContent = score;
+    $('winDet').textContent = 'Thời gian ' + fmt(secs) + ' · gợi ý ' + S.hints + ' · sai ' + S.wrong;
+    var idx = puzzlesOf(S.N).findIndex(function (p) { return p.id === S.p.id; });
+    var hasNext = idx >= 0 && idx < puzzlesOf(S.N).length - 1;
+    $('winNext').style.display = hasNext ? '' : 'none';
+    $('btnNext').style.display = hasNext ? '' : 'none';
+    setTimeout(function () { $('win').classList.add('on'); }, 500);
+    if (!reduced) { FX.rain({ n: 90, colors: ['#ffd166', '#3fcf74', '#5cc8ff', '#ff6b8a'], size: 9 }); }
+    renderClues();
+  }
+  function fmt(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
+  function updateFoot() {
+    var left = 0; for (var i = 0; i < S.N; i++) rowChk(i).forEach(function (j) { if (!S.cells[i][j].given && norm(S.values[i][j]) !== answerAt(i, j)) left++; });
+    if (!keyDone()) left++;
+    $('foot').textContent = S.won ? '' : (left ? 'Còn ' + left + ' ô trống hoặc chưa đúng' : 'Đoán từ khóa ở cột vàng để thắng.');
+  }
+  function tick() { if (!S || S.won) return; $('clock').textContent = fmt(Math.floor((Date.now() - S.t0) / 1000)); }
+
+  /* ---------- mở màn ---------- */
+  function startPuzzle(id) {
+    var p = null;
+    SIZES.forEach(function (n) { puzzlesOf(n).forEach(function (q) { if (q.id === id) p = q; }); });
+    if (!p) return;
+    cur = p; S = buildState(p);
+    $('lvName').textContent = 'Màn ' + (puzzlesOf(p.n).indexOf(p) + 1) + ' · ' + p.n + '×' + p.n;
+    $('win').classList.remove('on');
+    show('vPlay');
+    renderBoard(); updateFoot();
+    $('clock').textContent = '0:00';
+    clearInterval(clockTimer); clockTimer = setInterval(tick, 1000);
+    var first = rowCols(0)[0];
+    setTimeout(function () { S.sel = { row: 0, col: first }; focusCell(0, first); paintCells(); }, 50);
+  }
+  function nextPuzzle() {
+    var list = puzzlesOf(S.N), idx = list.findIndex(function (p) { return p.id === S.p.id; });
+    if (idx >= 0 && idx < list.length - 1) startPuzzle(list[idx + 1].id);
+  }
+
+  /* ---------- sự kiện ---------- */
+  $('sizes').addEventListener('click', function (e) {
+    var b = e.target.closest('.size'); if (!b) return;
+    curN = +b.dataset.n; renderMenu();
+  });
+  $('levels').addEventListener('click', function (e) {
+    var b = e.target.closest('.level'); if (!b) return;
+    startPuzzle(b.dataset.id);
+  });
+  $('board').addEventListener('input', onInput);
+  $('board').addEventListener('compositionend', function (e) { handleValue(e.target); });
+  $('board').addEventListener('keydown', onKeydown);
+  $('board').addEventListener('focusin', function (e) {
+    if (e.target.tagName !== 'INPUT') return;
+    var c = e.target.parentElement; setSel(+c.dataset.i, +c.dataset.j);
+  });
+  $('clues').addEventListener('click', function (e) {
+    var b = e.target.closest('.clue'); if (!b) return;
+    var r = b.dataset.row;
+    if (r === 'key') { S.sel = { row: 'key', col: S.p.keyCol }; var kc = S.p.keyCol; focusKey(); }
+    else { var i = +r; S.sel = { row: i, col: null }; var first = rowCols(i)[0]; focusCell(i, first); }
+    paintCells();
+  });
+  function focusKey() {
+    // chọn ô đầu tiên của cột từ khóa còn trống
+    for (var i = 0; i < S.N; i++) { var el = $('board').querySelector('.cell[data-i="' + i + '"][data-j="' + S.p.keyCol + '"] input'); if (el && !S.cells[i][S.p.keyCol].given && norm(S.values[i][S.p.keyCol]) !== norm(S.p.keyword.word.charAt(i))) { el.focus(); return; } }
+  }
+  $('btnCheck').onclick = checkAll;
+  $('btnHint').onclick = hint;
+  $('btnNext').onclick = nextPuzzle;
+  $('winNext').onclick = nextPuzzle;
+  $('winMenu').onclick = function () { $('win').classList.remove('on'); clearInterval(clockTimer); S = null; show('vMenu'); renderMenu(); };
+  $('btnBack').onclick = function () {
+    if (S && !S.won && $('vPlay').classList.contains('on')) { if (!confirm('Thoát ván đang chơi? Tiến độ màn này sẽ mất.')) return; }
+    clearInterval(clockTimer); S = null; show('vMenu'); renderMenu();
+  };
+
+  renderMenu();
+})();
+</script>
+</body>
+</html>
