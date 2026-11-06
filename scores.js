@@ -53,6 +53,7 @@
     { id: 'noitu', name: 'Nối từ' },
     { id: 'dauba', name: 'Đấu bài Thạch Sanh', fmt: v => v + ' tầng' },
     { id: 'biendoithichung', name: 'Biến đổi thích ứng' },
+    { id: 'timochu', name: 'Tìm ô chữ' },
     { id: 'daibacvutru', name: 'Đại bác vũ trụ' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
