@@ -345,6 +345,21 @@ footer{color:#7a82a0}
 #overlay .mode-btn:nth-of-type(1){animation-delay:.12s}#overlay .mode-btn:nth-of-type(2){animation-delay:.2s}#overlay .mode-btn:nth-of-type(3){animation-delay:.28s}
 @keyframes menuIn{from{opacity:0;transform:translateY(22px) rotate(-3deg)}}
 @media (prefers-reduced-motion:reduce){.cell.X.ink,.cell.O.ink,.cell.last,.win-cell,#overlay .mode-btn,#overlay .overlay-title{animation:none}#winline path{animation:none;stroke-dashoffset:0}}
+/* chơi lại với máy: bông bảng lau sạch bàn cờ + xúc xắc mini ở góc phải trên */
+.cell.wiped{color:transparent !important;text-shadow:none !important;background:transparent !important}
+#eraser{position:absolute;left:0;top:0;z-index:6;pointer-events:none;will-change:transform;filter:drop-shadow(0 7px 5px rgba(29,42,74,.3));transform-origin:50% 60%}
+#eraser .er-top{position:absolute;left:0;right:0;top:0;bottom:11px;border-radius:9px 9px 4px 4px;background:linear-gradient(180deg,#ecc890,#c99a5b);box-shadow:inset 0 2px 0 rgba(255,255,255,.55),inset 0 -2px 0 rgba(90,55,20,.35)}
+#eraser .er-top:before{content:"";position:absolute;left:14%;right:14%;top:26%;height:22%;border-radius:99px;background:rgba(90,55,20,.28);box-shadow:inset 0 1px 2px rgba(0,0,0,.25)}
+#eraser .er-felt{position:absolute;left:0;right:0;bottom:0;height:15px;border-radius:2px 2px 7px 7px;background:repeating-linear-gradient(90deg,#4f4f5d 0 5px,#3b3b47 5px 10px);box-shadow:inset 0 2px 0 rgba(255,255,255,.12)}
+#miniDiceBox{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));right:12px;width:44px;height:44px;perspective:300px;-webkit-perspective:300px;z-index:60;pointer-events:none;opacity:0}
+#miniDice{width:100%;height:100%;position:relative;transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
+#miniDice .dice-face{width:44px;height:44px;font-size:26px;border-radius:6px;border-width:1.5px}
+#miniDice .face-front{transform:translateZ(22px)}
+#miniDice .face-back{transform:rotateY(180deg) translateZ(22px)}
+#miniDice .face-left{transform:rotateY(-90deg) translateZ(22px)}
+#miniDice .face-right{transform:rotateY(90deg) translateZ(22px)}
+#miniDice .face-top{transform:rotateX(90deg) translateZ(22px)}
+#miniDice .face-bottom{transform:rotateX(-90deg) translateZ(22px)}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -393,7 +408,7 @@ footer{color:#7a82a0}
       <div id="undolimit">3/3</div>
     </div>
     <div class="action-card">
-      <button class="action-btn" id="btnReset" onclick="resetGame()">
+      <button class="action-btn" id="btnReset" onclick="resetGame()" data-no-scene>
         <span class="action-icon">↻</span>
         <span class="action-label">Ván mới</span>
       </button>
@@ -441,6 +456,17 @@ footer{color:#7a82a0}
       <button class="popup-btn btn-draw-reject" id="btn-draw-reject" title="Từ chối">✕</button>
       <button class="popup-btn btn-draw-accept" id="btn-draw-accept" title="Đồng ý">✓</button>
     </div>
+  </div>
+</div>
+
+<div id="miniDiceBox" aria-hidden="true">
+  <div id="miniDice">
+    <div class="dice-face face-front face-O"><span>O</span></div>
+    <div class="dice-face face-back face-X"><span>X</span></div>
+    <div class="dice-face face-left face-O"><span>O</span></div>
+    <div class="dice-face face-right face-X"><span>X</span></div>
+    <div class="dice-face face-top face-O"><span>O</span></div>
+    <div class="dice-face face-bottom face-X"><span>X</span></div>
   </div>
 </div>
 
@@ -1970,7 +1996,7 @@ function highlightWin(r, c, player) {
 
 function playerMove(r, c) {
   if (window.onlineActive && window.onlineActive()) return window.onlineClick(r, c);   // chế độ trực tuyến: gửi nước đi lên phòng
-  if (gameOver || board[r][c] !== "") return;
+  if (replaying || gameOver || board[r][c] !== "") return;
   if (pvpMode) {
     if (currentTurn !== "X" && currentTurn !== "O") return;
     const player = currentTurn;
@@ -2027,7 +2053,7 @@ btnDrawReject.addEventListener("click", () => {
 });
 
 function undoMove() {
-  if (gameOver) return;
+  if (replaying || gameOver) return;
   aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
   if (pvpMode) {
     if (moveHistory.length === 0) return;
@@ -2337,6 +2363,7 @@ const xFaces = ["back"];
 const oFaces = ["front"];
 
 function resetToModeSelectUI() {
+  cancelReplay();
   overlay.classList.remove("rolling");
   gameOver = false;
   aiThinking = false;
@@ -2458,6 +2485,7 @@ function startGame() {
 function resetGame() {
   overlay.classList.remove("rolling");
   if (window.onlineActive && window.onlineActive()) return window.onlineNewRound();   // trực tuyến: ván mới trong cùng phòng
+  if (!pvpMode && overlay.style.display === "none") return replayVsAI();   // đang chơi với máy: lau bảng rồi tung xúc xắc mini, không về màn chọn
   aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
   gameOver = false; lastCell = null;
   human = "X"; ai = "O"; currentTurn = "X";
@@ -2482,6 +2510,146 @@ function resetGame() {
   undoLeft = maxUndo; updateUndoUI(); resetAnalysis(false);
   aiThinking = false;
   boardDiv.classList.remove("disabled");
+}
+
+// ==================== CHƠI LẠI VỚI MÁY: BÔNG BẢNG + XÚC XẮC MINI ====================
+let replaying = false, replayToken = 0;
+const miniBox = document.getElementById("miniDiceBox"), miniDice = document.getElementById("miniDice");
+
+function cancelReplay() {
+  replayToken++; replaying = false;
+  const er = document.getElementById("eraser"); if (er) er.remove();
+  miniBox.getAnimations().forEach(a => a.cancel()); miniDice.getAnimations().forEach(a => a.cancel());
+  miniBox.style.opacity = "0";
+}
+
+function wipeBoardAnim(tok) {
+  return new Promise(resolve => {
+    const wrap = document.getElementById("board-wrap"), view = document.getElementById("board-view");
+    const vr = view.getBoundingClientRect(), wr = wrap.getBoundingClientRect();
+    const marks = [];
+    for (let r = 0; r < SIZE; r++) for (let c = 0; c < SIZE; c++) {
+      const el = cells[r][c];
+      if (!el.textContent) continue;
+      const rc = el.getBoundingClientRect();
+      marks.push({ el, cx: rc.left + rc.width / 2, cy: rc.top + rc.height / 2, tone: board[r][c] === "X" ? "#1b4fc4" : "#cf2d2d", done: false });
+    }
+    if (FX.reduced() || !vr.width) { resolve(); return; }
+    const er = document.createElement("div");
+    er.id = "eraser"; er.innerHTML = '<div class="er-top"></div><div class="er-felt"></div>';
+    const ew = 96, eh = Math.max(46, Math.min(74, vr.height / 4.2));
+    er.style.width = ew + "px"; er.style.height = eh + "px";
+    wrap.appendChild(er);
+    // quẹt qua quẹt lại từ trên xuống: mỗi lượt là một dải ngang, các dải chồng lên nhau để lau sạch
+    const rows = Math.max(3, Math.ceil((vr.height - eh) / (eh * 0.85)) + 1);
+    const total = Math.max(1500, Math.min(2000, rows * 300));
+    const xs = -ew * 0.6, xe = vr.width - ew * 0.4;
+    const yOf = i => i * (vr.height - eh) / (rows - 1);
+    const ease = u => 0.5 - Math.cos(Math.PI * u) / 2;
+    const t0 = performance.now();
+    let fadedLine = false;
+    function frame(now) {
+      if (tok !== replayToken) { er.remove(); resolve(); return; }
+      const p = Math.min(1, (now - t0) / total), seg = p * rows;
+      const row = Math.min(rows - 1, Math.floor(seg)), u = seg - row, dir = row % 2 ? -1 : 1;
+      const x = dir > 0 ? xs + (xe - xs) * ease(u) : xe + (xs - xe) * ease(u);
+      let y = yOf(row);
+      if (row < rows - 1 && u > 0.85) { const k = ease((u - 0.85) / 0.15); y += (yOf(row + 1) - y) * k; }
+      const tilt = dir * (3 + Math.sin(seg * 9) * 1.5);
+      er.style.transform = `translate(${vr.left - wr.left + x}px,${vr.top - wr.top + y}px) rotate(${tilt}deg)`;
+      const L = vr.left + x, R = L + ew, T = vr.top + y, B = T + eh;
+      for (const m of marks) {
+        if (m.done || m.cx < L || m.cx > R || m.cy < T || m.cy > B) continue;
+        m.done = true; m.el.classList.add("wiped");
+        try { FX.burst(m.cx, m.cy, { n: 4, colors: ["#e9e5d8", "#cfd8ea", m.tone], speed: 80, gravity: 40, size: 3.2, life: .5, shape: "circle", drag: 2.2 }); } catch (e) {}
+      }
+      if (!fadedLine && p > 0.3) {
+        fadedLine = true;
+        const wl = document.getElementById("winline"); if (wl) { wl.style.transition = "opacity .5s"; wl.style.opacity = "0"; }
+      }
+      if (p < 1) requestAnimationFrame(frame);
+      else {
+        marks.forEach(m => m.el.classList.add("wiped"));
+        er.style.transition = "opacity .25s"; er.style.opacity = "0";
+        setTimeout(() => { er.remove(); resolve(); }, 260);
+      }
+    }
+    requestAnimationFrame(frame);
+  });
+}
+
+// Tung xúc xắc mini ở góc phải trên: mặt X hay O là biểu tượng của người chơi
+function rollMiniDice(tok) {
+  return new Promise(resolve => {
+    const result = Math.random() < 0.5 ? "X" : "O";
+    const base = faceTransformsToFront[result === "X" ? xFaces[0] : oFaces[0]];
+    const final = `rotateX(${base.rx + (Math.floor(Math.random() * 3) + 2) * 360}deg) rotateY(${base.ry + (Math.floor(Math.random() * 3) + 2) * 360}deg)`;
+    const settled = `rotateX(${base.rx}deg) rotateY(${base.ry}deg)`;
+    miniBox.style.opacity = "1";
+    const finish = () => {
+      if (tok !== replayToken) { resolve(result); return; }
+      miniDice.style.transform = settled;
+      resolve(result);
+      setTimeout(() => {   // giữ kết quả một lúc rồi thu nhỏ biến mất
+        if (tok !== replayToken) return;
+        const a = miniBox.animate ? miniBox.animate([{ opacity: 1, transform: "scale(1)" }, { opacity: 0, transform: "scale(.5)" }], { duration: 280, easing: "ease-in" }) : null;
+        const done = () => { if (tok === replayToken) miniBox.style.opacity = "0"; };
+        if (a) a.onfinish = done; else done();
+      }, 1500);
+    };
+    if (FX.reduced() || !miniBox.animate) { miniDice.style.transform = settled; setTimeout(finish, 300); return; }
+    miniDice.style.transform = "rotateX(0deg) rotateY(0deg)";
+    const dur = 1500;
+    miniDice.animate([{ transform: "rotateX(0deg) rotateY(0deg)" }, { transform: final }], { duration: dur, easing: "cubic-bezier(.25,.1,.25,1)", fill: "forwards" });
+    miniBox.animate([
+      { transform: "translate(80px,-60px) scale(.55)", opacity: 0 },
+      { transform: "translate(40px,-20px) scale(.85)", opacity: 1, offset: .2 },
+      { transform: "translate(0,0) scale(1)", offset: .55 },
+      { transform: "translate(0,-14px)", offset: .7 },
+      { transform: "translate(0,0)", offset: .82 },
+      { transform: "translate(0,-4px)", offset: .92 },
+      { transform: "translate(0,0)", opacity: 1 }
+    ], { duration: dur, easing: "ease-out" });
+    setTimeout(finish, dur + 40);
+  });
+}
+
+async function replayVsAI() {
+  if (replaying) return;
+  replaying = true;
+  const tok = ++replayToken;
+  aiRequestId++; if (aiWorker) aiWorker.postMessage({ type: "cancel", requestId: aiRequestId });   // huỷ nước AI đang tính dở
+  aiThinking = false; gameOver = true;
+  boardDiv.classList.add("disabled");
+  confetti = []; drawPopup.style.display = "none";
+  statusTop.classList.remove("win"); statusTop.textContent = "Đang lau bảng...";
+  commentaryDiv.textContent = "Lau sạch bảng, chuẩn bị ván mới";
+  await wipeBoardAnim(tok);
+  if (tok !== replayToken) return;
+
+  lastCell = null; moveHistory = []; canUndo = false; undoUsed = false; playerStartTime = 0;
+  drawMilestones.clear();
+  undoLeft = maxUndo; updateUndoUI(); resetAnalysis(false);
+  createBoard();
+  boardDiv.classList.add("disabled");
+  resetBtn.innerHTML = '<span class="action-icon">↻</span><span class="action-label">Ván mới</span>';   // trả nút về nhãn gốc (có biểu tượng)
+  statusTop.textContent = "Tung xúc xắc..."; commentaryDiv.textContent = "...";
+
+  const result = await rollMiniDice(tok);
+  if (tok !== replayToken) return;
+  gameOver = false;
+  if (result === "X") {
+    human = "X"; ai = "O"; currentTurn = "X"; playerStartTime = Date.now();
+    setStatus("your-turn");
+    commentaryDiv.textContent = "Bạn là X, được đánh trước";
+  } else {
+    human = "O"; ai = "X"; currentTurn = "X";
+    statusTop.textContent = " AI.GiaBao đang đi...";
+    commentaryDiv.textContent = "Bạn là O, máy đánh trước";
+  }
+  boardDiv.classList.remove("disabled");
+  replaying = false;
+  if (currentTurn === ai) setTimeout(aiMove, 250);
 }
 
 // ==================== CONFETTI ====================
