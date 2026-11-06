@@ -1,45 +1,21 @@
 document.addEventListener('DOMContentLoaded', function () {
 
-    // ============================================================  
-    // 1. THAM CHIẾU PHẦN TỬ DOM  
-    // ============================================================  
+    // ============================================================
+    // 1. THAM CHIẾU PHẦN TỬ DOM
+    // ============================================================
     const overlay = document.getElementById('intro-overlay');
     const line1 = document.getElementById('intro-line1');
     const line2 = document.getElementById('intro-line2');
     const petalContainer = document.getElementById('petal-container');
-    const contentEl = document.querySelector('.content');
-    const utilityContainer = document.querySelector('.utility-container');
-    const utilityBar = document.getElementById('utilityBar');
-    const toggleBtn = document.getElementById('toggleBar');
     const skipIntroBtn = document.getElementById('skip-intro');
-    const chillBtn = document.getElementById('chillBar');          // Nút bấm mở Chill Bar
-    const chillPanel = document.getElementById('chillBarPanel'); // Panel chứa danh sách game
+    const chillBtn = document.getElementById('chillBar');          // Nút mở Chill Bar (trên thanh đầu trang)
+    const chillPanel = document.getElementById('chillBarPanel'); // Bảng mini-game
+    const actions = document.getElementById('hActions');          // Cụm nút bên phải thanh đầu trang
 
-    // Kiểm tra null (phòng trường hợp thiếu phần tử)
-    if (!overlay || !line1 || !line2 || !petalContainer || !contentEl ||
-        !utilityBar || !toggleBtn || !skipIntroBtn || !chillBtn || !chillPanel) {
+    if (!overlay || !line1 || !line2 || !petalContainer || !skipIntroBtn || !chillBtn || !chillPanel) {
         console.error('Thiếu phần tử DOM cần thiết. Kiểm tra lại HTML.');
         return;
     }
-
-    // ============================================================
-    // TÁCH chillPanel RA KHỎI utilityBar
-    // ============================================================
-    // Đảm bảo chillPanel không nằm bên trong utilityBar nữa,
-    // để hai menu độc lập và không chồng nhau.
-    if (chillPanel.parentElement === utilityBar) {
-    utilityContainer.appendChild(chillPanel);
-    
-    // Áp style để chillPanel hiển thị giống utility bar (bên dưới nút toggle)
-    chillPanel.style.position = 'absolute';
-    chillPanel.style.top = '62px';      // Cùng vị trí top như utilityBar
-    chillPanel.style.left = '1px';     // Bên cạnh nút chill, giống utilityBar (left: 0 so với container)
-    chillPanel.style.bottom = 'auto';   // Bỏ bottom
-    chillPanel.style.transform = 'none'; // Bỏ translateX
-    chillPanel.style.zIndex = '999';    // Đảm bảo hiển thị đè lên nhưng dưới utilityBar
-    chillPanel.style.width = '250px';   // Giữ nguyên width như CSS
-    chillPanel.style.maxHeight = 'calc(100vh - 140px)';
-}
 
     // Người dùng bật "giảm chuyển động" trong hệ điều hành
     const reduceMotionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
@@ -93,7 +69,6 @@ document.addEventListener('DOMContentLoaded', function () {
                 introTimer3 = setTimeout(() => {
                     if (introSkipped) return;
                     if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-                    openUtilityBar();
                 }, 1200);
             }, 1000);
         }
@@ -106,234 +81,52 @@ document.addEventListener('DOMContentLoaded', function () {
         introTimer2 = setTimeout(typeLine1, 1000);
     }, 2000);
 
-    // ============================================================  
-    // 4. QUẢN LÝ UTILITY BAR & CHILL BAR  
-    // ============================================================  
-    let autoCloseTimer;
-
-    function closeUtilityBar() {
-        utilityBar.classList.remove('show');
-        contentEl.classList.remove('hide');
-        toggleBtn.classList.remove('active');
-        toggleBtn.innerHTML = '<i class="fa-solid fa-gamepad icon-swap"></i>';
-        if (autoCloseTimer) {
-            clearTimeout(autoCloseTimer);
-            autoCloseTimer = null;
-        }
-        // Đóng luôn chill bar nếu đang mở (phòng trường hợp)
-        closeChillBar();
-    }
-
-    function openUtilityBar() {
-        // Đóng Chill Bar nếu đang mở
-        closeChillBar();
-
-        utilityBar.classList.add('show');
-        contentEl.classList.add('hide');
-        toggleBtn.classList.add('active');
-        toggleBtn.innerHTML = '<i class="fa-solid fa-xmark icon-swap"></i>';
-        if (autoCloseTimer) clearTimeout(autoCloseTimer);
-        autoCloseTimer = setTimeout(closeUtilityBar, 30000);
-    }
-
+    // ============================================================
+    // 4. CHILL BAR (bảng mini-game mở từ nút xúc xắc trên thanh đầu trang)
+    // ============================================================
     function openChillBar() {
-    // Đóng Utility Bar nếu đang mở
-    closeUtilityBar();
-
-    // Ẩn nội dung chính (TRẦN GIA BẢO...)
-    contentEl.classList.add('hide');
-
-    // Mở chill panel
-    chillPanel.classList.add('open');
-    chillBtn.classList.add('active');
-    
-    // Quay icon 180°
-    const chillIcon = chillBtn.querySelector('i');
-    if (chillIcon) {
-        chillIcon.style.transform = 'rotate(180deg)';
-        chillIcon.style.transition = 'transform 0.4s cubic-bezier(0.68, -0.55, 0.27, 1.55)';
+        chillPanel.hidden = false;
+        requestAnimationFrame(() => chillPanel.classList.add('open'));
+        chillBtn.classList.add('active');
+        chillBtn.setAttribute('aria-expanded', 'true');
+        requestAnimationFrame(checkDescOverflow);
     }
-}
-
-function closeChillBar() {
-    chillPanel.classList.remove('open');
-    chillBtn.classList.remove('active');
-    
-    // Reset icon về 0°
-    const chillIcon = chillBtn.querySelector('i');
-    if (chillIcon) {
-        chillIcon.style.transform = 'rotate(0deg)';
+    function closeChillBar() {
+        if (chillPanel.hidden) return;
+        chillPanel.classList.remove('open');
+        chillBtn.classList.remove('active');
+        chillBtn.setAttribute('aria-expanded', 'false');
+        setTimeout(() => { if (!chillPanel.classList.contains('open')) chillPanel.hidden = true; }, 220);
     }
-    
-    // Hiện lại nội dung chính nếu utility bar cũng đang đóng
-    if (!utilityBar.classList.contains('show')) {
-        contentEl.classList.remove('hide');
-    }
-}
-
-    // Gắn sự kiện click
-    toggleBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (utilityBar.classList.contains('show')) {
-            closeUtilityBar();
-        } else {
-            openUtilityBar();
-        }
-    });
-
     chillBtn.addEventListener('click', function (e) {
         e.stopPropagation();
-        if (chillPanel.classList.contains('open')) {
-            closeChillBar();
-        } else {
-            openChillBar();
-        }
+        if (chillPanel.classList.contains('open')) closeChillBar(); else openChillBar();
     });
-
-    // Khi click bên trong utility bar, reset thời gian tự đóng
-    utilityBar.addEventListener('click', function () {
-        if (autoCloseTimer) {
-            clearTimeout(autoCloseTimer);
-            autoCloseTimer = setTimeout(closeUtilityBar, 30000);
-        }
-    });
-
-    // Đóng tất cả khi click ra ngoài
+    // Bấm ra ngoài khi bảng đang mở: chỉ đóng bảng, không mở nhầm game nằm bên dưới
     document.addEventListener('click', function (e) {
-        if (
-            !utilityBar.contains(e.target) &&
-            !toggleBtn.contains(e.target) &&
-            !chillPanel.contains(e.target) &&
-            !chillBtn.contains(e.target)
-        ) {
-            closeUtilityBar();
-            closeChillBar();
-        }
-    });
+        if (!chillPanel.classList.contains('open')) return;
+        if (chillPanel.contains(e.target) || chillBtn.contains(e.target)) return;
+        e.stopPropagation(); e.preventDefault();
+        closeChillBar();
+    }, true);
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeChillBar(); });
 
-    // ============================================================  
-    // 5. NỀN CANVAS ĐỘNG (BIỂN + SAO)  
-    // ============================================================  
-    const canvas = document.getElementById('bg');
-    if (canvas) {
-        const ctx = canvas.getContext('2d');
-        let W, H, t = 0;
-        let lastFrame = 0;
-        let rafId = null;
-
-        function resize() {
-            // Vẽ theo mật độ điểm ảnh thật để nét trên màn hình Retina (tối đa 2x)
-            const dpr = Math.min(window.devicePixelRatio || 1, 2);
-            W = window.innerWidth;
-            H = window.innerHeight;
-            canvas.width = Math.round(W * dpr);
-            canvas.height = Math.round(H * dpr);
-            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-            initStars();
-            if (reduceMotionQuery.matches) draw(performance.now());
-        }
-        window.addEventListener('resize', resize);
-
-        const waves = [
-            { a: 0.055, wl: 0.012, sp: 0.018, yo: 0.62, alpha: 0.18, r: 100, g: 200, b: 255 },
-            { a: 0.040, wl: 0.018, sp: 0.012, yo: 0.68, alpha: 0.14, r: 60, g: 160, b: 230 },
-            { a: 0.030, wl: 0.025, sp: 0.022, yo: 0.73, alpha: 0.22, r: 30, g: 120, b: 200 },
-            { a: 0.022, wl: 0.035, sp: 0.008, yo: 0.78, alpha: 0.30, r: 10, g: 80, b: 170 },
-            { a: 0.015, wl: 0.050, sp: 0.030, yo: 0.82, alpha: 0.35, r: 5, g: 50, b: 130 },
-        ];
-        let stars = [];
-
-        function initStars() {
-            stars = [];
-            let rng = 1;
-            for (let s = 0; s < 80; s++) {
-                rng = (rng * 16807) % 2147483647;
-                const sx = rng % W;
-                rng = (rng * 16807) % 2147483647;
-                const sy = rng % Math.floor(H * 0.45);
-                rng = (rng * 16807) % 2147483647;
-                stars.push({ x: sx, y: sy, r: 0.5 + (rng % 10) / 10 });
-            }
-        }
-
-        function draw(now) {
-            // Tính thời gian theo mili-giây thực để tốc độ sóng giống nhau
-            // trên màn hình 60Hz, 120Hz hay khi trình duyệt bị giật khung
-            if (lastFrame) t += Math.min((now - lastFrame) / 1000, 0.05);
-            lastFrame = now;
-
-            const sky = ctx.createLinearGradient(0, 0, 0, H);
-            sky.addColorStop(0, '#050d1a');
-            sky.addColorStop(0.4, '#0a1a30');
-            sky.addColorStop(0.7, '#0d2540');
-            sky.addColorStop(1, '#0a1828');
-            ctx.fillStyle = sky;
-            ctx.fillRect(0, 0, W, H);
-
-            const glow = ctx.createRadialGradient(W * 0.5, H * 0.22, 0, W * 0.5, H * 0.22, W * 0.45);
-            glow.addColorStop(0, 'rgba(120,190,255,0.07)');
-            glow.addColorStop(0.5, 'rgba(60,130,200,0.03)');
-            glow.addColorStop(1, 'rgba(0,0,0,0)');
-            ctx.fillStyle = glow;
-            ctx.fillRect(0, 0, W, H);
-
-            stars.forEach(st => {
-                const tw = 0.4 + 0.6 * (0.5 + 0.5 * Math.sin(t * 1.2 + st.x));
-                ctx.beginPath();
-                ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
-                ctx.fillStyle = 'rgba(200,230,255,' + (tw * 0.8) + ')';
-                ctx.fill();
+    // ============================================================
+    // 5. GOM CÁC NÚT CỦA SCRIPT KHÁC VÀO THANH ĐẦU TRANG
+    //    (bảng xếp hạng, patch note, nhật ký và quản trị tự tạo nút riêng; đưa chúng về cùng một hàng)
+    // ============================================================
+    if (actions) {
+        const ORDER = ['mgrBtn', 'admBtn', 'lbBtn', 'pn-btn'];
+        const adopt = () => {
+            ORDER.forEach(id => {
+                const b = document.getElementById(id);
+                if (b && b.parentElement !== actions) { b.classList.add('h-act'); actions.appendChild(b); }
             });
-
-            waves.forEach(w => {
-                const baseY = H * w.yo;
-                const amp = H * w.a;
-                ctx.beginPath();
-                ctx.moveTo(0, H);
-                for (let x = 0; x <= W; x += 3) {
-                    const y = baseY + Math.sin(x * w.wl + t * w.sp * 60) * amp + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
-                    ctx.lineTo(x, y);
-                }
-                ctx.lineTo(W, H);
-                ctx.closePath();
-                const wg = ctx.createLinearGradient(0, baseY - amp, 0, H);
-                wg.addColorStop(0, 'rgba(' + w.r + ',' + w.g + ',' + w.b + ',' + w.alpha + ')');
-                wg.addColorStop(1, 'rgba(5,15,30,0.6)');
-                ctx.fillStyle = wg;
-                ctx.fill();
-            });
-
-            waves.slice(0, 3).forEach(w => {
-                const baseY = H * w.yo;
-                const amp = H * w.a;
-                ctx.beginPath();
-                for (let x = 0; x <= W; x += 3) {
-                    const y = baseY + Math.sin(x * w.wl + t * w.sp * 60) * amp + Math.sin(x * w.wl * 1.6 + t * w.sp * 40 + 1) * amp * 0.4;
-                    if (x === 0) ctx.moveTo(x, y);
-                    else ctx.lineTo(x, y);
-                }
-                ctx.strokeStyle = 'rgba(180,230,255,0.12)';
-                ctx.lineWidth = 1.5;
-                ctx.stroke();
-            });
-
-            rafId = reduceMotionQuery.matches ? null : requestAnimationFrame(draw);
-        }
-
-        resize();
-        if (!reduceMotionQuery.matches) rafId = requestAnimationFrame(draw);
-
-        // Bật/tắt chuyển động nền khi người dùng đổi cài đặt
-        reduceMotionQuery.addEventListener('change', () => {
-            lastFrame = 0;
-            if (reduceMotionQuery.matches) {
-                if (rafId) cancelAnimationFrame(rafId);
-                rafId = null;
-                draw(performance.now());
-            } else if (!rafId) {
-                rafId = requestAnimationFrame(draw);
-            }
-        });
+            // giữ thứ tự cố định: xúc xắc, quản trị, nhật ký, bảng xếp hạng, patch note
+            ORDER.forEach(id => { const b = document.getElementById(id); if (b && b.parentElement === actions) actions.appendChild(b); });
+        };
+        adopt();
+        new MutationObserver(adopt).observe(document.body, { childList: true });
     }
 
     // ============================================================  
@@ -352,7 +145,6 @@ function closeChillBar() {
 
         setTimeout(() => {
             if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
-            openUtilityBar();
         }, 500);
     }
 
@@ -389,49 +181,6 @@ function closeChillBar() {
         if (loadingOverlay) loadingOverlay.style.display = 'none';
     });
     
-    // ============================================================
-    // 8. HIỆU ỨNG THẺ GAME (NGHIÊNG 3D, ĐÈN THEO CON TRỎ, GỢN SÓNG)
-    // ============================================================
-    const gamesGrid = document.querySelector('.games-grid');
-    if (gamesGrid) {
-        const MAX_TILT = 8; // độ
-
-        gamesGrid.addEventListener('pointermove', (e) => {
-            if (e.pointerType !== 'mouse') return;
-            const card = e.target.closest('.game-card');
-            if (!card) return;
-            const rect = card.getBoundingClientRect();
-            const px = (e.clientX - rect.left) / rect.width;
-            const py = (e.clientY - rect.top) / rect.height;
-            card.style.setProperty('--mx', (px * 100) + '%');
-            card.style.setProperty('--my', (py * 100) + '%');
-            if (!reduceMotionQuery.matches) {
-                card.style.setProperty('--ry', ((px - 0.5) * MAX_TILT) + 'deg');
-                card.style.setProperty('--rx', ((0.5 - py) * MAX_TILT) + 'deg');
-            }
-        });
-
-        gamesGrid.addEventListener('pointerout', (e) => {
-            const card = e.target.closest('.game-card');
-            if (!card || card.contains(e.relatedTarget)) return;
-            card.style.setProperty('--rx', '0deg');
-            card.style.setProperty('--ry', '0deg');
-        });
-
-        gamesGrid.addEventListener('pointerdown', (e) => {
-            if (reduceMotionQuery.matches) return;
-            const card = e.target.closest('.game-card');
-            if (!card) return;
-            const rect = card.getBoundingClientRect();
-            const ripple = document.createElement('span');
-            ripple.className = 'card-ripple';
-            ripple.style.left = (e.clientX - rect.left) + 'px';
-            ripple.style.top = (e.clientY - rect.top) + 'px';
-            card.appendChild(ripple);
-            ripple.addEventListener('animationend', () => ripple.remove());
-        });
-    }
-
     function checkDescOverflow() {
         document.querySelectorAll(".chill-game-desc-wrap").forEach(wrap => {
             const text = wrap.querySelector(".chill-game-desc");
@@ -448,9 +197,5 @@ function closeChillBar() {
     } else {
         setTimeout(checkDescOverflow, 300);
     }
-
-    chillBtn.addEventListener('click', () => {
-        requestAnimationFrame(checkDescOverflow);
-    });
 
 }); // END DOMContentLoaded
