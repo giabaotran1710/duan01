@@ -16,7 +16,7 @@
     <link rel="stylesheet" href="game.css?v=20261103dbv2">
     <link rel="stylesheet" href="animations.css?v=20261013">
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&family=Quicksand:wght@400;500&family=Be+Vietnam+Pro:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="home.css?v=20261106c">
+    <link rel="stylesheet" href="home.css?v=20261106d">
 </head>
 <body>
 <!-- ===== INTRO OVERLAY ===== -->
@@ -1493,16 +1493,19 @@
 
         // ========== THỂ LOẠI ==========
         const genreNames = {
+            'sieukho': 'Siêu khó',
             'co': 'Cờ', 'chien-thuat': 'Chiến thuật', 'tri-tue': 'Trí tuệ', 'phan-xa': 'Phản xạ',
             'quan-sat': 'Quan sát', 'ghi-nho': 'Ghi nhớ', 'giai-tri': 'Giải trí', 'dau-bai': 'Đấu bài'
         };
-        const genreOrder = ['co', 'chien-thuat', 'tri-tue', 'phan-xa', 'quan-sat', 'ghi-nho', 'giai-tri', 'dau-bai'];
+        const genreOrder = ['sieukho', 'co', 'chien-thuat', 'tri-tue', 'phan-xa', 'quan-sat', 'ghi-nho', 'giai-tri', 'dau-bai'];
         const genreColor = {
             'moi': '#f2c14e', 'co': '#f2c14e', 'chien-thuat': '#ff8a5c', 'tri-tue': '#7aa2ff', 'phan-xa': '#ff5d8f',
             'quan-sat': '#4fd1c5', 'ghi-nho': '#b48cff', 'giai-tri': '#6fdc78', 'dau-bai': '#ffb347', 'sap': '#8a93ab'
         };
         // Game mới ra mắt: hiện nhãn NEW và mục "Mới ra mắt" ở đầu trang (game mới nhất đứng trước)
         const NEW_IDS = ['daibacvutru', 'biendoithichung', 'dauba'];
+        // Danh mục SIÊU KHÓ: hiện ở mục riêng ngay sau "Mới ra mắt", gắn nhãn rực lửa
+        const HARD_IDS = ['gamecaro', 'sieuduoibat', 'dayhop', 'colorSweeper', 'nedan', 'dungsidietvirus', 'cotuhuyenbi'];
 
         const feed = document.getElementById('hFeed');
         const chipBar = document.querySelector('.h-chips');
@@ -1526,26 +1529,28 @@
         }
         function tileHTML(g) {
             const off = maintenanceOff(g.id), soon = !!g.status;
+            const hot = HARD_IDS.includes(g.id) && !off && !soon;
             const badge = off ? '<b class="h-badge off">BẢO TRÌ</b>'
                 : soon ? '<b class="h-badge soon">SẮP RA</b>'
+                : hot ? '<b class="h-badge hot"><i class="fl f1"></i><i class="fl f2"></i><i class="fl f3"></i><span>SIÊU KHÓ</span></b>'
                 : NEW_IDS.includes(g.id) ? '<b class="h-badge new">NEW</b>' : '';
             const sub = off ? '<span class="h-sub">Đang bảo trì</span>'
                 : soon ? '<span class="h-sub">' + g.status + '</span>'
                 : diffHTML(g.diff);
-            return '<div class="h-tile' + (off ? ' is-off' : '') + (soon ? ' is-soon' : '') + '" role="button" tabindex="' + (off || soon ? -1 : 0) +
+            return '<div class="h-tile' + (hot ? ' is-hot' : '') + (off ? ' is-off' : '') + (soon ? ' is-soon' : '') + '" role="button" tabindex="' + (off || soon ? -1 : 0) +
                 '" data-id="' + g.id + '" aria-label="' + g.name + '">' +
                 '<span class="h-ico">' + iconHTML(g.id) + badge + '</span>' +
                 '<span class="h-name">' + g.name + '</span>' + sub + '</div>';
         }
         function sectionHTML(key, title, list) {
             if (!list.length) return '';
-            return '<section class="h-sec" style="--c:' + (genreColor[key] || '#8a93ab') + '">' +
+            return '<section class="h-sec' + (key === 'sieukho' ? ' hot' : '') + '" style="--c:' + (genreColor[key] || '#8a93ab') + '">' +
                 '<h2 class="h-sec-title"><i></i><span>' + title + '</span><em>' + list.length + '</em></h2>' +
                 '<div class="h-grid">' + list.map(tileHTML).join('') + '</div></section>';
         }
 
         // Mỗi game nằm ở một mục: có "cờ" thì vào mục Cờ, còn lại theo thể loại đầu tiên
-        function homeKey(g) { return g.genre.includes('co') ? 'co' : g.genre[0]; }
+        function homeKey(g) { return HARD_IDS.includes(g.id) ? 'sieukho' : g.genre.includes('co') ? 'co' : g.genre[0]; }
 
         let currentGenre = 'all';
         function renderGames(genre) {
@@ -1555,16 +1560,18 @@
                 genreOrder.forEach(k => { html += sectionHTML(k, genreNames[k], playable.filter(g => homeKey(g) === k)); });
                 html += sectionHTML('sap', 'Sắp ra mắt', games.filter(g => g.status));
             } else {
-                html += sectionHTML(genre, genreNames[genre] || genre, playable.filter(g => g.genre.includes(genre)));
+                html += sectionHTML(genre, genreNames[genre] || genre, genre === 'sieukho' ? playable.filter(g => HARD_IDS.includes(g.id)) : playable.filter(g => g.genre.includes(genre)));
             }
             feed.innerHTML = html;
         }
 
         // ========== CHIP LỌC THỂ LOẠI ==========
         chipBar.innerHTML = '<button class="h-chip active" data-genre="all">Tất cả</button>' +
-            genreOrder.filter(k => playable.some(g => g.genre.includes(k)))
-                .map(k => '<button class="h-chip" data-genre="' + k + '">' + genreNames[k] +
-                    ' <small>' + playable.filter(g => g.genre.includes(k)).length + '</small></button>').join('');
+            genreOrder.map(k => {
+                const n = k === 'sieukho' ? HARD_IDS.length : playable.filter(g => g.genre.includes(k)).length;
+                return n ? '<button class="h-chip' + (k === 'sieukho' ? ' hot' : '') + '" data-genre="' + k + '">' + (k === 'sieukho' ? '<i class="fa-solid fa-fire-flame-curved"></i> ' : '') + genreNames[k] +
+                    ' <small>' + n + '</small></button>' : '';
+            }).join('');
 
         chipBar.addEventListener('click', (e) => {
             const btn = e.target.closest('.h-chip');
