@@ -70,7 +70,7 @@ def word_ok(w):
     if w != w.lower(): return False                      # tên riêng, viết tắt
     if not re.fullmatch(r"[^\W\d_]+( [^\W\d_]+)?", w): return False   # tối đa hai tiếng, chỉ chữ cái
     L = letters(w)
-    if not (2 <= len(L) <= 7): return False
+    if not (2 <= len(L) <= 8): return False
     if any(c not in ALPHA for c in L): return False
     if w in BAN_WORDS or any(s in BAN_WORDS for s in w.split()): return False
     return True
