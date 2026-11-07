@@ -391,6 +391,7 @@
     }
     if (!on.started) return;
     if (t.left && t.left !== on.role) opponentLeft();
+    if (!on.forfeit) RM.onTree();
     if (t.round && t.round !== on.round && !on.forfeit) { startRound(t.round); showIntro(false); }
     applyMoves();
     checkEmo(t);
@@ -568,16 +569,18 @@
   window.onlineNewRound = async function () {
     if (!on.active || !on.started || on.forfeit) return;
     if (!gameOver) { toast('Chỉ bắt đầu ván mới khi ván này đã kết thúc.'); return; }
-    const next = 'g' + (parseInt(on.round.slice(1), 10) + 1);
-    const cur = on.tree.rounds[on.round];
-    try {
-      try { await http('PUT', '/caro_rooms/' + on.code + '/rounds/' + next, { xHost: !cur.xHost }); } catch (e) { /* đối thủ vừa tạo xong */ }
-      await http('PUT', '/caro_rooms/' + on.code + '/round', next);
-    } catch (e) { toast('Không tạo được ván mới. Thử lại.'); }
+    if (on.tree && on.tree.round && on.tree.round !== on.round) return;
+    RM.ask();   // gửi lời thách đấu; đối thủ đồng ý mới sang ván mới
   };
+  const RM = Rematch.create({
+    game: 'Cờ caro', http, path: () => '/caro_rooms/' + on.code, tree: () => on.tree, round: () => on.round, role: () => on.role,
+    oppName: () => (oppNode() && oppNode().name) || 'Đối thủ', toast: m => toast(m),
+    newRound: cur => ({ xHost: !(cur && cur.xHost) })
+  });
 
   // Rời phòng. Chưa có đối thủ: xoá phòng. Đã vào trận: ghi "left" để người ở lại thắng, người ở lại sẽ xoá phòng khi thoát.
   function resetOnline() {
+    RM.reset();
     clearInterval(on.hb); clearInterval(on.watch);
     if (on.es) on.es.close();
     const snap = { code: on.code, role: on.role, active: on.active, started: on.started, tree: on.tree };

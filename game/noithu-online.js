@@ -347,6 +347,7 @@
     if (!on.started) return;
     if (t.left && t.left !== on.role) { opponentLeft(); return; }
     if (on.forfeit) return;
+    RM.onTree();
     if (t.round && t.round !== on.round) startRound(t.round, false);
     const w = t.win && t.win[on.round];
     if (w && !on.over) roundOver(w.r);
@@ -438,18 +439,21 @@
     else { title.textContent = 'BẠN THẮNG!'; sub.textContent = 'Đối thủ đã rời phòng.'; }
     $('orScore').innerHTML = `<div><b>${w.me}</b><small>${esc(n.me)}</small></div><span>:</span><div><b>${w.opp}</b><small>${esc(n.opp)}</small></div>`;
     $('orAgain').style.display = kind === 'forfeit' ? 'none' : '';
-    $('orAgain').disabled = false;
+    $('orAgain').disabled = false; $('orAgain').textContent = 'VÁN MỚI';
     $('orLeave').textContent = kind === 'forfeit' ? 'VỀ MENU' : 'THOÁT PHÒNG';
     NT.show('onResult');
   }
-  $('orAgain').onclick = async () => {
+  // Ván mới: gửi lời thách đấu, đối thủ đồng ý mới sang ván mới (không kéo họ vào ván khi chưa đồng ý)
+  const RM = Rematch.create({
+    game: 'Nối thú', http, path: () => ROOMS + on.code, tree: () => on.tree, round: () => on.round, role: () => on.role,
+    oppName: () => names().opp, toast: m => NT.toast(m),
+    newRound: () => ({ seed: newSeed() }),
+    onWait: w => { $('orAgain').disabled = w; $('orAgain').textContent = w ? 'ĐANG CHỜ...' : 'VÁN MỚI'; }
+  });
+  $('orAgain').onclick = () => {
     if (!on.active || on.forfeit) return;
-    $('orAgain').disabled = true;
-    const next = 'g' + (parseInt(on.round.slice(1), 10) + 1);
-    try {
-      try { await http('PUT', ROOMS + on.code + '/rounds/' + next, { seed: newSeed() }); } catch (e) { /* đối thủ vừa tạo xong */ }
-      await http('PUT', ROOMS + on.code + '/round', next);
-    } catch (e) { NT.toast('Không tạo được ván mới. Thử lại.'); $('orAgain').disabled = false; }
+    if (on.tree && on.tree.round && on.tree.round !== on.round) return;
+    RM.ask();
   };
   $('orLeave').onclick = () => { if (on.forfeit || !on.started) { leave(); NT.toMenu(); } else askLeave(); };
 
@@ -517,6 +521,7 @@
   $('onLeaveBtn').onclick = () => { if (on.active && on.started) askLeave(); };
 
   function resetOnline() {
+    RM.reset();
     clearInterval(on.hb); clearInterval(on.watch); clearTimeout(on.countT); clearTimeout(on.sendT);
     if (on.es) on.es.close();
     const snap = { code: on.code, role: on.role, active: on.active, started: on.started, tree: on.tree };
