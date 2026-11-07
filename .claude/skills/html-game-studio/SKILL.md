@@ -24,6 +24,10 @@ Sửa một cái nút không chạy quy trình 11 bước. Chọn tuyến ngắn
 ### Yêu cầu đơn giản: làm ngay, không kiểm tra lại (người dùng đã chốt)
 Yêu cầu đơn giản (xoá/ẩn một thành phần, đổi chữ, đổi màu, chỉnh vài con số, gỡ một dòng patchnote...) thì **làm luôn và không chạy lại kiểm thử trình duyệt, không gọi subagent**. Chỉ làm kiểm tối thiểu không tốn kém: `node --check` phần script nếu có sửa JS và tìm lại tên đã xoá để chắc không còn tham chiếu sót. Vẫn commit, PR, merge như thường lệ. Khi nói với người dùng thì nêu rõ là chưa chạy kiểm thử. Yêu cầu không đơn giản (đổi luật, vật lý, logic, thêm tính năng) vẫn đi đúng tuyến ở bảng trên.
 
+### Chế độ theo đánh dấu của người dùng
+- Câu có `[*]` ở đầu: **thực hiện kỹ lưỡng**. Kiểm thử đầy đủ trên trình duyệt, dùng subagent kiểm định khi việc đủ lớn, báo cáo chi tiết.
+- Câu không có dấu: **tiết kiệm** (mặc định). Trả lời ngắn, ít công cụ, không gọi subagent, không kiểm thử thừa, chỉ kiểm tối thiểu như mục trên.
+
 ## 2. Quy trình đầy đủ (game mới / làm lại lớn)
 
 1. Tiếp nhận: ghi lại yêu cầu nguyên văn và điều người dùng **không** muốn đổi (luật chơi, điểm số, tên game...).
