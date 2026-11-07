@@ -315,6 +315,7 @@
     if (!on.started) return;
     if (t.left && t.left !== on.role) { opponentLeft(); return; }
     if (on.forfeit) return;
+    RM.onTree();
     if (t.round && t.round !== on.round) startRound(t.round, false);
     processMoves();
     const r = t.res && t.res[on.round];
@@ -414,21 +415,21 @@
     $('orLast').innerHTML = lw && lw.by !== 'sys' ? (lw.by === 'opp' ? esc(n.opp) : 'Bạn') + ' đáp: <b>' + esc(lw.w) + '</b>' : '';
     $('orScore').innerHTML = `<div><b>${w.me}</b><small>${esc(n.me)}</small></div><span>:</span><div><b>${w.opp}</b><small>${esc(n.opp)}</small></div>`;
     $('orAgain').style.display = kind === 'forfeit' ? 'none' : '';
-    $('orAgain').disabled = false;
+    $('orAgain').disabled = false; $('orAgain').textContent = 'VÁN MỚI';
     $('orLeave').textContent = kind === 'forfeit' ? 'VỀ MENU' : 'THOÁT PHÒNG';
     NW.show('onResult');
   }
-  $('orAgain').onclick = async () => {
-    if (!on.active || on.forfeit) return;
-    if (!on.over || (on.tree && on.tree.round && on.tree.round !== on.round)) return;   // đối thủ đã mở ván mới
-    $('orAgain').disabled = true;
-    const cur = on.tree && on.tree.rounds && on.tree.rounds[on.round];
-    const next = 'g' + (parseInt(on.round.slice(1), 10) + 1);
-    const firstNext = cur && cur.first === 'host' ? 'guest' : 'host';   // đổi bên đi trước
-    try {
-      try { await http('PUT', ROOMS + on.code + '/rounds/' + next, { first: firstNext, start: NW.pickStart() }); } catch (e) { /* đối thủ vừa tạo xong */ }
-      await http('PUT', ROOMS + on.code + '/round', next);
-    } catch (e) { NW.toast('Không tạo được ván mới. Thử lại.'); $('orAgain').disabled = false; }
+  // Ván mới: gửi lời thách đấu, đối thủ đồng ý mới sang ván mới (không kéo họ vào ván khi chưa đồng ý)
+  const RM = Rematch.create({
+    game: 'Nối từ', http, path: () => ROOMS + on.code, tree: () => on.tree, round: () => on.round, role: () => on.role,
+    oppName: () => names().opp, toast: m => NW.toast(m),
+    newRound: cur => ({ first: cur && cur.first === 'host' ? 'guest' : 'host', start: NW.pickStart() }),   // đổi bên đi trước
+    onWait: w => { $('orAgain').disabled = w; $('orAgain').textContent = w ? 'ĐANG CHỜ...' : 'VÁN MỚI'; }
+  });
+  $('orAgain').onclick = () => {
+    if (!on.active || on.forfeit || !on.over) return;
+    if (on.tree && on.tree.round && on.tree.round !== on.round) return;
+    RM.ask();
   };
   $('orLeave').onclick = () => { if (on.forfeit || !on.started) { leave(); NW.toMenu(); } else askLeave(); };
 
@@ -468,6 +469,7 @@
   }
 
   function resetOnline() {
+    RM.reset();
     clearInterval(on.hb); clearInterval(on.watch); clearInterval(on.tick); clearTimeout(on.countT);
     if (on.es) on.es.close();
     const snap = { code: on.code, role: on.role, active: on.active, started: on.started, tree: on.tree };
