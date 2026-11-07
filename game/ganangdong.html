@@ -2589,6 +2589,151 @@ function playLoseSound() {
                 if (gameState === 'playing') checkCollisions();
             }
 
+            // ==================== UI: BẢNG GỖ TRE + TRỨNG ====================
+            const UI = {
+                wood: '#3A2614', woodLight: '#5A3B1F', bamboo: '#E3BD6E', bambooDark: '#A67C32',
+                egg: '#FFF1CF', eggShade: '#E8C98A', ink: '#FFF6E2', inkSoft: '#E6D2AA',
+                red: '#E04A2F', redDark: '#B02F1A', board: '#F4E3BC', boardInk: '#3A2614',
+                font: '"Trebuchet MS", "Segoe UI", system-ui, sans-serif'
+            };
+            const REDUCE_MOTION = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+            function uiScale() { return Math.max(0.78, Math.min(1, Math.min(canvasWidth / 390, canvasHeight / 600))); }
+
+            function drawPlank(ctx, x, y, w, h, r) {
+                ctx.save();
+                ctx.fillStyle = 'rgba(0,0,0,0.28)';
+                ctx.beginPath(); ctx.roundRect(x, y + 3, w, h, r); ctx.fill();
+                const g = ctx.createLinearGradient(0, y, 0, y + h);
+                g.addColorStop(0, UI.woodLight); g.addColorStop(1, UI.wood);
+                ctx.fillStyle = g;
+                ctx.beginPath(); ctx.roundRect(x, y, w, h, r); ctx.fill();
+                ctx.strokeStyle = UI.bamboo; ctx.lineWidth = 2;
+                ctx.beginPath(); ctx.roundRect(x + 1, y + 1, w - 2, h - 2, r); ctx.stroke();
+                ctx.restore();
+            }
+
+            function drawEgg(ctx, cx, cy, s, full) {
+                ctx.save();
+                ctx.translate(cx, cy);
+                ctx.beginPath();
+                ctx.moveTo(0, -s * 0.62);
+                ctx.bezierCurveTo(s * 0.55, -s * 0.62, s * 0.5, s * 0.6, 0, s * 0.62);
+                ctx.bezierCurveTo(-s * 0.5, s * 0.6, -s * 0.55, -s * 0.62, 0, -s * 0.62);
+                ctx.closePath();
+                if (full) {
+                    const g = ctx.createLinearGradient(-s * 0.4, -s * 0.6, s * 0.4, s * 0.6);
+                    g.addColorStop(0, UI.egg); g.addColorStop(1, UI.eggShade);
+                    ctx.fillStyle = g; ctx.fill();
+                    ctx.strokeStyle = '#8A5A22'; ctx.lineWidth = 1.5; ctx.stroke();
+                    ctx.fillStyle = 'rgba(255,255,255,0.7)';
+                    ctx.beginPath(); ctx.ellipse(-s * 0.14, -s * 0.2, s * 0.08, s * 0.16, 0.3, 0, 6.2832); ctx.fill();
+                } else {
+                    ctx.fillStyle = 'rgba(0,0,0,0.35)'; ctx.fill();
+                    ctx.setLineDash([3, 3]);
+                    ctx.strokeStyle = UI.inkSoft; ctx.lineWidth = 1.5; ctx.stroke();
+                }
+                ctx.restore();
+            }
+
+            function drawHud(ctx) {
+                const k = uiScale();
+                const m = 12 * k;
+                // Thể lực: mỗi lần nhảy tốn một quả trứng
+                const egg = 22 * k, gap = 5 * k, pad = 8 * k;
+                const barW = pad * 2 + CONSTANTS.STAMINA_MAX * egg + (CONSTANTS.STAMINA_MAX - 1) * gap;
+                const barH = egg * 1.25 + pad;
+                drawPlank(ctx, m, m, barW, barH, 10 * k);
+                for (let i = 0; i < CONSTANTS.STAMINA_MAX; i++) {
+                    drawEgg(ctx, m + pad + egg / 2 + i * (egg + gap), m + barH / 2, egg, i < Math.floor(stamina));
+                }
+                // Điểm + kỷ lục
+                const pw = Math.min(118 * k, canvasWidth - barW - m * 3), ph = barH;
+                const px = canvasWidth - m - pw;
+                drawPlank(ctx, px, m, pw, ph, 10 * k);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = UI.ink;
+                ctx.font = `bold ${Math.round(22 * k)}px ${UI.font}`;
+                ctx.fillText(String(Math.floor(score)), px + pw - pad, m + ph * 0.58);
+                ctx.fillStyle = UI.inkSoft;
+                ctx.font = `${Math.round(11 * k)}px ${UI.font}`;
+                ctx.fillText(`Kỷ lục ${Math.floor(bestScore)}`, px + pw - pad, m + ph * 0.88);
+                // Thời gian khiên
+                if (chicken && (chicken.shieldTimer > 0 || chicken.invincibleTimer > 0)) {
+                    const t = chicken.shieldTimer > 0 ? chicken.shieldTimer : chicken.invincibleTimer;
+                    const label = `Khiên ${t.toFixed(1)}s`;
+                    ctx.font = `bold ${Math.round(12 * k)}px ${UI.font}`;
+                    const tw = ctx.measureText(label).width + 16 * k;
+                    drawPlank(ctx, m, m + barH + 8 * k, tw, 24 * k, 8 * k);
+                    ctx.textAlign = 'left';
+                    ctx.fillStyle = '#9BE3FF';
+                    ctx.fillText(label, m + 8 * k, m + barH + 8 * k + 16 * k);
+                }
+            }
+
+            function drawWaiting(ctx) {
+                const k = uiScale();
+                const w = Math.min(canvasWidth - 32, 300 * k + 40), h = 96 * k;
+                const x = canvasWidth / 2 - w / 2, y = canvasHeight * 0.2;
+                drawPlank(ctx, x, y, w, h, 14 * k);
+                ctx.textAlign = 'center';
+                ctx.fillStyle = UI.bamboo;
+                ctx.font = `bold ${Math.round(28 * k)}px ${UI.font}`;
+                ctx.fillText('Gà năng động', canvasWidth / 2, y + h * 0.43);
+                const pulse = REDUCE_MOTION ? 1 : 0.75 + 0.25 * Math.sin(frameCount * 0.08);
+                ctx.fillStyle = `rgba(255,246,226,${pulse})`;
+                ctx.font = `${Math.round(15 * k)}px ${UI.font}`;
+                ctx.fillText('Chạm hoặc nhấn Space để chạy', canvasWidth / 2, y + h * 0.75);
+            }
+
+            function gameOverLayout() {
+                const k = uiScale();
+                const pw = Math.min(canvasWidth - 32, 320), ph = 236 * k;
+                const px = canvasWidth / 2 - pw / 2, py = Math.max(12, canvasHeight / 2 - ph / 2 - 10);
+                const bw = pw - 48, bh = Math.max(52, 54 * k);
+                return { k, pw, ph, px, py, bx: canvasWidth / 2 - bw / 2, by: py + ph - bh - 22 * k, bw, bh };
+            }
+
+            function drawGameOver(ctx) {
+                const L = gameOverLayout(), k = L.k;
+                const t = gameOverAnimTimer;
+                ctx.fillStyle = `rgba(20,12,4,${Math.min(0.72, t * 2)})`;
+                ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+                const slide = REDUCE_MOTION ? 0 : Math.max(0, (1 - t * 3) * 160);
+                const y = L.py + slide;
+                // Biển gỗ
+                drawPlank(ctx, L.px, y, L.pw, L.ph, 16 * k);
+                ctx.fillStyle = UI.board;
+                ctx.beginPath(); ctx.roundRect(L.px + 12, y + 12, L.pw - 24, L.ph - 24, 10 * k); ctx.fill();
+                ctx.textAlign = 'center';
+                ctx.fillStyle = UI.redDark;
+                ctx.font = `bold ${Math.round(28 * k)}px ${UI.font}`;
+                ctx.fillText('Gà ngã rồi!', canvasWidth / 2, y + 56 * k);
+                ctx.fillStyle = UI.boardInk;
+                ctx.font = `${Math.round(15 * k)}px ${UI.font}`;
+                ctx.fillText('Điểm lần này', canvasWidth / 2, y + 82 * k);
+                ctx.font = `bold ${Math.round(34 * k)}px ${UI.font}`;
+                ctx.fillText(String(Math.floor(score)), canvasWidth / 2, y + 118 * k);
+                ctx.font = `${Math.round(14 * k)}px ${UI.font}`;
+                const rec = score > 0 && Math.floor(score) >= Math.floor(bestScore);
+                ctx.fillStyle = rec ? UI.redDark : '#6B4F2D';
+                ctx.fillText(rec ? 'Kỷ lục mới!' : `Kỷ lục ${Math.floor(bestScore)}`, canvasWidth / 2, y + 140 * k);
+                // Nút
+                restartButton.x = L.bx; restartButton.y = L.by + slide; restartButton.w = L.bw; restartButton.h = L.bh;
+                const bump = REDUCE_MOTION ? 1 : 1 + Math.sin(t * 5) * 0.025;
+                ctx.save();
+                ctx.translate(L.bx + L.bw / 2, L.by + slide + L.bh / 2);
+                ctx.scale(bump, bump);
+                ctx.fillStyle = UI.redDark;
+                ctx.beginPath(); ctx.roundRect(-L.bw / 2, -L.bh / 2 + 3, L.bw, L.bh, 12 * k); ctx.fill();
+                ctx.fillStyle = UI.red;
+                ctx.beginPath(); ctx.roundRect(-L.bw / 2, -L.bh / 2, L.bw, L.bh, 12 * k); ctx.fill();
+                ctx.fillStyle = '#FFF';
+                ctx.font = `bold ${Math.round(20 * k)}px ${UI.font}`;
+                ctx.fillText('Chạy lại', 0, 7 * k);
+                ctx.restore();
+            }
+
+
             // ==================== MAIN DRAW FUNCTION (ADDED BACK) ====================
             function draw(ctx) {
                 // Draw background
@@ -2611,183 +2756,10 @@ function playLoseSound() {
                 // Draw weather effects (foreground)
                 if (weatherManager) weatherManager.draw(ctx);
 
-                // ---- UI: STAMINA BAR ----
-                const boltWidth = 28;
-                const boltHeight = 36;
-                const boltGap = 6;
-                const startX = 20;
-                const startY = 20;
-
-                for (let i = 0; i < CONSTANTS.STAMINA_MAX; i++) {
-                    const bx = startX + i * (boltWidth + boltGap);
-                    const by = startY;
-                    const bw = boltWidth;
-                    const bh = boltHeight;
-
-                    // Background slot
-                    ctx.fillStyle = 'rgba(0,0,0,0.4)';
-                    ctx.beginPath();
-                    ctx.roundRect(bx, by, bw, bh, 6);
-                    ctx.fill();
-
-                    // Filled slot
-                    if (i < stamina) {
-                        const cx = bx + bw / 2;
-                        const cy = by + bh / 2;
-
-                        // Glow effect
-                        const glow = ctx.createRadialGradient(cx, cy, bw * 0.2, cx, cy, bw * 0.8);
-                        glow.addColorStop(0, 'rgba(100,255,218,0.8)');
-                        glow.addColorStop(0.5, 'rgba(0,200,255,0.4)');
-                        glow.addColorStop(1, 'rgba(0,150,255,0)');
-                        ctx.fillStyle = glow;
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, bw * 0.8, 0, Math.PI * 2);
-                        ctx.fill();
-
-                        // Lightning bolt shape
-                        const bolt = ctx.createLinearGradient(0, by, 0, by + bh);
-                        bolt.addColorStop(0, '#E0FFFF');
-                        bolt.addColorStop(0.3, '#00E5FF');
-                        bolt.addColorStop(0.5, '#00B8D4');
-                        bolt.addColorStop(0.7, '#0091EA');
-                        bolt.addColorStop(1, '#0066CC');
-                        ctx.fillStyle = bolt;
-                        ctx.beginPath();
-                        ctx.moveTo(cx, by + 3);
-                        ctx.lineTo(cx - bw * 0.35, cy - 2);
-                        ctx.lineTo(cx - 3, cy - 4);
-                        ctx.lineTo(cx - bw * 0.15, by + bh - 3);
-                        ctx.lineTo(cx + bw * 0.35, cy + 2);
-                        ctx.lineTo(cx + 3, cy + 4);
-                        ctx.lineTo(cx + bw * 0.15, by + 3);
-                        ctx.closePath();
-                        ctx.fill();
-                        ctx.strokeStyle = 'rgba(255,255,255,0.8)';
-                        ctx.lineWidth = 1.5;
-                        ctx.stroke();
-
-                        // Center highlight
-                        ctx.fillStyle = '#FFF';
-                        ctx.beginPath();
-                        ctx.arc(cx, cy, 3.5, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
-
-                // ---- UI: SCORE PANEL ----
-                ctx.fillStyle = 'rgba(0,0,0,0.5)';
-                ctx.beginPath();
-                ctx.roundRect(canvasWidth - 155, 15, 140, 45, 12);
-                ctx.fill();
-                ctx.strokeStyle = 'rgba(255,255,255,0.6)';
-                ctx.lineWidth = 2;
-                ctx.stroke();
-
-                ctx.fillStyle = '#FFF';
-                ctx.font = 'bold 19px "Segoe UI"';
-                ctx.textAlign = 'right';
-                ctx.fillText(` ${Math.floor(score)}`, canvasWidth - 30, 45);
-
-                ctx.fillStyle = 'rgba(255,255,255,0.7)';
-                ctx.font = '11px "Segoe UI"';
-                ctx.fillText(`Best: ${Math.floor(bestScore)}`, canvasWidth - 30, 60);
-
-                // ---- UI: SHIELD / INVINCIBILITY TIMER ----
-                if (chicken && (chicken.shieldTimer > 0 || chicken.invincibleTimer > 0)) {
-                    const timerValue = chicken.shieldTimer > 0 ? chicken.shieldTimer : chicken.invincibleTimer;
-                    ctx.fillStyle = 'rgba(100,200,255,0.8)';
-                    ctx.font = 'bold 12px "Segoe UI"';
-                    ctx.textAlign = 'left';
-                    ctx.fillText(` ${timerValue.toFixed(1)}s`, 20, 80);
-                }
-
-                // ---- UI: WAITING STATE ----
-                if (gameState === 'waiting') {
-                    ctx.fillStyle = 'rgba(255,255,255,0.6)';
-                    ctx.font = 'bold 20px "Segoe UI"';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(' Chạm để bắt đầu!', canvasWidth / 2, canvasHeight * 0.42);
-                }
-
-                // ---- UI: GAME OVER OVERLAY ----
-                if (gameState === 'gameover') {
-                    const overlayAlpha = Math.min(0.8, gameOverAnimTimer * 2);
-                    ctx.fillStyle = `rgba(0,0,0,${overlayAlpha})`;
-                    ctx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-                    const panelW = 300;
-                    const panelH = 190;
-                    const targetPanelY = canvasHeight / 2 - panelH / 2 - 20;
-                    const slideOffset = Math.max(0, (1 - gameOverAnimTimer * 3) * 200);
-                    const panelX = canvasWidth / 2 - panelW / 2;
-                    const panelY = targetPanelY + slideOffset;
-
-                    // Panel background
-                    ctx.fillStyle = 'rgba(255,255,255,0.95)';
-                    ctx.beginPath();
-                    ctx.roundRect(panelX, panelY, panelW, panelH, 20);
-                    ctx.fill();
-                    ctx.strokeStyle = '#FF8F00';
-                    ctx.lineWidth = 4;
-                    ctx.stroke();
-
-                    // Game over title (with bounce animation)
-                    const scale = 1 + Math.sin(gameOverAnimTimer * 8) * 0.03;
-                    ctx.save();
-                    ctx.translate(canvasWidth / 2, panelY + 45);
-                    ctx.scale(scale, scale);
-                    ctx.fillStyle = '#E53935';
-                    ctx.font = 'bold 26px "Segoe UI"';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(' Thua rồi!', 0, 0);
-                    ctx.restore();
-
-                    // Score display
-                    ctx.fillStyle = '#333';
-                    ctx.font = '18px "Segoe UI"';
-                    ctx.textAlign = 'center';
-                    ctx.fillText(`Điểm: ${Math.floor(score)}`, canvasWidth / 2, panelY + 85);
-                    ctx.fillText(`Kỷ lục: ${Math.floor(bestScore)}`, canvasWidth / 2, panelY + 115);
-
-                    // Restart button (with pulse animation)
-                    const btnX = restartButton.x;
-                    const btnY = restartButton.y;
-                    const btnW = restartButton.w;
-                    const btnH = restartButton.h;
-                    const pulse = 1 + Math.sin(gameOverAnimTimer * 5) * 0.05;
-
-                    ctx.save();
-                    ctx.translate(btnX + btnW / 2, btnY + btnH / 2);
-                    ctx.scale(pulse, pulse);
-
-                    const grad = ctx.createLinearGradient(-btnW / 2, -btnH / 2, btnW / 2, btnH / 2);
-                    grad.addColorStop(0, '#FFB300');
-                    grad.addColorStop(1, '#FF8F00');
-                    ctx.fillStyle = grad;
-                    ctx.beginPath();
-                    ctx.roundRect(-btnW / 2, -btnH / 2, btnW, btnH, 35);
-                    ctx.fill();
-
-                    ctx.fillStyle = '#FFF';
-                    ctx.font = 'bold 22px "Segoe UI"';
-                    ctx.textAlign = 'center';
-                    ctx.fillText('CHƠI LẠI', 0, 8);
-                    ctx.restore();
-
-                    // Decorative particles around game over screen
-                    for (let i = 0; i < 10; i++) {
-                        const angle = (i / 10) * Math.PI * 2 + gameOverAnimTimer * 2;
-                        const radius = 120 + Math.sin(gameOverAnimTimer * 3 + i) * 30;
-                        const px = canvasWidth / 2 + Math.cos(angle) * radius;
-                        const py = canvasHeight / 2 - 20 + Math.sin(angle) * radius * 0.6;
-                        const alpha = 0.5 + Math.sin(gameOverAnimTimer * 4 + i) * 0.3;
-                        ctx.fillStyle = `rgba(255,215,0,${alpha})`;
-                        ctx.beginPath();
-                        ctx.arc(px, py, 4 + Math.sin(gameOverAnimTimer * 5 + i) * 2, 0, Math.PI * 2);
-                        ctx.fill();
-                    }
-                }
+                // ---- UI: HUD / MÀN HÌNH CHỜ / MÀN HÌNH THUA (bảng gỗ tre + trứng gà) ----
+                drawHud(ctx);
+                if (gameState === 'waiting') drawWaiting(ctx);
+                if (gameState === 'gameover') drawGameOver(ctx);
             }
 
             // ==================== INPUT HANDLING ====================
