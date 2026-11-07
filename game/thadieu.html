@@ -66,7 +66,6 @@
   #banner small{display:block;font-size:13px;font-weight:700;opacity:.8}
   /* hành trình ở màn kết thúc */
   #journey{width:min(340px,88vw);display:flex;flex-direction:column;gap:10px;padding:14px 16px 12px;border-radius:18px;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.22)}
-  .jReach{font-size:15px}.jReach b{color:#ffe39a}
   #over .btn{margin-top:6px}
   .jBar{position:relative;height:10px;border-radius:99px;background:rgba(0,0,0,.28);margin:16px 8px 6px}
   #jFill{position:absolute;left:0;top:0;bottom:0;border-radius:99px;background:linear-gradient(90deg,#8fd0ff,#ffd36b 30%,#ff8a5c 40%,#5b5fc7 55%,#ffb8a0 80%,#8fd0ff)}
@@ -113,7 +112,6 @@
   <div><div class="sub">Thời gian bay</div><div class="big" id="oTime">0.0</div></div>
   <div class="sub" id="oBest"></div>
   <div id="journey">
-    <div class="jReach" id="oReach"></div>
     <div class="jBar"><i id="jFill"></i><div id="jMarks"></div><b id="jDot"></b></div>
     <div class="jNext" id="oNext"></div>
   </div>
@@ -411,6 +409,7 @@ function paintNear(g, P) {
 function makeSprite(size, paint) { const c = document.createElement('canvas'); c.width = c.height = Math.round(size * DPR); const g = c.getContext('2d'); g.scale(DPR, DPR); paint(g, size); return c; }
 
 function buildWorld() {
+  skyCv = null;
   hY = groundY - 34;
   farY0 = hY - 140; farH = 150; midY0 = hY - 96; midH = 140; nearY0 = groundY - 30; nearH = H - nearY0;
   for (const v of VARS) {
@@ -436,23 +435,59 @@ function buildWorld() {
   fgCv = fgCv || document.createElement('canvas'); fgCv.width = cv.width; fgCv.height = cv.height; fx = fgCv.getContext('2d');
 }
 
-// pha trộn 3 bản vẽ sẵn theo trọng số ngày / hoàng hôn / đêm
+// pha trộn 3 bản vẽ sẵn theo trọng số ngày / hoàng hôn / đêm.
+// Chỉ pha trộn lại vào một canvas đệm khi tỉ lệ đổi đáng kể (bước 1/40); các khung còn lại vẽ đúng một ảnh. Khi trời thuần ngày/hoàng hôn/đêm thì vẽ thẳng bản gốc.
 function drawBlend(set, x, y, w, h) {
-  const S = SKY, a = S.wd + S.wdu > 0.001 ? S.wdu / (S.wd + S.wdu) : 1;
-  if (S.wn < 0.999) {
-    if (a < 0.999) ctx.drawImage(set.day, x, y, w, h);
-    if (a > 0.001) { ctx.globalAlpha = a; ctx.drawImage(set.dusk, x, y, w, h); }
+  const S = SKY, a = S.wd + S.wdu > 0.001 ? S.wdu / (S.wd + S.wdu) : 1, wn = S.wn;
+  if (wn < 0.012) {
+    if (a < 0.012) { ctx.drawImage(set.day, x, y, w, h); return; }
+    if (a > 0.988) { ctx.drawImage(set.dusk, x, y, w, h); return; }
+  } else if (wn > 0.988) { ctx.drawImage(set.night, x, y, w, h); return; }
+  const key = Math.round(wn * 40) * 64 + Math.round(a * 40);
+  if (set._k !== key) {
+    if (!set._c) { set._c = document.createElement('canvas'); set._c.width = set.day.width; set._c.height = set.day.height; set._g = set._c.getContext('2d'); }
+    const g = set._g, cw = set._c.width, ch = set._c.height;
+    g.setTransform(1, 0, 0, 1, 0, 0); g.globalCompositeOperation = 'copy'; g.globalAlpha = 1;
+    if (wn < 0.999) {
+      if (a < 0.999) { g.drawImage(set.day, 0, 0, cw, ch); g.globalCompositeOperation = 'source-over'; }
+      if (a > 0.001) { g.globalCompositeOperation = a < 0.999 ? 'source-over' : 'copy'; g.globalAlpha = a < 0.999 ? a : 1; g.drawImage(set.dusk, 0, 0, cw, ch); }
+    }
+    g.globalCompositeOperation = 'source-over';
+    if (wn > 0.001) { g.globalAlpha = wn; g.drawImage(set.night, 0, 0, cw, ch); }
+    g.globalAlpha = 1; set._k = key;
   }
-  if (S.wn > 0.001) { ctx.globalAlpha = S.wn; ctx.drawImage(set.night, x, y, w, h); }
-  ctx.globalAlpha = 1;
+  ctx.drawImage(set._c, x, y, w, h);
 }
 
 let par = 0;   // thị sai mượt theo diều
+// Gradient bầu trời + quầng sáng mặt trời vẽ vào canvas đệm, dựng lại khi giờ trời đổi quá 0,12 giây (thay vì mỗi khung)
+let skyCv = null, skyG = null, skyKey = -99;
+function sunParams(S) {
+  const e = S.sun, low = 1 - clamp(e, 0, 1);
+  return { e, low, sx: W * lerp(0.84, 0.76, clamp(e, 0, 1)), sy: lerp(hY - 40, H * 0.13, clamp(e, -0.3, 1)), r: 20 + low * 22 };
+}
+function rebuildSky(S) {
+  const cw = Math.round((W + 40) * DPR), ch = Math.round((hY + 26) * DPR);
+  if (!skyCv || skyCv.width !== cw || skyCv.height !== ch) { skyCv = document.createElement('canvas'); skyCv.width = cw; skyCv.height = ch; skyG = skyCv.getContext('2d'); }
+  const g = skyG;
+  g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, cw, ch);
+  g.setTransform(DPR, 0, 0, DPR, 20 * DPR, 20 * DPR);
+  const sky = g.createLinearGradient(0, 0, 0, hY + 4);
+  sky.addColorStop(0, S.sky[0]); sky.addColorStop(0.45, S.sky[1]); sky.addColorStop(0.85, S.sky[2]); sky.addColorStop(1, S.sky[3]);
+  g.fillStyle = sky; g.fillRect(-20, -20, W + 40, hY + 26);
+  if (S.sun > -0.12) {
+    const { low, sx, sy } = sunParams(S);
+    const rg = g.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * (0.4 + low * 0.25));
+    rg.addColorStop(0, low > 0.6 ? 'rgba(255,170,110,.75)' : 'rgba(255,248,220,.75)'); rg.addColorStop(0.08, low > 0.6 ? 'rgba(255,140,90,.4)' : 'rgba(255,240,200,.42)');
+    rg.addColorStop(0.32, 'rgba(255,200,150,.1)'); rg.addColorStop(1, 'rgba(255,200,150,0)');
+    g.fillStyle = rg; g.fillRect(0, 0, W, hY + 4);
+  }
+  skyKey = skyT;
+}
 function drawSky() {
   const S = SKY;
-  const sky = ctx.createLinearGradient(0, 0, 0, hY + 4);
-  sky.addColorStop(0, S.sky[0]); sky.addColorStop(0.45, S.sky[1]); sky.addColorStop(0.85, S.sky[2]); sky.addColorStop(1, S.sky[3]);
-  ctx.fillStyle = sky; ctx.fillRect(-20, -20, W + 40, hY + 26);
+  if (!skyCv || Math.abs(skyT - skyKey) > 0.12 || skyCv.width !== Math.round((W + 40) * DPR)) rebuildSky(S);
+  ctx.drawImage(skyCv, -20, -20, W + 40, hY + 26);
   // sao
   if (S.stars > 0.01) {
     ctx.fillStyle = '#fff';
@@ -463,15 +498,10 @@ function drawSky() {
     }
     ctx.globalAlpha = 1;
   }
-  // mặt trời: hạ dần, to và đỏ dần khi về chân trời
+  // mặt trời: hạ dần, to và đỏ dần khi về chân trời (quầng sáng nằm trong canvas đệm)
   if (S.sun > -0.12) {
-    const e = S.sun, sx = W * lerp(0.84, 0.76, clamp(e, 0, 1)), sy = lerp(hY - 40, H * 0.13, clamp(e, -0.3, 1));
-    const low = 1 - clamp(e, 0, 1), r = 20 + low * 22;
+    const { low, sx, sy, r } = sunParams(S);
     const core = low > 0.6 ? mixHex('#fff1c2', '#ff7a45', (low - 0.6) / 0.4) : mixHex('#fffbe9', '#fff1c2', low / 0.6);
-    const rg = ctx.createRadialGradient(sx, sy, 0, sx, sy, Math.max(W, H) * (0.4 + low * 0.25));
-    rg.addColorStop(0, low > 0.6 ? 'rgba(255,170,110,.75)' : 'rgba(255,248,220,.75)'); rg.addColorStop(0.08, low > 0.6 ? 'rgba(255,140,90,.4)' : 'rgba(255,240,200,.42)');
-    rg.addColorStop(0.32, 'rgba(255,200,150,.1)'); rg.addColorStop(1, 'rgba(255,200,150,0)');
-    ctx.fillStyle = rg; ctx.fillRect(0, 0, W, hY + 4);
     ctx.save(); ctx.beginPath(); ctx.rect(-20, -20, W + 40, hY + 20); ctx.clip();
     ctx.fillStyle = core; ctx.beginPath(); ctx.arc(sx, sy, r, 0, Math.PI * 2); ctx.fill();
     ctx.restore();
@@ -579,7 +609,8 @@ function makeCloud(scale) {
     const lg = q.createLinearGradient(0, 0, 0, h); lg.addColorStop(0, top); lg.addColorStop(1, bot); q.globalAlpha = a; q.fillStyle = lg; q.fillRect(0, 0, w, h);
     return t;
   };
-  return { img: c, imgD: tint('#ffc98a', '#a65a8c', 0.62), imgN: tint('#6f7fae', '#1d2649', 0.82), w, h };
+  const dk = tint('#ffc98a', '#a65a8c', 0.62), nt = tint('#6f7fae', '#1d2649', 0.82);
+  return { img: c, imgD: dk, imgN: nt, set: { day: c, dusk: dk, night: nt }, w, h };
 }
 let clouds = [];
 function initClouds() {
@@ -791,7 +822,7 @@ function updateFx(dt) {
 }
 
 // ---------- vẽ ----------
-function drawClouds() { for (const c of clouds) drawBlend({ day: c.img, dusk: c.imgD, night: c.imgN }, c.x - par * 0.01 * c.depth, c.y, c.w, c.h); }
+function drawClouds() { for (const c of clouds) drawBlend(c.set, c.x - par * 0.01 * c.depth, c.y, c.w, c.h); }
 
 function drawBirds() {
   ctx.strokeStyle = 'rgba(40,50,70,.75)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
@@ -1104,7 +1135,6 @@ function journeyInfo(t) {
   $('jFill').style.width = (st.lap > 0 ? 100 : pct) + '%';
   $('jDot').style.left = pct + '%';
   $('jMarks').innerHTML = STAGES.map((s, i) => `<span style="left:${s.t / DAY_LEN * 100}%" class="${i <= st.s || st.lap ? 'on' : ''}">${s.i}</span>`).join('') + '<span style="left:100%" class="' + (st.lap ? 'on' : '') + '">🎉</span>';
-  $('oReach').innerHTML = 'Bạn đã bay tới <b>' + STAGES[st.s].i + ' ' + STAGES[st.s].n + '</b>' + (st.lap ? ' (ngày thứ ' + (st.lap + 1) + ')' : '');
   const left = (nx ? nx.t : DAY_LEN) - r;
   $('oNext').textContent = 'Còn ' + left.toFixed(1).replace('.', ',') + ' giây nữa là tới ' + (nx ? nx.i + ' ' + nx.n : '🎉 Ngày mới') + '!';
 }
