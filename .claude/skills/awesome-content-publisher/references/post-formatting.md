@@ -1,0 +1,141 @@
+# Post formatting — getting the source's markdown into a composer that is not markdown
+
+The post files are markdown. Almost no social composer is. Every defect in this file comes from typing the source verbatim and checking only that the *characters* arrived.
+
+Read this before the first composer of a run, alongside `browser-interaction.md`. The pre-submit checks it ends with are not optional extras: they are the difference between a post and a post with ` ```text ` printed in it.
+
+## Classify the platform before you type
+
+Three classes, and the class decides what reaches the editor:
+
+| Class | Platforms observed | What goes in |
+| --- | --- | --- |
+| Plain text | linkedin, facebook-wall, threads, instagram, pixelfed, x, mastodon, bluesky, truthsocial, peerlist, minds, bastyon, pinterest, tumblr, quora | markdown stripped: fences and inline backticks removed, `#` heading markers removed, `**bold**` unwrapped, `[t](u)` flattened |
+| Markdown-native | devto, hashnode (via paste), lemmy | the source verbatim |
+| Rich editor | medium, substack, buymeacoffee, daily-dev, ko-fi | markdown converted to HTML and delivered as a paste event |
+| Rich editor (paste first) | patreon | HTML paste into the Remirror body; the toolbar walk below only where the element count shows loss |
+
+Where the paste count shows loss, the formatting becomes a second pass. Patreon renders no markdown, so any `##` or `**…**` left as text is converted by hand: `Range` over the block's text node → the floating toolbar mounts above the selection → `button[aria-label="Text size"]` → `Heading 2`, or `button[aria-label="Bold"]` → then delete the marker characters, which the style does not consume. Budget for it: the pass is one round trip per heading, and skipping it publishes the markers as literal text.
+
+The class is a hypothesis until the live page proves it. `wonderful-dev` renders code fences, inline code and headings but not every link, so it belongs to no class cleanly (its note says which parts stay markdown; headings there take the plain-text emoji form) — and assuming "markdown platform" ships `[label](https://…)` as literal text. Before deciding, open one existing post on that platform and look at what its markup actually became.
+
+## Stripping for plain-text composers
+
+Remove, in this order: fence lines (` ``` ` and ` ```lang `, keeping the code lines), inline backticks, `> ` quote markers, `**` and `*` emphasis, a line holding only `***` or `---`, and flatten `[text](url)` to `text (url)`. Then collapse three or more consecutive newlines to two.
+
+A heading is not stripped to bare words, because a plain line of text between paragraphs reads as a stray sentence and the section break disappears. Replace each heading's `#` markers with one emoji that fits the heading's words, followed by a space and the heading text: a section about cost takes one from the money group, a section about a failure one from the tools or warning groups, a list of findings a pin or a magnifier. Take them from the rendering-safe palette and gate in `awesome-content-repurpose/references/authored-style.md` (section 8), use a different emoji for each heading of one post, and fall back to `📌` where nothing fits. Keep one blank line above and below the heading line, as the source had.
+
+Emphasis is not rebuilt out of Unicode Mathematical Alphanumeric characters (styled bold or italic letters) to replace the `**` that was removed. Screen readers spell them out letter by letter, search does not match them, and they read as a template. The unwrapped word stays plain, and emphasis comes from word order and line breaks.
+
+Two traps in the stripping itself:
+
+- A line starting with `#` is only a heading when a space follows the hashes. `#claudecode #ai #learning` is a hashtag line and must survive untouched. A converter that treats every `#` line as a heading (or, worse, whose paragraph loop skips `#` lines without advancing) either eats the tags or spins forever.
+- A trailing hashtag line is a heading on markdown platforms. On `devto` it renders as an `<h1>`; move it into the front-matter `tags:` field instead, which is that platform's own mechanism. On `hashnode` and `lemmy` a `#word` with no space is safe as body text.
+
+## HTML paste is the reliable route into TipTap and ProseMirror
+
+Medium, Substack, Buy Me a Coffee and daily.dev all run ProseMirror-family editors, and all four accept a synthetic paste carrying `text/html`:
+
+```js
+await page.evaluate((h) => {
+  const el = document.querySelector('.tiptap.ProseMirror');   // Medium: div.postArticle-content [contenteditable]
+  el.focus();
+  const dt = new DataTransfer();
+  dt.setData('text/html', h);
+  dt.setData('text/plain', h.replace(/<[^>]+>/g, ''));
+  el.dispatchEvent(new ClipboardEvent('paste', { clipboardData: dt, bubbles: true, cancelable: true }));
+}, HTML);
+```
+
+Verified end to end: headings became real `h3`/`h4`, fences became `pre`, `> ` became `blockquote`, `**bold**` became `strong`, and `[t](u)` became a working `a[href]`. Hashnode takes the markdown itself through the same paste event — its editor carries a markdown paste handler — so send the source there rather than HTML.
+
+This is also what avoids the TipTap input-rule dance: typing `## ` keystroke by keystroke to make a heading works, but it is slow, order-dependent, and every code fence needs an escape from the block it just created.
+
+Not every rich editor accepts that paste, and the failure is silent. Ko-fi's Froala sanitises the pasted HTML down to plain paragraphs — headings, `pre` blocks and both anchors gone, the links left as dead text — while reporting a perfectly normal length. Where an editor exposes its own API, use it instead: `window.FroalaEditor.INSTANCES[0].html.set(html)` followed by `undo.saveStep()` and `events.trigger('contentChanged')` kept every element, and it registers in the editor's model because it travels through the editor's own pipeline (unlike a raw DOM write, which does not). Verify the paste by counting elements, never by length: `h1..h4`, `pre`, `a[href]` and `ul` against what the HTML contained.
+
+Hashnode's handler takes markdown, not HTML, and does not autolink a bare URL. `[text](url)` becomes an anchor; `https://…` alone on a line stays text. Wrap bare URLs as `[url](url)` in the markdown before pasting — one extra regex, and it removes the whole link-control dance on that platform.
+
+## Bare URLs do not become links on their own
+
+Assume nothing autolinks. The failure is silent and it always eats the one thing the post exists for.
+
+- In an HTML paste, emit the anchor yourself — convert every bare `https://…` in the source to `<a href="…">…</a>` during the conversion, not afterwards.
+- In a plain-text composer, the platform's own linkifier decides. Where it exists, it fires on *typed* input, not on `insertText`: peerlist linkified the closing URL only when it was typed with real keystrokes and followed by a space, and produced dead text every other way.
+- Where an editor has a link control, use it on a selection: Tumblr (`Control+k`), Substack (toolbar `title="Link"`), Buy Me a Coffee (`button.option-button` index 3). Select the URL with a Range over its text node — `Home`/`Shift+End` grabs only the visual line and a wrapped URL loses its head.
+- Backticks inside a link label break the parser. ``[`label`](https://…)`` publishes as literal text on wonderful.dev while plain `[label](https://…)` renders as an anchor on the same platform. Strip inline code from link labels for every target.
+
+## Paragraph shape survives or it does not
+
+- `insertText` of a multi-paragraph string collapses it into one block in block editors. Insert paragraph by paragraph with an explicit `Enter` between them.
+- Newlines *inside* one inserted paragraph are dropped. A Tumblr block of five `/command …` lines publishes as one run-on line. Where a source paragraph contains single newlines, insert them as explicit `Shift+Enter` breaks and count the `br` elements afterwards.
+- Never press `Escape` between paragraph inserts. It scrambles the block order — the last paragraph ends up first. Nothing needs dismissing: `insertText` does not open Tumblr's slash menu.
+- Runs of very short paragraphs publish as a stretched wall in rich editors. A rhythmic `Browser.` / `Resolver.` / `Root.` sequence gets a full paragraph gap under each line on Medium and reads as broken. Fuse a run of three or more consecutive one-line paragraphs of ≤32 characters into one block joined by hard breaks. The threshold matters: at 35 it swallows real prose sentences, at 30 it misses `No assumed background knowledge.`
+
+## The pre-submit format gate
+
+Run all of it, in the composer, before the submit click. Every item is here because skipping it shipped a defect:
+
+1. Zero literal markdown where the platform renders it: no ` ``` `, no `^#{1,6} `, no `](http`, no stray backticks.
+2. Every URL in the source is an `a[href]` in the composer — or the platform is one whose linkifier is proven to fire server-side, and you say so in the ledger.
+3. Paragraph count and order match the source, and the first and last block are the source's first and last.
+4. Character-for-character diff of every block against the source. Rich editors *move characters*: Patreon drops the last letters of a paragraph (`…the last wor`) and appends them to the closing URL (`…/slugd`); Ko-fi's Froala does the same to several blocks at once. Compare per block, not by total length — the totals match.
+5. Attachment count equals what the post file declares.
+6. No `�` anywhere.
+7. Every backticked span in the source is a code element (or, on Patreon, a Quote block; on Tumblr, a Chat block) in the composer, and none of those spans contains an `a[href]`. Stripping the backticks for a plain-text class is right for `x`, `mastodon` or `bluesky`, where nothing renders; it is wrong for a rich editor, where the bare command gets autolinked from the `https://` inside it — Patreon and Tumblr both shipped `pip install -e 'git+https://…[fetch]'` with a dead anchor and the closing quote inside it. Count code spans against the source the way attachments are counted.
+8. Every dotted token the source writes as a word — `CLAUDE.md`, `AGENTS.md`, `culture.md`, anything shaped like `name.tld` — is still that word in the composer. Some platforms autolink it as a hostname AND rewrite what the reader sees: Bastyon published `culture.md` as `http://culture.md`, a live anchor to a host that does not exist, in a sentence the author never wrote. Wrap those tokens in code spans in the post file before the run reaches any composer (item 7 then carries them through the rich editors, and the plain-text strip leaves the word bare and safe), and search the filled composer for `http://` or `https://` prefixes the source does not contain.
+
+A failure here is a fix in the composer, never a publish followed by a repair.
+
+## When the post file has no title and the platform demands one
+
+Patreon disables Publish without a title; Ko-fi's blog, Hashnode, Medium and Substack all need one.
+
+A form file always carries its own `title` in frontmatter, and that is the title. For any other file, take it from a sibling post file in the same folder. A campaign folder written for many platforms always contains long-form units that carry an H1 — `devto`, `hashnode`, `medium` and `substack` posts open with one — and any of those titles is the campaign's own words for this piece. Read the siblings, pick the one whose length and register fit the target, and record in the ledger which file it came from.
+
+Only when no sibling in the folder carries a title does the first sentence of the post's own body become the fallback, and that is worth naming in the report. Inventing a title is not an option at any point.
+
+## Where the platform decides the shape, say so instead of fighting it
+
+Some platforms turn a piece of the source into something of their own, and each case below is correct behaviour to record rather than a defect to repair:
+
+- Tumblr turns a bare URL on its own line into a link card — the repo's title, description and a real anchor — and swallows the paragraph typed immediately after it. Keep the card; re-insert the lost paragraph.
+- Bluesky replaces its auto-generated link preview with the image when one is attached. The URL survives as a facet, so it is still a real link; only the card is gone.
+- Peerlist refuses hashtags outright and says so in the composer. A trailing hashtag line belongs elsewhere on that platform, not in the body.
+
+The rule underneath: when a platform transforms the source, check that nothing was lost (a paragraph, the link, the tail) and record what it did. Restoring the author's exact bytes against the platform's own rendering is not the goal.
+
+## Try the HTML paste on every rich editor, including the ones this skill says cannot take one
+
+The same first move works on every rich editor: focus the body node, dispatch a `paste` `ClipboardEvent` carrying `text/html`, read the result. Patreon's Remirror included: it takes a whole campaign unit in one call with headings, lists, bold and anchors intact. Classify by measuring, not by reputation: paste, then count `h1..h4`, `pre`, `li`, `a[href]`, `pre a` and the joined text against the source. Only where that count shows real loss does the per-construct toolbar walk earn its cost, and the note for that platform should record which of the two ran.
+
+What the paste loses is narrower and more predictable than "the editor cannot take HTML":
+
+- **No `codeBlock` in the schema** — every `<pre>` flattens to a paragraph *and its newlines become single spaces*, so a four-line command publishes as one run-on line. Seen on DeviantArt, Patreon and ko-fi.
+- **Whitespace runs collapse** wherever the container is not `pre`, taking column alignment and YAML indentation with them.
+- **Markdown-ish paste rules fire on the flattened text.** A `~ … ~` pair became strikethrough on Remirror; the same class of rule is what autolinks a URL that used to be inside a fence.
+
+One recipe answers all three for commands and code, and it is worth reaching for before any toolbar: emit **one `<p>` per source line** instead of one `<pre>` per block, and convert every run of two or more spaces to that many non-breaking spaces (U+00A0). Line breaks survive because each line is its own block; indentation survives because the spaces are no longer collapsible; and the tilde pair is split across two blocks where no rule can match it. Where the schema has a `blockquote` — most do — wrap each run of those paragraphs in one and the commands read as commands rather than as body prose. On ko-fi, which strips `<br>` inside a `<pre>` server-side, `<blockquote><p><code>…</code></p>…</blockquote>` published exactly right after the same post had already shipped with run-on commands.
+
+Then check what the paste autolinked. With the code container gone, the editor's Link extension sees plain URLs inside commands and marks them: on a ProseMirror-based editor whose instance is reachable (DeviantArt exposes it as `editorNode.editor`), walk `state.doc.descendants`, collect the text nodes whose `link` mark href is not one of the post's real reference links, and `removeMark` them in one transaction. Where no instance is exposed, the gate is the anchor list itself — it must hold the reference URLs and nothing from a command — and an unreachable link popover is an `adapted` line, not a reason to spend the draft.
+
+## Tables: a real table, a monospace block, or a list — never spaces in body text
+
+A source table, whether a Markdown pipe table or a fenced block of aligned columns, has exactly three honest forms, and the platform's schema picks one:
+
+1. **A real table** where the surface renders one: a markdown-native platform that renders GFM tables (confirm on one of its existing posts), or a rich editor whose schema has a `table` node (`editor.schema.nodes.table` where the instance is reachable; otherwise paste a two-row `<table>` and count `table`, `tr` and `td` in the editor).
+2. **A monospace block** where the surface keeps one: a `pre`/`codeBlock`, or a `code` mark that survives the paste. Padded columns line up only in a fixed-width font. Pad every cell to its column's widest value and check the published page renders the block in a monospace face.
+3. **A list, one item per row**, everywhere else. Every column heading appears in the list: in a lead line above the list, or inside each item. For two value columns, the lead line names both (`<column A> → <column B>:`) and each item reads `<row label>: <value A> → <value B>`. For three or more, each item names its columns (`<row label>: <column A> <value>, <column B> <value>, …`). Numbers and units are copied exactly, row order is kept, and nothing is rounded or dropped.
+
+Non-breaking spaces do not make a table. The one-`<p>`-per-line recipe above keeps a command's indentation because a command does not need its columns to line up. A table does, and in the proportional body font every editor here uses, a space is narrower than a digit and a label's width depends on its letters. So the columns drift apart row by row, and the published result is neither a table nor a list. A fenced block that holds a table is a table here, not a command: recognise it by two or more lines split into the same number of cells by runs of spaces or by `|`, and route it through this section.
+
+Gate: before submitting, the composer holds either a `table` with the source's row and column count, a monospace block with every line intact, or a list whose `li` count equals the source's data rows. It never holds paragraphs of space-padded cells. Forms 2 and 3 are `adapted` (`table as a monospace block`, `table as a list`), not `degraded`.
+
+## Section separators travel or they are dropped, never typed
+
+A post file may carry `---` or `***` on its own line as a section separator, most often the line above a footer the user chose. It is markup, not text, and it needs the same treatment as a heading:
+
+- On a **markdown-native** surface it goes through as written and renders as a rule.
+- On a **rich editor** it is converted with the rest of the body: `<hr>` inside the HTML paste where the schema has a `horizontalRule` node (Substack, DeviantArt, HackerNoon, Medium and Teletype all do), or the editor's own divider control where the paste drops it — HackerNoon's toolbar `Divider` (`ctrl _`), Teletype's block-menu `Divider`, Medium's `---` typed on an empty line, which converts as the third dash lands. On `daily-dev` the rule appears only when the separator is written as `---` (`***` in the source included) on a line of its own, with a line break before and after it (`posting-daily-dev.md`).
+- On a **plain-text** surface, and on a rich editor whose schema has no rule node, the separator is **removed**. Three dashes in a composer that renders nothing are three dashes the reader sees. Tumblr's block menu and Quora's formatting menu both lack one; check the platform's own note before assuming.
+
+The pre-submit gate counts rules in the composer against separators in the source, the same way it counts code spans: equal on a platform that supports them, zero on a platform that does not, and never a literal `---` in the published text.
