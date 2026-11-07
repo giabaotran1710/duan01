@@ -55,6 +55,7 @@
     { id: 'biendoithichung', name: 'Biến đổi thích ứng' },
     { id: 'timochu', name: 'Tìm ô chữ' },
     { id: 'daibacvutru', name: 'Đại bác vũ trụ' },
+    { id: 'truottuyet3d', name: 'Trượt tuyết' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
