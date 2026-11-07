@@ -1,9 +1,16 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
+<script>
+/* Nếu trình duyệt chặn lưu trữ (chế độ riêng tư, webview hạn chế) thì dùng bộ nhớ tạm để game không bị lỗi */
+(function(){['localStorage','sessionStorage'].forEach(function(n){try{window[n].getItem('__t')}catch(e){var m={};try{Object.defineProperty(window,n,{configurable:true,value:{getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null},setItem:function(k,v){m[k]=String(v)},removeItem:function(k){delete m[k]},clear:function(){m={}},key:function(i){return Object.keys(m)[i]||null},get length(){return Object.keys(m).length}}})}catch(e2){}}})})();
+</script>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>TRƯỢT TUYẾT 3D</title>
+<script src="../maintenance.js?v=20261103ban" data-game="truottuyet3d"></script>
+<script src="../scene.js" data-game="truottuyet3d"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0c4a6e">
+<title>Trượt tuyết</title>
 <style>
   *{margin:0;padding:0;box-sizing:border-box}
   html,body{width:100%;height:100%;overflow:hidden;background:#87ceeb}
@@ -56,6 +63,13 @@
   .stat-item .stat-value{font-size:22px;font-weight:800;color:#fff;text-shadow:none}
   #loading{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#87ceeb,#c8e4f8);color:#fff;font-size:16px;font-weight:800;letter-spacing:5px;z-index:100;transition:opacity 0.4s;text-shadow:0 2px 8px rgba(0,0,0,0.3)}
   #loading.hidden{opacity:0;pointer-events:none}
+  .speed-text{position:absolute;left:50%;bottom:calc(26px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);font-size:30px;font-weight:900;color:#fff;font-variant-numeric:tabular-nums;text-shadow:0 2px 10px rgba(0,30,70,.55);line-height:1}
+  .speed-text small{font-size:12px;letter-spacing:2px;margin-left:4px;color:rgba(255,255,255,.85)}
+  #powder{position:absolute;top:156px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:900;letter-spacing:3px;color:#ffb347;text-shadow:0 0 12px rgba(255,150,40,.8);opacity:0;transition:opacity .25s;white-space:nowrap}
+  #powder.show{opacity:1}
+  .back-btn{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:12px;z-index:20;width:42px;height:42px;padding:0;margin:0;border-radius:13px;font-size:20px;letter-spacing:0;color:#e0f2fe;background:rgba(10,25,50,.55);border:1px solid rgba(125,211,252,.35);box-shadow:none;animation:none;display:grid;place-items:center}
+  .back-btn:hover{transform:none}
+  #overlay.hidden ~ .back-btn{display:none}
 </style>
 </head>
 <body>
@@ -67,7 +81,7 @@
     <div class="stat">
       <div class="stat-label">ĐIỂM</div>
       <div class="stat-value" id="scoreVal">0</div>
-      <div class="stat-sub" id="distanceVal">0m</div>
+      <div class="stat-sub" id="distanceVal">0 m</div>
     </div>
     <div class="stat right">
       <div class="stat-label">MẠNG</div>
@@ -76,46 +90,56 @@
   </div>
   <div class="speed-bar"><div class="speed-fill" id="speedFill"></div></div>
   <div class="combo" id="comboVal"></div>
-  <div class="danger-label" id="dangerLabel">⚠ NGUY HIỂM ⚠</div>
+  <div class="danger-label" id="dangerLabel">⚠ ĐOẠN DỐC GẮT ⚠</div>
   <div id="slope-indicator"></div>
+  <div id="powder">TUYẾT DÀY · RA KHỎI ĐƯỜNG TRƯỢT</div>
+  <div class="speed-text"><span id="speedVal">0</span><small>KM/H</small></div>
 </div>
 
 <div id="overlay">
   <div class="screen" id="menuScreen">
     <h1>TRƯỢT<br>TUYẾT</h1>
-    <p class="sub">Lướt · Né · Sống sót</p>
-    <div class="hard-badge">⚡ ĐỊA HÌNH NÚI · 2 MẠNG</div>
+    <p class="sub">Đổ dốc · Ôm cua · Né cây</p>
+    <div class="hard-badge">⚡ ĐƯỜNG TRƯỢT ĐỔ NÚI · 2 MẠNG</div>
     <div class="goal-card">
       <div class="goal-label">LUẬT CHƠI</div>
       <div class="goal-text">
-        <b>← →</b> hoặc <b>A D</b> để lái · <b>Kéo ngón tay</b> trên mobile.<br>
-        Né <b>cây thông</b>, <b>đá</b>, và <b>khúc gỗ</b> — va chạm mất 1 mạng.<br>
-        <b>Địa hình có dốc cao</b> — lên dốc chậm, xuống dốc nhanh.<br>
-        Thỉnh thoảng gặp <b>nhà gỗ</b>, <b>cáp treo</b>, <b>đường mòn</b>.<br>
-        <span class="warn">⚠ Chỉ 2 mạng · Tốc độ tăng nhanh.</span>
+        <b>← →</b> hoặc <b>A D</b> để bẻ ván · <b>giữ ngón tay</b> bên trái/phải màn hình trên điện thoại.<br>
+        Lao thẳng xuống dốc thì <b>nhanh dần</b>, bẻ ván ngang sườn dốc thì <b>chậm lại</b>.<br>
+        Ở trong <b>đường trượt</b> (tuyết đã cán phẳng). Ra ngoài là <b>tuyết dày</b>, ván bị ghì lại và rừng thông rất dày.<br>
+        Né <b>cây thông</b>, <b>đá</b>, <b>khúc gỗ</b>; luồn qua <b>cổng cờ</b> để ăn điểm thưởng.<br>
+        <span class="warn">⚠ Chỉ 2 mạng · Càng xuống càng dốc.</span>
       </div>
     </div>
-    <button id="startBtn">THỬ THÁCH</button>
+    <button id="startBtn">XUẤT PHÁT</button>
   </div>
   <div class="screen hidden" id="overScreen">
-    <h2>HẾT MẠNG</h2>
+    <h2>NGÃ RỒI!</h2>
     <div class="scoreBig" id="finalScore">0</div>
     <div class="best" id="finalBest">Kỷ lục: 0</div>
     <div class="stat-row">
       <div class="stat-item">
         <div class="stat-label">QUÃNG ĐƯỜNG</div>
-        <div class="stat-value" id="finalDistance">0m</div>
+        <div class="stat-value" id="finalDistance">0 m</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-label">TỐC ĐỘ CAO NHẤT</div>
+        <div class="stat-value" id="finalSpeed">0</div>
       </div>
       <div class="stat-item">
         <div class="stat-label">CỔNG</div>
         <div class="stat-value" id="finalGates">0</div>
       </div>
     </div>
-    <button id="retryBtn">THỬ LẠI</button>
+    <button id="retryBtn">TRƯỢT LẠI</button>
   </div>
 </div>
+<button class="back-btn" id="backBtn" aria-label="Về trang chủ" data-no-scene>←</button>
 
 <div id="loading">ĐANG TẢI...</div>
+
+<footer class="tbFooter">Version: D20261107150000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
 
 <script>
   setTimeout(() => {
@@ -126,6 +150,7 @@
       l.style.fontSize = '14px';
     }
   }, 10000);
+  document.getElementById('backBtn').addEventListener('click', () => { location.href = '../'; });
 </script>
 
 <script type="importmap">
@@ -138,79 +163,72 @@ import * as THREE from 'three';
 const isMobile = /Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
 
 // ============================================================
-// DIFFICULTY
+// ĐƠN VỊ: 1 = 1 mét, tốc độ tính bằng m/s. Trục -Z là hướng xuống núi.
 // ============================================================
-const BASE_SPEED = 42;
-const MAX_SPEED = 105;
-const SPEED_INCREASE = 1.8;
-const HORIZ_SPEED_BASE = 34;
-const HORIZ_SPEED_MAX = 62;
-const STEER_RESPONSE = 16;
+const G = 9.81;
+const START_SPEED = 11;          // ~40 km/h khi xuất phát
+const MAX_SPEED = 44;            // ~158 km/h
+const MIN_SPEED = 6;             // không bao giờ đứng yên hẳn
+const MU_PISTE = 0.04;           // ma sát trên đường trượt đã cán
+const MU_POWDER = 0.2;           // tuyết dày ngoài đường trượt
+const DRAG = 0.0024;             // lực cản không khí (~ v²)
+const CARVE_LOSS = 0.09;         // mất tốc khi bẻ ván gắt
 
-const GATE_GAP = 3.8;
-const GATE_COLLISION_DIST = 0.55;
+const MAX_HEADING = 1.1;         // ~63° so với đường dốc chính
+const STEER_RATE = 2.6;          // rad/s khi bẻ ván
+const RETURN_RATE = 1.4;         // rad/s tự lái về hướng đổ dốc khi thả tay
+
+const PISTE_HALF = 24;           // nửa bề rộng đường trượt
+
+const GATE_GAP = 4.4;
+const GATE_COLLISION_DIST = 0.45;
 const GATE_INTERVAL_MIN = 5;
 const GATE_INTERVAL_MAX = 9;
 
 const INITIAL_LIVES = 2;
-const CRASH_INVINCIBILITY = 0.9;
-const CRASH_SPEED_KEEP = 0.72;
+const CRASH_INVINCIBILITY = 1.3;
+const CRASH_SPEED_KEEP = 0.45;
 
-const D_WARMUP = 500;
-const D_MID = 1200;
-const D_HARD = 2200;
+const D_WARMUP = 250;
+const D_MID = 700;
+const D_HARD = 1400;
 
-const SPAWN_WIDTH = 44;
-const SPAWN_AHEAD = 120;
-const RECYCLE_BEHIND = 30;
+const SPAWN_AHEAD = 135;
+const RECYCLE_BEHIND = 25;
 
-const MAX_HEADING = 0.62;
+const DECO_MIN_DISTANCE = 150;
+const DECO_MIN_INTERVAL = 9;
+const DECO_MAX_INTERVAL = 20;
 
-const SKI_LOCAL_Y = 0.10;
-const TRAIL_Y = 0.05;
-const TILT_Z_AMOUNT = 0.20;
-
-const SLOPE_SAMPLE_DIST = 12;
-const SLOPE_SPEED_STRENGTH = 0.8;
-const SLOPE_SPEED_MAX = 0.22;
-
-const DECO_MIN_DISTANCE = 500;
-const DECO_MIN_INTERVAL = 15;
-const DECO_MAX_INTERVAL = 40;
+const PLAYER_SCALE = 0.85;
 
 // ============================================================
-// TERRAIN — 4 tiers
+// ĐỊA HÌNH: một sườn núi đổ dốc, càng xuống càng dốc; đường trượt uốn lượn
+// nằm trong lòng chảo, hai bên cao dần thành sườn rừng.
+// Hàm JS và GLSL phải giống hệt nhau.
 // ============================================================
+function pisteCenter(z) {
+  return 34 * Math.sin(z * 0.0032) + 16 * Math.sin(z * 0.0013 + 1.3);
+}
 function getTerrainHeight(x, z) {
-  let h = Math.sin(x * 0.05) * 0.5
-        + Math.cos(z * 0.05) * 0.8 - 0.8
-        + Math.sin(x * 0.12 + z * 0.08) * 0.4
-        + Math.cos(z * 0.03) * 1.0 - 1.0;
-  h += Math.sin(z * 0.018 + x * 0.004) * 4.0;
-  h += Math.cos(z * 0.028 + 1.1) * 2.5;
-  h += Math.sin(z * 0.0065 + x * 0.008) * 10.0;
-  const pv = Math.sin(z * 0.0095 + x * 0.01 - 0.8);
-  if (pv > 0.0) h += pv * pv * pv * 18.0;
+  let h = 0.26 * z - 0.000003 * z * z + Math.sin(z * 0.0021) * 22;
+  h += Math.sin(x * 0.05) * 0.5 + Math.cos(z * 0.05) * 0.6 + Math.sin(x * 0.12 + z * 0.08) * 0.35;
+  h += Math.sin(z * 0.018 + x * 0.004) * 1.6 + Math.cos(z * 0.028 + 1.1) * 1.1;
+  const d = x - pisteCenter(z);
+  h += d * d * 0.0012 + Math.max(0, Math.abs(d) - PISTE_HALF) * 0.12;
   return h;
 }
 
-function getSlopeAlongTravel(x, z) {
-  const hAhead = getTerrainHeight(x, z - SLOPE_SAMPLE_DIST);
-  const hBehind = getTerrainHeight(x, z + SLOPE_SAMPLE_DIST);
-  return (hAhead - hBehind) / (SLOPE_SAMPLE_DIST * 2);
-}
-
 const TERRAIN_SHADER_FN = `
+  float pisteCenter(float z) {
+    return 34.0 * sin(z * 0.0032) + 16.0 * sin(z * 0.0013 + 1.3);
+  }
   float terrainHeight(vec2 p) {
-    float h = sin(p.x * 0.05) * 0.5
-            + cos(p.y * 0.05) * 0.8 - 0.8
-            + sin(p.x * 0.12 + p.y * 0.08) * 0.4
-            + cos(p.y * 0.03) * 1.0 - 1.0;
-    h += sin(p.y * 0.018 + p.x * 0.004) * 4.0;
-    h += cos(p.y * 0.028 + 1.1) * 2.5;
-    h += sin(p.y * 0.0065 + p.x * 0.008) * 10.0;
-    float pv = sin(p.y * 0.0095 + p.x * 0.01 - 0.8);
-    if (pv > 0.0) h += pv * pv * pv * 18.0;
+    float h = 0.26 * p.y - 0.000003 * p.y * p.y + sin(p.y * 0.0021) * 22.0;
+    h += sin(p.x * 0.05) * 0.5 + cos(p.y * 0.05) * 0.6 + sin(p.x * 0.12 + p.y * 0.08) * 0.35;
+    h += sin(p.y * 0.018 + p.x * 0.004) * 1.6 + cos(p.y * 0.028 + 1.1) * 1.1;
+    float d = p.x - pisteCenter(p.y);
+    h += d * d * 0.0012 + max(0.0, abs(d) - ${PISTE_HALF.toFixed(1)}) * 0.12;
     return h;
   }
 `;
@@ -218,191 +236,140 @@ const TERRAIN_SHADER_FN = `
 // ============================================================
 // SCENE
 // ============================================================
+const SKY = 0xbcd9ef;
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xb8d8f0);
-scene.fog = new THREE.Fog(0xc8e0f0, 55, 240);
+scene.background = new THREE.Color(SKY);
+scene.fog = new THREE.Fog(SKY, 70, 260);
 
-const camera = new THREE.PerspectiveCamera(65, window.innerWidth / window.innerHeight, 0.1, 800);
-camera.position.set(0, 6, 19);
-camera.lookAt(0, 1.4, -10);
+const camera = new THREE.PerspectiveCamera(62, window.innerWidth / window.innerHeight, 0.1, 900);
 
-let camDist = 19;
-let camHeight = 6;
-const camPos = { x: 0, y: 6, z: 19 };
-let targetFov = 65;
-
+let camDist = 6.6, camHeight = 2.5, baseFov = 62;
+const camPos = new THREE.Vector3(0, 4, 7);
+let camYaw = 0, camRoll = 0;
 let time = 0;
 
 let deathCamActive = false;
-let deathCamOffsetZ = 0;
-let deathCamOffsetY = 0;
-let deathCamVelZ = 0;
-let deathCamVelY = 0;
+let deathT = 0;
 
-let weatherTimer = 5;
-let weatherTarget = 0.3;
-let weatherIntensity = 0.3;
-let windPhase = 0;
-
-let smoothPitch = 0;
-let smoothRoll = 0;
+let weatherTimer = 5, weatherTarget = 0.3, weatherIntensity = 0.3, windPhase = 0;
 
 const renderer = new THREE.WebGLRenderer({ antialias: !isMobile, powerPreference: 'high-performance' });
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, isMobile ? 1.5 : 2));
-renderer.shadowMap.enabled = false;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 document.getElementById('game').appendChild(renderer.domElement);
 
-const sun = new THREE.DirectionalLight(0xfff5e0, 3.8);
-sun.position.set(25, 35, 12);
+const sun = new THREE.DirectionalLight(0xfff3dc, 3.2);
+sun.position.set(30, 40, 10);
 scene.add(sun);
-const hemi = new THREE.HemisphereLight(0xd8e8ff, 0xa8c0e0, 0.45);
-scene.add(hemi);
-const ambient = new THREE.AmbientLight(0xb8cce8, 0.28);
-scene.add(ambient);
+scene.add(sun.target);
+scene.add(new THREE.HemisphereLight(0xdce9ff, 0x9fb6d4, 0.55));
+scene.add(new THREE.AmbientLight(0xb8cce8, 0.25));
 
 // ============================================================
-// GROUND
+// MẶT TUYẾT (đường trượt cán phẳng có sọc, ngoài là tuyết dày lấp lánh)
 // ============================================================
-const groundGeo = new THREE.PlaneGeometry(400, 600, 80, 140);
-const groundMat = new THREE.MeshStandardMaterial({
-  color: 0xf8fcff, roughness: 0.88, metalness: 0.02
-});
-
+const groundGeo = new THREE.PlaneGeometry(420, 620, 90, 150);
+const groundMat = new THREE.MeshStandardMaterial({ color: 0xf8fcff, roughness: 0.88, metalness: 0.02 });
 groundMat.onBeforeCompile = (shader) => {
   shader.vertexShader = TERRAIN_SHADER_FN + shader.vertexShader;
-  shader.fragmentShader = TERRAIN_SHADER_FN + `
-    float hash21(vec2 p) {
-      return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453);
-    }
+  shader.fragmentShader = `
+    float hash21(vec2 p) { return fract(sin(dot(p, vec2(127.1, 311.7))) * 43758.5453); }
   ` + shader.fragmentShader;
-
-  shader.vertexShader = shader.vertexShader.replace('#include <common>',
-    `#include <common>
-     varying float vTerrainHeight;
+  const vary = `
+     varying float vPisteD;
      varying float vTerrainSlope;
      varying vec3 vWorldPos;
      varying vec3 vViewVec;
-    `);
-  shader.fragmentShader = shader.fragmentShader.replace('#include <common>',
-    `#include <common>
-     varying float vTerrainHeight;
-     varying float vTerrainSlope;
-     varying vec3 vWorldPos;
-     varying vec3 vViewVec;
-    `);
-
+  `;
+  shader.vertexShader = shader.vertexShader.replace('#include <common>', '#include <common>' + vary);
+  shader.fragmentShader = shader.fragmentShader.replace('#include <common>', '#include <common>' + vary);
   shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
     `#include <begin_vertex>
      vec4 _wp0 = modelMatrix * vec4(position, 1.0);
-     float _wx = _wp0.x;
-     float _wz = _wp0.z;
-     float _h = terrainHeight(vec2(_wx, _wz));
+     float _h = terrainHeight(vec2(_wp0.x, _wp0.z));
      transformed.z = _h;
-     vTerrainHeight = _h;
      float _eps = 0.7;
-     float _dhdx = (terrainHeight(vec2(_wx + _eps, _wz)) - terrainHeight(vec2(_wx - _eps, _wz))) / (2.0 * _eps);
-     float _dhdz = (terrainHeight(vec2(_wx, _wz + _eps)) - terrainHeight(vec2(_wx, _wz - _eps))) / (2.0 * _eps);
-     vTerrainSlope = sqrt(_dhdx * _dhdx + _dhdz * _dhdz);
-     vWorldPos = vec3(_wx, _h, _wz);
-     vec4 _wpDisp = modelMatrix * vec4(position.x, position.y, transformed.z, 1.0);
-     vViewVec = cameraPosition - _wpDisp.xyz;
+     float _dhdx = (terrainHeight(vec2(_wp0.x + _eps, _wp0.z)) - terrainHeight(vec2(_wp0.x - _eps, _wp0.z))) / (2.0 * _eps);
+     vTerrainSlope = abs(_dhdx);
+     vPisteD = _wp0.x - pisteCenter(_wp0.z);
+     vWorldPos = vec3(_wp0.x, _h, _wp0.z);
+     vViewVec = cameraPosition - vWorldPos;
     `);
-
   shader.vertexShader = shader.vertexShader.replace('#include <beginnormal_vertex>',
     `#include <beginnormal_vertex>
      vec4 _wp_n = modelMatrix * vec4(position, 1.0);
-     float _eps_n = 0.7;
-     float _dhdx_n = (terrainHeight(vec2(_wp_n.x + _eps_n, _wp_n.z)) - terrainHeight(vec2(_wp_n.x - _eps_n, _wp_n.z))) / (2.0 * _eps_n);
-     float _dhdz_n = (terrainHeight(vec2(_wp_n.x, _wp_n.z + _eps_n)) - terrainHeight(vec2(_wp_n.x, _wp_n.z - _eps_n))) / (2.0 * _eps_n);
-     objectNormal = normalize(vec3(-_dhdx_n, _dhdz_n, 1.0));
+     float _e = 0.7;
+     float _hx = (terrainHeight(vec2(_wp_n.x + _e, _wp_n.z)) - terrainHeight(vec2(_wp_n.x - _e, _wp_n.z))) / (2.0 * _e);
+     float _hz = (terrainHeight(vec2(_wp_n.x, _wp_n.z + _e)) - terrainHeight(vec2(_wp_n.x, _wp_n.z - _e))) / (2.0 * _e);
+     objectNormal = normalize(vec3(-_hx, _hz, 1.0));
     `);
-
   shader.fragmentShader = shader.fragmentShader.replace('#include <color_fragment>',
     `#include <color_fragment>
-     float slopeShadow = 1.0 - min(vTerrainSlope * 1.4, 0.5);
-     float hNorm = clamp((vTerrainHeight + 15.0) / 45.0, 0.0, 1.0);
-     vec3 valleyTint = vec3(0.62, 0.76, 1.12);
-     vec3 midTint = vec3(0.88, 0.94, 1.0);
-     vec3 peakTint = vec3(1.0, 1.0, 1.0);
-     vec3 tint = hNorm < 0.5
-       ? mix(valleyTint, midTint, hNorm * 2.0)
-       : mix(midTint, peakTint, (hNorm - 0.5) * 2.0);
-     float n1 = sin(vWorldPos.x * 3.7 + vWorldPos.z * 2.3) * 0.5 + 0.5;
-     float n2 = sin(vWorldPos.x * 8.1 - vWorldPos.z * 5.3) * 0.5 + 0.5;
-     float snowNoise = (n1 * 0.5 + n2 * 0.5) * 0.05 + 0.95;
-     vec2 sc = floor(vWorldPos.xz * 26.0);
-     float sparkleBase = hash21(sc);
-     float sparkleThresh = step(0.965, sparkleBase);
-     vec3 viewDirN = normalize(vViewVec);
-     float glance = 1.0 - abs(viewDirN.y);
-     float sparkle = sparkleThresh * smoothstep(0.3, 0.85, glance) * 0.55;
-     diffuseColor.rgb *= tint * slopeShadow * snowNoise;
+     float ad = abs(vPisteD);
+     float onPiste = 1.0 - smoothstep(${(PISTE_HALF - 1.5).toFixed(1)}, ${(PISTE_HALF + 1.5).toFixed(1)}, ad);
+     // sọc tuyết cán (corduroy) chạy dọc đường trượt
+     float cord = 0.965 + 0.035 * sin(vPisteD * 11.0);
+     // tuyết dày: gợn sóng gió thổi, xanh nhạt hơn
+     float n1 = sin(vWorldPos.x * 0.9 + vWorldPos.z * 0.35) * 0.5 + 0.5;
+     float n2 = sin(vWorldPos.x * 3.1 - vWorldPos.z * 2.3) * 0.5 + 0.5;
+     float powder = 0.93 + (n1 * 0.6 + n2 * 0.4) * 0.07;
+     vec3 pisteTint = vec3(0.97, 0.985, 1.0) * cord;
+     vec3 powderTint = vec3(0.90, 0.95, 1.04) * powder;
+     vec3 tint = mix(powderTint, pisteTint, onPiste);
+     // mép đường trượt hơi xám do bị cán và dồn tuyết
+     float edge = smoothstep(2.0, 0.0, abs(ad - ${PISTE_HALF.toFixed(1)}));
+     tint *= 1.0 - edge * 0.06;
+     float shade = 1.0 - min(vTerrainSlope * 0.6, 0.25);
+     vec2 sc = floor(vWorldPos.xz * 24.0);
+     float sparkle = step(0.968, hash21(sc)) * (0.35 + 0.35 * (1.0 - onPiste));
+     vec3 vd = normalize(vViewVec);
+     sparkle *= smoothstep(0.3, 0.85, 1.0 - abs(vd.y));
+     diffuseColor.rgb *= tint * shade;
      diffuseColor.rgb += sparkle * vec3(0.9, 0.95, 1.0);
     `);
 };
-groundMat.needsUpdate = true;
-
 const ground = new THREE.Mesh(groundGeo, groundMat);
 ground.rotation.x = -Math.PI / 2;
+ground.frustumCulled = false;   // đỉnh được dời trong shader nên khung bao gốc không còn đúng
 scene.add(ground);
 
-// Terrain-following material (for roads)
-function makeTerrainFollower(color) {
-  const mat = new THREE.MeshStandardMaterial({
-    color,
-    roughness: 0.95,
-    polygonOffset: true,
-    polygonOffsetFactor: -2,
-    polygonOffsetUnits: -2
-  });
-  mat.onBeforeCompile = (shader) => {
-    shader.vertexShader = TERRAIN_SHADER_FN + shader.vertexShader;
-    shader.vertexShader = shader.vertexShader.replace('#include <begin_vertex>',
-      `#include <begin_vertex>
-       vec4 _wp0 = modelMatrix * vec4(position, 1.0);
-       float _h = terrainHeight(vec2(_wp0.x, _wp0.z));
-       transformed.z = _h + 0.02;
-      `);
-  };
-  mat.needsUpdate = true;
-  return mat;
-}
-
 // ============================================================
-// MOUNTAINS + SUN
+// NÚI XA + MẶT TRỜI
 // ============================================================
-function makeMountains(color, scale, opacity) {
+function makeMountains(color, scale, count, spread) {
   const g = new THREE.Group();
-  const mat = new THREE.MeshBasicMaterial({ color, transparent: true, opacity, fog: false });
-  const count = 15;
-  const spread = 32 * scale;
+  const rockMat = new THREE.MeshBasicMaterial({ color, fog: false });
+  const snowMat = new THREE.MeshBasicMaterial({ color: 0xf4f8ff, fog: false });
   for (let i = 0; i < count; i++) {
-    const h = (3.5 + Math.random() * 5) * scale;
-    const w = (6 + Math.random() * 8) * scale;
-    const geo = new THREE.ConeGeometry(w, h, 4);
-    const m = new THREE.Mesh(geo, mat);
-    m.position.set((i - (count - 1) / 2) * spread + (Math.random() - 0.5) * 12, h / 2, Math.random() * 20);
+    const h = (60 + Math.random() * 70) * scale;
+    const w = (55 + Math.random() * 60) * scale;
+    const m = new THREE.Mesh(new THREE.ConeGeometry(w, h, 5), rockMat);
+    const x = (i - (count - 1) / 2) * spread + (Math.random() - 0.5) * spread * 0.6;
+    m.position.set(x, h / 2, Math.random() * 60);
     m.rotation.y = Math.random() * Math.PI;
     g.add(m);
+    const cap = new THREE.Mesh(new THREE.ConeGeometry(w * 0.36, h * 0.36, 5), snowMat);
+    cap.position.set(x, h - h * 0.18 + 0.5, m.position.z);
+    cap.rotation.y = m.rotation.y;
+    g.add(cap);
   }
   return g;
 }
-const mountains1 = makeMountains(0x90b0d0, 3.2, 0.85);
-const mountains2 = makeMountains(0x7ea6ca, 2.0, 0.9);
-scene.add(mountains1);
-scene.add(mountains2);
+const mountainsFar = makeMountains(0x9fbad6, 1.6, 11, 150);
+const mountainsNear = makeMountains(0x88a6c6, 1.0, 9, 120);
+scene.add(mountainsFar);
+scene.add(mountainsNear);
 
 function sunTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 256;
   const g = c.getContext('2d');
   const grd = g.createRadialGradient(128, 128, 0, 128, 128, 128);
-  grd.addColorStop(0, 'rgba(255,250,220,1)');
-  grd.addColorStop(0.15, 'rgba(255,240,180,0.95)');
-  grd.addColorStop(0.4, 'rgba(255,220,150,0.4)');
-  grd.addColorStop(1, 'rgba(255,200,100,0)');
+  grd.addColorStop(0, 'rgba(255,252,235,1)');
+  grd.addColorStop(0.1, 'rgba(255,246,210,0.95)');
+  grd.addColorStop(0.3, 'rgba(255,230,170,0.35)');
+  grd.addColorStop(1, 'rgba(255,210,120,0)');
   g.fillStyle = grd;
   g.fillRect(0, 0, 256, 256);
   return new THREE.CanvasTexture(c);
@@ -410,468 +377,334 @@ function sunTexture() {
 const sunSprite = new THREE.Sprite(new THREE.SpriteMaterial({
   map: sunTexture(), transparent: true, blending: THREE.AdditiveBlending, depthWrite: false, fog: false
 }));
-sunSprite.scale.set(110, 110, 1);
+sunSprite.scale.set(70, 70, 1);
 scene.add(sunSprite);
 
 // ============================================================
-// PLAYER — TÁCH SKI VÀ BODY
+// NGƯỜI TRƯỢT (cao ~1,8 m)
 // ============================================================
 const playerRoot = new THREE.Group();
+playerRoot.rotation.order = 'YXZ';
+playerRoot.scale.setScalar(PLAYER_SCALE);
 scene.add(playerRoot);
 
 const skiGroup = new THREE.Group();
 playerRoot.add(skiGroup);
-
 const bodyGroup = new THREE.Group();
 playerRoot.add(bodyGroup);
 
-const skiMat = new THREE.MeshStandardMaterial({
-  color: 0x1a1a3a, roughness: 0.4, metalness: 0.3,
-  polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2
-});
-const skiGeo = new THREE.BoxGeometry(0.16, 0.08, 2.2);
-const skiL = new THREE.Mesh(skiGeo, skiMat);
-skiL.position.set(-0.28, SKI_LOCAL_Y, 0.1);
-skiGroup.add(skiL);
-const skiR = new THREE.Mesh(skiGeo, skiMat);
-skiR.position.set(0.28, SKI_LOCAL_Y, 0.1);
-skiGroup.add(skiR);
-
-// Boots connecting skis to body
-const bootMat = new THREE.MeshStandardMaterial({ color: 0x101018, roughness: 0.8 });
-const bootGeo = new THREE.CylinderGeometry(0.12, 0.14, 0.25, 8);
-const bootL = new THREE.Mesh(bootGeo, bootMat);
-bootL.position.set(-0.28, SKI_LOCAL_Y + 0.14, 0.05);
-bodyGroup.add(bootL);
-const bootR = new THREE.Mesh(bootGeo, bootMat);
-bootR.position.set(0.28, SKI_LOCAL_Y + 0.14, 0.05);
-bodyGroup.add(bootR);
-
-// Legs
-const legMat = new THREE.MeshStandardMaterial({ color: 0x1a1a3a, roughness: 0.8 });
-const legGeo = new THREE.CylinderGeometry(0.12, 0.12, 0.35, 8);
-const legL = new THREE.Mesh(legGeo, legMat);
-legL.position.set(-0.28, 0.42, 0.05);
-bodyGroup.add(legL);
-const legR = new THREE.Mesh(legGeo, legMat);
-legR.position.set(0.28, 0.42, 0.05);
-bodyGroup.add(legR);
-
-// Body
-const bodyMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.7 });
-const bodyGeo = new THREE.CylinderGeometry(0.35, 0.4, 1.0, 12);
-const body = new THREE.Mesh(bodyGeo, bodyMat);
-body.position.y = 0.9;
-bodyGroup.add(body);
-
-const armGeo = new THREE.CylinderGeometry(0.1, 0.1, 0.65, 6);
-const armL = new THREE.Mesh(armGeo, bodyMat);
-armL.position.set(-0.42, 1.05, 0);
-armL.rotation.z = 0.4;
-bodyGroup.add(armL);
-const armR = new THREE.Mesh(armGeo, bodyMat);
-armR.position.set(0.42, 1.05, 0);
-armR.rotation.z = -0.4;
-bodyGroup.add(armR);
-
-const headMat = new THREE.MeshStandardMaterial({ color: 0xffd5b0, roughness: 0.8 });
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.32, 16, 16), headMat);
-head.position.y = 1.65;
-bodyGroup.add(head);
-
-const hatMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.8 });
-const hat = new THREE.Mesh(new THREE.SphereGeometry(0.35, 16, 8, 0, Math.PI * 2, 0, Math.PI / 2), hatMat);
-hat.position.y = 1.68;
-bodyGroup.add(hat);
-
-const pompom = new THREE.Mesh(new THREE.SphereGeometry(0.12, 8, 8), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.9 }));
-pompom.position.y = 2.05;
-bodyGroup.add(pompom);
-
-// ============================================================
-// BUILDERS
-// ============================================================
-function buildTree() {
-  const g = new THREE.Group();
-  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
-  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.22, 0.8, 8), trunkMat);
-  trunk.position.y = 0.4;
-  g.add(trunk);
-
-  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x1a5a35, roughness: 0.85 });
-  const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-
-  const tiers = [
-    { y: 0.7, r: 1.0, h: 1.3 },
-    { y: 1.6, r: 0.78, h: 1.2 },
-    { y: 2.4, r: 0.55, h: 1.0 }
-  ];
-  for (const t of tiers) {
-    const cone = new THREE.Mesh(new THREE.ConeGeometry(t.r, t.h, 8), foliageMat);
-    cone.position.y = t.y + t.h * 0.3;
-    g.add(cone);
-    const snowCap = new THREE.Mesh(new THREE.ConeGeometry(t.r * 0.72, t.h * 0.42, 8), snowMat);
-    snowCap.position.y = t.y + t.h * 0.62;
-    g.add(snowCap);
-  }
-  return g;
+const skiMat = new THREE.MeshStandardMaterial({ color: 0x1a1a3a, roughness: 0.4, metalness: 0.3 });
+const skiTipMat = new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: 0.5 });
+const skiGeo = new THREE.BoxGeometry(0.13, 0.05, 1.9);
+const tipGeo = new THREE.BoxGeometry(0.13, 0.05, 0.25);
+for (const sx of [-0.2, 0.2]) {
+  const ski = new THREE.Mesh(skiGeo, skiMat);
+  ski.position.set(sx, 0.04, 0.05);
+  skiGroup.add(ski);
+  const tip = new THREE.Mesh(tipGeo, skiTipMat);
+  tip.position.set(sx, 0.09, -0.95);
+  tip.rotation.x = 0.45;
+  skiGroup.add(tip);
 }
 
+const darkMat = new THREE.MeshStandardMaterial({ color: 0x101018, roughness: 0.8 });
+const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e2a4a, roughness: 0.8 });
+const jacketMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.7 });
+const bootGeo = new THREE.BoxGeometry(0.17, 0.22, 0.32);
+const legGeo = new THREE.CylinderGeometry(0.1, 0.11, 0.62, 8);
+const legs = [];
+for (const sx of [-0.2, 0.2]) {
+  const boot = new THREE.Mesh(bootGeo, darkMat);
+  boot.position.set(sx, 0.17, 0.05);
+  bodyGroup.add(boot);
+  const leg = new THREE.Mesh(legGeo, pantsMat);
+  leg.position.set(sx, 0.58, 0.05);
+  bodyGroup.add(leg);
+  legs.push(leg);
+}
+const torsoGroup = new THREE.Group();   // phần thân trên, gập về trước khi tăng tốc
+torsoGroup.position.set(0, 0.88, 0.05);
+bodyGroup.add(torsoGroup);
+const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.24, 0.7, 12), jacketMat);
+torso.position.y = 0.35;
+torsoGroup.add(torso);
+const armGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.6, 6);
+const armL = new THREE.Mesh(armGeo, jacketMat);
+armL.position.set(-0.32, 0.38, -0.08);
+armL.rotation.set(-0.7, 0, 0.3);
+torsoGroup.add(armL);
+const armR = new THREE.Mesh(armGeo, jacketMat);
+armR.position.set(0.32, 0.38, -0.08);
+armR.rotation.set(-0.7, 0, -0.3);
+torsoGroup.add(armR);
+// gậy trượt tuyết
+const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0c8d8, roughness: 0.3, metalness: 0.6 });
+const poleGeo = new THREE.CylinderGeometry(0.018, 0.018, 1.25, 5);
+for (const sx of [-0.42, 0.42]) {
+  const p = new THREE.Mesh(poleGeo, poleMat);
+  p.position.set(sx, -0.05, 0.25);
+  p.rotation.x = 0.55;
+  torsoGroup.add(p);
+}
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), new THREE.MeshStandardMaterial({ color: 0xffd5b0, roughness: 0.8 }));
+head.position.y = 0.86;
+torsoGroup.add(head);
+const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 1.8), new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.5 }));
+helmet.position.y = 0.88;
+torsoGroup.add(helmet);
+const goggles = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.07, 0.08), new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: 0.2, metalness: 0.5, emissive: 0x442200 }));
+goggles.position.set(0, 0.88, -0.13);
+torsoGroup.add(goggles);
+
+// ============================================================
+// CÂY THÔNG — vẽ bằng InstancedMesh (một lệnh vẽ cho mỗi phần, cả rừng cây)
+// ============================================================
+const TREE_MAX = 190;
+const treeParts = [];
+(function buildTreeParts() {
+  const trunkMat = new THREE.MeshStandardMaterial({ color: 0x3d2817, roughness: 0.9 });
+  const foliageMat = new THREE.MeshStandardMaterial({ color: 0x1b4f33, roughness: 0.85 });
+  const snowMat = new THREE.MeshStandardMaterial({ color: 0xf6f9ff, roughness: 0.95 });
+  const add = (geo, mat, y) => {
+    const m = new THREE.InstancedMesh(geo, mat, TREE_MAX);
+    m.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+    m.frustumCulled = false;
+    m.count = TREE_MAX;
+    scene.add(m);
+    treeParts.push({ mesh: m, local: new THREE.Matrix4().makeTranslation(0, y, 0) });
+  };
+  add(new THREE.CylinderGeometry(0.12, 0.2, 1.0, 7), trunkMat, 0.5);
+  const tiers = [{ y: 0.8, r: 1.15, h: 1.6 }, { y: 1.85, r: 0.9, h: 1.45 }, { y: 2.8, r: 0.62, h: 1.25 }, { y: 3.6, r: 0.36, h: 0.9 }];
+  for (const t of tiers) {
+    add(new THREE.ConeGeometry(t.r, t.h, 8), foliageMat, t.y + t.h * 0.3);
+    add(new THREE.ConeGeometry(t.r * 0.7, t.h * 0.4, 8), snowMat, t.y + t.h * 0.62);
+  }
+})();
+const _m4 = new THREE.Matrix4(), _q = new THREE.Quaternion(), _v = new THREE.Vector3(), _s = new THREE.Vector3(), _up = new THREE.Vector3(0, 1, 0);
+const ZERO_M4 = new THREE.Matrix4().makeScale(0, 0, 0);
+const trees = [];
+for (let i = 0; i < TREE_MAX; i++) {
+  trees.push({ idx: i, active: false, worldX: 0, worldZ: 0, y: 0, s: 1, radius: 1, edge: false });
+  for (const p of treeParts) p.mesh.setMatrixAt(i, ZERO_M4);
+}
+let treesDirty = true;
+function setTreeMatrix(t) {
+  if (!t.active) { for (const p of treeParts) p.mesh.setMatrixAt(t.idx, ZERO_M4); }
+  else {
+    _q.setFromAxisAngle(_up, t.rot);
+    _s.set(t.s, t.s * t.sy, t.s);
+    _v.set(t.worldX, t.y, t.worldZ);
+    const base = new THREE.Matrix4().compose(_v, _q, _s);
+    for (const p of treeParts) { _m4.multiplyMatrices(base, p.local); p.mesh.setMatrixAt(t.idx, _m4); }
+  }
+  treesDirty = true;
+}
+function placeTree(x, z, s, edge) {
+  const t = trees.find(t => !t.active);
+  if (!t) return null;
+  t.active = true; t.worldX = x; t.worldZ = z; t.s = s; t.sy = 0.9 + Math.random() * 0.3;
+  t.rot = Math.random() * Math.PI * 2; t.y = getTerrainHeight(x, z) - 0.1;
+  t.radius = 0.5 * s; t.edge = edge;
+  setTreeMatrix(t);
+  return t;
+}
+function hideTree(t) { t.active = false; setTreeMatrix(t); }
+
+// ============================================================
+// ĐÁ, KHÚC GỖ, NHÀ GỖ, CÁP TREO, CỔNG
+// ============================================================
 function buildRock() {
   const g = new THREE.Group();
-  const rockMat = new THREE.MeshStandardMaterial({ color: 0x7a7a8a, roughness: 0.95 });
+  const rockMat = new THREE.MeshStandardMaterial({ color: 0x6f7280, roughness: 0.95, flatShading: true });
   const geo = new THREE.IcosahedronGeometry(0.8, 1);
   const pa = geo.attributes.position;
   for (let i = 0; i < pa.count; i++) {
     const v = new THREE.Vector3().fromBufferAttribute(pa, i);
     v.multiplyScalar(0.75 + Math.random() * 0.5);
+    v.y *= 0.75;
     pa.setXYZ(i, v.x, v.y, v.z);
   }
   geo.computeVertexNormals();
   const rock = new THREE.Mesh(geo, rockMat);
-  rock.position.y = 0.5;
+  rock.position.y = 0.35;
   g.add(rock);
-
-  const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-  const snow = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), snowMat);
-  snow.position.y = 0.85;
-  snow.scale.set(1, 0.55, 1);
+  const snow = new THREE.Mesh(new THREE.SphereGeometry(0.55, 10, 6, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }));
+  snow.position.y = 0.72;
+  snow.scale.set(1, 0.5, 1);
   g.add(snow);
   return g;
 }
-
 function buildLog() {
   const g = new THREE.Group();
-  const logMat = new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.95 });
-  const logGeo = new THREE.CylinderGeometry(0.4, 0.4, 3.5, 12);
-  const log = new THREE.Mesh(logGeo, logMat);
+  const log = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.32, 3.5, 12), new THREE.MeshStandardMaterial({ color: 0x5a3a1a, roughness: 0.95 }));
   log.rotation.z = Math.PI / 2;
-  log.position.y = 0.4;
+  log.position.y = 0.3;
   g.add(log);
-
-  const grainMat = new THREE.MeshStandardMaterial({ color: 0x3a2410, roughness: 0.9 });
-  for (const ox of [-1.0, 0, 1.0]) {
-    const grainGeo = new THREE.TorusGeometry(0.41, 0.03, 6, 12);
-    const grain = new THREE.Mesh(grainGeo, grainMat);
-    grain.rotation.y = Math.PI / 2;
-    grain.position.set(ox, 0.4, 0);
-    g.add(grain);
-  }
-
   const capMat = new THREE.MeshStandardMaterial({ color: 0x8a6030, roughness: 0.8 });
-  const capGeo = new THREE.CircleGeometry(0.4, 12);
-  const capL = new THREE.Mesh(capGeo, capMat);
-  capL.position.set(-1.751, 0.4, 0);
-  capL.rotation.y = -Math.PI / 2;
-  g.add(capL);
-  const capR = new THREE.Mesh(capGeo, capMat);
-  capR.position.set(1.751, 0.4, 0);
-  capR.rotation.y = Math.PI / 2;
-  g.add(capR);
-
-  const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-  const snow = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 6), snowMat);
-  snow.scale.set(3.3, 0.28, 0.85);
-  snow.position.y = 0.78;
+  const capGeo = new THREE.CircleGeometry(0.32, 12);
+  for (const sx of [-1, 1]) {
+    const cap = new THREE.Mesh(capGeo, capMat);
+    cap.position.set(sx * 1.751, 0.3, 0);
+    cap.rotation.y = sx * Math.PI / 2;
+    g.add(cap);
+  }
+  const snow = new THREE.Mesh(new THREE.SphereGeometry(0.5, 12, 6), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }));
+  snow.scale.set(3.3, 0.24, 0.7);
+  snow.position.y = 0.6;
   g.add(snow);
   return g;
 }
-
-// ============================================================
-// DECORATION BUILDERS
-// ============================================================
 function buildHouse() {
   const g = new THREE.Group();
-
-  // Walls
   const woodMat = new THREE.MeshStandardMaterial({ color: 0x6b4a2a, roughness: 0.9 });
-  const walls = new THREE.Mesh(new THREE.BoxGeometry(3, 2.2, 2.5), woodMat);
-  walls.position.y = 1.1;
+  const walls = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, 5), woodMat);
+  walls.position.y = 1.6;
   g.add(walls);
-
-  // Log lines on walls
   const logLineMat = new THREE.MeshStandardMaterial({ color: 0x4a2e15, roughness: 0.95 });
-  for (let i = 0; i < 4; i++) {
-    const logLine = new THREE.Mesh(new THREE.BoxGeometry(3.1, 0.05, 0.05), logLineMat);
-    logLine.position.set(0, 0.35 + i * 0.5, 1.26);
-    g.add(logLine);
-    const logLineB = logLine.clone();
-    logLineB.position.z = -1.26;
-    g.add(logLineB);
+  for (let i = 0; i < 5; i++) for (const z of [2.51, -2.51]) {
+    const l = new THREE.Mesh(new THREE.BoxGeometry(6.1, 0.07, 0.07), logLineMat);
+    l.position.set(0, 0.4 + i * 0.6, z);
+    g.add(l);
   }
-
-  // Roof left slope
   const roofMat = new THREE.MeshStandardMaterial({ color: 0x3a1f0f, roughness: 0.9 });
-  const roofL = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 2.9), roofMat);
-  roofL.position.set(-0.72, 2.78, 0);
-  roofL.rotation.z = -0.55;
-  g.add(roofL);
-
-  // Roof right slope
-  const roofR = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.1, 2.9), roofMat);
-  roofR.position.set(0.72, 2.78, 0);
-  roofR.rotation.z = 0.55;
-  g.add(roofR);
-
-  // Snow on roof
   const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-  const snowL = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.12, 2.95), snowMat);
-  snowL.position.set(-0.72, 2.86, 0);
-  snowL.rotation.z = -0.55;
-  g.add(snowL);
-  const snowR = new THREE.Mesh(new THREE.BoxGeometry(1.95, 0.12, 2.95), snowMat);
-  snowR.position.set(0.72, 2.86, 0);
-  snowR.rotation.z = 0.55;
-  g.add(snowR);
-
-  // Windows (glowing)
+  for (const sx of [-1, 1]) {
+    const roof = new THREE.Mesh(new THREE.BoxGeometry(3.8, 0.15, 5.8), roofMat);
+    roof.position.set(sx * 1.45, 4.0, 0);
+    roof.rotation.z = -sx * 0.55;
+    g.add(roof);
+    const sn = new THREE.Mesh(new THREE.BoxGeometry(3.85, 0.22, 5.85), snowMat);
+    sn.position.set(sx * 1.45, 4.15, 0);
+    sn.rotation.z = -sx * 0.55;
+    g.add(sn);
+  }
   const winMat = new THREE.MeshBasicMaterial({ color: 0xffdd88 });
-  const win1 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), winMat);
-  win1.position.set(-0.75, 1.4, 1.26);
-  g.add(win1);
-  const win2 = win1.clone();
-  win2.position.x = 0.75;
-  g.add(win2);
-  const win3 = new THREE.Mesh(new THREE.PlaneGeometry(0.6, 0.6), winMat);
-  win3.position.set(0, 1.4, -1.26);
-  win3.rotation.y = Math.PI;
-  g.add(win3);
-
-  // Door
-  const doorMat = new THREE.MeshStandardMaterial({ color: 0x2a1505, roughness: 0.9 });
-  const door = new THREE.Mesh(new THREE.PlaneGeometry(0.7, 1.4), doorMat);
-  door.position.set(0, 0.75, 1.26);
+  for (const sx of [-1.5, 1.5]) {
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.9), winMat);
+    w.position.set(sx, 1.9, 2.53);
+    g.add(w);
+  }
+  const door = new THREE.Mesh(new THREE.PlaneGeometry(1.0, 2.0), new THREE.MeshStandardMaterial({ color: 0x2a1505, roughness: 0.9 }));
+  door.position.set(0, 1.0, 2.53);
   g.add(door);
-
-  // Chimney
-  const chimMat = new THREE.MeshStandardMaterial({ color: 0x555560, roughness: 0.9 });
-  const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.9, 0.4), chimMat);
-  chimney.position.set(-0.7, 3.2, 0.6);
+  const chimney = new THREE.Mesh(new THREE.BoxGeometry(0.6, 1.4, 0.6), new THREE.MeshStandardMaterial({ color: 0x555560, roughness: 0.9 }));
+  chimney.position.set(-1.4, 4.7, 1.2);
   g.add(chimney);
-
-  // Snow on chimney
-  const chimneySnow = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.1, 0.45), snowMat);
-  chimneySnow.position.set(-0.7, 3.68, 0.6);
-  g.add(chimneySnow);
-
   return g;
 }
-
+// Cáp treo băng ngang đường trượt: hai trụ hai bên, cabin chạy qua lại trên dây
+const CABLE_SPAN = PISTE_HALF * 2 + 16;
 function buildCableCar() {
   const g = new THREE.Group();
-
-  const poleMat = new THREE.MeshStandardMaterial({ color: 0x404045, roughness: 0.7, metalness: 0.4 });
-  const poleGeo = new THREE.CylinderGeometry(0.1, 0.18, 14, 8);
-
-  const poleL = new THREE.Mesh(poleGeo, poleMat);
-  poleL.position.set(-8, 7, 0);
-  g.add(poleL);
-
-  const poleR = new THREE.Mesh(poleGeo, poleMat);
-  poleR.position.set(8, 7, 0);
-  g.add(poleR);
-
-  // Cross arms at top of poles
-  const armGeo = new THREE.BoxGeometry(1.2, 0.15, 0.15);
-  const armL = new THREE.Mesh(armGeo, poleMat);
-  armL.position.set(-7.5, 13, 0);
-  g.add(armL);
-  const armR = new THREE.Mesh(armGeo, poleMat);
-  armR.position.set(7.5, 13, 0);
-  g.add(armR);
-
-  // Cable
-  const cableMat = new THREE.MeshBasicMaterial({ color: 0x1a1a1a });
-  const cable = new THREE.Mesh(new THREE.BoxGeometry(15, 0.06, 0.06), cableMat);
-  cable.position.set(0, 13, 0);
-  g.add(cable);
-
-  // Cabin group (hanging)
-  const cabinGroup = new THREE.Group();
-  cabinGroup.position.set(0, 11, 0);
-  g.add(cabinGroup);
-  g.userData.cabinGroup = cabinGroup;
-
-  // Cabin arm
-  const cabinArm = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 6), poleMat);
-  cabinArm.position.y = 0.75;
-  cabinGroup.add(cabinArm);
-
-  // Cabin body (red)
-  const cabinMat = new THREE.MeshStandardMaterial({ color: 0xd02020, roughness: 0.6 });
-  const cabinBody = new THREE.Mesh(new THREE.BoxGeometry(1.8, 1.5, 1.4), cabinMat);
-  cabinGroup.add(cabinBody);
-
-  // Windows
-  const winMat = new THREE.MeshBasicMaterial({ color: 0xccddff });
-  for (let i = -1; i <= 1; i++) {
-    const win = new THREE.Mesh(new THREE.PlaneGeometry(0.4, 0.5), winMat);
-    win.position.set(i * 0.55, 0.1, 0.71);
-    cabinGroup.add(win);
+  const poleMat = new THREE.MeshStandardMaterial({ color: 0x505660, roughness: 0.6, metalness: 0.5 });
+  for (const sx of [-1, 1]) {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.45, 18, 8), poleMat);
+    pole.position.set(sx * CABLE_SPAN / 2, 9, 0);
+    g.add(pole);
+    const arm = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.3, 0.3), poleMat);
+    arm.position.set(sx * (CABLE_SPAN / 2 - 0.6), 17.6, 0);
+    g.add(arm);
   }
-
-  // Snow on cabin
-  const snowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 });
-  const cabinSnow = new THREE.Mesh(new THREE.BoxGeometry(1.9, 0.15, 1.5), snowMat);
-  cabinSnow.position.y = 0.82;
-  cabinGroup.add(cabinSnow);
-
+  const cable = new THREE.Mesh(new THREE.BoxGeometry(CABLE_SPAN, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: 0x1a1a1a }));
+  cable.position.set(0, 17.6, 0);
+  g.add(cable);
+  const cabin = new THREE.Group();
+  cabin.name = 'cabin';
+  cabin.position.set(0, 15.2, 0);
+  g.add(cabin);
+  const hanger = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.05, 2.0, 6), poleMat);
+  hanger.position.y = 1.2;
+  cabin.add(hanger);
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.2, 1.9, 1.8), new THREE.MeshStandardMaterial({ color: 0xd02020, roughness: 0.6 }));
+  cabin.add(body);
+  const winMat = new THREE.MeshBasicMaterial({ color: 0xcfe0ff });
+  for (let i = -1; i <= 1; i++) for (const z of [0.91, -0.91]) {
+    const w = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.6), winMat);
+    w.position.set(i * 0.65, 0.2, z);
+    if (z < 0) w.rotation.y = Math.PI;
+    cabin.add(w);
+  }
+  const roofSnow = new THREE.Mesh(new THREE.BoxGeometry(2.3, 0.18, 1.9), new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.95 }));
+  roofSnow.position.y = 1.03;
+  cabin.add(roofSnow);
+  return g;
+}
+function buildGate(gap) {
+  const g = new THREE.Group();
+  const redMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.5 });
+  const blueMat = new THREE.MeshStandardMaterial({ color: 0x2f5bff, roughness: 0.5 });
+  const poleGeo = new THREE.CylinderGeometry(0.03, 0.03, 1.9, 6);
+  const half = gap / 2;
+  // cổng kiểu slalom khổng lồ: hai cọc mỗi bên căng một tấm vải
+  for (const [sx, mat] of [[-1, redMat], [1, blueMat]]) {
+    for (const off of [-0.45, 0.45]) {
+      const p = new THREE.Mesh(poleGeo, mat);
+      p.position.set(sx * half + sx * off * 0.0 + off, 0.95, 0);
+      g.add(p);
+    }
+    const panel = new THREE.Mesh(new THREE.PlaneGeometry(0.9, 0.7), new THREE.MeshStandardMaterial({ color: mat.color, roughness: 0.6, side: THREE.DoubleSide }));
+    panel.position.set(sx * half, 1.45, 0);
+    g.add(panel);
+  }
   return g;
 }
 
 // ============================================================
 // POOLS
 // ============================================================
-const treePool = [];
-for (let i = 0; i < 24; i++) {
-  const mesh = buildTree();
-  mesh.visible = false;
-  scene.add(mesh);
-  treePool.push({ mesh, active: false, worldX: 0, worldZ: 0, radius: 1.1 });
-}
-
 const rockPool = [];
-for (let i = 0; i < 12; i++) {
-  const mesh = buildRock();
-  mesh.visible = false;
-  scene.add(mesh);
-  rockPool.push({ mesh, active: false, worldX: 0, worldZ: 0, radius: 0.85 });
+for (let i = 0; i < 14; i++) {
+  const mesh = buildRock(); mesh.visible = false; scene.add(mesh);
+  rockPool.push({ mesh, active: false, worldX: 0, worldZ: 0, radius: 0.8 });
 }
-
-const giantTreePool = [];
-for (let i = 0; i < 4; i++) {
-  const mesh = buildTree();
-  mesh.visible = false;
-  scene.add(mesh);
-  giantTreePool.push({ mesh, active: false, worldX: 0, worldZ: 0, radius: 2.5 });
-}
-
-const giantRockPool = [];
-for (let i = 0; i < 3; i++) {
-  const mesh = buildRock();
-  mesh.visible = false;
-  scene.add(mesh);
-  giantRockPool.push({ mesh, active: false, worldX: 0, worldZ: 0, radius: 1.9 });
-}
-
 const logPool = [];
 for (let i = 0; i < 10; i++) {
-  const mesh = buildLog();
-  mesh.visible = false;
-  scene.add(mesh);
-  logPool.push({ mesh, active: false, worldX: 0, worldZ: 0, length: 3.5, radius: 0.4 });
+  const mesh = buildLog(); mesh.visible = false; scene.add(mesh);
+  logPool.push({ mesh, active: false, worldX: 0, worldZ: 0, length: 3.5, radius: 0.32 });
 }
-
-// House pool (clone template)
 const houseTemplate = buildHouse();
 const housePool = [];
 for (let i = 0; i < 6; i++) {
-  const mesh = houseTemplate.clone();
-  mesh.visible = false;
-  scene.add(mesh);
+  const mesh = houseTemplate.clone(); mesh.visible = false; scene.add(mesh);
   housePool.push({ mesh, active: false, worldX: 0, worldZ: 0 });
 }
-
-// Cable car pool
-const cableCarTemplate = buildCableCar();
+const cableTemplate = buildCableCar();
 const cableCarPool = [];
 for (let i = 0; i < 2; i++) {
-  const mesh = cableCarTemplate.clone();
-  mesh.visible = false;
-  scene.add(mesh);
-  cableCarPool.push({
-    mesh,
-    active: false,
-    worldX: 0,
-    worldZ: 0,
-    cabinGroup: mesh.children.find(c => c.isGroup && c.position.y === 11) || null,
-    swingPhase: 0
-  });
+  const mesh = cableTemplate.clone(); mesh.visible = false; scene.add(mesh);
+  cableCarPool.push({ mesh, active: false, worldX: 0, worldZ: 0, cabin: mesh.getObjectByName('cabin'), phase: 0 });
 }
-
-// Road pool
-const roadPool = [];
-for (let i = 0; i < 4; i++) {
-  const geo = new THREE.PlaneGeometry(3.5, 40, 1, 20);
-  const mat = makeTerrainFollower(0x9a8a70);
-  const mesh = new THREE.Mesh(geo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.visible = false;
-  scene.add(mesh);
-  roadPool.push({ mesh, active: false, worldX: 0, worldZ: 0 });
-}
-
-// Gates
 const gatePool = [];
-function buildGate(gap) {
-  const g = new THREE.Group();
-  const redMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.5 });
-  const blueMat = new THREE.MeshStandardMaterial({ color: 0x4060ff, roughness: 0.5 });
-  const poleGeo = new THREE.CylinderGeometry(0.12, 0.12, 3, 8);
-  const halfGap = gap / 2;
-
-  const poleL = new THREE.Mesh(poleGeo, redMat);
-  poleL.position.set(-halfGap, 1.5, 0);
-  g.add(poleL);
-  const poleR = new THREE.Mesh(poleGeo, blueMat);
-  poleR.position.set(halfGap, 1.5, 0);
-  g.add(poleR);
-
-  const flagGeo = new THREE.PlaneGeometry(0.75, 0.45);
-  const flagL = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.5, side: THREE.DoubleSide }));
-  flagL.position.set(-halfGap + 0.4, 2.75, 0);
-  g.add(flagL);
-  const flagR = new THREE.Mesh(flagGeo, new THREE.MeshStandardMaterial({ color: 0x4060ff, roughness: 0.5, side: THREE.DoubleSide }));
-  flagR.position.set(halfGap - 0.4, 2.75, 0);
-  g.add(flagR);
-  return g;
-}
 for (let i = 0; i < 4; i++) {
-  const mesh = buildGate(GATE_GAP);
-  mesh.visible = false;
-  scene.add(mesh);
+  const mesh = buildGate(GATE_GAP); mesh.visible = false; scene.add(mesh);
   gatePool.push({ mesh, active: false, worldX: 0, worldZ: 0, prevPlayerZ: 0, passed: false });
 }
-
-// Flakes
 const flakePool = [];
-const flakeMat = new THREE.MeshStandardMaterial({
-  color: 0xffffff, emissive: 0x88ccff, emissiveIntensity: 0.9, roughness: 0.2
-});
-const flakeGeo = new THREE.OctahedronGeometry(0.35, 0);
+const flakeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ccff, emissiveIntensity: 0.9, roughness: 0.2 });
+const flakeGeo = new THREE.OctahedronGeometry(0.3, 0);
 for (let i = 0; i < 14; i++) {
-  const mesh = new THREE.Mesh(flakeGeo, flakeMat);
-  mesh.visible = false;
-  scene.add(mesh);
-  flakePool.push({ mesh, active: false, worldX: 0, worldZ: 0, baseY: 1.2, phase: 0 });
+  const mesh = new THREE.Mesh(flakeGeo, flakeMat); mesh.visible = false; scene.add(mesh);
+  flakePool.push({ mesh, active: false, worldX: 0, worldZ: 0, baseY: 1.1, phase: 0 });
 }
 
-// Particles
+// Bụi tuyết bắn lên
 const particlePool = [];
-const particleGeo = new THREE.SphereGeometry(0.07, 5, 4);
+const particleGeo = new THREE.SphereGeometry(0.06, 5, 4);
 for (let i = 0; i < 120; i++) {
-  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 });
-  const mesh = new THREE.Mesh(particleGeo, mat);
-  mesh.visible = false;
-  scene.add(mesh);
+  const mesh = new THREE.Mesh(particleGeo, new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 1 }));
+  mesh.visible = false; scene.add(mesh);
   particlePool.push({ mesh, active: false, life: 0, maxLife: 1, vel: new THREE.Vector3() });
 }
-
-function spawnParticle(worldX, worldY, worldZ, vx, vy, vz, life) {
+function spawnParticle(x, y, z, vx, vy, vz, life) {
   const p = particlePool.find(p => !p.active);
   if (!p) return;
-  p.mesh.position.set(worldX, worldY, worldZ);
-  p.mesh.visible = true;
-  p.vel.set(vx, vy, vz);
-  p.active = true;
-  p.life = life;
-  p.maxLife = life;
-  p.mesh.material.opacity = 1;
-  p.mesh.scale.setScalar(1);
+  p.mesh.position.set(x, y, z); p.mesh.visible = true;
+  p.vel.set(vx, vy, vz); p.active = true; p.life = life; p.maxLife = life;
+  p.mesh.material.opacity = 1; p.mesh.scale.setScalar(1);
 }
 
-// Snow
-const SNOW_COUNT = 1500;
+// Tuyết rơi
+const SNOW_COUNT = isMobile ? 900 : 1500;
 const SNOW_BOX = { halfW: 40, halfD: 50, top: 25, bottom: -20 };
 const snowPositions = new Float32Array(SNOW_COUNT * 3);
 const snowSpeeds = new Float32Array(SNOW_COUNT);
@@ -880,12 +713,11 @@ for (let i = 0; i < SNOW_COUNT; i++) {
   snowPositions[i * 3] = (Math.random() - 0.5) * SNOW_BOX.halfW * 2;
   snowPositions[i * 3 + 1] = Math.random() * (SNOW_BOX.top - SNOW_BOX.bottom) + SNOW_BOX.bottom;
   snowPositions[i * 3 + 2] = (Math.random() - 0.5) * SNOW_BOX.halfD * 2;
-  snowSpeeds[i] = 2.5 + Math.random() * 5.5;
+  snowSpeeds[i] = 2.0 + Math.random() * 4.5;
   snowPhases[i] = Math.random() * Math.PI * 2;
 }
 const snowGeo = new THREE.BufferGeometry();
 snowGeo.setAttribute('position', new THREE.BufferAttribute(snowPositions, 3));
-
 function makeSnowTexture() {
   const c = document.createElement('canvas');
   c.width = c.height = 32;
@@ -894,195 +726,171 @@ function makeSnowTexture() {
   grd.addColorStop(0, 'rgba(255,255,255,1)');
   grd.addColorStop(0.5, 'rgba(255,255,255,0.6)');
   grd.addColorStop(1, 'rgba(255,255,255,0)');
-  g.fillStyle = grd;
-  g.fillRect(0, 0, 32, 32);
+  g.fillStyle = grd; g.fillRect(0, 0, 32, 32);
   return new THREE.CanvasTexture(c);
 }
-
-const snowMat = new THREE.PointsMaterial({
-  map: makeSnowTexture(),
-  color: 0xffffff,
-  size: 0.35,
-  transparent: true,
-  opacity: 0.8,
-  depthWrite: false,
-  sizeAttenuation: true
-});
-
+const snowMat = new THREE.PointsMaterial({ map: makeSnowTexture(), color: 0xffffff, size: 0.22, transparent: true, opacity: 0.8, depthWrite: false, sizeAttenuation: true });
 const snow = new THREE.Points(snowGeo, snowMat);
 snow.frustumCulled = false;
 scene.add(snow);
 
 function updateSnow(dt) {
-  const positions = snowGeo.attributes.position.array;
+  const pos = snowGeo.attributes.position.array;
   const windX = Math.sin(windPhase) * 2.5 + Math.sin(windPhase * 2.3) * 1.2;
   const windZ = Math.cos(windPhase * 0.7) * 1.8;
-
   for (let i = 0; i < SNOW_COUNT; i++) {
-    const idx = i * 3;
-    const speed = snowSpeeds[i];
-
-    positions[idx] += (windX + Math.sin(time * 1.5 + snowPhases[i]) * 0.6) * dt;
-    positions[idx + 1] -= speed * dt;
-    positions[idx + 2] += windZ * dt;
-
-    const rx = positions[idx] - camPos.x;
-    const ry = positions[idx + 1] - camPos.y;
-    const rz = positions[idx + 2] - camPos.z;
-
+    const k = i * 3;
+    pos[k] += (windX + Math.sin(time * 1.5 + snowPhases[i]) * 0.6) * dt;
+    pos[k + 1] -= snowSpeeds[i] * dt;
+    pos[k + 2] += windZ * dt;
+    const rx = pos[k] - camPos.x, ry = pos[k + 1] - camPos.y, rz = pos[k + 2] - camPos.z;
     if (ry < SNOW_BOX.bottom) {
-      positions[idx + 1] = camPos.y + SNOW_BOX.top;
-      positions[idx] = camPos.x + (Math.random() - 0.5) * SNOW_BOX.halfW * 2;
-      positions[idx + 2] = camPos.z + (Math.random() - 0.5) * SNOW_BOX.halfD * 2;
+      pos[k + 1] = camPos.y + SNOW_BOX.top;
+      pos[k] = camPos.x + (Math.random() - 0.5) * SNOW_BOX.halfW * 2;
+      pos[k + 2] = camPos.z + (Math.random() - 0.5) * SNOW_BOX.halfD * 2;
     }
-    if (rx < -SNOW_BOX.halfW) positions[idx] += SNOW_BOX.halfW * 2;
-    if (rx > SNOW_BOX.halfW) positions[idx] -= SNOW_BOX.halfW * 2;
-    if (rz < -SNOW_BOX.halfD) positions[idx + 2] += SNOW_BOX.halfD * 2;
-    if (rz > SNOW_BOX.halfD) positions[idx + 2] -= SNOW_BOX.halfD * 2;
+    if (ry > SNOW_BOX.top + 5) pos[k + 1] -= (SNOW_BOX.top - SNOW_BOX.bottom);
+    if (rx < -SNOW_BOX.halfW) pos[k] += SNOW_BOX.halfW * 2;
+    if (rx > SNOW_BOX.halfW) pos[k] -= SNOW_BOX.halfW * 2;
+    if (rz < -SNOW_BOX.halfD) pos[k + 2] += SNOW_BOX.halfD * 2;
+    if (rz > SNOW_BOX.halfD) pos[k + 2] -= SNOW_BOX.halfD * 2;
   }
-
   snowGeo.attributes.position.needsUpdate = true;
-  const visibleCount = Math.floor(SNOW_COUNT * weatherIntensity);
-  snowGeo.setDrawRange(0, visibleCount);
+  snowGeo.setDrawRange(0, Math.floor(SNOW_COUNT * weatherIntensity));
   snowMat.opacity = 0.5 + weatherIntensity * 0.4;
 }
-
 function updateWeather(dt) {
   weatherTimer -= dt;
   if (weatherTimer <= 0) {
     weatherTimer = 8 + Math.random() * 12;
     const r = Math.random();
-    if (r < 0.25) weatherTarget = 0.0;
-    else if (r < 0.55) weatherTarget = 0.25;
-    else if (r < 0.85) weatherTarget = 0.65;
-    else weatherTarget = 1.0;
+    weatherTarget = r < 0.25 ? 0.0 : r < 0.55 ? 0.25 : r < 0.85 ? 0.6 : 1.0;
   }
   weatherIntensity += (weatherTarget - weatherIntensity) * Math.min(1, 0.6 * dt);
   windPhase += dt * 0.3;
 }
 
-// Trails
-const trailPool = [];
-const trailGeo = new THREE.PlaneGeometry(0.18, 0.4);
-for (let i = 0; i < 100; i++) {
-  const mat = new THREE.MeshBasicMaterial({ color: 0x7098b8, transparent: true, opacity: 0.7 });
-  const mesh = new THREE.Mesh(trailGeo, mat);
-  mesh.rotation.x = -Math.PI / 2;
-  mesh.visible = false;
+// ============================================================
+// VỆT VÁN TRƯỢT: hai dải liền mạch bám theo mặt tuyết, mờ dần theo thời gian
+// ============================================================
+const TRAIL_N = 160, TRAIL_LIFE = 3.2, TRAIL_W = 0.07;
+function makeRibbon() {
+  const pos = new Float32Array(TRAIL_N * 2 * 3);
+  const col = new Float32Array(TRAIL_N * 2 * 4);
+  const idx = [];
+  for (let i = 0; i < TRAIL_N - 1; i++) {
+    const a = i * 2, b = a + 1, c = a + 2, d = a + 3;
+    idx.push(a, b, c, b, d, c);
+  }
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute('position', new THREE.BufferAttribute(pos, 3).setUsage(THREE.DynamicDrawUsage));
+  geo.setAttribute('color', new THREE.BufferAttribute(col, 4).setUsage(THREE.DynamicDrawUsage));
+  geo.setIndex(idx);
+  const mesh = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ vertexColors: true, transparent: true, depthWrite: false, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -2 }));
+  mesh.frustumCulled = false;
   scene.add(mesh);
-  trailPool.push({ mesh, active: false, life: 0 });
+  return { mesh, pos, col, pts: [] };
 }
-
-function spawnTrail(worldX, worldZ) {
-  const t = trailPool.find(t => !t.active);
-  if (!t) return;
-  const y = getTerrainHeight(worldX, worldZ) + TRAIL_Y;
-  t.mesh.position.set(worldX, y, worldZ);
-  t.mesh.visible = true;
-  t.active = true;
-  t.life = 1.6;
-  t.mesh.material.opacity = 0.7;
+const ribbons = [makeRibbon(), makeRibbon()];
+function resetRibbons() { for (const r of ribbons) { r.pts.length = 0; r.col.fill(0); r.mesh.geometry.attributes.color.needsUpdate = true; } }
+function pushRibbon(r, x, z, dirX, dirZ) {
+  const last = r.pts[0];
+  if (last && (last.x - x) * (last.x - x) + (last.z - z) * (last.z - z) < 0.25) { last.x = x; last.z = z; return; }
+  r.pts.unshift({ x, z, nx: -dirZ, nz: dirX, t: time });
+  if (r.pts.length > TRAIL_N) r.pts.length = TRAIL_N;
+}
+function updateRibbon(r) {
+  const { pos, col, pts } = r;
+  for (let i = 0; i < TRAIL_N; i++) {
+    const p = pts[i] || pts[pts.length - 1];
+    const k = i * 6, c = i * 8;
+    if (!p) { col[c + 3] = 0; col[c + 7] = 0; continue; }
+    const y = getTerrainHeight(p.x, p.z) + 0.03;
+    pos[k] = p.x - p.nx * TRAIL_W; pos[k + 1] = y; pos[k + 2] = p.z - p.nz * TRAIL_W;
+    pos[k + 3] = p.x + p.nx * TRAIL_W; pos[k + 4] = y; pos[k + 5] = p.z + p.nz * TRAIL_W;
+    const a = pts[i] ? Math.max(0, 1 - (time - p.t) / TRAIL_LIFE) * 0.38 : 0;
+    col[c] = col[c + 4] = 0.55; col[c + 1] = col[c + 5] = 0.66; col[c + 2] = col[c + 6] = 0.8;
+    col[c + 3] = col[c + 7] = a;
+  }
+  r.mesh.geometry.attributes.position.needsUpdate = true;
+  r.mesh.geometry.attributes.color.needsUpdate = true;
 }
 
 // ============================================================
-// STATE
+// TRẠNG THÁI
 // ============================================================
-const player3d = { worldX: 0, worldZ: 0, worldY: 0, vx: 0 };
-let currentSlope = 0;
-
+const player = { x: 0, z: 0, y: 0, heading: 0, speed: START_SPEED, omega: 0, pitch: 0, roll: 0, lean: 0 };
 const state = {
-  mode: 'menu',
-  worldSpeed: BASE_SPEED,
-  baseSpeed: BASE_SPEED,
-  maxSpeed: MAX_SPEED,
-  currentHorizSpeed: HORIZ_SPEED_BASE,
-  distance: 0,
-  score: 0,
-  bonusScore: 0,
-  lives: INITIAL_LIVES,
-  gates: 0,
-  combo: 0,
-  comboTimer: 0,
-  invincible: 0,
-  shake: 0,
-  spawnTimer: 0,
-  gateTimer: 0,
-  flakeTimer: 0,
-  trailTimer: 0,
-  decoTimer: 8
+  mode: 'menu', distance: 0, score: 0, bonusScore: 0, lives: INITIAL_LIVES, gates: 0, combo: 0, comboTimer: 0,
+  invincible: 0, shake: 0, spawnTimer: 0, gateTimer: 0, flakeTimer: 0, decoTimer: 8, edgeNextZ: 0, topSpeed: 0, offPiste: false, grade: 0
 };
+let best = 0;
+try { best = parseInt(localStorage.getItem('ski3d_best') || '0', 10) || 0; } catch (e) {}
 
-let best = parseInt(localStorage.getItem('ski3d_best') || '0');
-
-// INPUT
+// ĐIỀU KHIỂN
 const keys = {};
-let inputX = 0;
-let touchActive = false;
-let mouseControl = false;
-
+let inputX = 0, touchActive = false, mouseControl = false;
 window.addEventListener('keydown', e => {
   if (['ArrowLeft', 'ArrowRight', 'ArrowUp', 'ArrowDown', 'Space'].includes(e.code)) e.preventDefault();
   keys[e.code] = true;
 });
 window.addEventListener('keyup', e => { keys[e.code] = false; });
-
+function pointerX(e) {
+  const half = window.innerWidth / 2;
+  return Math.max(-1, Math.min(1, (e.clientX - half) / (half * 0.55)));
+}
 renderer.domElement.addEventListener('pointerdown', e => {
   if (state.mode !== 'playing') return;
-  const half = window.innerWidth / 2;
-  if (e.pointerType === 'touch') {
-    touchActive = true;
-    inputX = Math.max(-1, Math.min(1, (e.clientX - half) / (half * 0.5)));
-  } else {
-    mouseControl = true;
-    inputX = Math.max(-1, Math.min(1, (e.clientX - half) / (half * 0.55)));
-  }
+  if (e.pointerType === 'touch') touchActive = true; else mouseControl = true;
+  inputX = pointerX(e);
 });
-
 renderer.domElement.addEventListener('pointermove', e => {
   if (state.mode !== 'playing') return;
-  const half = window.innerWidth / 2;
-  if (e.pointerType === 'touch') {
-    if (touchActive) {
-      inputX = Math.max(-1, Math.min(1, (e.clientX - half) / (half * 0.5)));
-    }
-  } else {
-    mouseControl = true;
-    inputX = Math.max(-1, Math.min(1, (e.clientX - half) / (half * 0.55)));
-  }
+  if (e.pointerType === 'touch') { if (touchActive) inputX = pointerX(e); }
+  else { mouseControl = true; inputX = pointerX(e); }
 });
-
-function endPointer(e) {
-  if (e.pointerType === 'touch') {
-    touchActive = false;
-    inputX = 0;
-  }
-}
+function endPointer(e) { if (e.pointerType === 'touch') { touchActive = false; inputX = 0; } }
 renderer.domElement.addEventListener('pointerup', endPointer);
 renderer.domElement.addEventListener('pointercancel', endPointer);
-renderer.domElement.addEventListener('pointerleave', e => {
-  if (e.pointerType !== 'touch') inputX = 0;
-});
+renderer.domElement.addEventListener('pointerleave', e => { if (e.pointerType !== 'touch') inputX = 0; });
 
-// AUDIO
-let audioCtx = null;
+// ÂM THANH
+let audioCtx = null, windGain = null, windFilter = null;
 function initAudio() {
   if (audioCtx) return;
-  try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+  try {
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    // tiếng gió rít theo tốc độ: nhiễu trắng qua bộ lọc
+    const buf = audioCtx.createBuffer(1, audioCtx.sampleRate * 2, audioCtx.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+    const src = audioCtx.createBufferSource();
+    src.buffer = buf; src.loop = true;
+    windFilter = audioCtx.createBiquadFilter();
+    windFilter.type = 'bandpass'; windFilter.frequency.value = 500; windFilter.Q.value = 0.7;
+    windGain = audioCtx.createGain(); windGain.gain.value = 0;
+    src.connect(windFilter); windFilter.connect(windGain); windGain.connect(audioCtx.destination);
+    src.start();
+  } catch (e) {}
 }
 function beep(freq, dur, type, vol) {
   if (!audioCtx || audioCtx.state === 'suspended') return;
   const t = audioCtx.currentTime;
-  const osc = audioCtx.createOscillator();
-  const gain = audioCtx.createGain();
+  const osc = audioCtx.createOscillator(), gain = audioCtx.createGain();
   osc.type = type || 'sine';
   osc.frequency.setValueAtTime(freq, t);
   osc.frequency.exponentialRampToValueAtTime(Math.max(40, freq * 0.5), t + dur);
   gain.gain.setValueAtTime(vol || 0.06, t);
   gain.gain.exponentialRampToValueAtTime(0.001, t + dur);
-  osc.connect(gain);
-  gain.connect(audioCtx.destination);
-  osc.start(t);
-  osc.stop(t + dur + 0.02);
+  osc.connect(gain); gain.connect(audioCtx.destination);
+  osc.start(t); osc.stop(t + dur + 0.02);
+}
+function updateWindSound() {
+  if (!windGain || !audioCtx) return;
+  const playing = state.mode === 'playing';
+  const r = playing ? Math.min(1, player.speed / 36) : 0;
+  windGain.gain.setTargetAtTime(r * r * 0.05, audioCtx.currentTime, 0.2);
+  windFilter.frequency.setTargetAtTime(350 + r * 1100, audioCtx.currentTime, 0.2);
 }
 
 // DOM
@@ -1094,716 +902,452 @@ const scoreValEl = document.getElementById('scoreVal');
 const distanceValEl = document.getElementById('distanceVal');
 const livesValEl = document.getElementById('livesVal');
 const speedFillEl = document.getElementById('speedFill');
+const speedValEl = document.getElementById('speedVal');
 const comboValEl = document.getElementById('comboVal');
 const dangerLabelEl = document.getElementById('dangerLabel');
 const slopeIndicatorEl = document.getElementById('slope-indicator');
+const powderEl = document.getElementById('powder');
 const vignetteEl = document.getElementById('vignette');
-
-function formatNum(n) {
-  return n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
-}
+const formatNum = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 function updateCameraRig() {
   const aspect = window.innerWidth / window.innerHeight;
-  const vFov = camera.fov * Math.PI / 180;
-  const hFovHalf = Math.atan(Math.tan(vFov / 2) * aspect);
-  const targetHalfWidth = 22;
-  const needed = targetHalfWidth / Math.tan(hFovHalf);
-  camDist = Math.max(16, Math.min(30, needed));
-  camHeight = 4.5 + camDist * 0.12;
+  if (aspect < 0.8) { camDist = 7.8; camHeight = 3.0; baseFov = 70; }      // điện thoại dọc: lùi xa hơn một chút
+  else if (aspect < 1.3) { camDist = 7.0; camHeight = 2.7; baseFov = 64; }
+  else { camDist = 6.4; camHeight = 2.4; baseFov = 60; }
+}
+
+function resetPools() {
+  for (const t of trees) if (t.active) hideTree(t);
+  for (const pool of [rockPool, logPool, gatePool, flakePool, particlePool, housePool, cableCarPool]) {
+    pool.forEach(o => { o.active = false; o.mesh.visible = false; });
+  }
+  resetRibbons();
+}
+
+// Rừng hai bên đường trượt mọc sẵn từ đầu
+function growEdgeForest(untilZ) {
+  while (state.edgeNextZ > untilZ) {
+    const z = state.edgeNextZ;
+    const c = pisteCenter(z);
+    for (const side of [-1, 1]) {
+      const n = 1 + (Math.random() < 0.6 ? 1 : 0);
+      for (let i = 0; i < n; i++) {
+        const off = PISTE_HALF + 2.5 + Math.pow(Math.random(), 1.4) * 55;
+        placeTree(c + side * off, z + (Math.random() - 0.5) * 4, 2.3 + Math.random() * 1.6, true);
+      }
+    }
+    // cây lẻ lác đác sát mép trong đường trượt
+    if (Math.random() < 0.08) {
+      const side = Math.random() < 0.5 ? -1 : 1;
+      placeTree(c + side * (PISTE_HALF - 2 - Math.random() * 3), z, 2.0 + Math.random() * 0.8, true);
+    }
+    state.edgeNextZ -= 5;
+  }
 }
 
 function startGame() {
   initAudio();
   if (audioCtx && audioCtx.state === 'suspended') audioCtx.resume();
-
   state.mode = 'playing';
-  player3d.worldX = 0;
-  player3d.worldZ = 0;
-  player3d.worldY = 0;
-  player3d.vx = 0;
-  currentSlope = 0;
-  smoothPitch = 0;
-  smoothRoll = 0;
-
-  state.worldSpeed = state.baseSpeed;
-  state.currentHorizSpeed = HORIZ_SPEED_BASE;
-  state.distance = 0;
-  state.score = 0;
-  state.bonusScore = 0;
-  state.lives = INITIAL_LIVES;
-  state.gates = 0;
-  state.combo = 0;
-  state.comboTimer = 0;
-  state.invincible = 1;
-  state.shake = 0;
-  state.spawnTimer = 0.8;
-  state.gateTimer = 2;
-  state.flakeTimer = 2;
-  state.trailTimer = 0;
-  state.decoTimer = 8;
-
-  deathCamActive = false;
-  deathCamOffsetZ = 0;
-  deathCamOffsetY = 0;
-  deathCamVelZ = 0;
-  deathCamVelY = 0;
-
+  Object.assign(player, { x: pisteCenter(0), z: 0, heading: 0, speed: START_SPEED, omega: 0, pitch: 0, roll: 0, lean: 0 });
+  player.y = getTerrainHeight(player.x, player.z);
+  Object.assign(state, {
+    distance: 0, score: 0, bonusScore: 0, lives: INITIAL_LIVES, gates: 0, combo: 0, comboTimer: 0,
+    invincible: 1.2, shake: 0, spawnTimer: 1.2, gateTimer: 2.5, flakeTimer: 2, decoTimer: 6, topSpeed: 0, offPiste: false
+  });
+  deathCamActive = false; deathT = 0;
+  resetPools();
+  state.edgeNextZ = 30;
+  growEdgeForest(-SPAWN_AHEAD);
   updateCameraRig();
-  camPos.x = 0;
-  camPos.y = camHeight;
-  camPos.z = camDist;
-  camera.position.set(camPos.x, camPos.y, camPos.z);
-  camera.lookAt(0, 1.4, -10);
-  camera.fov = 65;
-  camera.updateProjectionMatrix();
-  targetFov = 65;
-
-  treePool.forEach(t => { t.active = false; t.mesh.visible = false; });
-  rockPool.forEach(r => { r.active = false; r.mesh.visible = false; });
-  giantTreePool.forEach(t => { t.active = false; t.mesh.visible = false; });
-  giantRockPool.forEach(r => { r.active = false; r.mesh.visible = false; });
-  logPool.forEach(l => { l.active = false; l.mesh.visible = false; });
-  gatePool.forEach(g => { g.active = false; g.mesh.visible = false; g.passed = false; });
-  flakePool.forEach(f => { f.active = false; f.mesh.visible = false; });
-  particlePool.forEach(p => { p.active = false; p.mesh.visible = false; });
-  trailPool.forEach(t => { t.active = false; t.mesh.visible = false; });
-  housePool.forEach(h => { h.active = false; h.mesh.visible = false; });
-  cableCarPool.forEach(c => { c.active = false; c.mesh.visible = false; });
-  roadPool.forEach(r => { r.active = false; r.mesh.visible = false; });
-
-  player3d.worldY = getTerrainHeight(0, 0);
-  playerRoot.position.set(0, player3d.worldY, 0);
-  playerRoot.rotation.set(0, 0, 0);
-  skiGroup.rotation.set(0, 0, 0);
-  bodyGroup.rotation.set(0, 0, 0);
+  camYaw = 0; camRoll = 0;
+  snapCamera();
+  camera.fov = baseFov; camera.updateProjectionMatrix();
   playerRoot.visible = true;
-
-  weatherTarget = 0.35;
-  weatherIntensity = 0.35;
-  weatherTimer = 6;
-
+  weatherTarget = 0.3; weatherIntensity = 0.3; weatherTimer = 6;
   overlay.classList.add('hidden');
-  hud.style.display = '';
+  hud.style.display = 'block';
   vignetteEl.style.opacity = 0;
   dangerLabelEl.classList.remove('show');
   slopeIndicatorEl.style.opacity = 0;
+  powderEl.classList.remove('show');
+  updatePlayerTransform(0);
   updateHUD();
 }
 
 function gameOver() {
   state.mode = 'over';
-  if (state.score > best) {
-    best = state.score;
-    localStorage.setItem('ski3d_best', best);
-  }
+  if (state.score > best) { best = state.score; try { localStorage.setItem('ski3d_best', best); } catch (e) {} }
+  if (window.Scores) Scores.submit('truottuyet3d', state.score);
   beep(180, 0.4, 'sawtooth', 0.08);
   setTimeout(() => beep(100, 0.5, 'sine', 0.08), 100);
-
   setTimeout(() => {
     if (state.mode !== 'over') return;
     document.getElementById('finalScore').textContent = formatNum(state.score);
     document.getElementById('finalBest').textContent = 'Kỷ lục: ' + formatNum(best);
-    document.getElementById('finalDistance').textContent = Math.floor(state.distance / 10) + 'm';
+    document.getElementById('finalDistance').textContent = formatNum(Math.floor(state.distance)) + ' m';
+    document.getElementById('finalSpeed').textContent = Math.round(state.topSpeed * 3.6) + ' km/h';
     document.getElementById('finalGates').textContent = state.gates;
     menuScreen.classList.add('hidden');
     overScreen.classList.remove('hidden');
     overlay.classList.remove('hidden');
     hud.style.display = 'none';
     vignetteEl.style.opacity = 0;
-    dangerLabelEl.classList.remove('show');
-    slopeIndicatorEl.style.opacity = 0;
-  }, 1400);
+  }, 1600);
 }
-
 document.getElementById('startBtn').addEventListener('click', startGame);
 document.getElementById('retryBtn').addEventListener('click', startGame);
 
-// SPAWN
-function getSpawnGap() {
-  const speedRatio = Math.min(1, (state.worldSpeed - state.baseSpeed) / (state.maxSpeed - state.baseSpeed));
-  const distRatio = Math.min(1, state.distance / 3000);
-  return Math.max(34, 52 - speedRatio * 10 - distRatio * 8);
+// ============================================================
+// SINH VẬT CẢN (trên đường trượt, nhắm vào hướng người chơi sắp tới)
+// ============================================================
+const aheadZ = () => player.z - SPAWN_AHEAD;
+function clampToPiste(x, z, margin) {
+  const c = pisteCenter(z), lim = PISTE_HALF - (margin || 0);
+  return Math.max(c - lim, Math.min(c + lim, x));
 }
-
-function safeSpawnX() {
-  return player3d.worldX + (Math.random() - 0.5) * SPAWN_WIDTH;
+function predictX() {
+  const t = SPAWN_AHEAD / Math.max(8, player.speed);
+  return player.x + Math.sin(player.heading) * player.speed * Math.min(t, 2.5) * 0.6;
 }
-
-function aggressiveSpawnX() {
-  const predictX = player3d.worldX + player3d.vx * 0.6;
-  if (Math.random() < 0.55 && state.distance > 250) {
-    const off = (Math.random() - 0.5) * 16;
-    return predictX + off;
-  }
-  return predictX + (Math.random() - 0.5) * SPAWN_WIDTH * 1.5;
+function obstacleX(spread) {
+  const z = aheadZ();
+  let x;
+  if (state.distance > 120 && Math.random() < 0.55) x = predictX() + (Math.random() - 0.5) * 14;
+  else x = pisteCenter(z) + (Math.random() - 0.5) * PISTE_HALF * 2 * (spread || 1);
+  return clampToPiste(x, z, 1);
 }
-
-function placeAtWorld(mesh, worldX, worldZ, baseY) {
-  const y = getTerrainHeight(worldX, worldZ) + (baseY || 0);
-  mesh.position.set(worldX, y, worldZ);
-}
-
-function spawnTree(x) {
-  const t = treePool.find(t => !t.active);
-  if (!t) return;
-  t.active = true;
-  t.worldX = x;
-  t.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  const s = 0.85 + Math.random() * 0.5;
-  t.mesh.scale.setScalar(s);
-  placeAtWorld(t.mesh, t.worldX, t.worldZ, 0);
-  t.mesh.rotation.y = Math.random() * Math.PI * 2;
-  t.radius = 1.0 * s;
-  t.mesh.visible = true;
-}
-
-function spawnRock(x) {
+function spawnTreeObstacle(x, s) { placeTree(x, aheadZ() + (Math.random() - 0.5) * 6, s || (2.0 + Math.random() * 1.0), false); }
+function spawnRock(x, big) {
   const r = rockPool.find(r => !r.active);
   if (!r) return;
-  r.active = true;
-  r.worldX = x;
-  r.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  const s = 0.8 + Math.random() * 0.4;
+  const s = big ? 2.2 + Math.random() * 0.6 : 1.0 + Math.random() * 0.6;
+  r.active = true; r.worldX = x; r.worldZ = aheadZ();
   r.mesh.scale.setScalar(s);
-  placeAtWorld(r.mesh, r.worldX, r.worldZ, 0);
+  r.mesh.position.set(x, getTerrainHeight(x, r.worldZ) - 0.1, r.worldZ);
   r.mesh.rotation.y = Math.random() * Math.PI * 2;
-  r.radius = 0.85 * s;
-  r.mesh.visible = true;
+  r.radius = 0.8 * s; r.mesh.visible = true;
 }
-
-function spawnGiantTree(x) {
-  const t = giantTreePool.find(t => !t.active);
-  if (!t) return;
-  const s = 2.2 + Math.random() * 0.6;
-  t.active = true;
-  t.worldX = x;
-  t.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  t.mesh.scale.setScalar(s);
-  placeAtWorld(t.mesh, t.worldX, t.worldZ, 0);
-  t.mesh.rotation.y = Math.random() * Math.PI * 2;
-  t.radius = 1.0 * s;
-  t.mesh.visible = true;
-}
-
-function spawnGiantRock(x) {
-  const r = giantRockPool.find(r => !r.active);
-  if (!r) return;
-  const s = 2.0 + Math.random() * 0.5;
-  r.active = true;
-  r.worldX = x;
-  r.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  r.mesh.scale.setScalar(s);
-  placeAtWorld(r.mesh, r.worldX, r.worldZ, 0);
-  r.mesh.rotation.y = Math.random() * Math.PI * 2;
-  r.radius = 0.85 * s;
-  r.mesh.visible = true;
-}
-
 function spawnLog(x) {
   const l = logPool.find(l => !l.active);
   if (!l) return;
-  const len = 2.5 + Math.random() * 2;
-  l.active = true;
-  l.worldX = x;
-  l.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  l.length = len;
-  l.radius = 0.4;
+  const len = 3 + Math.random() * 2.5;
+  l.active = true; l.worldX = x; l.worldZ = aheadZ(); l.length = len;
   l.mesh.scale.set(len / 3.5, 1, 1);
-  placeAtWorld(l.mesh, l.worldX, l.worldZ, 0);
+  l.mesh.position.set(x, getTerrainHeight(x, l.worldZ), l.worldZ);
   l.mesh.rotation.y = (Math.random() - 0.5) * 0.3;
   l.mesh.visible = true;
 }
-
-function spawnSlalom() {
-  const side = Math.random() < 0.5 ? -1 : 1;
-  const startX = player3d.worldX;
-  for (let i = 0; i < 2; i++){
-    const t = treePool.find(t => !t.active);
-    if (!t) break;
-    const offX = startX + side * (3.5 + i * 3) + (Math.random() - 0.5) * 1.5;
-    t.active = true;
-    t.worldX = offX;
-    t.worldZ = player3d.worldZ - SPAWN_AHEAD - i * 12;
-    t.mesh.position.set(t.worldX, getTerrainHeight(t.worldX, t.worldZ), t.worldZ);
-    t.mesh.rotation.y = Math.random() * Math.PI * 2;
-    const s = 0.85 + Math.random() * 0.4;
-    t.mesh.scale.setScalar(s);
-    t.radius = 1.0 * s;
-    t.mesh.visible = true;
+function spawnTreeCluster() {
+  const x = obstacleX(0.8);
+  const n = 3 + Math.floor(Math.random() * 3);
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, r = Math.random() * 4.5;
+    placeTree(clampToPiste(x + Math.cos(a) * r, aheadZ(), 0), aheadZ() + Math.sin(a) * r, 2.0 + Math.random() * 1.3, false);
   }
 }
-
 function spawnPair() {
-  const baseX = aggressiveSpawnX();
-  const gapDir = Math.random() < 0.5 ? -1 : 1;
-  const gap = 3.5 + Math.random() * 2;
-  spawnTree(baseX);
-  spawnTree(baseX + gapDir * gap);
+  const x = obstacleX();
+  const gap = 5.5 + Math.random() * 2.5;
+  spawnTreeObstacle(x - gap / 2);
+  spawnTreeObstacle(x + gap / 2);
 }
-
 function spawnWave() {
-  const d = state.distance;
-  let giantChance = 0;
-  if (d >= D_WARMUP) giantChance = 0.05;
-  if (d >= D_MID) giantChance = 0.10;
-  if (d >= D_HARD) giantChance = 0.15;
-
-  if (Math.random() < giantChance) {
-    const x = aggressiveSpawnX();
-    if (Math.random() < 0.6) spawnGiantTree(x);
-    else spawnGiantRock(x);
-    beep(220, 0.15, 'triangle', 0.05);
-    return;
-  }
-
-  const r = Math.random();
+  const d = state.distance, r = Math.random();
   if (d < D_WARMUP) {
-    if (r < 0.85) spawnTree(safeSpawnX());
-    else spawnRock(safeSpawnX());
+    if (r < 0.75) spawnTreeObstacle(obstacleX());
+    else spawnRock(obstacleX());
     return;
   }
   if (d < D_MID) {
-    if (r < 0.65) spawnTree(aggressiveSpawnX());
-    else if (r < 0.88) spawnRock(aggressiveSpawnX());
-    else spawnLog(aggressiveSpawnX());
+    if (r < 0.5) spawnTreeObstacle(obstacleX());
+    else if (r < 0.75) spawnRock(obstacleX());
+    else if (r < 0.9) spawnLog(obstacleX());
+    else spawnTreeCluster();
     return;
   }
-  if (d < D_HARD) {
-    if (r < 0.45) spawnTree(aggressiveSpawnX());
-    else if (r < 0.68) spawnRock(aggressiveSpawnX());
-    else if (r < 0.85) spawnLog(aggressiveSpawnX());
-    else spawnPair();
-    return;
-  }
-  if (r < 0.4) spawnTree(aggressiveSpawnX());
-  else if (r < 0.6) spawnRock(aggressiveSpawnX());
-  else if (r < 0.78) spawnLog(aggressiveSpawnX());
-  else if (r < 0.92) spawnPair();
-  else spawnSlalom();
+  if (r < 0.34) spawnTreeObstacle(obstacleX());
+  else if (r < 0.52) spawnRock(obstacleX(), Math.random() < 0.3);
+  else if (r < 0.68) spawnLog(obstacleX());
+  else if (r < 0.84) spawnPair();
+  else spawnTreeCluster();
 }
-
+function getSpawnGap() {
+  const k = Math.min(1, state.distance / 2500);
+  return Math.max(16, 34 - k * 16);   // khoảng cách (m) giữa hai đợt vật cản
+}
 function spawnGate() {
   const g = gatePool.find(g => !g.active);
   if (!g) return;
-  const x = player3d.worldX + (Math.random() - 0.5) * 30;
-  g.active = true;
-  g.worldX = x;
-  g.worldZ = player3d.worldZ - SPAWN_AHEAD;
-  g.prevPlayerZ = player3d.worldZ;
-  g.passed = false;
-  placeAtWorld(g.mesh, g.worldX, g.worldZ, 0);
+  const z = aheadZ();
+  g.active = true; g.passed = false;
+  g.worldX = clampToPiste(pisteCenter(z) + (Math.random() - 0.5) * (PISTE_HALF - 6) * 2, z, 4);
+  g.worldZ = z; g.prevPlayerZ = player.z;
+  g.mesh.position.set(g.worldX, getTerrainHeight(g.worldX, z), z);
+  g.mesh.rotation.y = 0;
   g.mesh.visible = true;
 }
-
 function spawnFlakes() {
-  const count = 1 + Math.floor(Math.random() * 3);
-  const baseX = player3d.worldX + (Math.random() - 0.5) * 30;
+  const z = aheadZ();
+  const count = 2 + Math.floor(Math.random() * 3);
+  const baseX = clampToPiste(pisteCenter(z) + (Math.random() - 0.5) * 30, z, 3);
   for (let i = 0; i < count; i++) {
     const f = flakePool.find(f => !f.active);
     if (!f) return;
-    f.active = true;
-    f.worldX = baseX + (i - count / 2) * 1.6 + Math.random() * 0.5;
-    f.worldZ = player3d.worldZ - SPAWN_AHEAD - i * 1.5;
-    f.baseY = 1.2;
+    f.active = true; f.worldX = baseX + (Math.random() - 0.5) * 1.2; f.worldZ = z - i * 4;
     f.phase = Math.random() * Math.PI * 2;
-    const groundY = getTerrainHeight(f.worldX, f.worldZ);
-    f.mesh.position.set(f.worldX, groundY + f.baseY, f.worldZ);
+    f.mesh.position.set(f.worldX, getTerrainHeight(f.worldX, f.worldZ) + f.baseY, f.worldZ);
     f.mesh.visible = true;
   }
 }
-
-// ============================================================
-// DECORATION SPAWNS
-// ============================================================
 function spawnHouseCluster() {
-  const count = 2 + Math.floor(Math.random() * 2);
+  const z = aheadZ() - Math.random() * 20;
   const side = Math.random() < 0.5 ? -1 : 1;
-  const baseX = player3d.worldX + side * (18 + Math.random() * 12);
-  const baseZ = player3d.worldZ - SPAWN_AHEAD - Math.random() * 30;
-
+  const c = pisteCenter(z);
+  const count = 1 + Math.floor(Math.random() * 2);
   for (let i = 0; i < count; i++) {
     const h = housePool.find(h => !h.active);
     if (!h) return;
     h.active = true;
-    h.worldX = baseX + (i - count / 2) * 5.5 + (Math.random() - 0.5) * 2;
-    h.worldZ = baseZ - i * 4 + (Math.random() - 0.5) * 3;
-    const s = 0.85 + Math.random() * 0.35;
-    h.mesh.scale.setScalar(s);
-    h.mesh.position.set(h.worldX, getTerrainHeight(h.worldX, h.worldZ), h.worldZ);
-    h.mesh.rotation.y = Math.random() * Math.PI * 2;
+    h.worldX = c + side * (PISTE_HALF + 9 + i * 9 + Math.random() * 4);
+    h.worldZ = z - i * 7;
+    // dọn chỗ: bỏ cây đè lên nhà
+    for (const t of trees) if (t.active && Math.abs(t.worldX - h.worldX) < 7 && Math.abs(t.worldZ - h.worldZ) < 7) hideTree(t);
+    h.mesh.position.set(h.worldX, getTerrainHeight(h.worldX, h.worldZ) - 0.3, h.worldZ);
+    h.mesh.rotation.y = side > 0 ? -Math.PI / 2 : Math.PI / 2;   // quay mặt ra đường trượt
     h.mesh.visible = true;
   }
 }
-
 function spawnCableCar() {
   const c = cableCarPool.find(c => !c.active);
   if (!c) return;
-  c.active = true;
-  c.worldX = player3d.worldX + (Math.random() - 0.5) * 8;
-  c.worldZ = player3d.worldZ - SPAWN_AHEAD - Math.random() * 20;
-  c.mesh.position.set(c.worldX, getTerrainHeight(c.worldX, c.worldZ), c.worldZ);
-  c.mesh.rotation.y = 0;
-  c.swingPhase = Math.random() * Math.PI * 2;
+  const z = aheadZ() - 15;
+  c.active = true; c.worldZ = z; c.worldX = pisteCenter(z);
+  for (const t of trees) if (t.active && Math.abs(t.worldZ - z) < 3 && Math.abs(Math.abs(t.worldX - c.worldX) - CABLE_SPAN / 2) < 3) hideTree(t);
+  c.mesh.position.set(c.worldX, getTerrainHeight(c.worldX, z), z);
+  c.phase = Math.random() * Math.PI * 2;
   c.mesh.visible = true;
 }
-
-function spawnRoad() {
-  const r = roadPool.find(r => !r.active);
-  if (!r) return;
-  r.active = true;
-  r.worldX = player3d.worldX + (Math.random() - 0.5) * 24;
-  r.worldZ = player3d.worldZ - SPAWN_AHEAD - 20;
-  r.mesh.position.set(r.worldX, 0, r.worldZ);
-  r.mesh.visible = true;
-}
-
 function spawnDecorations() {
   if (state.distance < DECO_MIN_DISTANCE) return;
-  const r = Math.random();
-  if (r < 0.45) spawnHouseCluster();
-  else if (r < 0.75) spawnCableCar();
-  else spawnRoad();
+  if (Math.random() < 0.6) spawnHouseCluster(); else spawnCableCar();
 }
 
 // ============================================================
-// UPDATE PLAYING
+// CẬP NHẬT KHI ĐANG TRƯỢT
 // ============================================================
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 function updatePlaying(dt) {
-  // Input
+  // --- Lái: bẻ ván làm đổi hướng trượt, thả tay thì ván tự trôi về hướng đổ dốc ---
   let tIn = 0;
   if (keys['ArrowLeft'] || keys['KeyA']) tIn -= 1;
   if (keys['ArrowRight'] || keys['KeyD']) tIn += 1;
-  if (tIn === 0) {
-    if (touchActive) tIn = inputX;
-    else if (mouseControl) tIn = inputX;
-  }
+  if (tIn === 0 && (touchActive || mouseControl)) tIn = inputX;
+  const target = tIn * MAX_HEADING;
+  const rate = Math.abs(tIn) > 0.05 ? STEER_RATE * (0.55 + 0.45 * Math.abs(tIn)) : RETURN_RATE;
+  const prevHeading = player.heading;
+  player.heading += clamp(target - player.heading, -rate * dt, rate * dt);
+  const omega = (player.heading - prevHeading) / Math.max(dt, 1e-4);
+  player.omega += (omega - player.omega) * Math.min(1, 10 * dt);
 
-  const speedRatio = Math.max(0, Math.min(1,
-    (state.worldSpeed - state.baseSpeed) / (state.maxSpeed - state.baseSpeed)
-  ));
-  const effectiveHorizSpeed = HORIZ_SPEED_BASE + speedRatio * (HORIZ_SPEED_MAX - HORIZ_SPEED_BASE);
-  state.currentHorizSpeed = effectiveHorizSpeed;
+  // --- Vật lý: trọng lực dọc sườn dốc, ma sát, cản gió, mất tốc khi ôm cua ---
+  const sx = Math.sin(player.heading), sz = -Math.cos(player.heading);   // hướng trượt (x, z)
+  const e = 1.0;
+  const hx = (getTerrainHeight(player.x + e, player.z) - getTerrainHeight(player.x - e, player.z)) / (2 * e);
+  const hz = (getTerrainHeight(player.x, player.z + e) - getTerrainHeight(player.x, player.z - e)) / (2 * e);
+  const dhds = hx * sx + hz * sz;                     // độ cao đổi bao nhiêu khi đi 1 m theo hướng trượt
+  const offset = player.x - pisteCenter(player.z);
+  state.offPiste = Math.abs(offset) > PISTE_HALF + 0.5;
+  const mu = state.offPiste ? MU_POWDER : MU_PISTE;
+  const tuck = clamp(player.speed / 30, 0, 1) * (Math.abs(tIn) < 0.2 ? 1 : 0.4);
+  const drag = DRAG * (1 - 0.25 * tuck);
+  let a = -G * dhds / Math.sqrt(1 + dhds * dhds) - mu * G - drag * player.speed * player.speed
+        - CARVE_LOSS * Math.abs(player.omega) * player.speed;
+  player.speed = clamp(player.speed + a * dt, MIN_SPEED, MAX_SPEED);
+  state.topSpeed = Math.max(state.topSpeed, player.speed);
+  state.grade = Math.max(0, hz);
 
-  const targetVX = tIn * effectiveHorizSpeed;
-  player3d.vx += (targetVX - player3d.vx) * Math.min(1, STEER_RESPONSE * dt);
+  const prevZ = player.z;
+  player.x += sx * player.speed * dt;
+  player.z += sz * player.speed * dt;
+  const progress = Math.max(0, prevZ - player.z);
+  state.distance += progress;
+  state.score = Math.floor(state.distance) + state.bonusScore;
 
-  player3d.worldX += player3d.vx * dt;
+  growEdgeForest(aheadZ());
+  updatePlayerTransform(dt, tIn);
 
-  currentSlope = getSlopeAlongTravel(player3d.worldX, player3d.worldZ);
-  const slopeFactor = 1 - Math.max(-SLOPE_SPEED_MAX, Math.min(SLOPE_SPEED_MAX, currentSlope * SLOPE_SPEED_STRENGTH));
+  // --- Mặt đất, núi, mặt trời đi theo người chơi ---
+  ground.position.set(player.x, 0, player.z);
+  mountainsFar.position.set(player.x * 0.6, player.y - 160, player.z - 520);
+  mountainsNear.position.set(player.x * 0.8, player.y - 150, player.z - 400);
+  sunSprite.position.set(player.x + 160, player.y + 120, player.z - 420);
+  sun.position.set(player.x + 30, player.y + 40, player.z + 10);
+  sun.target.position.set(player.x, player.y, player.z);
 
-  state.worldSpeed = Math.min(state.worldSpeed + SPEED_INCREASE * dt, state.maxSpeed);
-  const moveZ = state.worldSpeed * slopeFactor * dt;
-  player3d.worldZ -= moveZ;
-  state.distance += moveZ;
-  state.score = Math.floor(state.distance * 2) + state.bonusScore;
-
-  // Terrain sample
-  const footZ = 2.0, footX = 0.8;
-  const hF = getTerrainHeight(player3d.worldX, player3d.worldZ - footZ);
-  const hB = getTerrainHeight(player3d.worldX, player3d.worldZ + footZ);
-  const hL = getTerrainHeight(player3d.worldX - footX, player3d.worldZ);
-  const hR = getTerrainHeight(player3d.worldX + footX, player3d.worldZ);
-
-  const targetY = Math.max(hF, hB, hL, hR);
-  player3d.worldY += (targetY - player3d.worldY) * Math.min(1, 22 * dt);
-
-  const targetPitch = Math.max(-0.45, Math.min(0.45, Math.atan2(hB - hF, footZ * 2)));
-  const targetRoll = Math.max(-0.4, Math.min(0.4, Math.atan2(hR - hL, footX * 2)));
-  smoothPitch += (targetPitch - smoothPitch) * Math.min(1, 15 * dt);
-  smoothRoll += (targetRoll - smoothRoll) * Math.min(1, 15 * dt);
-
-  // === PLAYER TRANSFORM — TÁCH SKI VÀ BODY ===
-  playerRoot.position.set(player3d.worldX, player3d.worldY + 0.05, player3d.worldZ);
-
-  // Ski yaw: ván trượt xoay nhẹ theo hướng di chuyển
-  const turnYaw = -Math.atan2(player3d.vx, state.worldSpeed) * 0.4;
-  skiGroup.rotation.set(smoothPitch, turnYaw, 0);
-
-  // Body: nghiêng vào cua (roll), pitch một phần
-  const leanAmount = -(player3d.vx / Math.max(0.01, state.currentHorizSpeed)) * TILT_Z_AMOUNT * 1.5;
-  bodyGroup.rotation.set(smoothPitch * 0.6, 0, leanAmount);
-
-  // Ground + mountains + sun
-  ground.position.set(player3d.worldX, 0, player3d.worldZ);
-  mountains1.position.set(player3d.worldX * 0.9, 0, player3d.worldZ - 320);
-  mountains2.position.set(player3d.worldX * 0.95, 0, player3d.worldZ - 250);
-  sunSprite.position.set(player3d.worldX + 110, 80, player3d.worldZ - 290);
-
-  // Recycle
-  const recycleZ = player3d.worldZ + RECYCLE_BEHIND;
-  for (const t of treePool) {
-    if (!t.active) continue;
-    if (t.worldZ > recycleZ) { t.active = false; t.mesh.visible = false; }
-  }
-  for (const r of rockPool) {
-    if (!r.active) continue;
-    if (r.worldZ > recycleZ) { r.active = false; r.mesh.visible = false; }
-  }
-  for (const t of giantTreePool) {
-    if (!t.active) continue;
-    if (t.worldZ > recycleZ + 10) { t.active = false; t.mesh.visible = false; }
-  }
-  for (const r of giantRockPool) {
-    if (!r.active) continue;
-    if (r.worldZ > recycleZ + 10) { r.active = false; r.mesh.visible = false; }
-  }
-  for (const l of logPool) {
-    if (!l.active) continue;
-    if (l.worldZ > recycleZ) { l.active = false; l.mesh.visible = false; }
-  }
+  // --- Thu hồi vật đã đi qua ---
+  const recycleZ = player.z + RECYCLE_BEHIND;
+  for (const t of trees) if (t.active && t.worldZ > recycleZ) hideTree(t);
+  for (const pool of [rockPool, logPool]) for (const o of pool) if (o.active && o.worldZ > recycleZ) { o.active = false; o.mesh.visible = false; }
   for (const g of gatePool) {
     if (!g.active) continue;
-    if (!g.passed && g.prevPlayerZ > g.worldZ && player3d.worldZ <= g.worldZ) {
-      checkGatePass(g);
-    }
-    g.prevPlayerZ = player3d.worldZ;
+    if (!g.passed && g.prevPlayerZ > g.worldZ && player.z <= g.worldZ) checkGatePass(g);
+    g.prevPlayerZ = player.z;
     if (g.worldZ > recycleZ) { g.active = false; g.mesh.visible = false; }
   }
   for (const f of flakePool) {
     if (!f.active) continue;
     f.phase += dt * 4;
-    f.mesh.position.y = getTerrainHeight(f.worldX, f.worldZ) + f.baseY + Math.sin(f.phase) * 0.3;
-    f.mesh.rotation.y += dt * 3;
-    f.mesh.rotation.x += dt * 2;
+    f.mesh.position.y = getTerrainHeight(f.worldX, f.worldZ) + f.baseY + Math.sin(f.phase) * 0.25;
+    f.mesh.rotation.y += dt * 3; f.mesh.rotation.x += dt * 2;
     if (f.worldZ > recycleZ) { f.active = false; f.mesh.visible = false; }
   }
-
-  // Decoration updates
-  for (const h of housePool) {
-    if (!h.active) continue;
-    if (h.worldZ > recycleZ + 40) { h.active = false; h.mesh.visible = false; }
-  }
+  for (const h of housePool) if (h.active && h.worldZ > recycleZ + 40) { h.active = false; h.mesh.visible = false; }
   for (const c of cableCarPool) {
     if (!c.active) continue;
-    c.swingPhase += dt * 0.8;
-    if (c.cabinGroup) {
-      c.cabinGroup.rotation.z = Math.sin(c.swingPhase) * 0.05;
+    c.phase += dt * 0.25;
+    if (c.cabin) {
+      c.cabin.position.x = Math.sin(c.phase) * (CABLE_SPAN / 2 - 3);
+      c.cabin.rotation.z = Math.sin(c.phase * 3.1) * 0.03;
     }
     if (c.worldZ > recycleZ + 40) { c.active = false; c.mesh.visible = false; }
   }
-  for (const r of roadPool) {
-    if (!r.active) continue;
-    if (r.worldZ > recycleZ + 30) { r.active = false; r.mesh.visible = false; }
-  }
 
-  // Trail
-  state.trailTimer -= dt;
-  if (state.trailTimer <= 0) {
-    state.trailTimer = 0.045;
-    spawnTrail(player3d.worldX - 0.28, player3d.worldZ + 0.85);
-    spawnTrail(player3d.worldX + 0.28, player3d.worldZ + 0.85);
+  // --- Vệt ván và tuyết bắn ---
+  for (let i = 0; i < 2; i++) {
+    const side = i === 0 ? -1 : 1;
+    const lx = player.x + (-sz) * side * 0.17 * PLAYER_SCALE, lz = player.z + sx * side * 0.17 * PLAYER_SCALE;
+    pushRibbon(ribbons[i], lx, lz, sx, sz);
   }
-
-  // Snow spray
-  const turnI = Math.abs(player3d.vx) / effectiveHorizSpeed;
-  if (turnI > 0.4 && Math.random() < 0.7) {
-    const n = Math.floor(turnI * 3);
+  const carve = Math.abs(player.omega) * player.speed;
+  if ((carve > 6 || state.offPiste) && Math.random() < 0.8) {
+    const n = state.offPiste ? 3 : Math.min(4, Math.floor(carve / 6));
+    const outward = Math.sign(player.omega) || 1;
     for (let i = 0; i < n; i++) {
       spawnParticle(
-        player3d.worldX + (Math.random() - 0.5) * 0.6,
-        player3d.worldY + 0.15 + Math.random() * 0.3,
-        player3d.worldZ + (Math.random() - 0.5) * 0.4,
-        -player3d.vx * 0.35 + (Math.random() - 0.5) * 4,
-        1 + Math.random() * 2,
-        state.worldSpeed * 0.35 + Math.random() * 3,
-        0.35 + Math.random() * 0.25
-      );
+        player.x + (Math.random() - 0.5) * 0.6, player.y + 0.1 + Math.random() * 0.2, player.z + (Math.random() - 0.5) * 0.6,
+        -sz * outward * (2 + Math.random() * 3) + sx * player.speed * 0.3, 1 + Math.random() * 2.5, sx * outward * (2 + Math.random() * 3) + sz * player.speed * 0.3,
+        0.4 + Math.random() * 0.3);
     }
   }
 
-  // Spawn
+  // --- Sinh vật cản theo quãng đường đã đi ---
   state.spawnTimer -= dt;
   if (state.spawnTimer <= 0) {
     spawnWave();
-    const gap = getSpawnGap();
-    state.spawnTimer = (gap / state.worldSpeed) * (0.75 + Math.random() * 0.5);
+    state.spawnTimer = (getSpawnGap() / Math.max(8, player.speed)) * (0.7 + Math.random() * 0.6);
   }
-
   state.gateTimer -= dt;
-  if (state.gateTimer <= 0) {
-    spawnGate();
-    state.gateTimer = GATE_INTERVAL_MIN + Math.random() * (GATE_INTERVAL_MAX - GATE_INTERVAL_MIN);
-  }
-
+  if (state.gateTimer <= 0) { spawnGate(); state.gateTimer = GATE_INTERVAL_MIN + Math.random() * (GATE_INTERVAL_MAX - GATE_INTERVAL_MIN); }
   state.flakeTimer -= dt;
-  if (state.flakeTimer <= 0) {
-    spawnFlakes();
-    state.flakeTimer = 4 + Math.random() * 2;
-  }
-
+  if (state.flakeTimer <= 0) { spawnFlakes(); state.flakeTimer = 4 + Math.random() * 3; }
   state.decoTimer -= dt;
-  if (state.decoTimer <= 0) {
-    spawnDecorations();
-    state.decoTimer = DECO_MIN_INTERVAL + Math.random() * (DECO_MAX_INTERVAL - DECO_MIN_INTERVAL);
-  }
+  if (state.decoTimer <= 0) { spawnDecorations(); state.decoTimer = DECO_MIN_INTERVAL + Math.random() * (DECO_MAX_INTERVAL - DECO_MIN_INTERVAL); }
 
-  // Collisions
-  if (state.invincible <= 0) {
-    checkCollisions();
-  } else {
+  // --- Va chạm ---
+  if (state.invincible <= 0) checkCollisions();
+  else {
     state.invincible -= dt;
     playerRoot.visible = Math.floor(state.invincible * 15) % 2 === 0;
   }
   if (state.invincible <= 0) playerRoot.visible = true;
 
-  if (state.comboTimer > 0) {
-    state.comboTimer -= dt;
-    if (state.comboTimer <= 0) { state.combo = 0; updateComboUI(); }
-  }
-
+  if (state.comboTimer > 0) { state.comboTimer -= dt; if (state.comboTimer <= 0) { state.combo = 0; updateComboUI(); } }
   if (state.shake > 0) state.shake = Math.max(0, state.shake - dt * 45);
 
-  targetFov = 65 + speedRatio * 18;
-  if (Math.abs(camera.fov - targetFov) > 0.1) {
-    camera.fov += (targetFov - camera.fov) * Math.min(1, 2 * dt);
-    camera.updateProjectionMatrix();
-  }
+  const sr = clamp((player.speed - 15) / 25, 0, 1);
+  const tf = baseFov + sr * 14;
+  if (Math.abs(camera.fov - tf) > 0.1) { camera.fov += (tf - camera.fov) * Math.min(1, 2 * dt); camera.updateProjectionMatrix(); }
+  vignetteEl.style.opacity = Math.min(0.7, Math.max(0, (sr - 0.45) * 1.3));
 
-  const vigOpacity = Math.max(0, (speedRatio - 0.3) * 1.4);
-  vignetteEl.style.opacity = Math.min(0.85, vigOpacity);
-
-  if (state.distance > D_HARD) {
-    dangerLabelEl.classList.add('show');
-  } else {
-    dangerLabelEl.classList.remove('show');
-  }
-
-  if (Math.abs(currentSlope) > 0.06) {
-    const pct = Math.round(currentSlope * 100);
-    if (currentSlope > 0) {
-      slopeIndicatorEl.textContent = '▲ LÊN DỐC ' + pct + '%';
-      slopeIndicatorEl.style.color = '#ff8a5b';
-    } else {
-      slopeIndicatorEl.textContent = '▼ XUỐNG DỐC ' + Math.abs(pct) + '%';
-      slopeIndicatorEl.style.color = '#7dd3fc';
-    }
-    slopeIndicatorEl.style.opacity = Math.min(1, Math.abs(currentSlope) * 5);
-  } else {
-    slopeIndicatorEl.style.opacity = 0;
-  }
-
+  dangerLabelEl.classList.toggle('show', state.grade > 0.33);
+  const deg = Math.round(Math.atan(state.grade) * 180 / Math.PI);
+  slopeIndicatorEl.textContent = '▼ DỐC ' + deg + '°';
+  slopeIndicatorEl.style.color = state.grade > 0.33 ? '#ff8a5b' : '#e0f2fe';
+  slopeIndicatorEl.style.opacity = 0.85;
+  powderEl.classList.toggle('show', state.offPiste);
   updateHUD();
 }
 
-function checkGatePass(g) {
-  const halfGap = GATE_GAP / 2;
-  const lp = g.worldX - halfGap;
-  const rp = g.worldX + halfGap;
-  const px = player3d.worldX;
+function updatePlayerTransform(dt, tIn) {
+  const sx = Math.sin(player.heading), sz = -Math.cos(player.heading);
+  const f = 0.9;
+  const hF = getTerrainHeight(player.x + sx * f, player.z + sz * f);
+  const hB = getTerrainHeight(player.x - sx * f, player.z - sz * f);
+  const hL = getTerrainHeight(player.x + sz * 0.4, player.z - sx * 0.4);
+  const hR = getTerrainHeight(player.x - sz * 0.4, player.z + sx * 0.4);
+  const ty = (hF + hB + hL + hR) / 4;
+  const k = dt > 0 ? Math.min(1, 25 * dt) : 1;
+  player.y += (ty - player.y) * k;
+  // ván áp theo mặt dốc: mũi ván chúi xuống khi đổ dốc
+  const tPitch = Math.atan2(hF - hB, 2 * f);
+  const tRoll = Math.atan2(hL - hR, 0.8);
+  player.pitch += (tPitch - player.pitch) * k;
+  player.roll += (tRoll - player.roll) * k;
+  // nghiêng người vào cua theo lực hướng tâm
+  const tLean = clamp(-Math.atan(player.speed * player.omega / G) * 0.6, -0.45, 0.45);
+  player.lean += (tLean - player.lean) * (dt > 0 ? Math.min(1, 8 * dt) : 1);
 
-  if (Math.abs(px - lp) < GATE_COLLISION_DIST || Math.abs(px - rp) < GATE_COLLISION_DIST) {
+  playerRoot.position.set(player.x, player.y, player.z);
+  playerRoot.rotation.set(-player.pitch, -player.heading, -player.roll);
+  skiGroup.rotation.set(0, 0, 0);
+  bodyGroup.rotation.set(0, 0, player.lean);
+  // tư thế trượt: gập gối và gập người về trước khi lao nhanh
+  const tuck = clamp(player.speed / 32, 0, 1) * (tIn && Math.abs(tIn) > 0.2 ? 0.5 : 1);
+  torsoGroup.rotation.x = -(0.25 + 0.5 * tuck);
+  torsoGroup.position.y = 0.88 - 0.18 * tuck;
+  for (const l of legs) l.rotation.x = -0.15 - 0.25 * tuck;
+}
+
+function checkGatePass(g) {
+  const half = GATE_GAP / 2;
+  const lp = g.worldX - half, rp = g.worldX + half, px = player.x;
+  if (Math.abs(px - lp) < GATE_COLLISION_DIST + 0.45 || Math.abs(px - rp) < GATE_COLLISION_DIST + 0.45) {
     crash();
-    g.active = false;
-    g.mesh.visible = false;
+    g.active = false; g.mesh.visible = false;
     return;
   }
-
-  if (px > lp + GATE_COLLISION_DIST && px < rp - GATE_COLLISION_DIST) {
+  if (px > lp && px < rp) {
     g.passed = true;
-    state.gates++;
-    state.combo++;
-    state.comboTimer = 3;
+    state.gates++; state.combo++; state.comboTimer = 4;
     state.bonusScore += 50 * state.combo;
-    state.worldSpeed = Math.min(state.worldSpeed + 2, state.maxSpeed);
     updateComboUI();
     beep(600 + state.combo * 60, 0.1, 'sine', 0.05);
-
-    for (let i = 0; i < 10; i++) {
-      spawnParticle(
-        g.worldX + (Math.random() - 0.5) * GATE_GAP,
-        getTerrainHeight(g.worldX, g.worldZ) + 1 + Math.random() * 2,
-        g.worldZ,
-        (Math.random() - 0.5) * 5,
-        2 + Math.random() * 4,
-        (Math.random() - 0.5) * 5,
-        0.5
-      );
-    }
+    const gy = getTerrainHeight(g.worldX, g.worldZ);
+    for (let i = 0; i < 10; i++) spawnParticle(g.worldX + (Math.random() - 0.5) * GATE_GAP, gy + 1 + Math.random() * 1.5, g.worldZ,
+      (Math.random() - 0.5) * 5, 2 + Math.random() * 4, (Math.random() - 0.5) * 5, 0.5);
   }
 }
 
+function burst(x, y, z, n) {
+  for (let i = 0; i < n; i++) spawnParticle(x + (Math.random() - 0.5) * 1.5, y + 0.5 + Math.random() * 2, z,
+    (Math.random() - 0.5) * 8, 3 + Math.random() * 5, (Math.random() - 0.5) * 8, 0.7);
+}
 function checkCollisions() {
-  const px = player3d.worldX;
-  const pz = player3d.worldZ;
-  const pr = 0.5;
-
-  for (const t of treePool) {
+  const px = player.x, pz = player.z, pr = 0.35;
+  for (const t of trees) {
     if (!t.active) continue;
-    const dx = t.worldX - px;
-    const dz = t.worldZ - pz;
-    if (dx * dx + dz * dz < (pr + t.radius) * (pr + t.radius)) {
-      crash();
-      t.active = false;
-      t.mesh.visible = false;
-      return;
-    }
+    const dx = t.worldX - px, dz = t.worldZ - pz, r = pr + t.radius;
+    if (dx * dx + dz * dz < r * r) { crash(); burst(t.worldX, t.y + 2, t.worldZ, 18); hideTree(t); return; }
   }
-  for (const r of rockPool) {
-    if (!r.active) continue;
-    const dx = r.worldX - px;
-    const dz = r.worldZ - pz;
-    if (dx * dx + dz * dz < (pr + r.radius) * (pr + r.radius)) {
-      crash();
-      r.active = false;
-      r.mesh.visible = false;
-      return;
-    }
-  }
-  for (const t of giantTreePool) {
-    if (!t.active) continue;
-    const dx = t.worldX - px;
-    const dz = t.worldZ - pz;
-    if (dx * dx + dz * dz < (pr + t.radius) * (pr + t.radius)) {
-      crash();
-      for (let i = 0; i < 20; i++) {
-        spawnParticle(t.worldX + (Math.random() - 0.5) * 2, t.mesh.position.y + 1 + Math.random() * 3, t.worldZ,
-          (Math.random() - 0.5) * 8, 3 + Math.random() * 6, (Math.random() - 0.5) * 8, 0.7);
-      }
-      t.active = false;
-      t.mesh.visible = false;
-      return;
-    }
-  }
-  for (const r of giantRockPool) {
-    if (!r.active) continue;
-    const dx = r.worldX - px;
-    const dz = r.worldZ - pz;
-    if (dx * dx + dz * dz < (pr + r.radius) * (pr + r.radius)) {
-      crash();
-      for (let i = 0; i < 20; i++) {
-        spawnParticle(r.worldX + (Math.random() - 0.5) * 2, r.mesh.position.y + 1 + Math.random() * 2, r.worldZ,
-          (Math.random() - 0.5) * 8, 3 + Math.random() * 6, (Math.random() - 0.5) * 8, 0.7);
-      }
-      r.active = false;
-      r.mesh.visible = false;
-      return;
-    }
+  for (const o of rockPool) {
+    if (!o.active) continue;
+    const dx = o.worldX - px, dz = o.worldZ - pz, r = pr + o.radius;
+    if (dx * dx + dz * dz < r * r) { crash(); o.active = false; o.mesh.visible = false; return; }
   }
   for (const l of logPool) {
     if (!l.active) continue;
-    if (Math.abs(l.worldX - px) < l.length/2 + pr && Math.abs(l.worldZ - pz) < l.radius + pr) {
-      crash();
-      l.active = false;
-      l.mesh.visible = false;
-      return;
-    }
+    if (Math.abs(l.worldX - px) < l.length / 2 + pr && Math.abs(l.worldZ - pz) < l.radius + pr) { crash(); l.active = false; l.mesh.visible = false; return; }
   }
   for (const f of flakePool) {
     if (!f.active) continue;
-    const dx = f.worldX - px;
-    const dz = f.worldZ - pz;
-    const dy = (f.mesh.position.y - getTerrainHeight(f.worldX, f.worldZ)) - 1;
-    if (dx * dx + dz * dz + dy * dy < 1.3 * 1.3) {
-      f.active = false;
-      f.mesh.visible = false;
+    const dx = f.worldX - px, dz = f.worldZ - pz;
+    if (dx * dx + dz * dz < 1.2 * 1.2) {
+      f.active = false; f.mesh.visible = false;
       state.bonusScore += 15;
       beep(1000 + Math.random() * 300, 0.06, 'triangle', 0.04);
-      for (let i = 0; i < 6; i++) {
-        spawnParticle(f.worldX, f.mesh.position.y, f.worldZ,
-          (Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3, 0.4);
-      }
+      for (let i = 0; i < 6; i++) spawnParticle(f.worldX, f.mesh.position.y, f.worldZ, (Math.random() - 0.5) * 3, Math.random() * 2, (Math.random() - 0.5) * 3, 0.4);
     }
   }
 }
@@ -1812,24 +1356,19 @@ function crash() {
   state.lives--;
   state.shake = 32;
   state.invincible = CRASH_INVINCIBILITY;
-  state.combo = 0;
-  state.comboTimer = 0;
-  state.worldSpeed = Math.max(state.baseSpeed, state.worldSpeed * CRASH_SPEED_KEEP);
+  state.combo = 0; state.comboTimer = 0;
+  player.speed = Math.max(MIN_SPEED, player.speed * CRASH_SPEED_KEEP);
+  player.heading *= 0.3;
+  // đứng dậy: nếu ngã trong rừng thì quay lại mép đường trượt, dọn chỗ phía trước cho khỏi ngã liên tiếp
+  player.x = clampToPiste(player.x, player.z, 3);
+  for (const t of trees) if (t.active && t.worldZ < player.z + 2 && t.worldZ > player.z - 14 && Math.abs(t.worldX - player.x) < 5) hideTree(t);
+  for (const pool of [rockPool, logPool]) for (const o of pool) if (o.active && o.worldZ < player.z + 2 && o.worldZ > player.z - 14 && Math.abs(o.worldX - player.x) < 5) { o.active = false; o.mesh.visible = false; }
   updateComboUI();
   beep(150, 0.35, 'sawtooth', 0.09);
-
-  for (let i = 0; i < 22; i++) {
-    spawnParticle(player3d.worldX + (Math.random() - 0.5) * 1, player3d.worldY + 0.4 + Math.random(), player3d.worldZ,
-      (Math.random() - 0.5) * 8, 2 + Math.random() * 5, (Math.random() - 0.5) * 8, 0.6 + Math.random() * 0.3);
-  }
-
+  burst(player.x, player.y, player.z, 22);
   if (state.lives <= 0) {
-    deathCamActive = true;
-    deathCamOffsetZ = camPos.z - (player3d.worldZ + camDist);
-    deathCamOffsetY = camPos.y - (player3d.worldY + camHeight);
-    deathCamVelZ = 0;
-    deathCamVelY = -3;
-    state.shake = 55;
+    deathCamActive = true; deathT = 0;
+    state.shake = 50;
     gameOver();
   }
 }
@@ -1839,119 +1378,113 @@ function updateParticles(dt) {
     if (!p.active) continue;
     p.life -= dt;
     if (p.life <= 0) { p.active = false; p.mesh.visible = false; continue; }
-    p.mesh.position.x += p.vel.x * dt;
-    p.mesh.position.y += p.vel.y * dt;
-    p.mesh.position.z += p.vel.z * dt;
-    p.vel.y -= 10 * dt;
-    p.vel.x *= 0.98;
-    p.vel.z *= 0.98;
+    p.mesh.position.addScaledVector(p.vel, dt);
+    p.vel.y -= 10 * dt; p.vel.x *= 0.97; p.vel.z *= 0.97;
     const k = p.life / p.maxLife;
     p.mesh.material.opacity = k;
-    p.mesh.scale.setScalar(0.5 + k * 0.5);
+    p.mesh.scale.setScalar(0.6 + (1 - k) * 1.2);
   }
 }
 
-function updateTrails(dt) {
-  for (const t of trailPool) {
-    if (!t.active) continue;
-    t.life -= dt;
-    if (t.life <= 0) { t.active = false; t.mesh.visible = false; continue; }
-    t.mesh.material.opacity = (t.life / 1.6) * 0.7;
-  }
+// ============================================================
+// CAMERA: bám sau lưng, cao ngang vai một chút, nhìn xuống dốc phía trước
+// ============================================================
+const _look = new THREE.Vector3();
+function camTarget(out) {
+  const sr = clamp((player.speed - 15) / 25, 0, 1);
+  const dist = camDist + sr * 1.2;
+  const bx = player.x - Math.sin(camYaw) * dist, bz = player.z + Math.cos(camYaw) * dist;
+  const gy = getTerrainHeight(bx, bz);
+  out.set(bx, Math.max(gy + camHeight, player.y + camHeight * 0.9), bz);
+  return out;
 }
-
+function lookTarget(out) {
+  const ahead = 13;
+  const lx = player.x + Math.sin(camYaw) * ahead, lz = player.z - Math.cos(camYaw) * ahead;
+  out.set(lx, getTerrainHeight(lx, lz) + 1.6, lz);
+  return out;
+}
+const _ct = new THREE.Vector3();
+function snapCamera() {
+  camPos.copy(camTarget(_ct));
+  camera.position.copy(camPos);
+  camera.lookAt(lookTarget(_look));
+}
 function updateCamera(dt) {
   if (deathCamActive) {
-    updateDeathCamera(dt);
+    // máy quay vượt lên trước rồi quay lại nhìn người vừa ngã
+    deathT += dt;
+    const k = Math.min(1, deathT / 1.4);
+    const tx = player.x + 3, tz = player.z - 9 * k, ty = getTerrainHeight(tx, tz) + 2.2;
+    camPos.x += (tx - camPos.x) * Math.min(1, 3 * dt);
+    camPos.y += (ty - camPos.y) * Math.min(1, 3 * dt);
+    camPos.z += (tz - camPos.z) * Math.min(1, 3 * dt);
+    camera.position.copy(camPos);
+    camera.lookAt(player.x, player.y + 0.6, player.z);
     return;
   }
-
-  const hs = state.currentHorizSpeed || HORIZ_SPEED_BASE;
-  const heading = Math.max(-1, Math.min(1, player3d.vx / hs)) * MAX_HEADING;
-  const speedRatio = Math.max(0, Math.min(1, (state.worldSpeed - state.baseSpeed) / (state.maxSpeed - state.baseSpeed)));
-  const dist = camDist + speedRatio * 3.5;
-  const height = camHeight + speedRatio * 0.5;
-
-  const targetX = player3d.worldX - Math.sin(heading) * dist;
-  const targetZ = player3d.worldZ + Math.cos(heading) * dist;
-  const targetY = player3d.worldY + height;
-
-  camPos.x += (targetX - camPos.x) * Math.min(1, 12 * dt);
-  camPos.y += (targetY - camPos.y) * Math.min(1, 10 * dt);
-  camPos.z += (targetZ - camPos.z) * Math.min(1, 12 * dt);
-
-  let sx = 0, sy = 0;
-  if (state.shake > 0.3) {
-    sx = (Math.random() - 0.5) * state.shake * 0.02;
-    sy = (Math.random() - 0.5) * state.shake * 0.02;
-  }
-
-  camera.position.set(camPos.x + sx, camPos.y + sy, camPos.z);
-
-  const lookX = player3d.worldX + Math.sin(heading) * 10;
-  const lookZ = player3d.worldZ - Math.cos(heading) * 10;
-  const lookY = player3d.worldY + 1.4;
-  camera.lookAt(lookX, lookY, lookZ);
-}
-
-function updateDeathCamera(dt) {
-  const targetOffsetZ = -(camDist + 15);
-  const kZ = 10, dZ = 4;
-  deathCamVelZ += (-kZ * (deathCamOffsetZ - targetOffsetZ) - dZ * deathCamVelZ) * dt;
-  deathCamOffsetZ += deathCamVelZ * dt;
-
-  const kY = 18, dY = 5;
-  deathCamVelY += (-kY * deathCamOffsetY - dY * deathCamVelY) * dt;
-  deathCamOffsetY += deathCamVelY * dt;
-
-  const targetX = player3d.worldX;
-  camPos.x += (targetX - camPos.x) * Math.min(1, 4 * dt);
-
-  camPos.y = player3d.worldY + camHeight + deathCamOffsetY;
-  camPos.z = player3d.worldZ + camDist + deathCamOffsetZ;
-
-  let sx = 0, sy = 0;
-  if (state.shake > 0.3) {
-    sx = (Math.random() - 0.5) * state.shake * 0.04;
-    sy = (Math.random() - 0.5) * state.shake * 0.04;
-  }
-
-  camera.position.set(camPos.x + sx, camPos.y + sy, camPos.z);
-  camera.lookAt(camPos.x + sx, camPos.y - camHeight * 0.5, camPos.z - 25);
+  camYaw += (player.heading * 0.75 - camYaw) * Math.min(1, 3.2 * dt);
+  camTarget(_ct);
+  camPos.x += (_ct.x - camPos.x) * Math.min(1, 9 * dt);
+  camPos.y += (_ct.y - camPos.y) * Math.min(1, 7 * dt);
+  camPos.z += (_ct.z - camPos.z) * Math.min(1, 9 * dt);
+  let shx = 0, shy = 0;
+  if (state.shake > 0.3) { shx = (Math.random() - 0.5) * state.shake * 0.015; shy = (Math.random() - 0.5) * state.shake * 0.015; }
+  // rung nhẹ khi lao nhanh trên tuyết
+  const buzz = clamp((player.speed - 22) / 20, 0, 1) * 0.02;
+  camera.position.set(camPos.x + shx + (Math.random() - 0.5) * buzz, camPos.y + shy + (Math.random() - 0.5) * buzz, camPos.z);
+  camera.lookAt(lookTarget(_look));
+  camRoll += (player.lean * 0.12 - camRoll) * Math.min(1, 4 * dt);
+  camera.rotateZ(camRoll);
 }
 
 function updateHUD() {
   scoreValEl.textContent = formatNum(state.score);
-  distanceValEl.textContent = Math.floor(state.distance / 10) + 'm';
-
+  distanceValEl.textContent = formatNum(Math.floor(state.distance)) + ' m';
   let lh = '';
   for (let i = 0; i < INITIAL_LIVES; i++) {
     const on = i < state.lives;
     lh += `<svg class="life" viewBox="0 0 16 16" fill="${on ? '#7dd3fc' : 'none'}" stroke="${on ? 'none' : 'rgba(120,150,180,0.45)'}" stroke-width="1.5"><path d="M8 1l2 4 4 .5-3 3 1 4-4-2-4 2 1-4-3-3 4-.5z"/></svg>`;
   }
   livesValEl.innerHTML = lh;
-
-  const sr = (state.worldSpeed - state.baseSpeed) / (state.maxSpeed - state.baseSpeed);
-  speedFillEl.style.height = (sr * 100) + '%';
+  speedFillEl.style.height = (clamp(player.speed / MAX_SPEED, 0, 1) * 100) + '%';
+  speedValEl.textContent = Math.round(player.speed * 3.6);
+}
+function updateComboUI() {
+  if (state.combo >= 2) { comboValEl.textContent = 'x' + state.combo + ' CỔNG'; comboValEl.classList.add('show'); }
+  else comboValEl.classList.remove('show');
 }
 
-function updateComboUI() {
-  if (state.combo >= 2) {
-    comboValEl.textContent = 'x' + state.combo + ' CỔNG';
-    comboValEl.classList.add('show');
-  } else {
-    comboValEl.classList.remove('show');
-  }
+// Màn chờ: máy quay lướt chậm dọc đường trượt làm nền
+function updateMenu(dt) {
+  player.z -= 9 * dt;
+  player.x = pisteCenter(player.z);
+  player.speed = 9; player.heading = 0;
+  growEdgeForest(aheadZ());
+  const recycleZ = player.z + RECYCLE_BEHIND;
+  for (const t of trees) if (t.active && t.worldZ > recycleZ) hideTree(t);
+  updatePlayerTransform(dt, 0);
+  ground.position.set(player.x, 0, player.z);
+  mountainsFar.position.set(player.x * 0.6, player.y - 160, player.z - 520);
+  mountainsNear.position.set(player.x * 0.8, player.y - 150, player.z - 400);
+  sunSprite.position.set(player.x + 160, player.y + 120, player.z - 420);
+  sun.position.set(player.x + 30, player.y + 40, player.z + 10);
+  sun.target.position.set(player.x, player.y, player.z);
+  pushRibbon(ribbons[0], player.x - 0.15, player.z, 0, -1);
+  pushRibbon(ribbons[1], player.x + 0.15, player.z, 0, -1);
 }
 
 function update(dt) {
   time += dt;
   if (state.mode === 'playing') updatePlaying(dt);
+  else if (state.mode === 'menu') updateMenu(dt);
   updateParticles(dt);
-  updateTrails(dt);
+  updateRibbon(ribbons[0]); updateRibbon(ribbons[1]);
   updateWeather(dt);
   updateSnow(dt);
   updateCamera(dt);
+  updateWindSound();
+  if (treesDirty) { for (const p of treeParts) p.mesh.instanceMatrix.needsUpdate = true; treesDirty = false; }
 }
 
 let last = performance.now();
@@ -1964,24 +1497,28 @@ function loop(now) {
   renderer.render(scene, camera);
   requestAnimationFrame(loop);
 }
-
 function resize() {
   camera.aspect = window.innerWidth / window.innerHeight;
+  updateCameraRig();
+  if (state.mode !== 'playing') camera.fov = baseFov;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
-  updateCameraRig();
 }
 window.addEventListener('resize', resize);
+document.addEventListener('visibilitychange', () => { last = performance.now(); });
 
+// khởi tạo cảnh nền cho màn chờ
 updateCameraRig();
-camPos.x = 0;
-camPos.y = camHeight;
-camPos.z = camDist;
-camera.position.set(camPos.x, camPos.y, camPos.z);
-camera.lookAt(0, 1.4, -10);
-
+camera.fov = baseFov; camera.updateProjectionMatrix();
+player.x = pisteCenter(0); player.y = getTerrainHeight(player.x, 0);
+state.edgeNextZ = 30;
+growEdgeForest(-SPAWN_AHEAD);
+updatePlayerTransform(0, 0);
+snapCamera();
 document.getElementById('loading').classList.add('hidden');
 requestAnimationFrame(loop);
 </script>
+<script src="../scores.js?v=20261103ban"></script>
+<script src="../activity.js?v=20261103ban" defer></script>
 </body>
 </html>
