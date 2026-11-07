@@ -24,7 +24,7 @@
   const CODE_RE = /^[A-HJ-NP-Z2-9]{5}$/;
   const SHOT_SECONDS = 30;
   const GRACE_MS = 5000;          // bên kia chờ thêm chừng này mới thay người chậm báo hết giờ
-  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000;
+  const HEARTBEAT_MS = 12000, STALE_MS = 60000, FORFEIT_MS = 150000;
   const INTRO_MS = 2800;
   const QUEUE_FRESH_MS = 25000;
   const AIM_MS = 140;
@@ -221,7 +221,7 @@
       for (const k of Object.keys(m.data || {})) on.tree = setIn(on.tree, base.concat(split(k)), m.data[k]);
       onTree();
     });
-    es.onerror = () => { on.connOk = false; };
+    es.onerror = () => { on.connOk = false; if (es.readyState === 2) setTimeout(() => { if (on.active && !on.closing && on.es === es) startStream(); }, 2000); };
     es.onopen = () => { on.connOk = true; };
   }
 
@@ -661,7 +661,17 @@
   }, true);
 
   // đóng trang / thoát đột ngột: báo cho đối thủ (hoặc xoá phòng / hàng chờ)
-  window.addEventListener('pagehide', () => {
+  // Quay lại từ nền / mạng chập chờn: dữ liệu đối thủ chưa kịp về nên đừng coi họ là "im lặng quá lâu",
+  // và nếu luồng thời gian thực đã đóng thì nối lại. (Trước đây vừa mở lại điện thoại là ván bị huỷ.)
+  function resumeOnline() {
+    if (document.visibilityState === 'hidden' || !on.active || on.closing) return;
+    on.oppSeenAt = Date.now();
+    try { if (on.es && on.es.readyState === 2 && on.code && typeof startStream === 'function') startStream(); } catch (e) {}
+  }
+  ['visibilitychange', 'pageshow', 'online', 'focus'].forEach(t => window.addEventListener(t, resumeOnline));
+
+  window.addEventListener('pagehide', e => {
+    if (e && e.persisted) return;   // trang chỉ được cất vào bộ nhớ đệm (có thể quay lại), không phải thoát
     const ka = (method, path, body) => { try { fetch(DB + path + '.json', { method, body: body === undefined ? undefined : JSON.stringify(body), keepalive: true }); } catch (e) {} };
     if (qm.on && qm.id) ka('DELETE', '/bida_queue/' + qm.id);
     if (!on.active || !on.code) return;

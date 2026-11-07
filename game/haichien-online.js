@@ -27,7 +27,7 @@
   const SIZES = [5, 4, 3, 3, 2, 2];
   const SHIP_NAMES = ['Thiết Giáp Hạm', 'Tuần Dương Hạm', 'Khu Trục Hạm', 'Khu Trục Hạm', 'Tàu Hộ Tống', 'Tàu Hộ Tống'];
   const TURN_MS = 30000, GRACE_MS = 5000, PLACE_MS = 90000;
-  const HEARTBEAT_MS = 12000, STALE_MS = 40000, FORFEIT_MS = 80000, QUEUE_FRESH_MS = 25000;
+  const HEARTBEAT_MS = 12000, STALE_MS = 60000, FORFEIT_MS = 150000, QUEUE_FRESH_MS = 25000;
   const INTRO_MS = 2400;
   const BODY = HCArt.BODY;
 
@@ -422,7 +422,7 @@
     on.es = es;
     es.addEventListener('put', e => { const m = JSON.parse(e.data); on.tree = setIn(on.tree, split(m.path), m.data === undefined ? null : m.data); onTree(); });
     es.addEventListener('patch', e => { const m = JSON.parse(e.data), base = split(m.path); for (const k of Object.keys(m.data || {})) on.tree = setIn(on.tree, base.concat(split(k)), m.data[k]); onTree(); });
-    es.onerror = () => { on.connOk = false; };
+    es.onerror = () => { on.connOk = false; if (es.readyState === 2) setTimeout(() => { if (on.active && !on.closing && on.es === es) startStream(); }, 2000); };
     es.onopen = () => { on.connOk = true; };
     clearInterval(on.hb); clearInterval(on.watch);
     on.hb = setInterval(() => { http('PUT', '/haichien_rooms/' + on.code + '/' + on.role + '/seen', SV).catch(() => {}); }, HEARTBEAT_MS);
@@ -767,7 +767,17 @@
   HC.onlineBusy = () => !!(B && B.phase !== 'over' && on.started);
   HC.onlineLeaveText = () => (B && B.phase === 'battle' ? 'Trận đang diễn ra. Nếu rời đi, bạn sẽ bị xử thua.' : 'Bạn sẽ rời khỏi trận đấu.');
 
-  addEventListener('pagehide', () => {
+  // Quay lại từ nền / mạng chập chờn: dữ liệu đối thủ chưa kịp về nên đừng coi họ là "im lặng quá lâu",
+  // và nếu luồng thời gian thực đã đóng thì nối lại. (Trước đây vừa mở lại điện thoại là ván bị huỷ.)
+  function resumeOnline() {
+    if (document.visibilityState === 'hidden' || !on.active || on.closing) return;
+    on.oppSeenAt = Date.now();
+    try { if (on.es && on.es.readyState === 2 && on.code && typeof startStream === 'function') startStream(); } catch (e) {}
+  }
+  ['visibilitychange', 'pageshow', 'online', 'focus'].forEach(t => window.addEventListener(t, resumeOnline));
+
+  addEventListener('pagehide', e => {
+    if (e && e.persisted) return;   // trang chỉ được cất vào bộ nhớ đệm (có thể quay lại), không phải thoát
     const ka = (method, path, body) => { try { fetch(DB + path + '.json', { method, body: body === undefined ? undefined : JSON.stringify(body), keepalive: true }); } catch (e) {} };
     if (qm.on && qm.id) ka('DELETE', '/haichien_queue/' + qm.id);
     if (on.code && on.role) {
