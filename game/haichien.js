@@ -223,7 +223,7 @@
   $('infoOk').onclick = () => toggleInfo(false);
   $('infoOv').onclick = () => toggleInfo(false);
   function toggleInfo(v) { $('infoOv').classList.toggle('hidden', !v); }
-  function soundIcon() { $('btnSound').innerHTML = SFX.muted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>'; }
+  function soundIcon() { if (window.BGM) BGM.setOn(!SFX.muted, true); $('btnSound').innerHTML = SFX.muted ? '<i class="fa-solid fa-volume-xmark"></i>' : '<i class="fa-solid fa-volume-high"></i>'; }
   $('btnSound').onclick = () => { SFX.setMuted(!SFX.muted); soundIcon(); if (!SFX.muted) SFX.click(); };
   soundIcon();
   document.querySelectorAll('#onTabs button').forEach(b => b.addEventListener('click', () => { if (HC.onTab) HC.onTab(b.dataset.v); else showBoard(b.dataset.v); }));
