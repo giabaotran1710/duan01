@@ -230,9 +230,14 @@ const Snd = {
 
 // ---------- khung hình ----------
 let groundY = 0, handX = 0, handY = 0, skyT = 24, skyClock = 0;
+let lastW = 0, lastH = 0, rzT = 0;
 function resize() {
   DPR = Math.min(2, window.devicePixelRatio || 1);
-  W = innerWidth; H = innerHeight;
+  const nw = innerWidth, nh = innerHeight;
+  if (!nw || !nh) return;   // cửa sổ bằng 0 (iframe ẩn): giữ nguyên, không tạo canvas rỗng
+  if (nw === lastW && nh === lastH && clouds.length) return;   // kích thước không đổi: không dựng lại
+  lastW = nw; lastH = nh;
+  W = nw; H = nh;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
   groundY = H - Math.max(150, H * 0.2);
   handX = W / 2; handY = groundY + 34;
@@ -989,14 +994,18 @@ function draw() {
   // tiền cảnh (dây, diều, cỏ, người) vẽ lên lớp riêng rồi phủ ánh sáng theo giờ
   const tint = S.wdu * 0.26 + S.wn * 0.5;
   if (tint > 0.01) {
-    fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, fgCv.width, fgCv.height);
-    fx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    // chỉ xử lý vùng tiền cảnh (từ 22% chiều cao màn hình trở xuống) thay vì cả màn hình
+    const fy0 = Math.floor(H * 0.22 * DPR), fh = cv.height - fy0;
+    fx.setTransform(1, 0, 0, 1, 0, 0); fx.clearRect(0, 0, fgCv.width, fh);
+    fx.setTransform(DPR, 0, 0, DPR, 0, -H * 0.22 * DPR);
     ctx = fx; drawForeground(); ctx = mainCtx;
     fx.globalCompositeOperation = 'source-atop';
-    if (S.wdu > 0.01) { fx.fillStyle = `rgba(150,60,70,${S.wdu * 0.26})`; fx.fillRect(0, 0, W, H); }
-    if (S.wn > 0.01) { fx.fillStyle = `rgba(12,22,70,${S.wn * 0.5})`; fx.fillRect(0, 0, W, H); }
+    if (S.wdu > 0.01) { fx.fillStyle = `rgba(150,60,70,${S.wdu * 0.26})`; fx.fillRect(0, H * 0.22, W, H); }
+    if (S.wn > 0.01) { fx.fillStyle = `rgba(12,22,70,${S.wn * 0.5})`; fx.fillRect(0, H * 0.22, W, H); }
     fx.globalCompositeOperation = 'source-over';
-    ctx.setTransform(1, 0, 0, 1, ox * DPR, oy * DPR); ctx.drawImage(fgCv, 0, 0); ctx.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
+    ctx.setTransform(1, 0, 0, 1, ox * DPR, oy * DPR);
+    ctx.drawImage(fgCv, 0, 0, fgCv.width, fh, 0, fy0, fgCv.width, fh);
+    ctx.setTransform(DPR, 0, 0, DPR, ox * DPR, oy * DPR);
   } else drawForeground();
   drawFireflies();
   drawGustWarn();
@@ -1145,7 +1154,8 @@ const syncSnd = () => { sndBtn.textContent = store.snd ? '🔊' : '🔇'; };
 sndBtn.onclick = () => { store.snd = !store.snd; save(); syncSnd(); Snd.init(); if (!store.snd) Snd.mute(); };
 syncSnd();
 
-addEventListener('resize', resize);
+addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(resize, 150); });   // gom các sự kiện resize liên tiếp
+addEventListener('visibilitychange', () => { if (document.hidden) Snd.mute(); });   // tab ẩn: tắt gió và sáo
 resize();
 initClouds();
 resetGame();
