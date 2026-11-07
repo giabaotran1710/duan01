@@ -160,11 +160,11 @@ def main():
             ns = len(w.split())
             c = freq.get(w, 0)
             if ns == 1:
-                if c < 20: continue                       # đứng một mình ít nhất 20 lần trong phụ đề
+                if c < 6: continue                        # đứng một mình ít nhất 6 lần trong phụ đề (từ ít gặp phải qua rà soát tay)
                 tier = 1 if c >= 300 else 2
             else:
-                if tier2.get(w) not in (0, 1): continue
-                if c < 5: continue                        # hai tiếng đứng liền nhau ít nhất 5 lần
+                if tier2.get(w) not in (0, 1, 2): continue
+                if c < 2: continue                        # hai tiếng đứng liền nhau ít nhất 2 lần
                 tier = 1 if c >= 40 else 2
             got = pick_sense(w, POS_OK[pt], d.get('senses') or [])
             if not got: continue
