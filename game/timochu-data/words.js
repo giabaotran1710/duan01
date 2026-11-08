@@ -4868,7 +4868,6 @@ thói|D|Lối, cách sống hay hoạt động, thường không tốt, được
 thói quen|D|Cách làm lặp đi lặp lại lâu ngày thành nếp, khó thay đổi.|1
 thóp|D|Chỗ mềm trên đỉnh đầu trẻ mới sinh, nơi xương sọ chưa liền.|2
 thô|T|Có hình dáng to bè ra, đường nét thiếu mềm mại, trông không thích mắt.|2
-thô tục|T|Thiếu lịch sự, bậy bạ, nghe khó chịu.|1
 thôi|Đ|Ngừng hẳn lại, đình chỉ.|1
 thôi miên|Đ|Đưa người khác vào trạng thái như ngủ để điều khiển theo ý mình.|1
 thôi thúc|Đ|Giục giã khiến muốn làm ngay.|1
@@ -5001,7 +5000,6 @@ thắng|Đ|Giành được phần hơn trong cuộc đấu, cuộc thi.|1
 thắng cố|D|Món canh thịt của người H'mông.|2
 thắng trận|Đ|Đạt được kết quả làm cho địch không thể chiến đấu chống lại mình nữa.|1
 thắp|Đ|Châm lửa vào cho cháy lên.|2
-thằng cha|K|Tiếng gọi một người đàn ông với ý coi thường.|1
 thẳm|T|Sâu hoặc xa đến mức không thấy đáy, không thấy cùng.|2
 thẳng|T|Theo một hướng, không có chỗ nào chệch lệch, cong vẹo, gãy gập.|1
 thẳng tay|T|Mạnh mẽ, không chút nương nhẹ.|2
@@ -5558,7 +5556,6 @@ tìm hiểu|Đ|Hỏi han, tra cứu để biết rõ về một điều gì.|1
 tình|D|Sự yêu thương, gắn bó giữa người với người.|1
 tình cảm|D|Sự rung động trong lòng trước một đối tượng nào đó.|1
 tình duyên|D|Quan hệ yêu đương giữa trai và gái gặp gỡ nhau.|2
-tình dục|D|Thú vui xác thịt hay đơn giản hơn là thú vui về tinh thần diễn đạt qua thể chất.|1
 tình nghi|Đ|Ngờ là có phạm tội nhưng chưa có bằng chứng.|1
 tình nhân|D|Người yêu, thường là trong mối quan hệ không chính thức.|1
 tình tiết|D|Những sự việc nhỏ trong diễn biến của một câu chuyện.|1
