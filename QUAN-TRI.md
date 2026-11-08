@@ -31,3 +31,5 @@ rồi lưu lại, dán lại đúng mã đó vào bảng quản lý. Nên dùng 
 
 Trang web không có đăng nhập, danh tính người chơi là một mã ngẫu nhiên lưu trên máy (`lb_uid`). Người bị cấm xoá dữ liệu
 trình duyệt sẽ có mã mới và vào lại được (với một tên mới). Muốn chặn triệt để cần có tài khoản đăng nhập thật.
+
+<!-- Lần kiểm tra deploy: 2026-11-08 -->
