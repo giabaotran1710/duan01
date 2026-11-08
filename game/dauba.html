@@ -407,6 +407,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
 <script src="../music/dauba.js?v=1"></script>
 <script src="../bgmweb.js?v=1" data-volume="0.4" data-xf="3"></script>
 <script src="../scores.js?v=20261103ban"></script>
+<script src="dauba-art.js?v=20261109a"></script>
 <script>
 (() => {
   'use strict';
@@ -1400,7 +1401,15 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     const c = cv.getContext('2d'); c.setTransform(1, 0, 0, 1, 0, 0); c.clearRect(0, 0, px, px);
     c.setTransform(px / 200, 0, 0, px / 200, 0, 0);
     if (hue) c.filter = `hue-rotate(${hue}deg)`;
-    ART[art](c, t);
+    const im = svgImg('foe', art);
+    if (im) {
+      // hình SVG tĩnh: thở / bay lơ lửng bằng phép biến đổi, bóng đất vẽ riêng
+      const fly = SVG_FLY[art], b = fly ? Math.sin(t * 2.6) * 6 - 6 : Math.sin(t * 2.2) * 1.6;
+      const br = Math.sin(t * 2.2) * (fly ? .01 : .018);
+      shadow(c, 100, 187, fly ? 44 - b * .8 : 62);
+      c.save(); c.translate(100, 186 + b); c.scale(1 - br * .6, 1 + br); c.rotate(Math.sin(t * 1.3) * (fly ? .03 : .012)); c.translate(-100, -186);
+      c.drawImage(im, 0, 0, 200, 200); c.restore();
+    } else ART[art](c, t);
     if (hue) c.filter = 'none';
     if (hit > 0) { c.setTransform(1, 0, 0, 1, 0, 0); c.globalCompositeOperation = 'source-atop'; c.fillStyle = `rgba(255,255,255,${hit * .85})`; c.fillRect(0, 0, px, px); c.globalCompositeOperation = 'source-over'; }
   }
@@ -1746,7 +1755,9 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     const bg = c.createRadialGradient(56, 48, 4, 56, 56, 84); bg.addColorStop(0, EC[el]); bg.addColorStop(1, ED[el]); c.fillStyle = bg; c.fillRect(0, 0, 112, 112);
     c.save(); c.globalAlpha = .18; c.strokeStyle = '#fff'; c.lineWidth = 1; for (let r = 10; r < 90; r += 12) { c.beginPath(); c.arc(56, 56, r, 0, TAU); c.stroke(); } c.restore();
     c.save(); c.globalAlpha = .22; c.fillStyle = '#fff'; c.font = '900 64px "Noto Serif",serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText(EH[el], 88, 76); c.restore();
-    c.save(); c.translate(56, 58); c.scale(1.12, 1.12); c.translate(-56, -38); glyph(c, g, EC[el], 0); c.restore();
+    const im = svgImg('card', g);
+    if (im) c.drawImage(im, 7, 9, 98, 98);
+    else { c.save(); c.translate(56, 58); c.scale(1.12, 1.12); c.translate(-56, -38); glyph(c, g, EC[el], 0); c.restore(); }
     return (artCache[key] = cv.toDataURL());
   }
   function iconCanvas(cv, g, col, bgc) {
@@ -1754,7 +1765,26 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     c.scale(w * d / 112, w * d / 112);
     c.fillStyle = bgc || '#3a1c10'; c.fillRect(0, 0, 112, 112);
     const g2 = c.createRadialGradient(56, 56, 4, 56, 56, 70); g2.addColorStop(0, (col || '#f2c14e') + '66'); g2.addColorStop(1, 'rgba(0,0,0,0)'); c.fillStyle = g2; c.fillRect(0, 0, 112, 112);
-    c.translate(0, 18); glyph(c, g, col || '#f2c14e', 0);
+    const im = svgImg('card', g);
+    if (im) c.drawImage(im, 10, 10, 92, 92); else { c.translate(0, 18); glyph(c, g, col || '#f2c14e', 0); }
+  }
+
+  // --- hình SVG chi tiết (dauba-art.js). Ảnh chưa giải mã xong thì dùng hình canvas cũ ---
+  const SVGI = {}, SVG_FLY = { ghost: 1, wisp: 1, bat: 1, wasp: 1, lai: 1 };
+  function svgImg(kind, k) {
+    const A = window.DBART && DBART[kind]; if (!A || !A[k]) return null;
+    let im = SVGI[kind + ':' + k];
+    if (!im) { im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(A[k]); SVGI[kind + ':' + k] = im; }
+    return im.complete && im.naturalWidth ? im : null;
+  }
+  function preloadArt() {
+    if (!window.DBART) return;
+    const ims = [];
+    ['foe', 'card'].forEach(kind => Object.keys(DBART[kind] || {}).forEach(k => { svgImg(kind, k); ims.push(SVGI[kind + ':' + k]); }));
+    Promise.all(ims.map(im => (im.decode ? im.decode() : Promise.resolve()).catch(() => {}))).then(() => {
+      for (const k in artCache) delete artCache[k];            // vẽ lại hình lá bài bằng SVG
+      try { if (C) render(); } catch (e) {}
+    });
   }
 
   // --- quả cầu năng lượng ---
@@ -2847,7 +2877,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   window.DB = { get R() { return R; }, get C() { return C; }, cardArt, CARDS, FOES, RELICS, POOL, STARTER, stats, previewOf, sinhBonus, tapCard, endTurn, playCard, drawOne,
     startBattle, newRun, openMap, enterNode, get mode() { return mode; }, get busy() { return busy; }, victory, curTarget, setTarget: id => { C.target = id; }, alive, drawCards, render,
     get nodes() { return curNodes; }, stageDone, addRelic, inst, hasR, upgradeRelic, hurtMe, emax, ART, drawSprite, autoPick: false, moveOf, desc, descUp, cardHTML };
-  syncSnd(); fit(); toMenu(); requestAnimationFrame(frame);
+  syncSnd(); fit(); toMenu(); preloadArt(); requestAnimationFrame(frame);
 })();
 </script>
 <script src="../activity.js?v=20261103ban" defer></script>
