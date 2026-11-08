@@ -68,7 +68,7 @@
     '.tcoGhost[disabled],.tcoBig[disabled]{opacity:.5}',
     '.tcoJoin{display:flex;gap:8px;align-items:stretch}',
     '.tcoCodeBox{position:relative;flex:1;min-width:0;display:flex;gap:5px}',
-    '.tcoCodeBox .tcoT{flex:1;width:auto;max-width:54px;font-size:clamp(18px,6vw,26px);background:rgba(255,255,255,.9)}',
+    '.tcoCodeBox .tcoT{flex:1 1 0;min-width:0;width:auto;max-width:54px;font-size:clamp(18px,6vw,26px);background:rgba(255,255,255,.9)}',
     '.tcoCodeBox .tcoT.on{box-shadow:inset 0 0 0 3px #2f8fd8,0 4px 0 rgba(0,0,0,.3)}',
     '.tcoCodeBox input{position:absolute;inset:0;width:100%;height:100%;opacity:0;font-size:16px;text-transform:uppercase;border:0;background:none;color:transparent}',
     '.tcoJoin .tcoGhost{width:92px;flex:none;background:rgba(47,143,216,.35)}',
@@ -85,9 +85,9 @@
     '.tcoShuf .tcoT:nth-child(2){animation-delay:.12s}.tcoShuf .tcoT:nth-child(3){animation-delay:.24s}.tcoShuf .tcoT:nth-child(4){animation-delay:.36s}.tcoShuf .tcoT:nth-child(5){animation-delay:.48s}',
     '@keyframes tcoFlip{0%,100%{transform:rotateX(0)}50%{transform:rotateX(90deg)}}',
     '#tcoCode .tcoT{width:clamp(40px,13vw,54px)}',
-    '.tcoLink{align-self:center;color:var(--muted);font-size:13px;font-weight:700;padding:8px 14px}',
+    '.tcoLink{align-self:center;color:var(--muted);font-size:13px;font-weight:700;padding:14px 18px;min-height:44px}',
     /* thanh đối đầu trong ván */
-    '#tcoDuel{display:none;gap:6px;padding:10px 12px;border-radius:16px;background:rgba(0,0,0,.22);flex-direction:column}',
+    '#tcoDuel{display:none;gap:6px;padding:10px 12px;border-radius:16px;background:#0e2a3c;box-shadow:0 6px 14px rgba(0,0,0,.3);flex-direction:column;position:sticky;top:6px;z-index:5}',
     'body.tc-online #tcoDuel{display:flex}',
     '.tcoLane{display:grid;grid-template-columns:minmax(0,92px) 1fr auto;gap:8px;align-items:center}',
     '.tcoLane .nm{font-size:12.5px;font-weight:800;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}',
@@ -100,8 +100,8 @@
     '.tcoLane.off .nm small:after{content:" · mất kết nối";color:#ffb3a8}',
     'body.tc-online .status{display:none}',
     'body.tc-online #lvName{display:none}',
-    'body.tc-online .actions{grid-template-columns:1fr 1fr}',
-    'body.tc-online #btnGive,body.tc-online #btnNew{display:none}',
+    'body.tc-online .actions{grid-template-columns:1fr}',
+    'body.tc-online #btnGive,body.tc-online #btnNew,body.tc-online #btnHint{display:none}',
     '#tcoLeave{display:none}',
     'body.tc-online #tcoLeave{display:block}',
     /* màn chắn: giới thiệu + đếm ngược */
@@ -143,7 +143,7 @@
     '#tcoAsk h3{font-size:18px;font-weight:900;margin-bottom:6px}',
     '#tcoAsk p{font-size:13px;color:var(--muted);line-height:1.5;margin-bottom:14px}',
     '#tcoAsk .row{display:grid;grid-template-columns:1fr 1fr;gap:8px}',
-    '@media (max-height:520px) and (orientation:landscape){.tcoHero{display:none}.tcoBig{padding:12px}#tcoStage{gap:12px}}',
+    '@media (max-height:520px) and (orientation:landscape){.tcoHero{display:none}.tcoBig{padding:12px}#tcoStage{gap:12px}#tcoResult .bx{padding:12px 16px;max-height:94vh;overflow:auto}#tcoResult .word .tcoT{width:34px;font-size:18px}#tcoResult .why,#tcoResult .kwd{margin-bottom:6px}#tcoResult .tally{margin:2px 0 8px}#tcoResult .tally b{font-size:24px}#tcoResult .bt{grid-template-columns:1fr 1fr}}',
     '@media (prefers-reduced-motion:reduce){.tcoHero .tcoT,.tcoShuf .tcoT,#tcoStage .pl,#tcoStage .num .tcoT,#tcoResult .word .tcoT{animation:none!important}}'
   ].join('\n');
   var stEl = document.createElement('style'); stEl.textContent = css; document.head.appendChild(stEl);
@@ -262,11 +262,15 @@
     msg('');
     qm.on = true; qm.id = rndId(); qm.hasRoom = false; qm.tick = 0; qm.busy = false;
     $('tcoHome').style.display = 'none'; $('tcoSearch').classList.add('on');
-    http('PUT', QUEUE + qm.id, { name: myName(), seen: SV }).then(function () { return http('GET', QUEUE + qm.id); }).then(function (me) {
+    var myId = qm.id;
+    http('PUT', QUEUE + myId, { name: myName(), seen: SV }).then(function () { return http('GET', QUEUE + myId); }).then(function (me) {
+      if (!qm.on || qm.id !== myId) { http('DELETE', QUEUE + myId).catch(function () {}); return; }   // đã bấm hủy trong lúc gửi yêu cầu
       qm.offset = ((me && me.seen) || Date.now()) - Date.now();
+      clearInterval(qm.timer);
       qm.timer = setInterval(qmTick, 1500);
       qmTick();
     }).catch(function () {
+      if (qm.id !== myId) return;
       qm.on = false; showHome(); msg('Không kết nối được máy chủ ghép trận. Kiểm tra mạng rồi thử lại.');
     });
   }
@@ -304,7 +308,10 @@
           }
           return pre.then(function (go) {
             if (!go) return false;
-            return joinCode(room).then(function (err) { return !err; }, function () { return false; });
+            return joinCode(room).then(function (err) {
+              if (!err && !qm.on) { leave(true); return false; }        // đã hủy trong lúc đang vào phòng
+              return !err;
+            }, function () { return false; });
           });
         });
       });
@@ -404,6 +411,7 @@
   function startRound(g, first) {
     var t = on.tree, r = t.rounds && t.rounds[g];
     if (!r || typeof r.seed !== 'number' || typeof r.n !== 'number') return;     // chờ dữ liệu ván về đủ
+    if (r.n !== Math.floor(r.n) || r.n < 4 || r.n > 6) { toast('Dữ liệu ván không hợp lệ.'); leave(true).then(function () { TC.leave(); }); return; }
     if (r.v !== window.TimOChu.bankSize()) {
       toast('Hai máy đang dùng bộ từ khác nhau. Hãy tải lại trang rồi vào lại.');
       leave(true).then(function () { TC.leave(); });
@@ -459,11 +467,19 @@
       if (!on.active || !on.started || on.over) return;
       renderDuel();
       clearTimeout(on.sendT);
-      on.sendT = setTimeout(function () { http('PUT', ROOMS + on.code + '/prog/' + on.round + '/' + on.role, { n: n }).catch(function () {}); }, 100);
+      var code = on.code, g = on.round, role = on.role;
+      on.sendT = setTimeout(function () { http('PUT', ROOMS + code + '/prog/' + g + '/' + role, { n: n }).catch(function () {}); }, 100);
     },
     finish: function (won) {
       if (!on.active || !won || on.over) return;
-      http('PUT', ROOMS + on.code + '/win/' + on.round, { r: on.role }).catch(function () { /* đối thủ ghi thắng trước một chút: chờ dữ liệu về */ });
+      var code = on.code, g = on.round, tries = 0;
+      (function put() {
+        http('PUT', ROOMS + code + '/win/' + g, { r: on.role }).catch(function (e) {
+          // 401/403: đối thủ đã ghi thắng trước, chờ dữ liệu về. Lỗi mạng: thử lại vài lần.
+          if (e && (e.status === 401 || e.status === 403)) return;
+          if (++tries < 8 && on.active && on.code === code && on.round === g) setTimeout(put, 1500);
+        });
+      })();
     }
   });
 
@@ -475,7 +491,8 @@
     if (mine) { beep(784, .12); setTimeout(function () { beep(1175, .25); }, 140); } else { beep(300, .3); }
     try { if (navigator.vibrate) navigator.vibrate(mine ? [20, 40, 20] : 60); } catch (e) {}
     renderDuel();
-    setTimeout(function () { showResult(mine ? 'win' : 'lose'); }, mine ? 450 : 800);
+    clearTimeout(on.resT);
+    on.resT = setTimeout(function () { if (!on.forfeit) showResult(mine ? 'win' : 'lose'); }, mine ? 450 : 800);
   }
   function showResult(kind) {
     if (!on.active) return;
@@ -510,7 +527,7 @@
   function opponentLeft() {
     if (on.forfeit) return;
     on.forfeit = true; on.over = true; on.playing = false;
-    clearTimeout(on.stageT); stage.classList.remove('on');
+    clearTimeout(on.stageT); clearTimeout(on.resT); stage.classList.remove('on');
     TC.end();
     beep(784, .12);
     renderDuel();
@@ -547,7 +564,7 @@
 
   function resetOnline() {
     RM.reset();
-    clearInterval(on.hb); clearInterval(on.watch); clearTimeout(on.stageT); clearTimeout(on.sendT);
+    clearInterval(on.hb); clearInterval(on.watch); clearTimeout(on.stageT); clearTimeout(on.sendT); clearTimeout(on.resT);
     if (on.es) on.es.close();
     var snap = { code: on.code, role: on.role, active: on.active, started: on.started, tree: on.tree };
     on.active = false; on.code = null; on.role = null; on.es = null; on.tree = null; on.started = false; on.round = null; on.forfeit = false; on.over = false; on.playing = false; on.N = 0;
