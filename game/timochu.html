@@ -436,13 +436,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       requestAnimationFrame(function () { requestAnimationFrame(function () { document.querySelectorAll('.bl').forEach(function (el) { el.style.setProperty('--b', kb + 'px'); }); }); });
     }
     blurPrev = kb;
-    $('hintLeft').textContent = S.hints ? ' (' + S.hints + ')' : '';
+    $('hintLeft').textContent = ' (' + (HINT_MAX - S.hints) + ')';
     var inp = $('ans');
     inp.classList.toggle('key', S.sel === 'key');
     inp.placeholder = S.over ? 'Ván đã kết thúc' : S.sel === 'key' ? 'Đoán từ khóa (' + K.L.length + ' chữ)…' :
       S.solved[S.sel] ? 'Hàng ' + (S.sel + 1) + ' đã giải, chọn hàng khác' : 'Nhập đáp án hàng ' + (S.sel + 1) + '…';
     inp.disabled = S.over; $('btnAns').disabled = S.over;
-    $('btnHint').disabled = S.over; $('btnGive').disabled = S.over;
+    $('btnHint').disabled = S.over || S.hints >= HINT_MAX; $('btnGive').disabled = S.over;
     updateFoot();
   }
   function updateFoot() {
@@ -499,8 +499,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     S.keySolved = true; S.keyDirect = S.solved.some(function (x) { return !x; });
     finish(true);
   }
+  var HINT_MAX = 3;
   function hint() {
     if (!S || S.over) return;
+    if (S.hints >= HINT_MAX) { toast('Đã dùng hết ' + HINT_MAX + ' lượt gợi ý'); return; }
     var cs = cellsOf(S.sel).filter(function (p) { return !known(p[0], p[1]); });
     if (S.sel !== 'key') {
       // ưu tiên mở ô không thuộc cột từ khóa
@@ -510,7 +512,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     if (!cs.length) { toast('Hàng này đã đủ chữ, hãy trả lời'); return; }
     var p = cs[Math.floor(Math.random() * cs.length)];
     S.cells[p[0]][p[1]].hint = true; S.hints++;
-    toast('Đã mở một chữ (−30 điểm)');
+    toast('Đã mở một chữ (còn ' + (HINT_MAX - S.hints) + ' lượt gợi ý)');
     paint();
     var el = cellEl(p[0], p[1]); if (el && !reduced) { el.classList.remove('pop'); void el.offsetWidth; el.classList.add('pop'); }
     // mở hết chữ của một hàng thì hàng đó coi như đã giải
@@ -547,7 +549,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     var score = 0;
     if (won) {
       // bảng càng lớn điểm gốc càng cao; đoán từ khóa sớm được thưởng theo số hàng chưa giải
-      score = Math.max(50, 200 * S.N - secs - 30 * S.hints - 20 * S.wrongRow - 60 * S.wrongKey + 120 * unsolved + (S.keyDirect ? 150 : 0));
+      score = Math.max(50, 200 * S.N - secs - 20 * S.wrongRow - 60 * S.wrongKey + 120 * unsolved + (S.keyDirect ? 150 : 0));
       s.won++; s.streak++; s.best = Math.max(s.best, score);
       if (window.Scores) Scores.submit('timochu', score);
     } else s.streak = 0;
