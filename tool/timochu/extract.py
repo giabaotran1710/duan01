@@ -251,7 +251,22 @@ def main():
             n_extra += 1
     print('Từ tự viết gợi ý:', n_extra)
 
-    bank = sorted(best.values(), key=lambda e: (e['tier'], len(e['L']), e['w']))
+    extra_senses = []
+    # --- nghĩa thứ hai của từ đồng âm (senses.tsv): thêm câu hỏi mới có cùng đáp án ---
+    sp = os.path.join(os.path.dirname(__file__), 'senses.tsv')
+    n_sense = 0
+    if os.path.exists(sp):
+        for line in open(sp, encoding='utf-8'):
+            if not line.strip() or line.startswith('#'): continue
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) < 3: print('senses.tsv: dòng thiếu cột:', line.strip()); continue
+            w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
+            if w not in best: print('senses.tsv: chưa có từ chính, bỏ', w); continue
+            if lab not in POS_OK.values() and lab != 'Khẩu ngữ': print('senses.tsv: nhãn lạ', w, lab); continue
+            extra_senses.append({'w': w, 'L': best[w]['L'], 'label': lab, 'desc': desc, 'tier': best[w]['tier']})
+            n_sense += 1
+    print('Nghĩa thứ hai:', n_sense)
+    bank = sorted(best.values(), key=lambda e: (e['tier'], len(e['L']), e['w'])) + extra_senses
     # mô tả trùng nhau giữa hai từ: bỏ bớt để mỗi gợi ý chỉ có một đáp án
     by_desc = collections.defaultdict(list)
     for e in bank: by_desc[e['desc'].lower()].append(e)
@@ -261,9 +276,9 @@ def main():
     leak = []
     for e in bank:
         toks = set(re.findall(r'[^\W\d_]+', e['desc'].lower()))
-        if any(t in toks for t in e['w'].split()): leak.append(e['w'])
-    if leak: print('CẢNH BÁO gợi ý lộ đáp án:', leak)
-    bank = [e for e in bank if e['w'] not in leak]
+        if any(t in toks for t in e['w'].split()): leak.append(e)
+    if leak: print('CẢNH BÁO gợi ý lộ đáp án:', [e['w'] for e in leak])
+    bank = [e for e in bank if not any(e is x for x in leak)]
 
     with open(os.path.join(os.path.dirname(__file__), 'bank.tsv'), 'w', encoding='utf-8') as f:
         f.write('tu\tchu\tnhan\tmo_ta\tmuc\n')
@@ -279,7 +294,7 @@ def main():
         f.write('// Kho từ cho game Tìm ô chữ — tạo bởi tool/timochu/extract.py, không sửa tay.\n')
         f.write('// Định nghĩa dựa trên Wiktionary tiếng Việt (CC BY-SA 4.0, qua kaikki.org/Wiktextract),\n')
         f.write('// đã rà soát, rút gọn và viết lại thủ công. Độ phổ biến: phụ đề OpenSubtitles 2016 (OPUS).\n')
-        f.write('// Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)\n')
+        f.write('// Một từ đồng âm có thể xuất hiện nhiều dòng (mỗi dòng một nghĩa, một câu hỏi). Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)\n')
         f.write('window.TIMOCHU_WORDS = `' + '\n'.join(lines) + '`;\n')
     print('đã ghi', out, os.path.getsize(out), 'byte')
     print('Tổng:', len(bank), dict(collections.Counter(e['label'] for e in bank)))
