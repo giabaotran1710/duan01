@@ -246,6 +246,9 @@ def main():
             if (lab not in POS_OK.values() and lab != 'Khẩu ngữ') or not word_ok(w):
                 print('extra.tsv: bỏ', w, lab); continue
             if w in best: continue                      # đã có từ Wiktionary
+            rv = review.get(w, '')
+            if rv == 'x': stats['loại khi rà soát'] += 1; continue
+            if rv.startswith('clue='): lab, _, desc = rv[5:].partition('|'); desc = nfc(desc)
             c = freq.get(w, 0); wf = wfreq.get(w, 0)
             tier = 1 if (c >= 40 or wf >= 400) else 2
             if len(parts) >= 4 and parts[3].strip() in ('1', '2'): tier = int(parts[3].strip())   # cột 4 (tuỳ chọn): mức phổ biến
