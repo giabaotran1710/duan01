@@ -194,7 +194,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   function loadJ(k, d) { try { var v = JSON.parse(localStorage.getItem(k)); return v == null ? d : v; } catch (e) { return d; } }
   function saveJ(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function toast(msg) { var t = $('toast'); t.textContent = msg; t.classList.add('on'); clearTimeout(toast.h); toast.h = setTimeout(function () { t.classList.remove('on'); }, 1900); }
-  function show(id) { ['vMenu', 'vPlay'].forEach(function (v) { $(v).classList.toggle('on', v === id); }); }
+  function show(id) { document.querySelectorAll('.view').forEach(function (v) { v.classList.toggle('on', v.id === id); }); }
   function fmt(s) { return Math.floor(s / 60) + ':' + ('0' + (s % 60)).slice(-2); }
 
   /* ---------- kho từ ---------- */
@@ -305,6 +305,23 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     var P = generate(n, seed, recent);
     if (!P) { toast('Không tạo được bảng, thử lại nhé'); return; }
     recent.unshift(P.key.w); saveJ(RECENT_KEY, recent.slice(0, 60));
+    initGame(P, false);
+  }
+  // online: cả hai máy dựng cùng một bảng từ (cỡ, seed); đồng hồ chỉ chạy khi gọi begin()
+  var hooks = null;
+  function startOnline(n, seed) {
+    var P = generate(n, seed, []);
+    if (!P) return false;
+    initGame(P, true);
+    return true;
+  }
+  function beginOnline() { if (!S || !S.online || S.over) return; S.live = true; S.t0 = Date.now(); $('clock').textContent = '0:00'; clearInterval(clockTimer); clockTimer = setInterval(tick, 1000); }
+  function endOnline() {
+    if (!S || S.over) return;
+    S.over = true; S.won = false; clearInterval(clockTimer);
+    revealRest(); $('ans').value = ''; $('ans').blur(); paint();
+  }
+  function initGame(P, online) {
     var N = P.N, cells = [];
     for (var i = 0; i < N; i++) {
       cells[i] = [];
@@ -317,14 +334,16 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       });
     });
     S = { P: P, N: N, c: P.c, cells: cells, solved: P.rows.map(function () { return false; }), keySolved: false,
-      sel: 0, hints: 0, wrongRow: 0, wrongKey: 0, t0: Date.now(), over: false, won: false };
-    $('lvName').textContent = 'Bảng ' + N + '×' + N + (st(N).streak > 1 ? ' · chuỗi thắng ' + st(N).streak : '');
+      sel: 0, hints: 0, wrongRow: 0, wrongKey: 0, t0: Date.now(), over: false, won: false, online: !!online, sent: -1 };
+    $('lvName').textContent = online ? 'Đấu trực tuyến' : 'Bảng ' + N + '×' + N + (st(N).streak > 1 ? ' · chuỗi thắng ' + st(N).streak : '');
+    document.body.classList.toggle('tc-online', !!online);
     $('win').classList.remove('on');
     show('vPlay');
     renderBoard();
     select(firstOpen(0));
     $('clock').textContent = '0:00';
-    clearInterval(clockTimer); clockTimer = setInterval(tick, 1000);
+    clearInterval(clockTimer);
+    if (!online) clockTimer = setInterval(tick, 1000);
   }
   function rowOf(i) { return S.P.rows[i]; }
   function known(i, j) {
@@ -373,6 +392,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       el.classList.toggle('sel', inSel && !S.over);
     });
     renderClues();
+    if (S.online && hooks && hooks.progress) { var sc = S.solved.filter(Boolean).length; if (sc !== S.sent) { S.sent = sc; hooks.progress(sc, S.N); } }
   }
   function clueHTML(e) { return '<b>' + esc(e.lab) + '.</b> ' + esc(e.d); }
   function renderClues() {
@@ -401,6 +421,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   }
   function updateFoot() {
     var left = S.solved.filter(function (x) { return !x; }).length;
+    if (S.online) { $('foot').textContent = S.over ? 'Chữ màu cam là đáp án được mở ra.' : 'Chạm vào hàng để chọn, gõ cả từ rồi bấm Trả lời. Ai giải xong trước thì thắng.'; return; }
     $('foot').textContent = S.over ? 'Chữ màu cam là đáp án được mở ra.' :
       'Còn ' + left + ' hàng chưa giải. Chạm vào hàng hoặc gợi ý để chọn, gõ cả từ rồi bấm Trả lời. Từ nhiều tiếng thì gõ có dấu cách hay viết liền đều được.';
   }
@@ -431,7 +452,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   }
   function focusAns() { var inp = $('ans'); if (!inp.disabled) { try { inp.focus({ preventScroll: true }); } catch (e) { inp.focus(); } } }
   function submit() {
-    if (!S || S.over) return;
+    if (!S || S.over || (S.online && !S.live)) return;
     var v = lettersOf($('ans').value);
     if (!v.length) { toast('Hãy gõ đáp án trước'); return; }
     if (S.sel === 'key') return answerKey(v);
@@ -483,6 +504,12 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   }
   function finish(won) {
     if (S.over) return;
+    if (S.online) {                       // trận trực tuyến: không tính điểm/thống kê, chỉ báo cho module online
+      S.over = true; S.won = won; clearInterval(clockTimer);
+      revealRest(); $('ans').value = ''; $('ans').blur(); paint();
+      if (hooks && hooks.finish) hooks.finish(won, Math.floor((Date.now() - S.t0) / 1000));
+      return;
+    }
     S.over = true; S.won = won;
     clearInterval(clockTimer);
     var secs = Math.floor((Date.now() - S.t0) / 1000);
@@ -565,14 +592,25 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
   $('winLook').onclick = function () { $('win').classList.remove('on'); try { window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' }); } catch (e) { window.scrollTo(0, 0); } };
   $('winMenu').onclick = toMenu;
   $('btnBack').onclick = function () {
+    if (window.TOC && TOC.active()) { TOC.back(); return; }
     if ($('vPlay').classList.contains('on')) {
       if (inProgress() && !confirm('Thoát ván đang chơi?')) return;
       toMenu();
     } else location.href = '../';
   };
 
+  window.TimOChu.online = {
+    start: startOnline, begin: beginOnline, end: endOnline, show: show, toast: toast, esc: esc, fmt: fmt, norm: norm,
+    setHooks: function (h) { hooks = h; },
+    state: function () { return S; },
+    pick: function () { var n = 4 + Math.floor(Math.random() * 3); for (var a = 0; a < 20; a++) { var seed = (Math.random() * 2147483646) >>> 0; if (generate(n, seed, [])) return { n: n, seed: seed, v: BANK.length }; } return null; },
+    ok: function (n, seed) { return !!generate(n, seed, []); },
+    leave: function () { document.body.classList.remove('tc-online'); clearInterval(clockTimer); S = null; show('vMenu'); renderMenu(); }
+  };
   renderMenu();
 })();
 </script>
+<script src="../rematch.js?v=1"></script>
+<script src="timochu-online.js?v=20261108a"></script>
 </body>
 </html>
