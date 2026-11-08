@@ -78,6 +78,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
 .clue-box{background:var(--panel);border-radius:16px;padding:12px 14px;box-shadow:var(--shadow);min-height:70px;display:flex;flex-direction:column;justify-content:center}
 .clue-box .k{font-size:11px;color:var(--muted);font-weight:700;letter-spacing:.8px;text-transform:uppercase}
 .clue-box .t{font-size:16px;font-weight:600;margin-top:3px;line-height:1.4}
+.bl{display:inline;filter:blur(var(--b,9px));transition:filter .7s ease;user-select:none;-webkit-user-select:none;pointer-events:none}
 .clue-box .t b,.clue .lab{font-weight:800;color:var(--gold)}
 .answer{display:flex;gap:8px}
 .answer input{flex:1;min-width:0;padding:13px 14px;border-radius:14px;border:2px solid rgba(255,255,255,.18);background:rgba(0,0,0,.25);color:var(--ink);
@@ -395,6 +396,25 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     if (S.online && hooks && hooks.progress) { var sc = S.solved.filter(Boolean).length; if (sc !== S.sent) { S.sent = sc; hooks.progress(sc, S.N); } }
   }
   function clueHTML(e) { return '<b>' + esc(e.lab) + '.</b> ' + esc(e.d); }
+  // Gợi ý của từ khóa bị làm mờ: chỉ lộ từ loại. Giải được càng nhiều hàng thì chữ càng rõ.
+  // Khi chưa giải hàng nào, nội dung thật KHÔNG có trong trang (thay bằng chữ giả cùng độ dài).
+  var KEY_BLUR = 9, blurPrev = KEY_BLUR;
+  function scrambled(t) {
+    var h = 7, i;
+    for (i = 0; i < S.P.key.w.length; i++) h = (h * 31 + S.P.key.w.charCodeAt(i)) >>> 0;
+    var A = 'aăâeêioôơuưynmtcrslhdgbvpkx';
+    return String(t).replace(/[^\s.,;:!?()\-–]/g, function () { h = (h * 1103515245 + 12345) >>> 0; return A[(h >>> 8) % A.length]; });
+  }
+  function keyBlur() {
+    var c = S.solved.filter(Boolean).length;
+    return S.over ? 0 : KEY_BLUR * (1 - c / S.N);
+  }
+  function keyText(K) {
+    if (S.over) return esc(K.d);
+    var c = S.solved.filter(Boolean).length;
+    return '<span class="bl" aria-hidden="true">' + esc(c ? K.d : scrambled(K.d)) + '</span>';
+  }
+  function keyHTML(K) { return '<b>' + esc(K.lab) + '.</b> ' + keyText(K); }
   function renderClues() {
     var html = '';
     S.P.rows.forEach(function (r, i) {
@@ -405,11 +425,17 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     });
     var K = S.P.key;
     html += '<button class="clue keyc' + (S.sel === 'key' ? ' on' : '') + (S.keySolved ? ' done' : '') + '" data-row="key"><b>🔑</b><span class="txt">' +
-      '<span class="lab">' + esc(K.lab) + '.</span> ' + esc(K.d) + (S.over ? '<br><span class="aw' + (S.keySolved ? '' : ' rev') + '">' + esc(norm(K.w)) + '</span>' : '') + '</span></button>';
+      '<span class="lab">' + esc(K.lab) + '.</span> ' + keyText(K) + (S.over ? '<br><span class="aw' + (S.keySolved ? '' : ' rev') + '">' + esc(norm(K.w)) + '</span>' : '') + '</span></button>';
     $('clues').innerHTML = html;
     var e = S.sel === 'key' ? K : rowOf(S.sel).e;
     $('clueK').textContent = S.sel === 'key' ? 'Từ khóa · cột vàng · ' + K.L.length + ' chữ' : 'Hàng ' + (S.sel + 1) + ' · ' + e.L.length + ' chữ';
-    $('clueT').innerHTML = clueHTML(e);
+    $('clueT').innerHTML = S.sel === 'key' ? keyHTML(K) : clueHTML(e);
+    var kb = keyBlur(), bls = document.querySelectorAll('.bl');
+    if (bls.length) {
+      bls.forEach(function (el) { el.style.setProperty('--b', blurPrev + 'px'); });
+      requestAnimationFrame(function () { requestAnimationFrame(function () { document.querySelectorAll('.bl').forEach(function (el) { el.style.setProperty('--b', kb + 'px'); }); }); });
+    }
+    blurPrev = kb;
     $('hintLeft').textContent = S.hints ? ' (' + S.hints + ')' : '';
     var inp = $('ans');
     inp.classList.toggle('key', S.sel === 'key');
@@ -470,7 +496,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     var L = S.P.key.L;
     if (v.length !== L.length) { toast('Từ khóa có ' + L.length + ' chữ, bạn đang gõ ' + v.length + ' chữ'); animCells('key', 'bad'); return; }
     if (v.join('') !== L.join('')) { S.wrongKey++; animCells('key', 'bad'); toast('Từ khóa chưa đúng'); return; }
-    S.keySolved = true;
+    S.keySolved = true; S.keyDirect = S.solved.some(function (x) { return !x; });
     finish(true);
   }
   function hint() {
@@ -521,7 +547,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     var score = 0;
     if (won) {
       // bảng càng lớn điểm gốc càng cao; đoán từ khóa sớm được thưởng theo số hàng chưa giải
-      score = Math.max(50, 200 * S.N - secs - 30 * S.hints - 20 * S.wrongRow - 40 * S.wrongKey + 60 * unsolved);
+      score = Math.max(50, 200 * S.N - secs - 30 * S.hints - 20 * S.wrongRow - 60 * S.wrongKey + 120 * unsolved + (S.keyDirect ? 150 : 0));
       s.won++; s.streak++; s.best = Math.max(s.best, score);
       if (window.Scores) Scores.submit('timochu', score);
     } else s.streak = 0;
@@ -533,7 +559,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     $('winScore').textContent = won ? score : '';
     $('winScore').style.display = won ? '' : 'none';
     $('winDet').textContent = won ?
-      'Thời gian ' + fmt(secs) + ' · gợi ý ' + S.hints + ' · trả lời sai ' + (S.wrongRow + S.wrongKey) + (unsolved ? ' · thưởng đoán sớm +' + 60 * unsolved : '') + (s.streak > 1 ? ' · chuỗi thắng ' + s.streak : '') :
+      'Thời gian ' + fmt(secs) + ' · gợi ý ' + S.hints + ' · trả lời sai ' + (S.wrongRow + S.wrongKey) + (unsolved ? ' · thưởng đoán sớm +' + (120 * unsolved + (S.keyDirect ? 150 : 0)) : '') + (s.streak > 1 ? ' · chuỗi thắng ' + s.streak : '') :
       'Chữ màu cam trên bảng là đáp án. Thử một bảng khác nhé!';
     setTimeout(function () { if (S && S.over) $('win').classList.add('on'); }, won ? 650 : 250);
     if (won && !reduced && window.FX) FX.rain({ n: 90, colors: ['#ffd166', '#3fcf74', '#5cc8ff', '#ff6b8a'], size: 9 });

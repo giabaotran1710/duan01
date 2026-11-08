@@ -243,11 +243,13 @@ def main():
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 3: print('extra.tsv: dòng thiếu cột:', line.strip()); continue
             w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
-            if lab not in POS_OK.values() or not word_ok(w):
+            if (lab not in POS_OK.values() and lab != 'Khẩu ngữ') or not word_ok(w):
                 print('extra.tsv: bỏ', w, lab); continue
             if w in best: continue                      # đã có từ Wiktionary
             c = freq.get(w, 0); wf = wfreq.get(w, 0)
-            best[w] = {'w': w, 'L': letters(w).upper(), 'label': lab, 'desc': desc, 'tier': 1 if (c >= 40 or wf >= 400) else 2}
+            tier = 1 if (c >= 40 or wf >= 400) else 2
+            if len(parts) >= 4 and parts[3].strip() in ('1', '2'): tier = int(parts[3].strip())   # cột 4 (tuỳ chọn): mức phổ biến
+            best[w] = {'w': w, 'L': letters(w).upper(), 'label': lab, 'desc': desc, 'tier': tier}
             n_extra += 1
     print('Từ tự viết gợi ý:', n_extra)
 
@@ -261,9 +263,11 @@ def main():
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 3: print('senses.tsv: dòng thiếu cột:', line.strip()); continue
             w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
-            if w not in best: print('senses.tsv: chưa có từ chính, bỏ', w); continue
             if lab not in POS_OK.values() and lab != 'Khẩu ngữ': print('senses.tsv: nhãn lạ', w, lab); continue
-            extra_senses.append({'w': w, 'L': best[w]['L'], 'label': lab, 'desc': desc, 'tier': best[w]['tier']})
+            if w in best: tier = best[w]['tier']
+            elif word_ok(w): tier = int(parts[3].strip()) if len(parts) >= 4 and parts[3].strip() in ('1', '2') else 2   # chưa có từ chính: thành mục mới
+            else: print('senses.tsv: từ không hợp lệ, bỏ', w); continue
+            extra_senses.append({'w': w, 'L': letters(w).upper(), 'label': lab, 'desc': desc, 'tier': tier})
             n_sense += 1
     print('Nghĩa thứ hai:', n_sense)
     bank = sorted(best.values(), key=lambda e: (e['tier'], len(e['L']), e['w'])) + extra_senses
