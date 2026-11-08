@@ -15,7 +15,6 @@ an tử|D|Cái chết không đau đớn.|2
 an ủi|Đ|Làm dịu nỗi đau khổ, buồn phiền (thường là bằng lời khuyên giải).|1
 anh|D|Người con trai sinh trước trong cùng một thế hệ của gia đình, họ hàng.|1
 anh chàng|D|Người con trai trẻ (thường nói với ý bông đùa).|1
-anh chị em|D|Những người còn trẻ, gồm cả nam lẫn nữ, có quan hệ ruột thịt hoặc gần gũi như ruột thịt.|1
 anh dũng|T|Can đảm khác thường.|1
 anh em|D|Những người cùng một thế hệ có quan hệ ruột thịt hoặc họ hàng với nhau.|1
 anh hùng|D|Người lập nên công trạng đặc biệt lớn lao đối với nhân dân, đất nước.|1
@@ -176,7 +175,7 @@ bách hóa|D|Các mặt hàng tiêu dùng, chủ yếu là đồ may mặc và �
 bách hợp|D|Cây nhỏ cùng họ với hành tỏi, hoa to, hình loa kèn, màu trắng, vảy của củ dùng làm thuốc.|2
 bách nhật|D|Cây trồng làm cảnh, cùng họ với rau dền, lá mềm mọc đối, hoa màu tía, có thể đến một trăm ngày mới tàn.|2
 bách thảo|T|Nói nơi tập hợp nhiều loại cây.|2
-bái yết|Đ|Trtr. Trình diện người trên bằng cử chỉ lễ nghi cung kính.|2
+bái yết|Đ|Đến gặp người bề trên và làm lễ cung kính.|2
 bám|Đ|Giữ chặt, không rời ra.|1
 bám sát|Đ|Theo dõi, nắm bắt tình hình, diễn biến một việc nào đó một cách liên tục.|1
 bán|Đ|Đem đổi hàng hoá để lấy tiền.|1
@@ -491,7 +490,6 @@ bổn phận|D|Phần mình phải gánh vác, lo liệu, theo đạo lí.|1
 bổn sư|D|Thầy pháp gốc, thường chỉ Thích-ca Mâu-ni.|2
 bổng|T|Cao lên trong không gian, gây cảm giác rất nhẹ.|2
 bộ dạng|D|Cử chỉ và dáng người.|1
-bộ gõ|D|Công cụ hỗ trợ bàn phím trong việc đánh máy.|2
 bộ nhớ|D|Phần cứng cất giữ thông tin trong máy tính.|1
 bộ phận|D|Phần của một chỉnh thể, trong quan hệ với chỉnh thể.|1
 bộ thủ|D|Phần cơ bản cấu tạo nên chữ Hán hoặc chữ Nôm.|2
@@ -1036,7 +1034,6 @@ công nhận|Đ|Cho là phải, là đúng, là hợp lí.|1
 công sai|D|Số mà cộng vào mỗi số hạng của một cấp số cộng thì được số hạng liền sau.|2
 công suất|D|Khả năng làm việc của máy móc trong một đơn vị thời gian.|1
 công thức|D|Dãy kí hiệu viết gọn một quy tắc toán học, hóa học; cách pha chế một món.|1
-công trạng|D|Có những thành tích đóng góp to lớn.|2
 công tác|Đ|Làm việc tại một nơi khác, xa nơi làm việc thường ngày, trong một thời gian nhất định.|1
 công tâm|D|Lòng ngay thẳng, chỉ vì việc chung chứ không vì tư lợi hoặc thiên vị.|2
 công tử|D|Con trai nhà quan, nhà quyền quý thời phong kiến (có thể dùng để xưng gọi).|1
@@ -1167,7 +1164,6 @@ cần kíp|T|Phải làm ngay, rất gấp.|2
 cần mẫn|T|Siêng năng và lanh lợi.|2
 cầu|D|Công trình bắc ngang qua sông, suối hay đường để người và xe đi qua.|1
 cầu an|Đ|Chỉ mong được yên thân mà thôi.|2
-cầu chứng|Đ|Đăng ký (nhãn hiệu, mẫu mã).|2
 cầu cạnh|Đ|Xin xỏ, nhờ vả người có quyền thế để mong được việc gì.|2
 cầu hoà|Đ|Xin ngừng chiến, không giao tranh nữa.|2
 cầu hôn|Đ|Xin được lấy làm vợ.|1
@@ -1230,7 +1226,6 @@ cống hiến|Đ|Đóng góp công sức, tài năng cho sự nghiệp chung.|1
 cốp|D|Khoang đựng hành lý trên xe ô tô, xe máy.|2
 cốt|D|Xương người, động vật.|2
 cốt cách|D|Dáng vẻ, phong thái của một người.|2
-cốt cán|T|Tính chất sức mạnh, sự vững chắc của một người hoặc nhóm người.|2
 cốt lõi|D|Những cái quan trọng nhất, chủ yếu nhất.|1
 cốt nhục|T|Thân thiết, ruột thịt.|2
 cồn|D|Rượu có nồng độ cao, dùng để đốt, sát trùng.|2
@@ -1420,7 +1415,7 @@ dư âm|D|Tiếng vang hay ảnh hưởng còn đọng sau sự việc đã qua.
 dưa|D|Món ăn làm bằng rau hay củ muối chua.|2
 dương bản|D|Ảnh chụp một vật trên đó những phần trắng, đen phản ánh đúng những chỗ sáng, tối trên vật.|2
 dương cầm|D|Đàn piano, nhạc cụ có bàn phím đen trắng.|1
-dưỡng dục|Đ|Nuôi nấng, dạy dỗ. Sinh thành.|2
+dưỡng dục|Đ|Nuôi nấng và dạy dỗ con cái nên người.|2
 dưỡng lão|Đ|Chăm sóc, nuôi người già lúc tuổi cao.|2
 dưỡng sinh|Đ|Rèn luyện để bảo vệ sức khỏe.|2
 dược điển|D|Bộ tập hợp các tiêu chuẩn về chất lượng thuốc.|2
@@ -2781,7 +2776,6 @@ lên lớp|Đ|Nói như kiểu người bề trên dạy bảo.|1
 lên mặt|Đ|Làm cao, kiêu ngạo, tỏ vẻ hơn người.|1
 lên tiếng|Đ|Nói ra ý kiến của mình về một việc.|1
 lên án|Đ|Chỉ ra tội lỗi để buộc tội, để phê phán.|1
-lên đỉnh|Đ|Cảm giác sướng tột cùng.|1
 lênh láng|Đ|(Chất lỏng) tràn ra khắp một khoảng rộng.|2
 lênh đênh|Đ|Trôi nổi trên mặt nước, không có hướng nhất định.|2
 lêu lổng|T|Lang thang không được ai dạy dỗ chỉ bảo, không làm lụng gì.|2
@@ -2928,7 +2922,7 @@ lật|Đ|Trở một vật để thay đổi mặt của nó.|2
 lật lọng|Đ|Có tính phản bội lời cam kết, không làm theo lời hứa.|2
 lật mặt|Đ|Thay đổi thái độ từ tốt sang xấu một cách bất ngờ.|2
 lật tẩy|K|Làm cho lộ rõ bộ mặt gian dối hoặc mưu đồ xấu xa đang được che giấu.|1
-lật đật|D|Đồ chơi hình người có đáy tròn gắn vật nặng, hễ cứ đặt nằm là tự bật dậy. Con.|2
+lật đật|D|Đồ chơi hình người có đáy tròn gắn vật nặng, đặt nằm là tự bật dậy.|2
 lậu|T|Có tính chất trái phép, lén lút (thường nói về hàng hóa hay việc buôn bán).|2
 lắc|Đ|Làm cho chuyển động, rung động theo nhịp liên tục.|1
 lắc lư|Đ|Lảo đảo ngả nghiêng sang hai bên như muốn đổ.|1
@@ -3038,7 +3032,7 @@ lục địa|D|Vùng đất rộng lớn nằm giữa các đại dương, như 
 lục đục|Đ|Lủng củng, hay va chạm nhau.|2
 lụn bại|Đ|Lâm vào tình trạng suy kiệt và suy sụp không thể cứu vãn được.|2
 lụp xụp|T|Thấp bé, rách nát, tồi tàn, lộn xộn.|2
-lủi thủi|T|P. Một cách âm thầm, lặng lẽ, với vẻ cô đơn, đáng thương.|2
+lủi thủi|T|Âm thầm, lặng lẽ, với vẻ cô đơn, đáng thương.|2
 lủng củng|T|Lộn xộn, thiếu trật tự, vướng víu.|2
 lứa|D|Loạt những sinh vật cùng một thời kỳ sinh trưởng.|2
 lừa|Đ|Cố ý làm cho người khác tin điều sai để mình được lợi.|1
@@ -3278,7 +3272,7 @@ mọt|D|Loài sâu bọ khoét đục gỗ hay các hạt khô.|2
 mỏ|D|Phần sừng cứng chìa ra ngoài miệng loài chim.|2
 mỏ lết|D|Dụng cụ để vặn đai ốc, có thể điều chỉnh được kích cỡ để phù hợp với nhiều đai ốc.|2
 mỏi|T|Cảm thấy rã rời, cần nghỉ sau khi làm việc lâu hoặc quá sức.|2
-mỏi mắt|Đ|Ngb. Nói mong chờ từ lâu.|2
+mỏi mắt|Đ|Mong chờ lâu ngày, nhìn mãi về phía xa.|2
 mỏm|D|Phần nhô cao hay thò ra của núi, đá.|2
 mỏng|T|Không dày, có bề dày nhỏ.|2
 mỏng manh|T|Yếu ớt, dễ đứt, dễ vỡ, khó bền lâu.|1
@@ -3494,7 +3488,6 @@ ngưng|Đ|Thôi, không tiếp tục làm hay diễn ra nữa.|1
 ngưng đọng|Đ|Ở vào tình trạng dồn ứ lại, không lưu thông.|2
 ngước|Đ|Đưa mắt nhìn lên trên.|2
 người|D|Động vật có tư duy, biết nói và biết làm ra công cụ lao động.|1
-người lính|D|Kẻ mang quân phục, làm nhiệm vụ bảo vệ đất nước.|1
 người lớn|D|Kẻ đã trưởng thành, không còn là trẻ nhỏ.|1
 người nhái|D|Lực lượng biệt kích dưới nước của quân đội.|2
 ngưỡng cửa|D|Lúc mới đầu của cả một quá trình, lúc bước vào một giai đoạn.|1
@@ -4573,7 +4566,6 @@ sảng khoái|T|Nói tinh thần tỉnh táo, vui vẻ.|1
 sấm|D|Tiếng nổ rền vang trên trời khi có sét.|2
 sấy|Đ|Làm cho khô bằng khí nóng.|2
 sầm uất|T|Đông đúc, nhộn nhịp buôn bán.|2
-sần sùi|T|Có những mụn nhỏ nổi lên.|2
 sầu muộn|T|Buồn rầu trong lòng, không muốn nói ra.|2
 sầu riêng|D|Loài cây cùng họ với cây gạo, quả có gai mềm trông như quả mít nhỏ, vị ngọt, nồng và béo, mọc nhiều ở Nam Bộ.|2
 sập|Đ|Đổ ụp xuống một cách đột ngột.|2
@@ -4690,7 +4682,6 @@ thang|D|Dụng cụ có nhiều bậc dùng để trèo lên, xuống.|2
 thanh bạch|T|Trong sạch và giữ được tiết tháo.|2
 thanh long|D|Hylocereus undatus thuộc chi Hylocereus, ruột trắng với vỏ hồng hay đỏ.|1
 thanh lọc|Đ|Loại bỏ những thứ xấu để làm cho trong sạch.|2
-thanh minh|D|Tháng tư dương lịch, thường vào khoảng tháng hai, tháng ba âm lịch, có tục đi thăm viếng sửa sang mồ mả.|1
 thanh niên|D|Người trẻ tuổi, đang ở độ tuổi trưởng thành.|1
 thanh nữ|D|Người con gái trẻ tuổi.|2
 thanh thải|D|Sự dọn dẹp, vứt bỏ hoặc sắp xếp cho ngăn nắp; sự dọn quang.|2
@@ -4738,7 +4729,6 @@ thiếu|T|Dưới mức cần phải có, không đủ, hụt.|1
 thiếu niên|D|Người ở độ tuổi từ mười đến mười lăm.|1
 thiển cận|T|Nông cạn, chỉ thấy cái trước mắt.|2
 thiểu não|T|Có vẻ khổ sở, buồn bã, trông đáng thương.|2
-thiểu năng|T|Chậm phát triển, ngu, đần (nói tục).|1
 thiện|T|Tốt, lành, hợp với đạo đức.|2
 thiện chí|D|Ý muốn tốt, thành tâm khi làm việc gì.|1
 thiện nghệ|T|Giỏi nghề, lành nghề.|2
@@ -4868,7 +4858,6 @@ thói|D|Lối, cách sống hay hoạt động, thường không tốt, được
 thói quen|D|Cách làm lặp đi lặp lại lâu ngày thành nếp, khó thay đổi.|1
 thóp|D|Chỗ mềm trên đỉnh đầu trẻ mới sinh, nơi xương sọ chưa liền.|2
 thô|T|Có hình dáng to bè ra, đường nét thiếu mềm mại, trông không thích mắt.|2
-thô tục|T|Thiếu lịch sự, bậy bạ, nghe khó chịu.|1
 thôi|Đ|Ngừng hẳn lại, đình chỉ.|1
 thôi miên|Đ|Đưa người khác vào trạng thái như ngủ để điều khiển theo ý mình.|1
 thôi thúc|Đ|Giục giã khiến muốn làm ngay.|1
@@ -5001,7 +4990,6 @@ thắng|Đ|Giành được phần hơn trong cuộc đấu, cuộc thi.|1
 thắng cố|D|Món canh thịt của người H'mông.|2
 thắng trận|Đ|Đạt được kết quả làm cho địch không thể chiến đấu chống lại mình nữa.|1
 thắp|Đ|Châm lửa vào cho cháy lên.|2
-thằng cha|K|Tiếng gọi một người đàn ông với ý coi thường.|1
 thẳm|T|Sâu hoặc xa đến mức không thấy đáy, không thấy cùng.|2
 thẳng|T|Theo một hướng, không có chỗ nào chệch lệch, cong vẹo, gãy gập.|1
 thẳng tay|T|Mạnh mẽ, không chút nương nhẹ.|2
@@ -5144,7 +5132,6 @@ tiên tri|Đ|Biết trước những việc mãi về sau mới xảy ra.|1
 tiêu|Đ|Dùng tiền để mua sắm, chi trả.|1
 tiêu biểu|T|Có những nét chung, đại diện cho cả một nhóm.|1
 tiêu bản|D|Mẫu vật còn giữ nguyên dạng dùng để nghiên cứu.|2
-tiêu chuẩn|D|Cái nêu cái thước để làm chừng mực. Điều được quy định dùng làm chừng mực để phân loại đánh giá.|1
 tiêu chí|D|Dấu hiệu, yêu cầu để dựa vào mà phân loại, đánh giá.|1
 tiêu cực|T|Thụ động, không tốt, gây ảnh hưởng xấu.|1
 tiêu diệt|Đ|Làm cho chết hoặc mất hẳn, không còn tồn tại.|1
@@ -5337,7 +5324,6 @@ trù mật|T|Đông đúc, phồn vinh.|2
 trù phú|T|Đông dân và giàu có (thường nói về một vùng đất).|2
 trùm|Đ|Phủ lên trên, che lấp hết cả.|1
 trùng hợp|T|Tình cờ xảy ra cùng lúc hoặc giống nhau.|1
-trùng trục|T|Ph. Nói cởi trần thô lỗ.|2
 trùng tu|Đ|Sửa chữa lại một công trình kiến trúc.|1
 trùng điệp|T|Hết lớp này đến lớp khác liên tiếp nhau.|2
 trú ngụ|Đ|Ở, sinh sống tạm tại một nơi nào đó không phải quê hương mình.|2
@@ -5558,7 +5544,6 @@ tìm hiểu|Đ|Hỏi han, tra cứu để biết rõ về một điều gì.|1
 tình|D|Sự yêu thương, gắn bó giữa người với người.|1
 tình cảm|D|Sự rung động trong lòng trước một đối tượng nào đó.|1
 tình duyên|D|Quan hệ yêu đương giữa trai và gái gặp gỡ nhau.|2
-tình dục|D|Thú vui xác thịt hay đơn giản hơn là thú vui về tinh thần diễn đạt qua thể chất.|1
 tình nghi|Đ|Ngờ là có phạm tội nhưng chưa có bằng chứng.|1
 tình nhân|D|Người yêu, thường là trong mối quan hệ không chính thức.|1
 tình tiết|D|Những sự việc nhỏ trong diễn biến của một câu chuyện.|1
@@ -5746,7 +5731,6 @@ tỉnh giấc|Đ|Thức dậy sau khi ngủ.|1
 tỉnh táo|T|Đầu óc minh mẫn, sáng suốt, không bị mê muội.|1
 tị nạn|Đ|Đi nơi khác để tránh những nguy hiểm do chiến tranh hoặc loạn lạc gây nên.|1
 tịnh xá|D|Nơi thờ tự của hệ phái Khất sĩ.|2
-tịt ngòi|Đ|Là một hành động có nghĩa là dừng lại, không làm nữa. thường thường thì có nghĩa là dừng lại vĩnh viễn.|2
 tọa lạc|Đ|(Nhà cửa, đất đai) nằm ở một vị trí nào đó.|1
 tọa đàm|Đ|Họp mặt trao đổi thân mật về một vấn đề.|1
 tọa độ|D|Các con số xác định vị trí của một điểm trên mặt phẳng hay trong không gian.|1
@@ -5921,7 +5905,6 @@ vô hình|T|Mắt thường không thể nhìn thấy được.|1
 vô lý|T|Trái ngược với lẽ phải.|1
 vô lăng|D|Tay lái hình vành tròn của ô tô.|1
 vô minh|T|Không tỉnh táo, sáng suốt trong tâm trí.|2
-vô ngã|D|Không có mình. Quên hẳn mình.|2
 vô phép|T|Không giữ được đúng lễ độ của xã hội.|2
 vô sự|T|Không gặp rủi ro, tai nạn (như đã lo ngại).|1
 vô thượng|T|Ở vị trí tối cao trên tất cả.|2
@@ -6754,7 +6737,6 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đồng minh|D|Bên liên kết với mình để cùng chống lại kẻ thù chung.|1
 đồng nhất|T|Giống nhau hoàn toàn ở mọi chỗ.|1
 đồng nát|D|Người chuyên thu gom sắt vụn, các đồ dùng hỏng bỏ đi để bán lại cho các vựa thu mua.|2
-đồng phôi|T|Tính chất tồn tại song ánh liên tục giữa hai không gian tô pô.|2
 đồng phục|D|Quần áo may cùng kiểu, cùng màu cho mọi người trong một tập thể.|1
 đồng ruộng|D|(Tập hợp) Khoảng đất rộng để cày cấy, trồng trọt.|2
 đồng song|T|Cùng học tập tại một trường học.|2
