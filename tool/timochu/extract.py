@@ -14,8 +14,15 @@ Nguồn (không đưa vào repo vì quá lớn, tải về trước khi chạy):
      và từ loại chính của nó là gì (không lấy nội dung định nghĩa tiếng Anh):
      https://kaikki.org/dictionary/Vietnamese/kaikki.org-dictionary-Vietnamese.jsonl
   5. tool/timochu/review.tsv: kết quả rà soát thủ công (loại từ, chọn từ loại khác, hoặc viết lại gợi ý).
+  6. tool/timochu/extra.tsv: từ do người rà soát tự chọn và tự viết gợi ý ("từ<TAB>Từ loại<TAB>Mô tả"), dành cho từ thông dụng bị
+     loại vì gợi ý của Wiktionary chứa chính tiếng của đáp án ("tháp canh": "Tháp xây để canh gác...") hoặc chỉ ghi "Như ...".
+     Từ trong tệp này vẫn qua kiểm tra chữ cái, danh sách cấm và kiểm tra lộ đáp án.
+  7. (tuỳ chọn) Tệp đếm tần suất trên văn bản viết (Wikipedia, báo) do corpus_freq.py tạo, đường dẫn trong biến môi trường
+     TIMOCHU_FREQ_WRITTEN. Phụ đề phim ít có từ văn viết như "tháp canh", nên từ hai/ba tiếng đứng liền nhau đủ nhiều lần
+     trong văn bản viết cũng được nhận, kể cả khi chưa có trong danh sách của game Nối từ. Ngưỡng: TIMOCHU_W2 (hai tiếng,
+     mặc định 25) và TIMOCHU_W3 (ba tiếng, mặc định 40).
 
-Chạy:  python3 tool/timochu/extract.py <kaikki-vi.jsonl> <freq.tsv> <kaikki-en-vietnamese.jsonl>
+Chạy:  [TIMOCHU_FREQ_WRITTEN=<freq-written.tsv>] python3 tool/timochu/extract.py <kaikki-vi.jsonl> <freq.tsv> <kaikki-en-vietnamese.jsonl>
 Kết quả: tool/timochu/bank.tsv (để rà soát) và game/timochu-data/words.js (game đọc).
 
 Gợi ý theo đúng cấu trúc của chương trình: "[Từ loại/Khẩu ngữ]. [Mô tả]".
@@ -68,9 +75,9 @@ def letters(word):
 
 def word_ok(w):
     if w != w.lower(): return False                      # tên riêng, viết tắt
-    if not re.fullmatch(r"[^\W\d_]+( [^\W\d_]+)?", w): return False   # tối đa hai tiếng, chỉ chữ cái
+    if not re.fullmatch(r"[^\W\d_]+( [^\W\d_]+){0,2}", w): return False   # tối đa ba tiếng, chỉ chữ cái
     L = letters(w)
-    if not (2 <= len(L) <= 8): return False
+    if not (2 <= len(L) <= 9): return False                # bảng lớn nhất là 9×9
     if any(c not in ALPHA for c in L): return False
     if w in BAN_WORDS or any(s in BAN_WORDS for s in w.split()): return False
     return True
@@ -137,6 +144,13 @@ def main():
     for line in open(FREQ, encoding='utf-8'):
         parts = line.rstrip('\n').split('\t')
         freq[nfc(parts[0])] = int(parts[1])
+    wfreq = {}
+    wp = os.environ.get('TIMOCHU_FREQ_WRITTEN')
+    W2, W3 = int(os.environ.get('TIMOCHU_W2', 25)), int(os.environ.get('TIMOCHU_W3', 40))
+    if wp:
+        for line in open(wp, encoding='utf-8'):
+            parts = line.rstrip('\n').split('\t')
+            if parts[0].count(' ') >= 1: wfreq[nfc(parts[0])] = int(parts[1])
     md = open(os.path.join(ROOT, 'game/noitu-data/noitu-words.md'), encoding='utf-8').read()
     secs = re.split(r'^# PHẦN (\d)', md, flags=re.M)
     tier2 = {}
@@ -163,9 +177,11 @@ def main():
                 if c < 6: continue                        # đứng một mình ít nhất 6 lần trong phụ đề (từ ít gặp phải qua rà soát tay)
                 tier = 1 if c >= 300 else 2
             else:
-                if tier2.get(w) not in (0, 1, 2): continue
-                if c < 2: continue                        # hai tiếng đứng liền nhau ít nhất 2 lần
-                tier = 1 if c >= 40 else 2
+                wf = wfreq.get(w, 0)
+                old = ns == 2 and tier2.get(w) in (0, 1, 2) and c >= 2   # hai tiếng có trong Nối từ, đứng liền nhau ít nhất 2 lần
+                new = wf >= (W2 if ns == 2 else W3)                        # hoặc đủ phổ biến trong văn bản viết
+                if not (old or new): continue
+                tier = 1 if (c >= 40 or wf >= 400) else 2
             got = pick_sense(w, POS_OK[pt], d.get('senses') or [])
             if not got: continue
             label, desc = got
@@ -217,6 +233,23 @@ def main():
         _, label, desc = lst[0]
         best[w] = {'w': w, 'L': letters(w).upper(), 'label': label, 'desc': desc, 'tier': o['tier']}
     print('Bỏ:', dict(stats))
+
+    # --- từ tự viết gợi ý (extra.tsv) ---
+    ep = os.path.join(os.path.dirname(__file__), 'extra.tsv')
+    n_extra = 0
+    if os.path.exists(ep):
+        for line in open(ep, encoding='utf-8'):
+            if not line.strip() or line.startswith('#'): continue
+            parts = line.rstrip('\n').split('\t')
+            if len(parts) < 3: print('extra.tsv: dòng thiếu cột:', line.strip()); continue
+            w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
+            if lab not in POS_OK.values() or not word_ok(w):
+                print('extra.tsv: bỏ', w, lab); continue
+            if w in best: continue                      # đã có từ Wiktionary
+            c = freq.get(w, 0); wf = wfreq.get(w, 0)
+            best[w] = {'w': w, 'L': letters(w).upper(), 'label': lab, 'desc': desc, 'tier': 1 if (c >= 40 or wf >= 400) else 2}
+            n_extra += 1
+    print('Từ tự viết gợi ý:', n_extra)
 
     bank = sorted(best.values(), key=lambda e: (e['tier'], len(e['L']), e['w']))
     # mô tả trùng nhau giữa hai từ: bỏ bớt để mỗi gợi ý chỉ có một đáp án
