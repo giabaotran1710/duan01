@@ -297,27 +297,47 @@ const PLAYER_SCALE = 0.85;
 // Hàm JS và GLSL phải giống hệt nhau.
 // ============================================================
 function pisteCenter(z) {
-  return 34 * Math.sin(z * 0.0032) + 16 * Math.sin(z * 0.0013 + 1.3);
+  return 52 * Math.sin(z * 0.0046) + 22 * Math.sin(z * 0.0019 + 1.3) + 9 * Math.sin(z * 0.0103 + 0.7);
+}
+// Đoạn rẽ nhánh: đường trượt tách thành hai lối quanh một đảo rừng rồi nhập lại.
+// forkOff = khoảng cách từ tim đường tới tim mỗi lối (0 = không tách).
+function forkOff(z) {
+  const m = Math.max(0, Math.sin(z * 0.0037 + 4.2) - 0.45);
+  return m * m * 142;
+}
+const laneHalf = z => PISTE_HALF - forkOff(z) * 0.2;                                   // lối rẽ hẹp hơn đường chính
+const pisteDist = (x, z) => Math.abs(Math.abs(x - pisteCenter(z)) - forkOff(z));       // cách tim lối gần nhất
+// hướng của đường trượt tại chỗ người chơi (rad, 0 = đổ thẳng dốc)
+function pisteHeading(x, z) {
+  const e = 2, side = x >= pisteCenter(z) ? 1 : -1;
+  const at = q => pisteCenter(q) + side * forkOff(q);
+  return Math.atan2(at(z - e) - at(z + e), 2 * e);
 }
 function getTerrainHeight(x, z) {
   let h = 0.26 * z - 0.000003 * z * z + Math.sin(z * 0.0021) * 22;
   h += Math.sin(x * 0.05) * 0.5 + Math.cos(z * 0.05) * 0.6 + Math.sin(x * 0.12 + z * 0.08) * 0.35;
   h += Math.sin(z * 0.018 + x * 0.004) * 1.6 + Math.cos(z * 0.028 + 1.1) * 1.1;
-  const d = x - pisteCenter(z);
-  h += d * d * 0.0012 + Math.max(0, Math.abs(d) - PISTE_HALF) * 0.12;
+  const d = pisteDist(x, z);
+  h += d * d * 0.0012 + Math.max(0, d - laneHalf(z)) * 0.12;
   return h;
 }
 
 const TERRAIN_SHADER_FN = `
   float pisteCenter(float z) {
-    return 34.0 * sin(z * 0.0032) + 16.0 * sin(z * 0.0013 + 1.3);
+    return 52.0 * sin(z * 0.0046) + 22.0 * sin(z * 0.0019 + 1.3) + 9.0 * sin(z * 0.0103 + 0.7);
   }
+  float forkOff(float z) {
+    float m = max(0.0, sin(z * 0.0037 + 4.2) - 0.45);
+    return m * m * 142.0;
+  }
+  float laneHalf(float z) { return ${PISTE_HALF.toFixed(1)} - forkOff(z) * 0.2; }
+  float pisteDist(vec2 p) { return abs(abs(p.x - pisteCenter(p.y)) - forkOff(p.y)); }
   float terrainHeight(vec2 p) {
     float h = 0.26 * p.y - 0.000003 * p.y * p.y + sin(p.y * 0.0021) * 22.0;
     h += sin(p.x * 0.05) * 0.5 + cos(p.y * 0.05) * 0.6 + sin(p.x * 0.12 + p.y * 0.08) * 0.35;
     h += sin(p.y * 0.018 + p.x * 0.004) * 1.6 + cos(p.y * 0.028 + 1.1) * 1.1;
-    float d = p.x - pisteCenter(p.y);
-    h += d * d * 0.0012 + max(0.0, abs(d) - ${PISTE_HALF.toFixed(1)}) * 0.12;
+    float d = pisteDist(p);
+    h += d * d * 0.0012 + max(0.0, d - laneHalf(p.y)) * 0.12;
     return h;
   }
 `;
@@ -381,7 +401,7 @@ groundMat.onBeforeCompile = (shader) => {
      float _eps = 0.7;
      float _dhdx = (terrainHeight(vec2(_wp0.x + _eps, _wp0.z)) - terrainHeight(vec2(_wp0.x - _eps, _wp0.z))) / (2.0 * _eps);
      vTerrainSlope = abs(_dhdx);
-     vPisteD = _wp0.x - pisteCenter(_wp0.z);
+     vPisteD = pisteDist(vec2(_wp0.x, _wp0.z)) * (${PISTE_HALF.toFixed(1)} / laneHalf(_wp0.z));   // quy về bề rộng chuẩn
      vWorldPos = vec3(_wp0.x, _h, _wp0.z);
      vViewVec = cameraPosition - vWorldPos;
     `);
@@ -497,53 +517,72 @@ for (const sx of [-0.2, 0.2]) {
 }
 
 const darkMat = new THREE.MeshStandardMaterial({ color: 0x101018, roughness: 0.8 });
-const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e2a4a, roughness: 0.8 });
+const pantsMat = new THREE.MeshStandardMaterial({ color: 0x1e2a4a, roughness: 0.85 });
 const jacketMat = new THREE.MeshStandardMaterial({ color: 0xe63946, roughness: 0.7 });
-const bootGeo = new THREE.BoxGeometry(0.17, 0.22, 0.32);
-const legGeo = new THREE.CylinderGeometry(0.1, 0.11, 0.62, 8);
+const jacket2Mat = new THREE.MeshStandardMaterial({ color: 0xf4f1e8, roughness: 0.75 });
+const skinMat = new THREE.MeshStandardMaterial({ color: 0xf0c4a0, roughness: 0.8 });
+const packMat = new THREE.MeshStandardMaterial({ color: 0x24303f, roughness: 0.9 });
+// Người trượt có khớp: hông → đùi → gối → ống chân → giày; vai → bắp tay → khuỷu → cẳng tay → găng + gậy.
+// Giày gắn trên ván; hông hạ xuống khi gập gối nên chân luôn chạm ván.
+const THIGH = 0.4, SHIN = 0.4, BOOT_TOP = 0.3;
+const cap = (r, len, mat) => new THREE.Mesh(new THREE.CapsuleGeometry(r, len, 4, 10), mat);
+const bindMat = new THREE.MeshStandardMaterial({ color: 0x8a94a6, roughness: 0.4, metalness: 0.6 });
+for (const sx of [-0.2, 0.2]) {
+  const boot = new THREE.Mesh(new THREE.BoxGeometry(0.17, 0.2, 0.34), darkMat);
+  boot.position.set(sx, 0.17, 0.03); skiGroup.add(boot);
+  const cuff = new THREE.Mesh(new THREE.CylinderGeometry(0.095, 0.1, 0.16, 10), darkMat);
+  cuff.position.set(sx, 0.3, 0.06); cuff.rotation.x = -0.2; skiGroup.add(cuff);
+  const buckle = new THREE.Mesh(new THREE.BoxGeometry(0.19, 0.03, 0.05), bindMat);
+  buckle.position.set(sx, 0.24, -0.08); skiGroup.add(buckle);
+  for (const bz of [-0.2, 0.26]) { const bd = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.06, 0.12), bindMat); bd.position.set(sx, 0.08, bz); skiGroup.add(bd); }
+}
+const hips = new THREE.Group();          // hông: mang thân trên và hai chân, hạ xuống khi gập gối
+bodyGroup.add(hips);
+const pelvis = cap(0.17, 0.2, pantsMat); pelvis.rotation.z = Math.PI / 2; pelvis.position.y = 0.02; hips.add(pelvis);
 const legs = [];
 for (const sx of [-0.2, 0.2]) {
-  const boot = new THREE.Mesh(bootGeo, darkMat);
-  boot.position.set(sx, 0.17, 0.05);
-  bodyGroup.add(boot);
-  const leg = new THREE.Mesh(legGeo, pantsMat);
-  leg.position.set(sx, 0.58, 0.05);
-  bodyGroup.add(leg);
-  legs.push(leg);
+  const hip = new THREE.Group(); hip.position.set(sx * 0.85, 0, 0); hips.add(hip);
+  const thigh = cap(0.105, THIGH - 0.12, pantsMat); thigh.position.y = -THIGH / 2; hip.add(thigh);
+  const knee = new THREE.Group(); knee.position.y = -THIGH; hip.add(knee);
+  const kcap = new THREE.Mesh(new THREE.SphereGeometry(0.105, 10, 8), pantsMat); knee.add(kcap);
+  const shin = cap(0.09, SHIN - 0.14, pantsMat); shin.position.y = -SHIN / 2; knee.add(shin);
+  legs.push({ hip, knee });
 }
 const torsoGroup = new THREE.Group();   // phần thân trên, gập về trước khi tăng tốc
-torsoGroup.position.set(0, 0.88, 0.05);
-bodyGroup.add(torsoGroup);
-const torso = new THREE.Mesh(new THREE.CylinderGeometry(0.27, 0.24, 0.7, 12), jacketMat);
-torso.position.y = 0.35;
-torsoGroup.add(torso);
-const armGeo = new THREE.CylinderGeometry(0.075, 0.075, 0.6, 6);
-const armL = new THREE.Mesh(armGeo, jacketMat);
-armL.position.set(-0.32, 0.38, -0.08);
-armL.rotation.set(-0.7, 0, 0.3);
-torsoGroup.add(armL);
-const armR = new THREE.Mesh(armGeo, jacketMat);
-armR.position.set(0.32, 0.38, -0.08);
-armR.rotation.set(-0.7, 0, -0.3);
-torsoGroup.add(armR);
-// gậy trượt tuyết
+torsoGroup.position.set(0, 0.06, 0);
+hips.add(torsoGroup);
+const torso = cap(0.215, 0.3, jacketMat); torso.position.y = 0.33; torso.scale.set(1.12, 1, 0.82); torsoGroup.add(torso);
+const yoke = cap(0.12, 0.34, jacket2Mat); yoke.rotation.z = Math.PI / 2; yoke.position.y = 0.6; yoke.scale.set(1, 1, 0.85); torsoGroup.add(yoke);   // cầu vai áo màu sáng
+const belt = new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.21, 0.07, 14), darkMat); belt.position.y = 0.1; belt.scale.set(1.1, 1, 0.84); torsoGroup.add(belt);
+const pack = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.38, 0.14), packMat); pack.position.set(0, 0.38, 0.2); torsoGroup.add(pack);
+const bib = new THREE.Mesh(new THREE.PlaneGeometry(0.24, 0.2), jacket2Mat); bib.position.set(0, 0.36, -0.185); bib.rotation.y = Math.PI; torsoGroup.add(bib);
+// tay: vai → khuỷu → găng, mỗi tay cầm một gậy
 const poleMat = new THREE.MeshStandardMaterial({ color: 0xc0c8d8, roughness: 0.3, metalness: 0.6 });
-const poleGeo = new THREE.CylinderGeometry(0.018, 0.018, 1.25, 5);
-for (const sx of [-0.42, 0.42]) {
-  const p = new THREE.Mesh(poleGeo, poleMat);
-  p.position.set(sx, -0.05, 0.25);
-  p.rotation.x = 0.55;
-  torsoGroup.add(p);
+const arms = [];
+for (const sx of [-1, 1]) {
+  const sh = new THREE.Group(); sh.position.set(sx * 0.29, 0.6, 0); torsoGroup.add(sh);
+  const upper = cap(0.075, 0.2, jacketMat); upper.position.y = -0.16; sh.add(upper);
+  const el = new THREE.Group(); el.position.y = -0.32; sh.add(el);
+  const fore = cap(0.065, 0.18, jacketMat); fore.position.y = -0.14; el.add(fore);
+  const glove = new THREE.Mesh(new THREE.SphereGeometry(0.075, 10, 8), darkMat); glove.position.y = -0.3; glove.scale.set(1, 1.15, 1); el.add(glove);
+  const pole = new THREE.Group(); pole.position.y = -0.3; el.add(pole);
+  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(0.012, 0.016, 1.2, 6), poleMat); shaft.position.y = -0.5; pole.add(shaft);
+  const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.024, 0.022, 0.16, 8), darkMat); grip.position.y = 0.04; pole.add(grip);
+  const basket = new THREE.Mesh(new THREE.CylinderGeometry(0.055, 0.055, 0.012, 10), darkMat); basket.position.y = -1.0; pole.add(basket);
+  arms.push({ sh, el, pole, sx });
 }
-const head = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), new THREE.MeshStandardMaterial({ color: 0xffd5b0, roughness: 0.8 }));
-head.position.y = 0.86;
-torsoGroup.add(head);
-const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.17, 14, 8, 0, Math.PI * 2, 0, Math.PI / 1.8), new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.5 }));
-helmet.position.y = 0.88;
-torsoGroup.add(helmet);
-const goggles = new THREE.Mesh(new THREE.BoxGeometry(0.26, 0.07, 0.08), new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: 0.2, metalness: 0.5, emissive: 0x442200 }));
-goggles.position.set(0, 0.88, -0.13);
-torsoGroup.add(goggles);
+const neck = new THREE.Mesh(new THREE.CylinderGeometry(0.07, 0.085, 0.1, 10), jacket2Mat); neck.position.y = 0.7; torsoGroup.add(neck);
+const headGroup = new THREE.Group(); headGroup.position.y = 0.83; torsoGroup.add(headGroup);
+const head = new THREE.Mesh(new THREE.SphereGeometry(0.135, 16, 14), skinMat); head.scale.set(0.95, 1.08, 1); headGroup.add(head);
+const helmetMat = new THREE.MeshStandardMaterial({ color: 0x1e40af, roughness: 0.35, metalness: 0.15 });
+const helmet = new THREE.Mesh(new THREE.SphereGeometry(0.165, 18, 12, 0, Math.PI * 2, 0, Math.PI * 0.58), helmetMat); helmet.position.set(0, 0.02, 0.012); headGroup.add(helmet);
+const earL = new THREE.Mesh(new THREE.SphereGeometry(0.06, 8, 8), helmetMat); earL.position.set(-0.14, -0.04, 0.02); earL.scale.set(0.5, 1.2, 1); headGroup.add(earL);
+const earR = earL.clone(); earR.position.x = 0.14; headGroup.add(earR);
+const strap = new THREE.Mesh(new THREE.TorusGeometry(0.15, 0.022, 6, 20), darkMat); strap.rotation.x = Math.PI / 2; strap.position.y = 0.03; headGroup.add(strap);
+const goggles = new THREE.Mesh(new THREE.SphereGeometry(0.1, 14, 10, 0, Math.PI * 2, 0, Math.PI), new THREE.MeshStandardMaterial({ color: 0xffb020, roughness: 0.12, metalness: 0.7, emissive: 0x442200 }));
+goggles.scale.set(1.25, 0.5, 0.5); goggles.rotation.x = -Math.PI / 2; goggles.position.set(0, 0.03, -0.11); headGroup.add(goggles);
+const scarf = new THREE.Mesh(new THREE.TorusGeometry(0.105, 0.04, 8, 16), jacket2Mat); scarf.rotation.x = Math.PI / 2; scarf.position.y = 0.72; torsoGroup.add(scarf);
+playerRoot.traverse(o => { if (o.isMesh) o.castShadow = true; });
 
 // ============================================================
 // CÂY THÔNG — vẽ bằng InstancedMesh (một lệnh vẽ cho mỗi phần, cả rừng cây)
@@ -1018,18 +1057,21 @@ function resetPools() {
 function growEdgeForest(untilZ) {
   while (state.edgeNextZ > untilZ) {
     const z = state.edgeNextZ;
-    const c = pisteCenter(z);
+    const c = pisteCenter(z), fo = forkOff(z), lh = laneHalf(z);
+    // đảo rừng nằm giữa hai lối rẽ
+    const isle = fo - lh - 2.5;
+    if (isle > 1) { const k = isle > 12 ? 2 : 1; for (let i = 0; i < k; i++) placeTree(c + (Math.random() * 2 - 1) * isle, z + (Math.random() - 0.5) * 4, 2.2 + Math.random() * 1.5, true); }
     for (const side of [-1, 1]) {
       const n = 1 + (Math.random() < 0.6 ? 1 : 0);
       for (let i = 0; i < n; i++) {
-        const off = PISTE_HALF + 2.5 + Math.pow(Math.random(), 1.4) * 55;
+        const off = fo + lh + 2.5 + Math.pow(Math.random(), 1.4) * 55;
         placeTree(c + side * off, z + (Math.random() - 0.5) * 4, 2.3 + Math.random() * 1.6, true);
       }
     }
     // cây lẻ lác đác sát mép trong đường trượt
     if (Math.random() < 0.08) {
       const side = Math.random() < 0.5 ? -1 : 1;
-      placeTree(c + side * (PISTE_HALF - 2 - Math.random() * 3), z, 2.0 + Math.random() * 0.8, true);
+      placeTree(c + side * (fo + lh - 2 - Math.random() * 3), z, 2.0 + Math.random() * 0.8, true);
     }
     state.edgeNextZ -= 5;
   }
@@ -1095,8 +1137,10 @@ document.getElementById('retryBtn').addEventListener('click', startGame);
 // ============================================================
 const aheadZ = () => player.z - SPAWN_AHEAD;
 function clampToPiste(x, z, margin) {
-  const c = pisteCenter(z), lim = PISTE_HALF - (margin || 0);
-  return Math.max(c - lim, Math.min(c + lim, x));
+  const c = pisteCenter(z), fo = forkOff(z), lim = laneHalf(z) - (margin || 0);
+  if (fo <= lim) return Math.max(c - fo - lim, Math.min(c + fo + lim, x));      // chưa tách hẳn: một dải rộng
+  const lc = c + (x >= c ? fo : -fo);                                            // đã tách: kẹp vào lối gần nhất
+  return Math.max(lc - lim, Math.min(lc + lim, x));
 }
 function predictX() {
   const t = SPAWN_AHEAD / Math.max(8, player.speed);
@@ -1106,7 +1150,7 @@ function obstacleX(spread) {
   const z = aheadZ();
   let x;
   if (state.distance > 120 && Math.random() < 0.55) x = predictX() + (Math.random() - 0.5) * 14;
-  else x = pisteCenter(z) + (Math.random() - 0.5) * PISTE_HALF * 2 * (spread || 1);
+  else x = pisteCenter(z) + (Math.random() - 0.5) * (PISTE_HALF + forkOff(z)) * 2 * (spread || 1);
   return clampToPiste(x, z, 1);
 }
 function spawnTreeObstacle(x, s) { placeTree(x, aheadZ() + (Math.random() - 0.5) * 6, s || (2.0 + Math.random() * 1.0), false); }
@@ -1173,7 +1217,7 @@ function spawnGate() {
   if (!g) return;
   const z = aheadZ();
   g.active = true; g.passed = false;
-  g.worldX = clampToPiste(pisteCenter(z) + (Math.random() - 0.5) * (PISTE_HALF - 6) * 2, z, 4);
+  g.worldX = clampToPiste(forkOff(z) > 8 ? predictX() + (Math.random() - 0.5) * 12 : pisteCenter(z) + (Math.random() - 0.5) * (PISTE_HALF - 6) * 2, z, 4);
   g.worldZ = z; g.prevPlayerZ = player.z;
   g.mesh.position.set(g.worldX, getTerrainHeight(g.worldX, z), z);
   g.mesh.rotation.y = 0;
@@ -1201,7 +1245,7 @@ function spawnHouseCluster() {
     const h = housePool.find(h => !h.active);
     if (!h) return;
     h.active = true;
-    h.worldX = c + side * (PISTE_HALF + 9 + i * 9 + Math.random() * 4);
+    h.worldX = c + side * (forkOff(z) + laneHalf(z) + 9 + i * 9 + Math.random() * 4);
     h.worldZ = z - i * 7;
     // dọn chỗ: bỏ cây đè lên nhà
     for (const t of trees) if (t.active && Math.abs(t.worldX - h.worldX) < 7 && Math.abs(t.worldZ - h.worldZ) < 7) hideTree(t);
@@ -1214,6 +1258,7 @@ function spawnCableCar() {
   const c = cableCarPool.find(c => !c.active);
   if (!c) return;
   const z = aheadZ() - 15;
+  if (forkOff(z) > 1) return;                       // không dựng cáp treo ngang đoạn rẽ nhánh
   c.active = true; c.worldZ = z; c.worldX = pisteCenter(z);
   for (const t of trees) if (t.active && Math.abs(t.worldZ - z) < 3 && Math.abs(Math.abs(t.worldX - c.worldX) - CABLE_SPAN / 2) < 3) hideTree(t);
   c.mesh.position.set(c.worldX, getTerrainHeight(c.worldX, z), z);
@@ -1235,7 +1280,7 @@ function updatePlaying(dt) {
   if (keys['ArrowLeft'] || keys['KeyA']) tIn -= 1;
   if (keys['ArrowRight'] || keys['KeyD']) tIn += 1;
   if (tIn === 0 && (touchActive || mouseControl)) tIn = inputX;
-  const target = tIn * MAX_HEADING;
+  const target = clamp(pisteHeading(player.x, player.z) + tIn * MAX_HEADING, -1.4, 1.4);
   const rate = Math.abs(tIn) > 0.05 ? STEER_RATE * (0.55 + 0.45 * Math.abs(tIn)) : RETURN_RATE;
   const prevHeading = player.heading;
   player.heading += clamp(target - player.heading, -rate * dt, rate * dt);
@@ -1248,8 +1293,7 @@ function updatePlaying(dt) {
   const hx = (getTerrainHeight(player.x + e, player.z) - getTerrainHeight(player.x - e, player.z)) / (2 * e);
   const hz = (getTerrainHeight(player.x, player.z + e) - getTerrainHeight(player.x, player.z - e)) / (2 * e);
   const dhds = hx * sx + hz * sz;                     // độ cao đổi bao nhiêu khi đi 1 m theo hướng trượt
-  const offset = player.x - pisteCenter(player.z);
-  state.offPiste = Math.abs(offset) > PISTE_HALF + 0.5;
+  state.offPiste = pisteDist(player.x, player.z) > laneHalf(player.z) + 0.5;
   const mu = state.offPiste ? MU_POWDER : MU_PISTE;
   const tuck = clamp(player.speed / 30, 0, 1) * (Math.abs(tIn) < 0.2 ? 1 : 0.4);
   const drag = DRAG * (1 - 0.25 * tuck);
@@ -1386,9 +1430,29 @@ function updatePlayerTransform(dt, tIn) {
   bodyGroup.rotation.set(0, 0, player.lean);
   // tư thế trượt: gập gối và gập người về trước khi lao nhanh
   const tuck = clamp(player.speed / 32, 0, 1) * (tIn && Math.abs(tIn) > 0.2 ? 0.5 : 1);
-  torsoGroup.rotation.x = -(0.25 + 0.5 * tuck);
-  torsoGroup.position.y = 0.88 - 0.18 * tuck;
-  for (const l of legs) l.rotation.x = -0.15 - 0.25 * tuck;
+  const turn = clamp(-player.lean / 0.45, -1, 1);                 // -1 cua trái … +1 cua phải
+  const tt = performance.now() / 1000, chat = Math.sin(tt * 23) * 0.012 * clamp(player.speed / 30, 0, 1);   // rung nhẹ khi lao nhanh
+  for (let i = 0; i < 2; i++) {
+    // chân ngoài cua duỗi hơn, chân trong gập sâu hơn
+    const outer = (i === 0 ? 1 : -1) * turn;
+    const b = clamp(0.42 + 0.42 * tuck - 0.16 * outer + chat, 0.2, 1.05);
+    legs[i].hip.rotation.x = b; legs[i].knee.rotation.x = -2 * b;
+    legs[i].hipY = BOOT_TOP + (THIGH + SHIN) * Math.cos(b);
+  }
+  hips.position.y = Math.min(legs[0].hipY, legs[1].hipY) - 0.01;
+  hips.rotation.z = (legs[1].hipY - legs[0].hipY) * 1.2;         // hông nghiêng theo hai chân lệch nhau
+  torsoGroup.rotation.x = -(0.3 + 0.62 * tuck);
+  torsoGroup.rotation.z = -hips.rotation.z - player.lean * 0.35;   // thân trên giữ thăng bằng, ngả ngược vào trong cua ít hơn chân
+  headGroup.rotation.x = 0.25 + 0.5 * tuck;                         // ngẩng đầu nhìn về phía trước dù gập người
+  headGroup.rotation.y = -turn * 0.3;
+  for (const a of arms) {
+    const inner = a.sx * turn;                                     // tay phía trong cua hạ thấp, chạm tuyết
+    a.sh.rotation.x = 0.55 - 0.5 * tuck + 0.15 * inner;           // tay đưa ra trước; khi thu người thì ép sát
+    a.sh.rotation.z = a.sx * (0.42 - 0.3 * tuck + 0.28 * Math.max(0, inner));
+    a.el.rotation.x = 0.9 + 0.75 * tuck;
+    a.pole.rotation.x = -(1.9 + 0.35 * tuck) + 0.25 * Math.max(0, inner);   // gậy hướng ra sau, kẹp nách khi thu người
+    a.pole.rotation.z = -a.sx * 0.12;
+  }
 }
 
 function checkGatePass(g) {
