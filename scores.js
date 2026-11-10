@@ -56,6 +56,7 @@
     { id: 'timochu', name: 'Tìm ô chữ' },
     { id: 'daibacvutru', name: 'Đại bác vũ trụ' },
     { id: 'truottuyet3d', name: 'Trượt tuyết' },
+    { id: 'daokhobau', name: 'Đào kho báu' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 

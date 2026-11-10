@@ -43,6 +43,7 @@
     xepnuoc: ['iris', '#0b2a4a', '#0891b2', '#cffafe'],
     truotbang: ['tiles', '#0e3a5c', '#7dd3fc', '#e0f7ff'],
     truottuyet3d: ['diagonal', '#0c4a6e', '#38bdf8', '#ffffff'],
+    daokhobau: ['diagonal', '#2b1d14', '#8a5a36', '#f4c542'],
     demsao: ['iris', '#020617', '#312e81', '#fde68a'],
     bongnay: ['iris', '#7c2d12', '#ea580c', '#fed7aa'],
     demech: ['tiles', '#14532d', '#22c55e', '#fef9c3'],

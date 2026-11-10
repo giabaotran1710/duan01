@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js?v=20261103ban" data-game="daokhobau"></script>
+<script src="../scene.js" data-game="daokhobau"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#2b1d14">
+<title>Đào kho báu</title>
+<style>
+:root{--bg:#2b1d14;--bg2:#3a281b;--ink:#fdf3dc;--mute:#c9b08a;--gold:#f4c542;--dirt:#8a5a36;--dirtD:#6b4326;--pit:#1d130d;--red:#e2574c;--green:#6fcf6f}
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:"Trebuchet MS","Segoe UI",system-ui,sans-serif;overflow:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+body{background:
+  radial-gradient(circle at 20% 12%,rgba(255,200,120,.10),transparent 42%),
+  repeating-linear-gradient(178deg,rgba(0,0,0,.14) 0 3px,transparent 3px 46px),
+  linear-gradient(180deg,#4a3322 0,#2b1d14 38%,#1a110b 100%)}
+button{font-family:inherit;color:inherit;border:none;cursor:pointer}
+.back{position:fixed;top:calc(10px + env(safe-area-inset-top,0px));left:10px;z-index:30;width:42px;height:42px;border-radius:12px;background:rgba(0,0,0,.35);border:2px solid rgba(253,243,220,.25);font-size:20px}
+#app{height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:12px;padding:calc(10px + env(safe-area-inset-top,0px)) 12px calc(12px + env(safe-area-inset-bottom,0px))}
+.hud{width:min(94vw,440px);display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;padding-left:50px}
+.stat{background:rgba(0,0,0,.32);border:2px solid rgba(253,243,220,.14);border-radius:12px;padding:6px 8px;text-align:center}
+.stat small{display:block;font-size:10px;letter-spacing:.14em;color:var(--mute);text-transform:uppercase}
+.stat b{font-size:22px;font-variant-numeric:tabular-nums;display:inline-flex;align-items:center;gap:5px}
+.stat b svg{width:20px;height:20px}
+#picksBox.low b{color:var(--red);animation:pulse .7s infinite}
+#picksBox.bump b{animation:bump .35s}
+@keyframes pulse{50%{opacity:.45}}
+@keyframes bump{40%{transform:scale(1.35)}}
+#boardWrap{position:relative;width:min(94vw,440px,calc(100dvh - 250px));aspect-ratio:1;background:var(--pit);border-radius:16px;padding:8px;border:3px solid #120b07;box-shadow:0 0 0 3px #5b3d26,0 12px 30px rgba(0,0,0,.5)}
+#board{width:100%;height:100%;display:grid;grid-template-columns:repeat(5,1fr);grid-template-rows:repeat(5,1fr);gap:6px}
+#boardWrap.shake{animation:shake .28s}
+@keyframes shake{20%{transform:translate(-4px,2px)}40%{transform:translate(4px,-2px)}60%{transform:translate(-3px,-1px)}80%{transform:translate(2px,2px)}}
+.tile{position:relative;border-radius:10px;background:
+  radial-gradient(circle at 28% 30%,rgba(255,255,255,.16) 0 7%,transparent 8%),
+  radial-gradient(circle at 70% 64%,rgba(0,0,0,.22) 0 9%,transparent 10%),
+  radial-gradient(circle at 44% 80%,rgba(255,255,255,.10) 0 5%,transparent 6%),
+  linear-gradient(160deg,#a26b40,var(--dirt) 55%,var(--dirtD));
+  box-shadow:inset 0 3px 0 rgba(255,255,255,.18),inset 0 -5px 0 rgba(0,0,0,.28),0 3px 0 #2a190e;overflow:visible;min-width:0;min-height:0}
+.tile.v1{filter:hue-rotate(-6deg) brightness(.94)}.tile.v2{filter:hue-rotate(5deg) brightness(1.05)}
+.tile:not(.open):active{transform:translateY(2px) scale(.96)}
+.tile:focus-visible{outline:3px solid var(--gold);outline-offset:1px}
+.tile.open{background:#24170f;box-shadow:inset 0 4px 10px rgba(0,0,0,.7);cursor:default}
+.tile .it{position:absolute;inset:9%;display:block;animation:pop .38s cubic-bezier(.2,1.6,.4,1)}
+.tile .it svg{width:100%;height:100%;display:block}
+@keyframes pop{0%{transform:scale(.2) rotate(-18deg);opacity:0}}
+.tile.rare::after{content:"";position:absolute;inset:-2px;border-radius:12px;border:2px solid var(--gold);box-shadow:0 0 14px rgba(244,197,66,.75);animation:glow 1.4s ease-in-out infinite;pointer-events:none}
+@keyframes glow{50%{opacity:.35}}
+.tile .n{position:absolute;right:3px;bottom:1px;font-size:clamp(10px,3.2vw,14px);font-weight:900;color:#ffe9a8;text-shadow:0 1px 2px #000,0 0 4px #000;z-index:2}
+.tile .n.z{color:#8d7a63}
+.chip{position:absolute;width:8px;height:8px;background:#b07a4b;border-radius:2px;pointer-events:none;z-index:5;animation:chip .55s ease-out forwards}
+@keyframes chip{to{transform:translate(var(--dx),var(--dy)) rotate(260deg);opacity:0}}
+.fly{position:absolute;z-index:6;font-weight:900;font-size:18px;pointer-events:none;text-shadow:0 2px 0 #000,0 0 6px #000;transform:translate(-50%,-50%);animation:fly .9s ease-out forwards;white-space:nowrap}
+@keyframes fly{to{transform:translate(-50%,-190%);opacity:0}}
+#msg{min-height:22px;font-size:15px;font-weight:700;text-align:center;color:var(--mute)}
+#msg b{color:var(--gold)}
+.row{display:flex;gap:10px;width:min(94vw,440px);min-height:52px;justify-content:center}
+.btn{flex:1;max-width:260px;height:52px;border-radius:14px;font-size:16px;font-weight:900;letter-spacing:.04em;background:linear-gradient(180deg,#ffd75e,#e0a21c);color:#3a2408;box-shadow:0 4px 0 #8a5d0c}
+.btn:active{transform:translateY(3px);box-shadow:0 1px 0 #8a5d0c}
+.btn.ghost{background:rgba(0,0,0,.3);color:var(--ink);box-shadow:none;border:2px solid rgba(253,243,220,.3)}
+.btn[hidden]{display:none}
+#downBtn{animation:nudge 1.2s ease-in-out infinite}
+@keyframes nudge{50%{transform:translateY(-3px);filter:brightness(1.12)}}
+.ov{position:fixed;inset:0;z-index:20;display:flex;align-items:center;justify-content:center;padding:18px;background:rgba(18,11,7,.86);overflow-y:auto}
+.ov[hidden]{display:none}
+.card{width:min(92vw,400px);background:linear-gradient(180deg,#4a3322,#33231a);border:3px solid #6e4b2e;border-radius:20px;padding:22px 18px;text-align:center;box-shadow:0 14px 40px rgba(0,0,0,.6)}
+.card h1{font-size:clamp(30px,9vw,40px);letter-spacing:.02em;color:var(--gold);text-shadow:0 3px 0 #6b4a08}
+.card p{font-size:14px;line-height:1.5;color:var(--mute);margin:8px 0}
+.demo{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:14px 0}
+.demo div{background:rgba(0,0,0,.3);border-radius:10px;padding:6px 2px;font-size:11px;color:var(--mute)}
+.demo svg{width:34px;height:34px;display:block;margin:0 auto 2px}
+.demo b{display:block;color:var(--ink);font-size:12px}
+.big{font-size:44px;font-weight:900;color:var(--gold);font-variant-numeric:tabular-nums}
+.haul{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:10px 0}
+.haul span{display:inline-flex;align-items:center;gap:3px;background:rgba(0,0,0,.3);border-radius:9px;padding:3px 7px;font-size:13px;font-weight:700}
+.haul svg{width:20px;height:20px}
+.card .btn{width:100%;max-width:none;margin-top:10px}
+@media (orientation:landscape) and (max-height:520px){
+  #app{display:grid;grid-template-columns:auto minmax(200px,300px);grid-template-rows:auto auto auto;align-content:center;justify-content:center;gap:10px 18px}
+  #boardWrap{width:min(calc(100dvh - 24px),52vw);grid-column:1;grid-row:1/4}
+  .hud,.row,#msg{width:100%;padding-left:0;grid-column:2}
+  .demo{grid-template-columns:repeat(8,1fr);margin:8px 0}.card{width:min(94vw,640px);padding:12px 14px}.card p{margin:4px 0;font-size:13px}
+}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01s!important}}
+</style>
+</head>
+<body>
+<button class="back" id="backBtn" aria-label="Về trang chủ" data-no-scene>←</button>
+<div id="app">
+  <div class="side" style="display:contents" id="side1">
+    <div class="hud">
+      <div class="stat"><small>Tầng</small><b id="depth">1</b></div>
+      <div class="stat" id="picksBox"><small>Cuốc</small><b><span id="pickIco"></span><span id="picks">0</span></b></div>
+      <div class="stat"><small>Điểm</small><b id="score">0</b></div>
+    </div>
+  </div>
+  <div id="boardWrap"><div id="board" role="grid" aria-label="Bãi đào 25 ô"></div></div>
+  <div class="side" style="display:contents" id="side2">
+    <div id="msg" aria-live="polite">Chọn một ô để đào</div>
+    <div class="row"><button class="btn" id="downBtn" hidden>Xuống tầng dưới (+5 cuốc)</button></div>
+  </div>
+</div>
+
+<div class="ov" id="menu">
+  <div class="card">
+    <h1>ĐÀO KHO BÁU</h1>
+    <p>Chọn một trong 25 ô rồi bổ cuốc. Mỗi nhát tốn <b>1 cuốc</b>. Hết cuốc là hết lượt.</p>
+    <div class="demo" id="demo"></div>
+    <p>Số ở góc ô đã đào cho biết có <b>bao nhiêu ô quý</b> (từ bạc trở lên) nằm sát bên. Tìm <b>cầu thang</b> để xuống sâu hơn, càng sâu càng nhiều của quý.</p>
+    <p id="bestLine"></p>
+    <button class="btn" id="startBtn">BẮT ĐẦU ĐÀO</button>
+  </div>
+</div>
+<div class="ov" id="over" hidden>
+  <div class="card">
+    <h1>HẾT CUỐC</h1>
+    <p id="overSub"></p>
+    <div class="big" id="overScore">0</div>
+    <div class="haul" id="haul"></div>
+    <p id="overBest"></p>
+    <button class="btn" id="againBtn">ĐÀO LẠI</button>
+    <button class="btn ghost" id="homeBtn">Về trang chủ</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+const $ = id => document.getElementById(id);
+const S = (b) => '<svg viewBox="0 0 40 40" aria-hidden="true">' + b + '</svg>';
+const gem = (c1, c2, c3) => S('<path d="M11 6h18l8 10-17 20L3 16z" fill="' + c1 + '"/><path d="M11 6l3 10H3zM29 6l-3 10h11zM14 16h12l-6 20z" fill="' + c2 + '"/><path d="M11 6h18l-3 10H14z" fill="' + c3 + '"/><path d="M8 5l1.2 2.8L12 9l-2.8 1.2L8 13l-1.2-2.8L4 9l2.8-1.2z" fill="#fff"/>');
+const ore = (rock, c, hi) => S('<path d="M5 26l4-13 10-7 12 3 5 12-4 11-15 3z" fill="' + rock + '"/><path d="M5 26l4-13 10-7-3 12z" fill="rgba(255,255,255,.14)"/><path d="M12 22l4-4 4 3-3 5zM22 13l5-1 2 5-5 2zM24 25l5-2 1 5-4 2z" fill="' + c + '"/><path d="M13.5 21l2.5-2 1.5 1.2zM23 14l3-.8.8 2z" fill="' + hi + '"/>');
+// Danh mục vật phẩm: v = điểm gốc, w = trọng số, wd = tăng theo tầng
+const ITEMS = {
+  dat:  { name: 'Đất', v: 0, w: 30, svg: S('<ellipse cx="20" cy="27" rx="15" ry="8" fill="#6b4326"/><path d="M7 27q4-13 13-13t13 13z" fill="#9a6a41"/><circle cx="15" cy="22" r="2" fill="#7b5231"/><circle cx="24" cy="24" r="1.6" fill="#b98a5c"/><circle cx="20" cy="18" r="1.3" fill="#7b5231"/>') },
+  da:   { name: 'Đá', v: 2, w: 22, svg: S('<path d="M5 27l4-13 10-7 12 3 5 12-4 11-15 3z" fill="#8d939b"/><path d="M5 27l4-13 10-7-2 13z" fill="#b3b9c1"/><path d="M17 20l14-10 5 12-4 11z" fill="#6f757d"/>') },
+  than: { name: 'Than', v: 8, w: 14, svg: ore('#3b3f46', '#14161a', '#5d6470') },
+  dong: { name: 'Đồng', v: 15, w: 10, svg: ore('#7d7468', '#d9793a', '#ffc08a') },
+  sat:  { name: 'Sắt', v: 25, w: 7, svg: ore('#6f6a66', '#c9ced6', '#ffffff') },
+  bac:  { name: 'Bạc', v: 50, w: 5, wd: .5, rare: 1, svg: S('<path d="M6 30l5-12h18l5 12z" fill="#aeb8c4"/><path d="M11 18h18l-3-6H14z" fill="#e8eef5"/><path d="M6 30l5-12 3 12z" fill="#d4dce6"/><path d="M30 8l1 2.4 2.4 1L31 12.4 30 15l-1-2.6-2.4-1 2.4-1z" fill="#fff"/>') },
+  vang: { name: 'Vàng', v: 100, w: 3, wd: .5, rare: 1, svg: S('<path d="M6 30l5-12h18l5 12z" fill="#e0a21c"/><path d="M11 18h18l-3-6H14z" fill="#ffe27a"/><path d="M6 30l5-12 3 12z" fill="#f4c542"/><path d="M30 7l1.2 2.8L34 11l-2.8 1.2L30 15l-1.2-2.8L26 11l2.8-1.2z" fill="#fff"/>') },
+  luc:  { name: 'Ngọc lục bảo', v: 180, w: 1.5, wd: .4, rare: 1, svg: gem('#1fa463', '#12804a', '#6fe3a2') },
+  hong: { name: 'Hồng ngọc', v: 300, w: .8, wd: .3, rare: 1, svg: gem('#e0284f', '#a8143a', '#ff8fa6') },
+  kc:   { name: 'Kim cương', v: 600, w: .4, wd: .2, rare: 1, svg: gem('#7fdcff', '#3fb2ea', '#e3f8ff') },
+  ruong:{ name: 'Rương kho báu', v: 1000, w: .3, wd: .1, rare: 1, svg: S('<rect x="5" y="17" width="30" height="17" rx="2" fill="#8a4f1d"/><path d="M5 18q0-10 15-10t15 10z" fill="#b06a2a"/><path d="M5 17h30v3H5zM10 8.6v25.4h3V8zM27 8v26h3V8.6z" fill="#f4c542"/><rect x="17" y="16" width="6" height="8" rx="1.5" fill="#ffe27a"/><circle cx="20" cy="20" r="1.3" fill="#6b4a08"/>') },
+  cuoc: { name: 'Cuốc phụ', v: 0, w: 4, svg: S('<path d="M12 33L27 12" stroke="#a8743f" stroke-width="4" stroke-linecap="round"/><path d="M12 8q14-4 24 8-9-5-17-2-3-2-7-6z" fill="#c9ced6"/><path d="M12 8q9-1 15 3l-4 3q-5-3-11-6z" fill="#fff" opacity=".6"/>') },
+  khi:  { name: 'Khí độc', v: 0, w: 3, wd: 1, svg: S('<circle cx="14" cy="23" r="8" fill="#7ac74f"/><circle cx="25" cy="19" r="9" fill="#93d95f"/><circle cx="23" cy="28" r="6" fill="#62ad3c"/><circle cx="17" cy="21" r="2" fill="#23420f"/><circle cx="26" cy="20" r="2" fill="#23420f"/><path d="M17 28q5 3 9 0" stroke="#23420f" stroke-width="2" fill="none" stroke-linecap="round"/>') },
+  thang:{ name: 'Cầu thang', v: 0, w: 0, svg: S('<path d="M11 4v32M29 4v32" stroke="#d9a15b" stroke-width="4" stroke-linecap="round"/><path d="M11 10h18M11 18h18M11 26h18M11 34h18" stroke="#f1c98c" stroke-width="3.2"/>') },
+};
+const ORDER = ['dat', 'da', 'than', 'dong', 'sat', 'bac', 'vang', 'luc', 'hong', 'kc', 'ruong'];
+const START_PICKS = 12, DOWN_BONUS = 5, PICK_BONUS = 3, GAS_COST = 2;
+const BEST_KEY = 'daokhobau_best';
+let st = null, busy = false, actx = null;
+
+const best = () => { try { return parseInt(localStorage.getItem(BEST_KEY), 10) || 0; } catch (e) { return 0; } };
+const fmt = n => n.toLocaleString('vi-VN');
+const mult = d => 1 + 0.25 * (d - 1);
+
+function tone(f, d, type, vol, slide) {
+  try {
+    actx = actx || new (window.AudioContext || window.webkitAudioContext)();
+    if (actx.state === 'suspended') actx.resume();
+    const o = actx.createOscillator(), g = actx.createGain(), t = actx.currentTime;
+    o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+    if (slide) o.frequency.exponentialRampToValueAtTime(slide, t + d);
+    g.gain.setValueAtTime(vol || .12, t); g.gain.exponentialRampToValueAtTime(.001, t + d);
+    o.connect(g).connect(actx.destination); o.start(t); o.stop(t + d);
+  } catch (e) {}
+}
+const sfx = {
+  dig: () => tone(150, .12, 'triangle', .2, 60),
+  ore: () => { tone(520, .1, 'square', .06); setTimeout(() => tone(780, .14, 'square', .06), 70); },
+  rare: () => [660, 880, 1100, 1320].forEach((f, i) => setTimeout(() => tone(f, .22, 'sine', .12), i * 80)),
+  gas: () => tone(220, .5, 'sawtooth', .1, 70),
+  pick: () => { tone(700, .08, 'triangle', .12); setTimeout(() => tone(1050, .14, 'triangle', .12), 80); },
+  down: () => tone(400, .4, 'sine', .14, 120),
+  over: () => tone(300, .7, 'triangle', .14, 90),
+};
+
+function genFloor(d) {
+  const keys = Object.keys(ITEMS).filter(k => ITEMS[k].w > 0);
+  const ws = keys.map(k => Math.min(ITEMS[k].w + (ITEMS[k].wd || 0) * (d - 1), k === 'khi' ? 9 : 99));
+  const tot = ws.reduce((a, b) => a + b, 0);
+  const roll = () => { let r = Math.random() * tot; for (let i = 0; i < keys.length; i++) { r -= ws[i]; if (r < 0) return keys[i]; } return 'dat'; };
+  const cells = Array.from({ length: 25 }, roll);
+  const idx = [...cells.keys()].sort(() => Math.random() - .5);
+  cells[idx[0]] = 'thang'; cells[idx[1]] = 'cuoc'; // mỗi tầng luôn có 1 cầu thang và ít nhất 1 cuốc phụ
+  return cells;
+}
+function nearRare(i) {
+  const r = Math.floor(i / 5), c = i % 5; let n = 0;
+  for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+    if (!dr && !dc) continue;
+    const rr = r + dr, cc = c + dc;
+    if (rr < 0 || rr > 4 || cc < 0 || cc > 4) continue;
+    if (ITEMS[st.cells[rr * 5 + cc]].rare) n++;
+  }
+  return n;
+}
+function buildBoard() {
+  const b = $('board'); b.innerHTML = '';
+  for (let i = 0; i < 25; i++) {
+    const t = document.createElement('button');
+    t.className = 'tile v' + (i * 7 % 3); t.dataset.i = i;
+    t.setAttribute('aria-label', 'Ô ' + (i + 1) + ', chưa đào');
+    b.appendChild(t);
+  }
+}
+function hud(bumpPicks) {
+  $('depth').textContent = st.depth; $('picks').textContent = st.picks; $('score').textContent = fmt(st.score);
+  const pb = $('picksBox'); pb.classList.toggle('low', st.picks <= 3);
+  if (bumpPicks) { pb.classList.remove('bump'); void pb.offsetWidth; pb.classList.add('bump'); }
+  $('downBtn').hidden = !st.ladder;
+}
+function fly(tile, text, color) {
+  const w = $('boardWrap'), a = w.getBoundingClientRect(), r = tile.getBoundingClientRect();
+  const f = document.createElement('div'); f.className = 'fly'; f.textContent = text; f.style.color = color;
+  f.style.left = Math.max(34, Math.min(a.width - 34, r.left - a.left + r.width / 2)) + 'px'; f.style.top = (r.top - a.top + r.height / 2) + 'px';
+  w.appendChild(f); setTimeout(() => f.remove(), 900);
+}
+function chips(tile) {
+  const w = $('boardWrap'), a = w.getBoundingClientRect(), r = tile.getBoundingClientRect();
+  for (let k = 0; k < 7; k++) {
+    const c = document.createElement('i'); c.className = 'chip';
+    c.style.left = (r.left - a.left + r.width / 2) + 'px'; c.style.top = (r.top - a.top + r.height / 2) + 'px';
+    const ang = Math.random() * Math.PI * 2, d = 26 + Math.random() * 30;
+    c.style.setProperty('--dx', Math.cos(ang) * d + 'px'); c.style.setProperty('--dy', (Math.sin(ang) * d - 12) + 'px');
+    w.appendChild(c); setTimeout(() => c.remove(), 560);
+  }
+}
+function shake() { const w = $('boardWrap'); w.classList.remove('shake'); void w.offsetWidth; w.classList.add('shake'); }
+
+function dig(i, tile) {
+  if (!st || st.over || busy || st.open[i] || st.picks <= 0) return;
+  st.open[i] = true; st.picks--; st.digs++;
+  const key = st.cells[i], it = ITEMS[key];
+  tile.classList.add('open'); tile.disabled = true;
+  const n = nearRare(i);
+  tile.innerHTML = '<span class="it">' + it.svg + '</span><span class="n' + (n ? '' : ' z') + '">' + n + '</span>';
+  tile.setAttribute('aria-label', 'Ô ' + (i + 1) + ': ' + it.name + ', ' + n + ' ô quý sát bên');
+  chips(tile); sfx.dig();
+  let msg = '';
+  if (key === 'thang') {
+    st.ladder = true; sfx.pick(); fly(tile, 'Cầu thang!', '#f1c98c');
+    msg = 'Tìm thấy <b>cầu thang</b>! Đào tiếp hoặc xuống tầng dưới.';
+  } else if (key === 'cuoc') {
+    st.picks += PICK_BONUS; sfx.pick(); fly(tile, '+' + PICK_BONUS + ' cuốc', '#9fe0ff');
+    msg = 'Nhặt được cuốc phụ: <b>+' + PICK_BONUS + ' cuốc</b>.';
+  } else if (key === 'khi') {
+    const lost = Math.min(GAS_COST, st.picks); st.picks -= lost; sfx.gas(); shake(); fly(tile, '−' + lost + ' cuốc', '#9be36a');
+    msg = 'Túi khí độc! Mất <b>' + lost + ' cuốc</b>.';
+  } else {
+    const pts = Math.round(it.v * mult(st.depth));
+    st.score += pts; st.haul[key] = (st.haul[key] || 0) + 1;
+    if (it.rare) { tile.classList.add('rare'); sfx.rare(); if (it.v >= 300) shake(); }
+    else if (pts) sfx.ore();
+    if (pts) fly(tile, '+' + fmt(pts), it.rare ? '#ffe27a' : '#fdf3dc');
+    msg = pts ? it.name + ': <b>+' + fmt(pts) + '</b> điểm.' : 'Chỉ là ' + it.name.toLowerCase() + '.';
+  }
+  $('msg').innerHTML = msg;
+  hud(key === 'cuoc' || key === 'khi');
+  if (st.picks <= 0) {
+    if (st.ladder) $('msg').innerHTML = 'Hết cuốc! Xuống tầng dưới để lấy thêm <b>' + DOWN_BONUS + ' cuốc</b>.';
+    else { busy = true; setTimeout(endGame, 900); }
+  } else if (st.open.every(Boolean)) {
+    $('msg').innerHTML = 'Đã đào sạch tầng này. Xuống tầng dưới thôi!';
+  }
+}
+function goDown() {
+  if (!st || st.over || busy || !st.ladder) return;
+  st.depth++; st.picks += DOWN_BONUS; st.ladder = false;
+  st.cells = genFloor(st.depth); st.open = Array(25).fill(false);
+  sfx.down(); buildBoard(); hud(true);
+  $('msg').innerHTML = 'Tầng <b>' + st.depth + '</b>: điểm khoáng sản ×' + mult(st.depth).toLocaleString('vi-VN') + '.';
+}
+function start() {
+  st = { depth: 1, picks: START_PICKS, score: 0, digs: 0, ladder: false, over: false, haul: {}, cells: genFloor(1), open: Array(25).fill(false) };
+  busy = false; $('menu').hidden = true; $('over').hidden = true;
+  buildBoard(); hud(); $('msg').textContent = 'Chọn một ô để đào';
+}
+function endGame() {
+  if (!st || st.over) return;
+  st.over = true; busy = false; sfx.over();
+  const old = best(), isNew = st.score > old;
+  if (isNew) { try { localStorage.setItem(BEST_KEY, String(st.score)); } catch (e) {} }
+  if (window.Scores && st.score > 0) Scores.submit('daokhobau', st.score);
+  $('overSub').textContent = 'Xuống tới tầng ' + st.depth + ' sau ' + st.digs + ' nhát cuốc';
+  $('overScore').textContent = fmt(st.score);
+  $('haul').innerHTML = ORDER.filter(k => st.haul[k]).map(k => '<span title="' + ITEMS[k].name + '">' + ITEMS[k].svg + '×' + st.haul[k] + '</span>').join('') || '<span>Chưa đào được gì</span>';
+  $('overBest').innerHTML = isNew && st.score > 0 ? '<b style="color:var(--gold)">Kỷ lục mới!</b>' : 'Kỷ lục: ' + fmt(Math.max(old, st.score));
+  $('over').hidden = false; $('againBtn').focus();
+}
+
+$('board').addEventListener('click', e => { const t = e.target.closest('.tile'); if (t) dig(+t.dataset.i, t); });
+$('downBtn').addEventListener('click', goDown);
+$('startBtn').addEventListener('click', start);
+$('againBtn').addEventListener('click', start);
+$('backBtn').addEventListener('click', () => { location.href = '../'; });
+$('homeBtn').addEventListener('click', () => { location.href = '../'; });
+$('pickIco').innerHTML = ITEMS.cuoc.svg;
+$('demo').innerHTML = ['da', 'than', 'vang', 'kc', 'ruong', 'cuoc', 'khi', 'thang'].map(k => {
+  const it = ITEMS[k];
+  const note = k === 'cuoc' ? '+' + PICK_BONUS + ' cuốc' : k === 'khi' ? '−' + GAS_COST + ' cuốc' : k === 'thang' ? 'Xuống tầng' : '+' + it.v;
+  return '<div>' + it.svg + '<b>' + it.name.replace('Rương kho báu', 'Rương') + '</b>' + note + '</div>';
+}).join('');
+$('bestLine').textContent = best() ? 'Kỷ lục của bạn: ' + fmt(best()) + ' điểm' : '';
+buildBoard();
+</script>
+<script src="../scores.js?v=20261103ban"></script>
+<script src="../activity.js?v=20261103ban" defer></script>
+</body>
+</html>
