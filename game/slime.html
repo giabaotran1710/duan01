@@ -696,9 +696,11 @@ footer{
 
   function saveSnapshot(){ history.push({grid:cloneGrid(grid),score}); if(history.length>50) history.shift(); }
   function undo(){
-    if(state==='PAUSED') return;
+    if(state==='PAUSED'||state==='LOADING') return;
     const snap=history.pop(); if(!snap){showToast('Chưa có nước để hoàn tác');return;}
     grid=cloneGrid(snap.grid); score=snap.score; state='PLAYING'; render(); hideOverlay();
+    boardEl.classList.remove('game-over'); gameOverTitleEl.setAttribute('aria-hidden','true');
+    gameHintEl.textContent='Vuốt lên/xuống/trái/phải để kết hợp Slime.'; gameHintEl.classList.remove('game-over-hint');
   }
 
   function compress(line){ return line.filter(Boolean); }
@@ -1090,8 +1092,13 @@ footer{
   function closeGuide(){ if(!guideDrawerEl)return; guideDrawerEl.classList.remove('show');guideDrawerEl.setAttribute('aria-hidden','true'); }
   function bindEvents(){ if(inputBound)return; inputBound=true;
     window.addEventListener('keydown',e=>{if(deviceBlocked)return;if(handleInput(e.key)){startBackgroundMusic();e.preventDefault();}},{passive:false});
-    boardEl.addEventListener('pointerdown',e=>{if(deviceBlocked)return;startBackgroundMusic();touchStart={x:e.clientX,y:e.clientY,pointerId:e.pointerId};boardEl.setPointerCapture?.(e.pointerId);});
-    boardEl.addEventListener('pointerup',e=>{ if(deviceBlocked){touchStart=null;return;} if(!touchStart)return; const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null; if(Math.max(Math.abs(dx),Math.abs(dy))<SWIPE_MIN)return; if(state!=='PLAYING')return; handleInput(Math.abs(dx)>Math.abs(dy)?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp')); });
+    // Chỉ ngón đã bắt đầu cử chỉ mới tạo nước đi; có ngón thứ hai chạm thì huỷ cử chỉ.
+    const activePointers=new Set();
+    const dropPointer=e=>{activePointers.delete(e.pointerId); if(touchStart&&touchStart.pointerId===e.pointerId)touchStart=null;};
+    boardEl.addEventListener('pointerdown',e=>{if(deviceBlocked)return;startBackgroundMusic();activePointers.add(e.pointerId);if(activePointers.size>1){touchStart=null;return;}touchStart={x:e.clientX,y:e.clientY,pointerId:e.pointerId};boardEl.setPointerCapture?.(e.pointerId);});
+    boardEl.addEventListener('pointercancel',dropPointer);
+    boardEl.addEventListener('lostpointercapture',e=>activePointers.delete(e.pointerId));
+    boardEl.addEventListener('pointerup',e=>{ activePointers.delete(e.pointerId); if(deviceBlocked){touchStart=null;return;} if(!touchStart||e.pointerId!==touchStart.pointerId)return; const dx=e.clientX-touchStart.x,dy=e.clientY-touchStart.y;touchStart=null; if(Math.max(Math.abs(dx),Math.abs(dy))<SWIPE_MIN)return; if(state!=='PLAYING')return; handleInput(Math.abs(dx)>Math.abs(dy)?(dx>0?'ArrowRight':'ArrowLeft'):(dy>0?'ArrowDown':'ArrowUp')); });
     tilesEl.addEventListener('pointerdown',e=>{ if(deviceBlocked)return; startBackgroundMusic(); const tile=e.target.closest('.tile'); if(!tile || state!=='PLAYING')return; const value=Number((tile.className.match(/v(\d+)/)||[])[1]||2); playSlimeCry(value); tile.classList.remove('interact'); void tile.offsetWidth; tile.classList.add('interact'); }); overlayBtn.addEventListener('click',()=>{ if(overlayTitleEl.textContent==='2048!'){hideOverlay();state='PLAYING';return;} if(state==='PAUSED'){togglePause();return;} initGrid(); });
     boardEl.addEventListener('click',()=>{ if(deviceBlocked)return; if(state==='GAME_OVER') initGrid(); });
     if(guideOpenEl && guideDrawerEl && guideCloseEl){ guideOpenEl.addEventListener('click',openGuide); guideCloseEl.addEventListener('click',closeGuide); guideDrawerEl.addEventListener('click',e=>{if(e.target===guideDrawerEl)closeGuide();}); }

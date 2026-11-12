@@ -489,6 +489,19 @@ const GROUND_RATIO   = 0.17;
 const BALL_R         = 12;
 const SHIELD_HALF    = 0.78;
 const TRAJ_STEP      = 0.012;
+// Ma sát không khí theo thời gian: AIR_FRICTION là hệ số cho mỗi REF_STEP giây (1/180s = 1 bước con khi chạy 60fps).
+const REF_STEP       = 1/180;
+const AIR_DRAG       = -Math.log(AIR_FRICTION) / REF_STEP;
+// Tích phân chính xác cho gia tốc không đổi (trọng lực + gió) cộng lực cản tỉ lệ vận tốc,
+// nên đường bay không phụ thuộc kích thước bước: bóng thật (mọi fps) và đường ngắm cùng nằm trên một đường cong.
+function integrateFlight(o, h){
+  const e = Math.exp(-AIR_DRAG * h), f = (1 - e) / AIR_DRAG;
+  const tx = wind / AIR_DRAG, ty = GRAVITY / AIR_DRAG;
+  o.x += tx * h + (o.vx - tx) * f;
+  o.y += ty * h + (o.vy - ty) * f;
+  o.vx = tx + (o.vx - tx) * e;
+  o.vy = ty + (o.vy - ty) * e;
+}
 const MAX_AMMO       = 5;
 const ARC_SPEED_MIN  = 380;
 const ARC_SPEED_MAX  = 1200;
@@ -1177,10 +1190,8 @@ document.getElementById('retryBtn').addEventListener('click', startGame);
 function simulateTrajectory(ang = cannon.angle, pw = cannon.power, noPts = false){
   const cp = cannonPos();
   const speed = ARC_SPEED_MIN + pw * (ARC_SPEED_MAX - ARC_SPEED_MIN);
-  let x = cp.x + Math.cos(ang) * 56;
-  let y = cp.y + Math.sin(ang) * 56;
-  let vx = Math.cos(ang) * speed;
-  let vy = Math.sin(ang) * speed;
+  const p = { x: cp.x + Math.cos(ang) * 56, y: cp.y + Math.sin(ang) * 56, vx: Math.cos(ang) * speed, vy: Math.sin(ang) * speed };
+  let x, y, vx, vy;
 
   const gy = groundY();
   const pts = [];
@@ -1188,12 +1199,8 @@ function simulateTrajectory(ang = cannon.angle, pw = cannon.power, noPts = false
   const MAX_B = 2;
 
   for (let i = 0; i < 500; i++){
-    vy += GRAVITY * TRAJ_STEP;
-    vx += wind * TRAJ_STEP;
-    vx *= AIR_FRICTION;
-    vy *= AIR_FRICTION;
-    x += vx * TRAJ_STEP;
-    y += vy * TRAJ_STEP;
+    integrateFlight(p, TRAJ_STEP);
+    ({ x, y, vx, vy } = p);
     if (!noPts) pts.push({ x, y });
 
     let tHit = null;
@@ -1234,6 +1241,7 @@ function simulateTrajectory(ang = cannon.angle, pw = cannon.power, noPts = false
         bounced = true; break;
       }
     }
+    p.x = x; p.y = y; p.vx = vx; p.vy = vy;
     if (bounced && ++bounces > MAX_B){ hitO = true; break; }
     if (Math.hypot(vx, vy) < STOP_SPEED && y > gy-BALL_R-6) break;
   }
@@ -1324,13 +1332,7 @@ function updateBall(dt){
 function updateBallStep(dt){
   flightTimer += dt;
 
-  ball.vy += GRAVITY * dt;
-  ball.vx += wind * dt;
-  ball.vx *= AIR_FRICTION;
-  ball.vy *= AIR_FRICTION;
-
-  ball.x += ball.vx * dt;
-  ball.y += ball.vy * dt;
+  integrateFlight(ball, dt);
 
   if (ball.x < ball.r){ ball.x = ball.r; ball.vx = Math.abs(ball.vx)*BOUNCE; }
   if (ball.x > W-ball.r){ ball.x = W-ball.r; ball.vx = -Math.abs(ball.vx)*BOUNCE; }
