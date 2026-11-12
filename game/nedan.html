@@ -197,7 +197,15 @@ const gameoverScreen = document.getElementById('gameoverScreen');
 const pauseScreen    = document.getElementById('pause-screen');
 let W, H;
 function resize(){ W=canvas.width=window.innerWidth; H=canvas.height=window.innerHeight; }
-resize(); window.addEventListener('resize', resize);
+resize();
+window.addEventListener('resize', ()=>{
+  resize();
+  // Xoay màn/đổi kích thước giữa ván: kéo máy bay về trong màn (cùng biên với điều khiển kéo)
+  if(plane){
+    plane.x=Math.max(42,Math.min(W-42,plane.x));
+    plane.y=Math.max(52,Math.min(H-52,plane.y));
+  }
+});
 
 // ═══════════════════════════════════════════════════════════
 //  WORLD SCALE — thu nhỏ toàn bộ map
@@ -1416,7 +1424,10 @@ window.addEventListener('keydown',e=>{
 });
 
 document.getElementById('startBtn').addEventListener('click',startGame);
-try{const b=parseInt(localStorage.getItem('nd_best')||'0');if(b)document.getElementById('startBest').textContent='Kỷ lục: '+b;}catch(e){}
+function updateStartBest(){
+  try{const b=parseInt(localStorage.getItem('nd_best')||'0');if(b)document.getElementById('startBest').textContent='Kỷ lục: '+b;}catch(e){}
+}
+updateStartBest();
 document.getElementById('restartBtn').addEventListener('click',startGame);
 
 pauseBtn.addEventListener('click',()=>{
@@ -1429,7 +1440,12 @@ document.getElementById('quitBtn').addEventListener('click',()=>{
   pauseScreen.classList.add('hidden');
   pauseBtn.classList.add('hidden');
   startScreen.classList.remove('hidden');
+  if(rafId!==null){ clearInterval(rafId); rafId=null; }
+  updateStartBest();
+  startIdle(); // nền màn bắt đầu chạy lại (không nhân đôi vòng)
 });
+// Rời tab/chuyển app giữa ván: tạm dừng
+document.addEventListener('visibilitychange',()=>{ if(document.hidden) pauseGame(); });
 
 
 // ═══════════════════════════════════════════════════════════
@@ -1462,12 +1478,15 @@ if (bgMusic) {
 }
 
 // Idle stars
+let idleRunning=false;
 function idle(){
-  if(gameRunning)return;
+  if(gameRunning){ idleRunning=false; return; }
+  idleRunning=true;
   drawSkyBase();
   drawStars(); requestAnimationFrame(idle);
 }
-idle();
+function startIdle(){ if(!idleRunning) idle(); }
+startIdle();
 </script>
 <script src="../scores.js?v=20261103ban"></script>
 <script src="../activity.js?v=20261103ban" defer></script>
