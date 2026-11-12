@@ -11,6 +11,9 @@ let lastRedMove = null;
   const AI_THINK_MS = 1000;
   let aiThinking = false;
   let aiTimer = null;
+  // Khoá ngay khi người vừa đi (trước khi đổi lượt sau 300 ms) để không đi được 2 nước liền.
+  let humanBusy = false;
+  let humanMoveTimer = null;
 
   const turnValue = document.getElementById('turnValue');
   const statusEl = document.getElementById('status');
@@ -417,6 +420,7 @@ piece.y = move.y;
 
   function reset() {
     clearTimeout(aiTimer);
+    clearTimeout(humanMoveTimer); humanMoveTimer = null; humanBusy = false;
     pieceDefs = getPieceDefs();
     initialPieces = buildInitialPieces();
     aiTimer = null;
@@ -504,9 +508,12 @@ lastRedMove = null;
       }
       recordPosition();
       render();
+      const ep = aiEpoch;
       requestAnimationFrame(() => {
+        if (ep !== aiEpoch) return;
         createTideOverlays('rising');
         setTimeout(() => {
+          if (ep !== aiEpoch) return;   // đã bấm ván mới
           state.tideAnimating = false;
           render();
           clearSelection('Đến lượt bạn.');
@@ -758,9 +765,12 @@ lastRedMove = null;
       state.tideAnimating = true;
       state.tideCountdown = 3;
       render();
+      const ep = aiEpoch;
       requestAnimationFrame(() => {
+        if (ep !== aiEpoch) return;
         createTideOverlays('receding');
         setTimeout(() => {
+          if (ep !== aiEpoch) return;   // đã bấm ván mới
           state.tideAnimating = false;
           render();
           state.turn = HUMAN_SIDE;
@@ -794,7 +804,9 @@ lastRedMove = null;
     if (isDisabled(piece)) { aiThinking = false; return; }
     processMove(piece, move);
     render();
+    const ep = aiEpoch;
     setTimeout(() => {
+      if (ep !== aiEpoch) return;   // đã bấm ván mới trong lúc chờ: không chạy nước AI cũ lên ván mới
       captureFx = null;
       finishAITurn(piece);
     }, 420);
@@ -924,7 +936,7 @@ lastRedMove = null;
   }
 
  function onCellClick(x, y) {
-    if (state.tideAnimating || state.winner || state.turn === AI_SIDE || aiThinking) return;
+    if (humanBusy || state.tideAnimating || state.winner || state.turn === AI_SIDE || aiThinking) return;
 
     const selected = state.pieces.find(p => p.id === state.selectedId) || null;
     const clickedPiece = pieceAt(x, y);
@@ -1000,10 +1012,13 @@ lastRedMove = null;
     // Thực hiện nước đi (có xử lý mutual kill, Cú, hoán đổi của Rắn...)
     state.selectedId = null;
     state.legal = [];
+    humanBusy = true;
     processMove(selected, move);
     render();
 
-    setTimeout(() => {
+    humanMoveTimer = setTimeout(() => {
+        humanMoveTimer = null;
+        humanBusy = false;
         captureFx = null;
         // Kiểm tra thắng
       if (

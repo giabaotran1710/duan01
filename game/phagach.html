@@ -351,6 +351,12 @@ let brickSlide = {
 
   function resize() {
     const rect = canvas.getBoundingClientRect();
+    // Màn ngang: CSS ẩn #app nên canvas về 0px. Không ép kích thước giả 320x240
+    // (toạ độ bóng/gạch cũ sẽ nằm ngoài màn, bóng bị coi là rơi) mà tạm dừng ván, giữ W/H.
+    if ((rect.width < 1 || rect.height < 1) && W > 1 && H > 1) {
+      pauseGame(performance.now());
+      return;
+    }
     W = Math.max(320, rect.width);
     H = Math.max(240, rect.height);
 
@@ -1242,12 +1248,17 @@ function updateBrickSlide(now) {
         )
       ){
         state.slowDown.active = false;
+        // Đang chậm sẵn thì chỉ gia hạn, không giảm tốc lần nữa
+        // (khi hết hạn chỉ chia 0.75 một lần → bóng sẽ chậm vĩnh viễn).
+        const alreadySlow = !!state.slowDownUntil;
         state.slowDownUntil = now + 15000;
 
         // Giảm tốc tất cả bóng 25%
-        for(const current of balls){
-          current.vx *= 0.75;
-          current.vy *= 0.75;
+        if(!alreadySlow){
+          for(const current of balls){
+            current.vx *= 0.75;
+            current.vy *= 0.75;
+          }
         }
 
         state.score += 15;
@@ -2080,6 +2091,10 @@ function drawSlowDown(){
 
   restartBtn.addEventListener('click', resetGame);
   window.addEventListener('resize', resize);
+  // Rời tab/chuyển app: tạm dừng (resumeGame dời các mốc thời gian theo thời gian dừng).
+  document.addEventListener('visibilitychange', ()=>{
+    if(document.hidden) pauseGame(performance.now());
+  });
 
   function loop(now){
     if(!state.paused){

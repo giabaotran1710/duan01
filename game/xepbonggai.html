@@ -4460,9 +4460,21 @@ async function waitBoardDropDone(){
 
 
 
+// Thế hệ ván: startGame tăng lên để vòng resolveBoard của ván cũ (đang await) tự dừng, không ghi đè trạng thái ván mới
+var gameGen = 0;
+// Kỷ lục chờ nộp bảng xếp hạng: nộp một lần khi CHƠI LẠI / rời trang thay vì mỗi lần vượt kỷ lục
+var pendingBest = 0, submittedBest = 0;
+function flushBestScore(){
+  if(pendingBest > submittedBest && window.Scores){
+    submittedBest = pendingBest;
+    try { Scores.submit("xepbonggai", Math.floor(pendingBest)); } catch(e) {}
+  }
+}
+
 async function resolveBoard(){
   if(resolving) return;
 
+  const gen = gameGen;
   resolving = true;
   gameState = "resolving";
   document.documentElement.classList.add("comboMode");
@@ -4472,6 +4484,7 @@ async function resolveBoard(){
   try{
     while(true){
       await nextPaint();
+      if(gen !== gameGen) return;
 
       const matches = findMatches();
       const lightningGroups = findLightningGroups();
@@ -4492,6 +4505,7 @@ async function resolveBoard(){
         playThunderSound();
 
         await animateLightningStorm(lightningCells);
+        if(gen !== gameGen) return;
       }
 
       const baseTargets = uniquePieces([
@@ -4531,6 +4545,7 @@ async function resolveBoard(){
 
       const popWait = popPieces(finalPopped);
 await sleep(popWait);
+      if(gen !== gameGen) return;
 
       removePieces(finalPopped);
 
@@ -4543,11 +4558,13 @@ await sleep(popWait);
 
       // Quan trọng: chờ ball rơi xuống hẳn rồi mới check combo tiếp
       await waitBoardDropDone();
+      if(gen !== gameGen) return;
 
       clearBallMotionClasses();
 
       // Nghỉ rất nhẹ để mắt người bắt kịp
       await sleep(80);
+      if(gen !== gameGen) return;
 
       if(shouldSpawnLockAtCombo(combo)){
         const lockTarget = pickRandomLockTarget();
@@ -4563,14 +4580,16 @@ await sleep(popWait);
     if(score > best){
       best = score;
       localStorage.setItem("fur_match_best", best);
-      if (window.Scores) Scores.submit("xepbonggai", Math.floor(best));
+      pendingBest = best;
       bestEl.textContent = best;
     }
   }finally{
-    document.documentElement.classList.remove("comboMode");
-    resolving = false;
-gameState = "playing";
-queueSaveGame();
+    if(gen === gameGen){
+      document.documentElement.classList.remove("comboMode");
+      resolving = false;
+      gameState = "playing";
+      queueSaveGame();
+    }
   }
 }
 
@@ -4579,6 +4598,8 @@ queueSaveGame();
 ========================= */
 
 async function startGame(){
+  const gen = ++gameGen;
+  document.documentElement.classList.remove("comboMode");
   clearSavedGame();
   initAudio();
   unlockThunderSound();
@@ -4610,6 +4631,7 @@ checkStoneSpawnByCounter();
   renderStartDrop(newIds);
 
   await sleep(1250);
+  if(gen !== gameGen) return;
 
 clearBallMotionClasses();
 
@@ -4846,11 +4868,12 @@ boardEl.addEventListener("pointercancel", () => {
 
   resetDrag();
 });
-window.addEventListener("pagehide", saveGame);
+window.addEventListener("pagehide", () => { flushBestScore(); saveGame(); });
 window.addEventListener("beforeunload", saveGame);
 
 document.addEventListener("visibilitychange", () => {
   if(document.hidden){
+    flushBestScore();
     saveGame();
   }
 });
@@ -4922,7 +4945,7 @@ function clearActiveItem(){
 
 startBtn.addEventListener("click", startGame);
 pauseBtn.addEventListener("click", togglePause);
-restartBtn.addEventListener("click", startGame);
+restartBtn.addEventListener("click", () => { flushBestScore(); startGame(); });
 
 updateCoins();
 

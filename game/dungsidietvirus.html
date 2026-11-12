@@ -890,7 +890,7 @@ healFlashText = '';
 UPGRADES.rate.level = 1;
 UPGRADES.damage.level = 1;
 
-UPGRADES.maxHp.level = 1;
+UPGRADES.maxHp.level = 0;
 UPGRADES.repair.level = 1;
     updateHUD();
     updateUpgradePanel();
@@ -1095,7 +1095,8 @@ function updateHealing(dt){
 }
   function updateTank(dt){
     tank.targetX = clamp(tank.targetX, tank.w/2, W - tank.w/2);
-    tank.x += (tank.targetX - tank.x) * 0.28;
+    // Trượt theo thời gian: ở 60fps vẫn tiến 28% mỗi khung như cũ
+    tank.x += (tank.targetX - tank.x) * (1 - Math.pow(1 - 0.28, dt / 16.6667));
     if (tank.flashTimer > 0) tank.flashTimer -= dt;
     if (invulnTimer > 0) invulnTimer -= dt;
   }
@@ -1124,7 +1125,8 @@ function updateHealing(dt){
   function updateBullets(dt){
     for (let i=bullets.length-1;i>=0;i--){
       const b = bullets[i];
-      b.x += b.vx; b.y += b.vy;
+      const k = dt / 16.6667; // vận tốc tính theo khung 60fps
+      b.x += b.vx * k; b.y += b.vy * k;
       if (b.y < -20 || b.x < -20 || b.x > W+20){ bullets.splice(i,1); continue; }
     }
   }
@@ -1214,9 +1216,11 @@ function updateHealing(dt){
   function updateParticles(dt){
     for (let i=particles.length-1;i>=0;i--){
       const p = particles[i];
-      p.x += p.vx; p.y += p.vy;
-      p.vx *= 0.94; p.vy *= 0.94;
-      p.life -= 0.035;
+      const k = dt / 16.6667; // quy đổi theo khung 60fps
+      p.x += p.vx * k; p.y += p.vy * k;
+      const f = Math.pow(0.94, k);
+      p.vx *= f; p.vy *= f;
+      p.life -= 0.035 * k;
       if (p.life <= 0) particles.splice(i,1);
     }
   }

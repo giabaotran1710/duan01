@@ -559,12 +559,14 @@
 
   function checkEndGame() {
     if (gameOver) return;
+    const g = gen; // ván mới/về menu trước khi hẹn giờ chạy thì bỏ qua
     if (shipsAlive === 0) {
       gameOver = true;
       setTimeout(() => {
+        if (g !== gen) return;
         SFX.win();
         banner('CHIẾN THẮNG', 'HẠM ĐỘI ĐỊCH BỊ XOÁ SỔ', '#2bf59a');
-        setTimeout(() => showResult({
+        setTimeout(() => g === gen && showResult({
           win: true, title: 'CHIẾN THẮNG',
           msg: `<div class="stats">${stat(shotsCount, 'PHÁT BẮN')}${stat(getTotalAmmo(), 'ĐẠN CÒN')}</div>`,
           buttons: endButtons()
@@ -575,6 +577,7 @@
     if (getTotalAmmo() <= 0) {
       gameOver = true; revealAll = true;
       setTimeout(() => {
+        if (g !== gen) return;
         SFX.lose();
         showResult({
           win: false, title: 'THẤT BẠI',

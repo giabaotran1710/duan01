@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
 <script src="../maintenance.js?v=20261103ban" data-game="barricade"></script>
 <script src="../scene.js" data-game="barricade"></script>
-<script src="../fx.js?v=20261103c"></script>
+<script src="../fx.js?v=20261112a"></script>
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -226,7 +226,9 @@
 
     .msg {
       width: 100%;
-      min-height: 22px;
+      /* giữ chỗ 2 dòng: thông báo dài xuống dòng không đẩy bàn cờ */
+      line-height: 1.3;
+      min-height: 2.6em;
       text-align: center;
       font-size: 13px;
       font-weight: 700;
@@ -427,7 +429,10 @@
       }
 
       function updateResetButton() {
-        resetBtn.hidden = state.moveCount === 0;
+        // Giữ chỗ cho nút Chơi lại (visibility thay vì hidden) để thanh nút luôn cao bằng nhau,
+        // bàn cờ không bị xê dịch khi thanh nút hiện/ẩn.
+        resetBtn.hidden = false;
+        resetBtn.style.visibility = state.moveCount === 0 ? 'hidden' : '';
         confirmWallBtn.hidden = !state.pendingWall;
         controlsEl.classList.toggle('hidden', state.moveCount === 0 && !state.pendingWall);
       }
@@ -608,10 +613,20 @@
           if (nx === opp.x && ny === opp.y) {
             const nx2 = nx + d.x;
             const ny2 = ny + d.y;
-            if (!insideBoard(nx2, ny2)) continue;
-            if (blockedBetween({ x: nx, y: ny }, { x: nx2, y: ny2 }, hWalls, vWalls)) continue;
-            if (nx2 === fromX && ny2 === fromY) continue;
-            moves.push({ x: nx2, y: ny2 });
+            if (insideBoard(nx2, ny2) && !blockedBetween({ x: nx, y: ny }, { x: nx2, y: ny2 }, hWalls, vWalls)) {
+              moves.push({ x: nx2, y: ny2 });
+              continue;
+            }
+            // Luật Quoridor: nhảy thẳng bị tường/mép bàn chặn thì được nhảy chéo
+            // sang hai bên đối thủ (nếu không có tường giữa đối thủ và ô đó).
+            for (const sd of [{ x: d.y, y: d.x }, { x: -d.y, y: -d.x }]) {
+              const sx = nx + sd.x;
+              const sy = ny + sd.y;
+              if (!insideBoard(sx, sy)) continue;
+              if (sx === fromX && sy === fromY) continue;
+              if (blockedBetween({ x: nx, y: ny }, { x: sx, y: sy }, hWalls, vWalls)) continue;
+              if (!moves.some(m => m.x === sx && m.y === sy)) moves.push({ x: sx, y: sy });
+            }
           } else {
             moves.push({ x: nx, y: ny });
           }
@@ -961,7 +976,8 @@
         }
         const STEP = [-9, 1, 9, -1];
 
-        // Giống hệt legalMoves của game: đi 1 ô, hoặc nhảy thẳng qua đối thủ
+        // Giống hệt legalMoves của game: đi 1 ô, nhảy thẳng qua đối thủ,
+        // hoặc nhảy chéo khi nhảy thẳng bị tường/mép bàn chặn
         function genMoves(side) {
           const me = pos[side], opp = pos[1 - side];
           const out = [];
@@ -969,10 +985,16 @@
             if (!canStep(me, d)) continue;
             const n = me + STEP[d];
             if (n === opp) {
-              if (!canStep(n, d)) continue;
-              const n2 = n + STEP[d];
-              if (n2 === me) continue;
-              out.push(n2);
+              if (canStep(n, d)) {
+                out.push(n + STEP[d]);
+                continue;
+              }
+              for (const sd of [(d + 1) % 4, (d + 3) % 4]) {
+                if (!canStep(n, sd)) continue;
+                const n2 = n + STEP[sd];
+                if (n2 === me || out.includes(n2)) continue;
+                out.push(n2);
+              }
             } else {
               out.push(n);
             }

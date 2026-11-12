@@ -222,7 +222,7 @@ footer{ position: fixed; bottom: 5px; left: 10px; font-size: 10px; color: #aaa; 
 
 
 <script src="https://cdn.jsdelivr.net/npm/three@0.158.0/build/three.min.js"></script>
-<script src="../fx.js?v=20261103c"></script>
+<script src="../fx.js?v=20261112a"></script>
 
 <script src="../scores.js?v=20261103ban"></script>
 <script>
@@ -568,14 +568,28 @@ const d = THREE.MathUtils.randFloat(0.78, 1.2);
   return createBlock(x, z, w, d);
 }
 
+// Gỡ khối khỏi cảnh và giải phóng geometry/material của nó (mỗi khối có bộ riêng)
+function disposeBlock(b){
+  scene.remove(b.group);
+  b.group.traverse(o => {
+    if(o.geometry) o.geometry.dispose();
+    if(o.material) o.material.dispose();
+  });
+}
+
+function disposeParticle(p){
+  scene.remove(p.mesh);
+  p.mesh.material.dispose(); // geometry dùng chung (PARTICLE_GEO), không dispose
+}
+
 function resetGame(){
   for(const b of blocks){
-    scene.remove(b.group);
+    disposeBlock(b);
   }
   blocks.length = 0;
 
   for(const p of particles){
-    scene.remove(p.mesh);
+    disposeParticle(p);
   }
   particles.length = 0;
 
@@ -940,7 +954,7 @@ function landSuccess(){
   while(blocks.length > 7){
     const old = blocks.shift();
     if(old !== currentBlock && old !== targetBlock){
-      scene.remove(old.group);
+      disposeBlock(old);
     }
   }
 
@@ -1011,9 +1025,12 @@ function fxAtAnimal(opts, dy){
 function bumpScore(){
   scoreEl.classList.remove("bump"); void scoreEl.offsetWidth; scoreEl.classList.add("bump");
 }
+let PARTICLE_GEO = null;
 function burstParticles(pos){
+  // Một geometry cầu bán kính 1 dùng chung, kích thước từng hạt qua scale
+  if(!PARTICLE_GEO) PARTICLE_GEO = new THREE.SphereGeometry(1, 10, 8);
   for(let i = 0; i < 18; i++){
-    const geo = new THREE.SphereGeometry(THREE.MathUtils.randFloat(.035, .075), 10, 8);
+    const geo = PARTICLE_GEO;
 
     const mat = new THREE.MeshBasicMaterial({
       color:Math.random() > .5 ? 0x7dffb2 : 0x60d8ff,
@@ -1022,6 +1039,7 @@ function burstParticles(pos){
     });
 
     const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.setScalar(THREE.MathUtils.randFloat(.035, .075));
     mesh.position.copy(pos);
     scene.add(mesh);
 
@@ -1047,7 +1065,7 @@ function updateParticles(dt){
     p.mesh.material.opacity = Math.max(p.life, 0);
 
     if(p.life <= 0){
-      scene.remove(p.mesh);
+      disposeParticle(p);
       particles.splice(i, 1);
     }
   }

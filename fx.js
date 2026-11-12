@@ -38,14 +38,21 @@
   }
 
   function frame(t) {
-    var dt = Math.min(.05, (t - last) / 1000 || .016); last = t;
+    // dt có thể âm khi mốc rAF sớm hơn performance.now() lúc run() -> kẹp >= 0; lỗi trong khung không được làm chết vòng lặp
+    var dt = Math.max(0, Math.min(.05, (t - last) / 1000 || .016)); last = t;
+    raf = 0;
+    try { draw(dt); } finally {
+      if (parts.length || rings.length) raf = requestAnimationFrame(frame); else { raf = 0; cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); }
+    }
+  }
+  function draw(dt) {
     cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height);
     cx.setTransform(dpr, 0, 0, dpr, 0, 0);
     for (var i = rings.length - 1; i >= 0; i--) {
-      var g = rings[i]; g.t += dt; var k = g.t / g.life;
+      var g = rings[i]; g.t += dt; var k = Math.max(0, g.t / g.life);
       if (k >= 1) { rings.splice(i, 1); continue; }
       cx.globalAlpha = (1 - k) * .9; cx.strokeStyle = g.color; cx.lineWidth = g.w * (1 - k * .6);
-      cx.beginPath(); cx.arc(g.x, g.y, g.r * (.2 + .8 * easeOut(k)), 0, 6.2832); cx.stroke();
+      cx.beginPath(); cx.arc(g.x, g.y, Math.max(0, g.r * (.2 + .8 * easeOut(k))), 0, 6.2832); cx.stroke();
     }
     for (var j = parts.length - 1; j >= 0; j--) {
       var p = parts[j]; p.t += dt;
@@ -65,7 +72,6 @@
       cx.restore();
     }
     cx.globalAlpha = 1;
-    if (parts.length || rings.length) raf = requestAnimationFrame(frame); else { raf = 0; cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, cv.width, cv.height); }
   }
   function easeOut(k) { return 1 - Math.pow(1 - k, 3); }
   function run() { if (!raf) { last = performance.now(); raf = requestAnimationFrame(frame); } }

@@ -1436,7 +1436,18 @@ function analyzeParWithWorker(map) {
     });
 }
 
+// Đang tải màn (chờ sinh màn / tính số bước): chặn đi, hoàn tác, chơi lại trên bàn cũ
+let levelLoading = false, levelLoadSeq = 0;
 async function loadLevel(levelIndex, forceNew = false) {
+    const seq = ++levelLoadSeq;
+    levelLoading = true;
+    try {
+        await loadLevelInner(levelIndex, forceNew, seq);
+    } finally {
+        if (seq === levelLoadSeq) levelLoading = false;
+    }
+}
+async function loadLevelInner(levelIndex, forceNew, seq) {
     if (isSharedLevel || dailyMode) {
         const parsed = parseMap(currentLevel.map);
 
@@ -1457,6 +1468,7 @@ async function loadLevel(levelIndex, forceNew = false) {
             const mv = await analyzeParWithWorker(currentLevel.map);
             currentLevel.parTried2 = true;
             if (mv !== null) { currentLevel.par = mv; currentLevel.parOpt = true; }
+            if (seq !== levelLoadSeq) return;
         }
         parMoves = currentLevel.par || 0;
 
@@ -1470,8 +1482,6 @@ async function loadLevel(levelIndex, forceNew = false) {
 
     showLoading();
     await new Promise(requestAnimationFrame);
-
-    currentLevelIndex = levelIndex;
 
     let level;
 
@@ -1505,6 +1515,11 @@ async function loadLevel(levelIndex, forceNew = false) {
         if (unlockedLevels[levelIndex]) { unlockedLevels[levelIndex] = level; saveUnlockedLevels(); }
     }
 
+    // có lệnh tải màn khác đến sau thì bỏ kết quả lần tải này
+    if (seq !== levelLoadSeq) return;
+
+    // chỉ đổi màn hiện tại khi màn mới đã sẵn sàng
+    currentLevelIndex = levelIndex;
     currentLevel = level;
 
     const stars = document.getElementById("starTargets");
@@ -1704,7 +1719,7 @@ else
       }
 
       function movePlayer(dr, dc) {
-        if (gameWon) return;
+        if (gameWon || levelLoading) return;
 
         const pr = playerPos.r, pc = playerPos.c;
         const nr = pr + dr, nc = pc + dc;
@@ -1787,7 +1802,7 @@ beep(170, 0.08, "square");
       
 
       function undo() {
-        if (gameWon) return;
+        if (gameWon || levelLoading) return;
         if (history.length === 0) return;
 
         const prev = history.pop();
@@ -1802,7 +1817,7 @@ beep(170, 0.08, "square");
       }
 
       function resetLevel() {
-
+    if (levelLoading) return;
     loadLevel(currentLevelIndex,false);
 
 }

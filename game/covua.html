@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <script src="../maintenance.js?v=20261103ban" data-game="covua"></script>
 <script src="../scene.js" data-game="covua"></script>
-<script src="../fx.js?v=20261103c"></script>
+<script src="../fx.js?v=20261112a"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#101315">
 <title>Cờ Vua</title>
@@ -1736,6 +1736,10 @@ function ExplainVi(){
   }
   function playMove(m, fromDrag){
     const legal = C.moves();
+    // Chỉ đi nước còn hợp lệ ở thế hiện tại (vd. bảng phong cấp mở từ thế cũ rồi bị Đi lại/ván mới).
+    const lm = m && legal.find(x => x.from===m.from && x.to===m.to && (x.promo||0)===(m.promo||0));
+    if(!lm) return false;
+    m = lm;
     const san = C.san(m, legal, settings.lang), sanEn = C.san(m, legal, 'en');
     const played = C.play(m); if(!played) return false;
     game.moves.push(C.uci(played)); game.sans.push(san); game.sansEn.push(sanEn);
@@ -1829,7 +1833,7 @@ function ExplainVi(){
     }
   }
   function startGame(side, level, moves){
-    cancelAI();
+    cancelAI(); closePromo();
     game.started = true; game.human = side; game.level = normElo(level); game.flipped = side===1;
     game.over = false; game.result = null; game.selected = -1; game.hint = null; game.view = -1;
     game.evalCp = null; game.evalMate = null; game.aiDepth = 0;
@@ -1851,6 +1855,8 @@ function ExplainVi(){
   }
   const canMove = () => game.started && !game.over && game.view<0 && !game.thinking && C.turn===game.human && !game.engineError;
   let drag = null, pendingPromo = null;
+  // Đóng bảng chọn quân phong cấp và huỷ nước phong đang chờ (khi Đi lại, ván mới, xem lại thế cũ).
+  function closePromo(){ pendingPromo = null; $('promo').classList.remove('show'); }
   boardEl.addEventListener('pointerdown', e => {
     if(e.button!==undefined && e.button!==0) return;
     audio();
@@ -1939,7 +1945,7 @@ function ExplainVi(){
 
   $('btnUndo').onclick = () => {
     if(!game.moves.length) return;
-    cancelAI();
+    cancelAI(); closePromo();
     let moves = game.moves.slice(0, -1);
     while(moves.length && (moves.length%2)!==game.human) moves.pop();   // lùi về lượt của người chơi
     game.over = false; game.result = null; game.selected = -1; game.hint = null; game.view = -1;
@@ -2203,6 +2209,7 @@ function ExplainVi(){
     const n = game.moves.length;
     game.view = (ply===null || ply>=n) ? -1 : Math.max(0, ply);
     game.selected = -1;
+    if(game.view >= 0) closePromo();
     renderPieces(); renderMarks(); renderInfo(); renderMoves(); renderAnalysis();
   }
   $('moveList').addEventListener('click', e => { const el = e.target.closest('.mv'); if(el) setView(+el.dataset.ply); });
@@ -2248,7 +2255,7 @@ function ExplainVi(){
   };
   let savedGame = null;
   function showStart(){
-    cancelAI();
+    cancelAI(); closePromo();
     savedGame = null;
     try {
       const s = JSON.parse(localStorage.getItem(SAVE_KEY)||'null');

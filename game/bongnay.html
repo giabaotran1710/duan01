@@ -8,7 +8,7 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261103ban" data-game="bongnay"></script>
 <script src="../scene.js" data-game="bongnay"></script>
-<script src="../fx.js?v=20261103c"></script>
+<script src="../fx.js?v=20261112a"></script>
 <meta name="viewport"
 content="width=device-width,
 initial-scale=1,
@@ -774,7 +774,7 @@ function getRadius(count){
   return count >= 7 ? 22 : count >= 6 ? 24 : 27;
 }
 
-function makeAmplitudeList(count, lv){
+function makeAmplitudeList(count, lv, cap){
   let easySpread;
 
 if(gameMode === "normal"){
@@ -786,23 +786,39 @@ else if(gameMode === "hard"){
 else{
   easySpread = lv <= 5 ? 40 : lv <= 15 ? 34 : 28;
 }
-  const minAmp = clamp(52 + lv * 1.2, 52, 82);
-  const maxAmp = minAmp + easySpread;
+  /*
+    Kẹp theo chiều cao màn TRƯỚC rồi mới phân bố, để màn thấp (ngang)
+    không bị nhiều bóng dồn về cùng biên độ trần → không có đáp án duy nhất.
+  */
+  const MIN_GAP = 12;
+  const hiCap = Number.isFinite(cap) ? cap : Infinity;
+  let minAmp = clamp(52 + lv * 1.2, 52, 82);
+  // Như bản gốc: cho dải giãn lên đủ cách 18px, nhưng không quá trần màn hình
+  const maxAmp = Math.min(Math.max(minAmp + easySpread, minAmp + (count - 1) * 18), hiCap);
+  if(count > 1 && maxAmp - minAmp < (count - 1) * MIN_GAP){
+    minAmp = Math.max(8, maxAmp - (count - 1) * MIN_GAP);
+  }
+  const gap = count > 1 ? Math.min(18, (maxAmp - minAmp) / (count - 1)) : 0;
 
   const values = [];
 
   for(let i = 0; i < count; i++){
     const t = count === 1 ? 0 : i / (count - 1);
     const jitter = rand(-6, 6);
-    values.push(minAmp + t * (maxAmp - minAmp) + jitter);
+    values.push(clamp(minAmp + t * (maxAmp - minAmp) + jitter, minAmp, maxAmp));
   }
 
   values.sort((a,b) => a - b);
 
+  // Giãn cách tối thiểu, rồi dồn ngược từ trần để không vượt maxAmp
   for(let i = 1; i < values.length; i++){
-    if(values[i] - values[i - 1] < 18){
-      values[i] = values[i - 1] + 18;
+    if(values[i] - values[i - 1] < gap){
+      values[i] = values[i - 1] + gap;
     }
+  }
+  for(let i = values.length - 1; i >= 0; i--){
+    const lim = i === values.length - 1 ? maxAmp : values[i + 1] - gap;
+    if(values[i] > lim) values[i] = lim;
   }
 
   return shuffle(values);
@@ -828,9 +844,7 @@ const radius = getRadius(count);
   const safeTop = 125;
   const maxAllowedAmp = Math.max(70, floorY - safeTop - radius);
 
-  const amps = makeAmplitudeList(count, level).map(a => {
-    return Math.min(a, maxAllowedAmp);
-  });
+  const amps = makeAmplitudeList(count, level, maxAllowedAmp);
 
   balls = [];
 
@@ -881,6 +895,9 @@ const wallSpeed = wallBounce
   getBounceSpeed(level) + 0.35
 ),
 
+  // Tốc độ chốt lúc tạo lượt: level++ khi trả lời đúng không làm bóng giật
+  speed:getBounceSpeed(level),
+  moveSpeed:getMoveSpeed(level),
   phase:rand(0, Math.PI * 2),
   movePhase:rand(0, Math.PI * 2),
   moveDir:Math.random() < 0.5 ? -1 : 1,
@@ -1018,8 +1035,9 @@ level++;
       Chỉ sau khi feedback hiện xong mới sang câu hỏi mới.
       Lúc này mới tạo round mới.
     */
+    const gen = roundGen;
     setTimeout(() => {
-      if(running){
+      if(running && gen === roundGen){
         createRound();
       }
     }, 650);
@@ -1035,15 +1053,17 @@ questionBox.innerHTML =
 
 showFeedback("✕", "#ff4d68", waitTime);
 
+// Hẹn giờ của ván cũ bỏ qua nếu đã sang ván mới (vd. bấm Chế độ trong lúc chờ)
+const gen = roundGen;
 if(wrong >= 3){
   setTimeout(() => {
-    if(running){
+    if(running && gen === roundGen){
       endGame();
     }
   }, waitTime);
 }else{
   setTimeout(() => {
-    if(running){
+    if(running && gen === roundGen){
       createRound();
     }
   }, waitTime);
@@ -1078,7 +1098,9 @@ modeBtn.addEventListener("click", toggleMode);
 startBtn.addEventListener("click", startGame);
 restartBtn.addEventListener("click", startGame);
 
+let roundGen = 0;
 function startGame(){
+  roundGen++;
     if (audioCtx.state === "suspended") {
     audioCtx.resume();
 }
@@ -1301,8 +1323,8 @@ function drawGround(){
 }
 
 function drawBall(ball, t){
-  const speed = getBounceSpeed(level);
-  const moveSpeed = getMoveSpeed(level);
+  const speed = ball.speed || getBounceSpeed(level);
+  const moveSpeed = ball.moveSpeed || getMoveSpeed(level);
 
   /*
     t là thời gian của lượt hiện tại.

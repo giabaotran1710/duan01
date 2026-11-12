@@ -492,7 +492,7 @@ footer{bottom:calc(4px + env(safe-area-inset-bottom));opacity:.45}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
-<script src="../fx.js?v=20261103c"></script>
+<script src="../fx.js?v=20261112a"></script>
 <style id="fx-hungbi">
 @keyframes gateHit{0%{transform:scale(1)}35%{transform:scale(1.18,.85)}70%{transform:scale(.95,1.1)}100%{transform:scale(1)}}
 .gate.hit{animation:gateHit .3s ease-out}
@@ -561,7 +561,9 @@ const loadingTrack = document.getElementById("loadingTrack");
 
 let gameStarted = false;
 let T0 = 0;
-const gameNow = () => gameStarted ? (performance.now() - T0) / 1000 : 0;   // giây kể từ lúc bấm BẮT ĐẦU
+// Đồng hồ game chỉ chạy trong vòng rAF (dt bị kẹp) nên tự dừng khi tab ẩn / rAF ngừng
+let gameClock = 0;
+const gameNow = () => gameStarted ? gameClock / 1000 : 0;   // giây chơi kể từ lúc bấm BẮT ĐẦU
 
 const laneCount = 5;
 let openedLanes = 2;
@@ -1026,13 +1028,6 @@ function checkBall(ball){
   }
 }
   
-  function whiteEventLoop(){
-  if(!running) return;
-
-  spawnWhiteEventBall();
-
-  setTimeout(whiteEventLoop, 21000);
-}
 
 function endGame(){
   running = false;
@@ -1045,31 +1040,39 @@ function endGame(){
   document.getElementById("bestLine").textContent = `Kỷ lục: ${best}`;
 }
 
-function spawnLoop(){
-  if(!running) return;
-  spawnWave();
-  setTimeout(spawnLoop, spawnDelay);
-}
-
-function difficultyLoop(){
-  if(!running) return;
-
+function difficultyStep(){
   fallSpeed = Math.min(maxFallSpeed, fallSpeed + 0.08);
   spawnDelay = Math.max(minSpawnDelay, spawnDelay - 25);
-
-  setTimeout(difficultyLoop, 5000);
 }
-  
-  function moveBalls(){
+
+// Sinh bi / tăng độ khó / bi trắng đều tính theo thời gian chơi trong rAF
+// (trước đây dùng setTimeout nên vẫn sinh bi khi tab ẩn trong lúc bi không rơi)
+const FRAME_MS = 1000 / 60, MAX_DT = 50;
+let lastFrame = 0, spawnAcc = 0, diffAcc = 0, whiteAcc = 0;
+
+  function moveBalls(now){
   if(!running) return;
 
+  if(typeof now !== "number") now = performance.now();
+  const dt = lastFrame ? Math.max(0, Math.min(MAX_DT, now - lastFrame)) : FRAME_MS;
+  lastFrame = now;
+  gameClock += dt;
+
+  diffAcc += dt;
+  if(diffAcc >= 5000){ diffAcc -= 5000; difficultyStep(); }
+  spawnAcc += dt;
+  if(spawnAcc >= spawnDelay){ spawnAcc = Math.min(spawnAcc - spawnDelay, spawnDelay); spawnWave(); }
+  whiteAcc += dt;
+  if(whiteAcc >= 21000){ whiteAcc -= 21000; spawnWhiteEventBall(); }
+
+  const k = dt / FRAME_MS;   // = 1 ở 60fps
   const balls = document.querySelectorAll(".ball");
 
   balls.forEach(ball => {
     let y = parseFloat(ball.style.top);
     const speedBonus = Number(ball.dataset.speedBonus || 1);
 
-    y += fallSpeed * speedBonus;
+    y += fallSpeed * speedBonus * k;
     ball.style.top = `${y}px`;
 
     if(y + 34 >= window.innerHeight - window.innerHeight * 0.08 - 58){
@@ -1091,11 +1094,13 @@ document.getElementById("startBtn").addEventListener("click", () => {
   document.getElementById("startScreen").classList.add("hide");
   gameStarted = true;
   T0 = performance.now();
+  gameClock = 0; lastFrame = 0;
+  diffAcc = 5000;          // như difficultyLoop cũ: bước độ khó đầu tiên ngay khi bắt đầu
+  spawnAcc = spawnDelay;   // như spawnLoop cũ: sinh bi ngay khi bắt đầu
+  whiteAcc = 0;            // bi trắng đầu tiên ở giây 21
   moveBalls();
-  spawnLoop();
-  difficultyLoop();
-  setTimeout(whiteEventLoop, 21000);
 });
+document.addEventListener("visibilitychange", () => { lastFrame = 0; });
 
 const unlockTimes = [
   null,
@@ -1136,7 +1141,12 @@ function updateUnlockTimers(){
 
 updateUnlockTimers();
 
-window.addEventListener("resize", updateGateSize);
+window.addEventListener("resize", () => {
+  updateGateSize();
+  // đặt lại vị trí ngang của bi đang rơi theo làn mới
+  const w = laneWidth();
+  document.querySelectorAll(".ball[data-lane]").forEach(b => { b.style.left = `${Number(b.dataset.lane) * w + w / 2 - 17}px`; });
+});
   document.getElementById("restartBtn").addEventListener("click", () => {
   location.reload();
 });
