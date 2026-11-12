@@ -387,7 +387,19 @@
       }
     }
     // Giữ chuột đang ở trên mặt đất khi xoay màn hình: chuyển sang hố cùng số thứ tự nếu còn.
-    if(old.length) state.moles = state.moles.filter(m => m.hole.id < holes.length).map(m => (m.hole = holes[m.hole.id], m));
+    // Chuột ở hố không còn tồn tại thì chuyển sang hố trống (ưu tiên Vua chuột); không còn chỗ thì bỏ.
+    if(old.length){
+      const keep = [], lost = [];
+      state.moles.forEach(m => { if(m.hole.id < holes.length){ m.hole = holes[m.hole.id]; keep.push(m); } else lost.push(m); });
+      lost.sort((a,b) => (b.type === 'boss') - (a.type === 'boss'));
+      lost.forEach(m => {
+        const used = new Set(keep.map(k => k.hole.id));
+        const free = holes.find(h => !used.has(h.id));
+        if(free){ m.hole = free; keep.push(m); }
+      });
+      state.moles = keep;
+      if(state.bossActive && !keep.some(m => m.type === 'boss')) state.bossActive = false;
+    }
   }
 
   function buildAmbient(){
@@ -1370,7 +1382,7 @@
       ? 'Kỷ lục mới! Lũ chuột chũi phải nể bạn rồi.'
       : score >= 500 ? 'Vườn mất sạch cà rốt, nhưng bạn đập rất cừ!' : 'Lũ chuột chũi đã ăn sạch vườn. Thử lại nhé!';
     sound.over(); buzz([30,60,30]);
-    setTimeout(() => { setHud(false); gameOverScreen.classList.remove('hidden'); }, 450);
+    setTimeout(() => { if(state.screen !== 'gameover') return; setHud(false); gameOverScreen.classList.remove('hidden'); }, 450);
     state.spawnTimer = 1200;
   }
 
