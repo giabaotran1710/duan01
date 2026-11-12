@@ -1584,6 +1584,8 @@ var gColorDuration=5000;
 // Chặn idle countdown khi ván chưa sẵn sàng hoặc đang xử lý bắt buộc
 var gRoundReady=false;
 var gAutoResolving=false;
+var gForceDrawing=false; // chống forceDraw chạy chồng (hẹn giờ 700ms + bấm bộ bài)
+var gEndDone=false; // chống endGame/endTeamGame chạy hai lần
   
   function updateColorIdleUI(){
 
@@ -2205,7 +2207,9 @@ function autoAction(){
 
       setTimeout(function(){
         gAutoResolving = false;
-        doPlay(0, playableIndex, col);
+        var i = gHands[0].indexOf(card);
+        if(gOver || gCur !== 0 || i < 0) return;
+        doPlay(0, i, col);
       }, 250);
 
     }else{
@@ -2235,7 +2239,9 @@ function autoAction(){
 
     setTimeout(function(){
       gAutoResolving = false;
-      doPlay(0, playableIndex, col2);
+      var i2 = gHands[0].indexOf(card2);
+      if(gOver || gCur !== 0 || i2 < 0) return;
+      doPlay(0, i2, col2);
     }, 250);
 
     return;
@@ -2282,6 +2288,7 @@ function autoAction(){
 
     // Quan trọng: thêm bài vào tay SAU animation rút
     gHands[0].push(drawn);
+    gUnoCalled[0] = false;
     sortHand(gHands[0]);
 
     gHasDrawn = true;
@@ -2331,7 +2338,9 @@ function autoAction(){
 
       setTimeout(function(){
         gAutoResolving = false;
-        doPlay(0, drawnIndex, col);
+        var i3 = gHands[0].indexOf(card);
+        if(gOver || gCur !== 0 || i3 < 0) return;
+        doPlay(0, i3, col);
       }, 650);
 
     }else{
@@ -2779,6 +2788,8 @@ function startGame(){
   randomizeAINames();
   gRoundReady=false;
   gAutoResolving=false;
+  gForceDrawing=false;
+  gEndDone=false;
   cancelIdleTimer();
   gOver=false;gWaitColor=false;gHasDrawn=false;clearTimeout(gAiTimer);gColorCb=null;
   gUnoCalled=[false,false,false,false];
@@ -4377,6 +4388,7 @@ function aiTurn(){
 
     var drawn = gDeck.pop();
     hand.push(drawn);
+    gUnoCalled[p] = false;
 
     var pz2 = pzoneCenter(p);
     var tx2 = pz2.x-24;
@@ -4439,6 +4451,7 @@ if(!choice){
     var drawnFallback = gDeck.pop();
 
     hand.push(drawnFallback);
+    gUnoCalled[p] = false;
 
     var fallbackPz = pzoneCenter(p);
 
@@ -4708,6 +4721,9 @@ function getDamageControlValue(p, color){
   
 function forceDraw(p){
 
+  if(gOver || gForceDrawing) return;
+  gForceDrawing = true;
+  gUnoCalled[p] = false;
   gAutoResolving = true;
   cancelIdleTimer();
 
@@ -4742,6 +4758,8 @@ if(drawn.length > 6){
 
   function finishForceDraw(){
 
+    gForceDrawing = false;
+    if(gOver){ gAutoResolving = false; return; }
     gCur = nextPlayer(p);
     gAutoResolving = false;
 
@@ -4958,11 +4976,15 @@ function animDrawFaceUpCard(card, cb){
 }
 
 function reshuf(){
-  if(gDeck.length===0&&gDiscard.length>1){var t=gDiscard.pop();gDeck=shuffle(gDiscard.slice());gDiscard=[t];}
+  if(gDeck.length===0&&gDiscard.length>1){var t=gDiscard.pop();gDeck=shuffle(gDiscard.slice());gDiscard=[t];
+    // lá Wild quay lại bộ bài không được giữ màu đã chọn ở lượt trước
+    gDeck.forEach(function(c){ delete c.effectColor; });}
 }
 
 function doPlay(p,idx,chosenColor){
   if(gAnimating)return;
+  // chỉ người đang tới lượt mới được đánh, và lá phải còn trong tay
+  if(gOver || p!==gCur || !gHands[p] || !gHands[p][idx])return;
 
   var card=Object.assign({},gHands[p][idx]);
   card.effectColor=(card.type === 'wild' || card.type === 'wild4' || card.value === 'reflect')
@@ -5002,14 +5024,15 @@ function doPlay(p,idx,chosenColor){
 renderAll();
     fxLand(card);
 
+    if(gOver)return;
+
     if(!gHands[p].length){
       renderAll();
       endGame(p);
       return;
     }
 
-    gUnoCalled[p]=false;
-
+    // gUnoCalled chỉ reset khi người chơi rút thêm bài (forceDraw / rút từ bộ bài)
     applyEffect(p,card);
   });
 }
@@ -5479,7 +5502,7 @@ spawnActIcon(
 /* ── HUMAN DRAW ── */
 $('deck-pile').onclick=function(){
 
-  if(gOver || gCur!==0 || gWaitColor || gAnimating) return;
+  if(gOver || gCur!==0 || gWaitColor || gAnimating || gAutoResolving || gForceDrawing) return;
 
   cancelIdleTimer();
 
@@ -5506,6 +5529,7 @@ $('deck-pile').onclick=function(){
     }
 
     showToast('Bạn có bài chồng được!');
+    startIdleTimer();
     return;
   }
 
@@ -5532,6 +5556,7 @@ $('deck-pile').onclick=function(){
   animDraw(tx,ty,function(){
 
     gHands[0].push(drawn);
+    gUnoCalled[0] = false;
     sortHand(gHands[0]);
 
     renderAll();
@@ -5749,12 +5774,12 @@ document.addEventListener('keydown',function(e){
 
 });
 function checkUnoWindow(){
-  if(gHands[0].length===1&&!gUnoCalled[0]){
+  if(!gOver&&gHands[0].length===1&&!gUnoCalled[0]){
     $('uno-btn').style.display='block';
     setTimeout(function(){
-      if(gHands[0].length===1&&!gUnoCalled[0]){
+      if(!gOver&&gHands[0].length===1&&!gUnoCalled[0]){
         showToast('Quên hô UNO! Phạt 2 bài!',2400);
-        reshuf();for(var i=0;i<2;i++)if(gDeck.length)gHands[0].push(gDeck.pop());
+        reshuf();for(var i=0;i<2;i++)if(gDeck.length)gHands[0].push(gDeck.pop());gUnoCalled[0]=false;
         renderAll();
       }
       $('uno-btn').style.display='none';
@@ -5764,7 +5789,7 @@ function checkUnoWindow(){
 
 function humanPlay(idx){
 
-  if(gOver || gCur !== 0 || gWaitColor || gAnimating) return;
+  if(gOver || gCur !== 0 || gWaitColor || gAnimating || gAutoResolving) return;
 
   cancelIdleTimer();
 
@@ -5784,6 +5809,10 @@ function humanPlay(idx){
       gWaitColor = false;
       $('color-picker').style.display = 'none';
 
+      // tìm lại lá theo tham chiếu: tay có thể đã đổi trong lúc chọn màu
+      var playIdx = gHands[0].indexOf(card);
+      if(gOver || gCur !== 0 || playIdx < 0) return;
+
       if(gHands[0].length === 2){
         gUnoCalled[0] = true;
         showToast('✋ UNO!', 1500);
@@ -5792,7 +5821,7 @@ function humanPlay(idx){
       gHasDrawn = false;
       $('pass-btn').classList.remove('show');
 
-      doPlay(0, idx, col);
+      doPlay(0, playIdx, col);
 
       setTimeout(checkUnoWindow, 400);
     };
@@ -5834,10 +5863,12 @@ function humanPlay(idx){
 });
 
 function endGame(w){
+  if(gEndDone) return;
   if(isTeamMode()){
     endTeamGame(w);
     return;
   }
+  gEndDone = true;
   cancelColorTimer();
   cancelIdleTimer();
 gAutoResolving=false;
@@ -5895,6 +5926,8 @@ var gainThird = totalLose - gainWinner;
   
   function endTeamGame(w){
 
+  if(gEndDone) return;
+  gEndDone = true;
   cancelColorTimer();
   cancelIdleTimer();
   gAutoResolving=false;
