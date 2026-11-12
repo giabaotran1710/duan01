@@ -40,7 +40,7 @@
     { id: 'bongnay', name: 'Bóng nảy' },
     { id: 'xepbonggai', name: 'Xếp bóng gai' },
     { id: 'hungbi', name: 'Hứng bi' },
-    { id: 'sieuduoibat', name: 'Siêu đuổi bắt' },
+    { id: 'sieuduoibat', name: 'Siêu đuổi bắt', fmt: v => v + ' giây' },
     { id: 'khinhkhicau', name: 'Khinh khí cầu', fmt: v => v.toLocaleString('vi-VN') + ' m' },
     { id: 'blockjump', name: 'Nhảy! Nhảy và nhảy!' },
     { id: 'dungsidietvirus', name: 'Bắn phá virus' },

@@ -439,34 +439,46 @@ let keys = {
   right:false
 };
 
-function setTurnByPointer(e){
-  const x = e.clientX;
-  keys.left = x < W / 2;
-  keys.right = x >= W / 2;
+// Theo dõi từng ngón theo pointerId: ngón chạm sau cùng quyết định hướng,
+// nhấc một ngón thì quay về hướng của ngón còn giữ.
+const activePointers = new Map();
+
+function applyPointers(){
+  let x = null;
+  for(const v of activePointers.values()) x = v;
+  keys.left = x !== null && x < W / 2;
+  keys.right = x !== null && x >= W / 2;
+}
+
+function clearPointers(){
+  activePointers.clear();
+  keys.left = false;
+  keys.right = false;
 }
 
 canvas.addEventListener("pointerdown",e=>{
-  setTurnByPointer(e);
+  activePointers.delete(e.pointerId);
+  activePointers.set(e.pointerId, e.clientX);
+  applyPointers();
 });
 
 canvas.addEventListener("pointermove",e=>{
-  if(e.buttons || e.pressure > 0){
-    setTurnByPointer(e);
+  if(activePointers.has(e.pointerId) && (e.buttons || e.pressure > 0)){
+    activePointers.set(e.pointerId, e.clientX);
+    applyPointers();
   }
 });
 
-canvas.addEventListener("pointerup",()=>{
-  keys.left = false;
-  keys.right = false;
-});
-
-canvas.addEventListener("pointercancel",()=>{
-  keys.left = false;
-  keys.right = false;
-});
+function releasePointer(e){
+  activePointers.delete(e.pointerId);
+  applyPointers();
+}
+canvas.addEventListener("pointerup",releasePointer);
+canvas.addEventListener("pointercancel",releasePointer);
 
 let player, camera, police, rocks, particles, explosions;
 let gameOver = false;
+let deviceBlocked = false;
 let startTime = 0;
 let lastTime = 0;
 let policeTimer = 0;
@@ -607,8 +619,7 @@ function restartGame(){
   gameStarted = false;
   gameOver = false;
 
-  keys.left = false;
-  keys.right = false;
+  clearPointers();
 
   gameOverBox.style.display = "none";
   document.getElementById("modeSelect").style.display = "flex";
@@ -635,7 +646,7 @@ function loop(t){
   const dt = Math.min((t - lastTime) / 16.67, 2);
   lastTime = t;
 
-  if(gameStarted && !gameOver){
+  if(gameStarted && !gameOver && !deviceBlocked){
     update(dt,t);
   }
 
@@ -693,7 +704,8 @@ function update(dt,t){
   // Độ khó tăng dần theo thời gian
   // 0 giây  = difficulty 0
   // 90 giây = difficulty 1
-  surviveTime = (t - startTime) / 1000;
+  // Cộng dồn theo dt đã kẹp (dt = 1 ở 60fps) để khoá máy/đổi tab không được cộng điểm
+  surviveTime += dt * 16.67 / 1000;
   difficulty = Math.min(surviveTime / currentMode.difficultySeconds, 1);
   updateNightCycle();
   // Càng sống lâu, tàu người chơi càng chạy nhanh
@@ -746,7 +758,7 @@ updateParticles(dt);
 updateExplosions(dt);
 checkCollision();
 
-  const score = Math.floor((t - startTime) / 1000);
+  const score = Math.floor(surviveTime);
   scoreEl.textContent = score;
 }
   
@@ -1118,6 +1130,7 @@ function checkCollision(){
   for(const p of police){
     if(dist(player,p) < player.radius + p.radius - 5){
       endGame();
+      return;
     }
   }
 
@@ -1125,12 +1138,15 @@ function checkCollision(){
     const d = Math.hypot(player.x-r.x, player.y-r.y);
     if(d < player.radius + r.hitRadius){
       endGame();
+      return;
     }
   }
 }
 
 function endGame(){
+  if(gameOver) return;
   gameOver = true;
+  clearPointers();
   if (window.Scores) Scores.submit('sieuduoibat', parseInt(scoreEl.textContent, 10) || 0);
   finalScoreEl.textContent = scoreEl.textContent;
   try{
@@ -1931,11 +1947,17 @@ function checkDeviceBlock(){
     block.style.display = "flex";
     document.body.style.overflow = "hidden";
 
-    gameOver = true;
+    // Tạm dừng (không kết thúc ván); xoay dọc lại thì chơi tiếp
+    deviceBlocked = true;
+    clearPointers();
     return;
   }
 
   block.style.display = "none";
+  if(deviceBlocked){
+    deviceBlocked = false;
+    lastTime = performance.now();
+  }
 }
 
 checkDeviceBlock();
