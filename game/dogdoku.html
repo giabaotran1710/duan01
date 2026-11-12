@@ -403,6 +403,8 @@ function startMusic(){
     musicLoop();
 }
 
+// chuyển tab thì tạm tắt nhạc nền, quay lại thì phát tiếp nếu đang bật
+document.addEventListener('visibilitychange', () => { if(document.hidden){ if(bgMusicPlaying){ stopMusic(); window.__dgResume = true; } } else if(window.__dgResume){ window.__dgResume = false; startMusic(); } });
 function stopMusic(){
     bgMusicPlaying = false;
     if(bgMusicTimer !== null){
@@ -798,11 +800,18 @@ function onTap(r,c){
         tapTimer = null;
         handleDouble(r,c);
     }else{
+        // chạm sang ô khác khi ô trước còn chờ: xử lý ngay chạm đơn của ô trước, rồi mới chờ ô mới
+        if(tapTimer !== null){
+            clearTimeout(tapTimer); tapTimer = null;
+            const pr = Math.floor(tapIdx / N), pc = tapIdx % N;
+            if(!gameOver) handleSingle(pr, pc);
+        }
         tapIdx = idx;
-        tapTimer = setTimeout(() => {
-            tapTimer = null;
+        const t = setTimeout(() => {
+            if(tapTimer === t) tapTimer = null;
             if(!gameOver) handleSingle(r,c);
         }, 260);
+        tapTimer = t;
     }
 }
 
