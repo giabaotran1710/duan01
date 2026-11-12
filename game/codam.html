@@ -717,6 +717,17 @@ let state = {
   lastMove:null, aiThinking:false, aiTimer:null,
   animating:false,
 };
+// Thế hệ ván: tăng mỗi khi sang ván mới/về menu. Mọi chuỗi hoạt cảnh (await) kiểm lại sau mỗi bước,
+// nếu thế hệ đã đổi thì dừng, không ghi đè thế cờ của ván mới.
+let gameGen = 0;
+function bumpGameGen() {
+  gameGen++;
+  clearTimeout(state.aiTimer);
+  state.aiThinking = false;
+  state.animating = false;
+  const ov = document.getElementById('anim-overlay');
+  if (ov) ov.innerHTML = '';
+}
 
 // ═══════════════════════════════════════════════════════════════
 //  RULES MODAL
@@ -906,6 +917,8 @@ function getJumpSequences(board,r,c,piece){
   const res=[];
   for(const j of jumps){
     const nb=applyMove(board,{fromR:r,fromC:c,...j});
+    // Quân vừa phong Hậu giữa chuỗi ăn không được ăn tiếp (như Hậu) trong lượt đó: chuỗi dừng tại đây.
+    if(!piece.king&&nb[j.toR][j.toC].king){ res.push([j]); continue; }
     getJumpSequences(nb,j.toR,j.toC,nb[j.toR][j.toC]).forEach(s=>res.push([j,...s]));
   }
   return res;
@@ -925,10 +938,17 @@ function applySequence(board,fromR,fromC,seq){
   for(const mv of seq){ b=applyMove(b,{fromR:r,fromC:c,...mv}); r=mv.toR; c=mv.toC; }
   return b;
 }
+const AI_TIME_MS=1200;          // giới hạn thời gian nghĩ của AI (chạy trên luồng chính)
+const WIN_SCORE=1000;
+let _abDeadline=Infinity, _abNodes=0;
+const AB_TIMEOUT={};
 function alphabeta(board,depth,alpha,beta,maximizing){
+  if(((++_abNodes)&1023)===0&&performance.now()>_abDeadline) throw AB_TIMEOUT;
   const color=maximizing?BLACK:WHITE;
   const seqs=getAllSequences(board,color);
-  if(depth===0||seqs.length===0) return evaluate(board);
+  // Bên phải đi mà hết nước (hết quân hoặc bị chặn) là thua; thắng sớm được ưu tiên hơn (cộng depth).
+  if(seqs.length===0) return maximizing?-(WIN_SCORE+depth):(WIN_SCORE+depth);
+  if(depth===0) return evaluate(board);
   if(maximizing){
     let best=-Infinity;
     for(const mv of seqs){
@@ -951,13 +971,26 @@ function getBestAIMove(board){
   if(seqs.length===1) return seqs[0];
   const{white,black}=countPieces(board);
   const total=white+black;
-  const depth=total<=6?10:total<=10?8:total<=16?6:5;
-  let bestVal=-Infinity,bestMove=null;
-  for(const mv of seqs){
-    const v=alphabeta(applySequence(board,mv.fromR,mv.fromC,mv.seq),depth-1,-Infinity,Infinity,false);
-    if(v>bestVal||(v===bestVal&&Math.random()<.12)){bestVal=v;bestMove=mv;}
-  }
-  return bestMove;
+  const maxDepth=total<=6?10:total<=10?8:total<=16?6:5;
+  // Iterative deepening có hạn thời gian: luôn giữ nước tốt nhất của độ sâu đã tính xong,
+  // hết giờ thì dừng để không treo luồng chính ở tàn cuộc.
+  _abDeadline=performance.now()+AI_TIME_MS; _abNodes=0;
+  let order=seqs.slice(), result=seqs[0];
+  try{
+    for(let depth=1;depth<=maxDepth;depth++){
+      let bestVal=-Infinity,bestMove=null; const vals=new Map();
+      for(const mv of order){
+        const v=alphabeta(applySequence(board,mv.fromR,mv.fromC,mv.seq),depth-1,-Infinity,Infinity,false);
+        vals.set(mv,v);
+        if(v>bestVal||(v===bestVal&&Math.random()<.12)){bestVal=v;bestMove=mv;}
+      }
+      result=bestMove;
+      order=order.slice().sort((a,b)=>vals.get(b)-vals.get(a));
+      if(bestVal>=WIN_SCORE) break;   // đã thấy đường thắng chắc
+    }
+  }catch(e){ if(e!==AB_TIMEOUT) throw e; }
+  finally{ _abDeadline=Infinity; }
+  return result;
 }
 
 // ═══════════════════════════════════════════════════════════════
@@ -1025,6 +1058,7 @@ function easeInOutCubic(t) {
   return t < 0.5 ? 4*t*t*t : 1 - Math.pow(-2*t+2, 3)/2;
 }
 function animateMove(piece, fromR, fromC, toR, toC, victimPiece, victimR, victimC) {
+  const gen = gameGen;
   return new Promise(resolve => {
     const overlay = document.getElementById('anim-overlay');
     const sz = cellSize();
@@ -1064,7 +1098,7 @@ function animateMove(piece, fromR, fromC, toR, toC, victimPiece, victimR, victim
         }
       }
       if (tRaw < 1) { requestAnimationFrame(frame); }
-      else { ghost.remove(); if (victim) victim.remove(); fxDamLand(piece, toR, toC, victimR, victimC, victimPiece); resolve(); }
+      else { ghost.remove(); if (victim) victim.remove(); if (gen === gameGen) fxDamLand(piece, toR, toC, victimR, victimC, victimPiece); resolve(); }
     }
     requestAnimationFrame(frame);
   });
@@ -1276,10 +1310,15 @@ function handleClick(r, c) {
 
 async function executeMove(fromR, fromC, move, isJump) {
   const s = state;
+  const gen = gameGen;
   const boardSnapshot = s.board;
+  const wasKing = !!boardSnapshot[fromR][fromC]?.king;
   await animateMoveSequence(boardSnapshot, fromR, fromC, move, isJump);
+  if (gen !== gameGen) return;   // đã sang ván mới / về menu trong lúc diễn hoạt cảnh
   const nb = applyMove(s.board, {fromR, fromC, ...move});
-  if (isJump) {
+  // Quân vừa phong Hậu giữa chuỗi ăn thì kết thúc lượt, không ăn tiếp.
+  const justPromoted = !wasKing && nb[move.toR][move.toC].king;
+  if (isJump && !justPromoted) {
     const further = getJumps(nb, move.toR, move.toC, nb[move.toR][move.toC]);
     if (further.length > 0) {
       s.board = nb;
@@ -1322,7 +1361,9 @@ function scheduleAI() {
   if (s.aiThinking) return;
   s.aiThinking = true;
   renderBoard();
+  const gen = gameGen;
   s.aiTimer = setTimeout(async ()=>{
+    if (gen !== gameGen) return;
     const mv = getBestAIMove(s.board);
     s.aiThinking = false;
     if (!mv) { s.winner=WHITE; renderBoard(); return; }
@@ -1340,6 +1381,7 @@ function scheduleAI() {
       await animateMove(piece, curR, curC, step.toR, step.toC,
         isJump ? curBoard[step.midR][step.midC] : null,
         step.midR, step.midC);
+      if (gen !== gameGen) return;   // VÁN MỚI/MENU được bấm khi AI đang diễn chuỗi ăn
       curBoard = applyMove(curBoard, {fromR:curR, fromC:curC, ...step});
       s.board = curBoard;
       renderBoard();
@@ -1354,8 +1396,9 @@ function scheduleAI() {
 //  NAVIGATION
 // ═══════════════════════════════════════════════════════════════
 function showMenu() {
-  clearTimeout(state.aiTimer);
+  bumpGameGen();
   playTransition(() => {
+    bumpGameGen();
     state.screen = 'menu';
     document.getElementById('screen-menu').className = 'screen active';
     document.getElementById('screen-game').className = 'screen';
@@ -1363,9 +1406,10 @@ function showMenu() {
 }
 
 function startGame(mode) {
-  clearTimeout(state.aiTimer);
+  bumpGameGen();
 
   playTransition(() => {
+    bumpGameGen();
     Object.assign(state, {
       screen:mode, board:initBoard(), turn:WHITE,
       selected:null, mustJumpFrom:null, winner:null,

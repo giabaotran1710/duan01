@@ -1879,6 +1879,7 @@ function aiMove() {
   aiThinking = true;
   setStatus("ai-thinking");
   boardDiv.classList.add("disabled");
+  updateUndoButton();
 
   aiRequestId++;
   const myRequestId = aiRequestId;
@@ -1903,7 +1904,7 @@ function aiMove() {
 }
 
 function finishAiMove(r, c) {
-  if (gameOver || board[r][c] !== "") { aiThinking = false; boardDiv.classList.remove("disabled"); return; }
+  if (gameOver || board[r][c] !== "") { aiThinking = false; boardDiv.classList.remove("disabled"); updateUndoButton(); return; }
   place(r, c, ai);
   if (checkWin(r, c, ai)) {
     highlightWin(r, c, ai);
@@ -1917,6 +1918,7 @@ function finishAiMove(r, c) {
   playerStartTime = Date.now();
   aiThinking = false;
   boardDiv.classList.remove("disabled");
+  updateUndoButton();
 
   const total = getOccupiedCount();
   if ([100, 150, 175].includes(total) && !drawMilestones.has(total)) {
@@ -2015,8 +2017,8 @@ function playerMove(r, c) {
   }
   if (currentTurn !== human) return;
   place(r, c, human);
-  canUndo = true; undoUsed = false; updateUndoButton();
   currentTurn = ai;
+  canUndo = true; undoUsed = false; updateUndoButton();
   if (checkWin(r, c, human)) {
     highlightWin(r, c, human);
     statusTop.textContent = " Người chơi thắng!"; statusTop.classList.add("win");
@@ -2054,6 +2056,9 @@ btnDrawReject.addEventListener("click", () => {
 
 function undoMove() {
   if (replaying || gameOver) return;
+  // Đánh với máy: chỉ hoàn tác khi đến lượt người chơi. Nếu AI đang nghĩ mà bỏ 2 nước thì sẽ xoá nhầm quân
+  // và người được đi thêm; chặn trước khi tăng aiRequestId để không huỷ nước AI đang tính.
+  if (!pvpMode && (aiThinking || currentTurn !== human)) { updateUndoButton(); return; }
   aiRequestId++; // huỷ mọi yêu cầu AI đang tính dở (nếu có)
   if (pvpMode) {
     if (moveHistory.length === 0) return;
@@ -2085,7 +2090,7 @@ function undoMove() {
 function updateUndoButton() {
   let active = false;
   if (pvpMode) active = !gameOver && moveHistory.length > 0;
-  else active = !gameOver && !undoUsed && canUndo && getOccupiedCount() >= 10 && undoLeft > 0;
+  else active = !gameOver && !undoUsed && canUndo && !aiThinking && currentTurn === human && getOccupiedCount() >= 10 && undoLeft > 0;
   btnUndo.disabled = !active;
   btnUndo.classList.toggle("active", active);
 }
@@ -2657,6 +2662,7 @@ const canvas = document.getElementById("confettiCanvas");
 const ctx = canvas.getContext("2d");
 canvas.width = window.innerWidth; canvas.height = window.innerHeight;
 let confetti = [];
+let confettiRunning = false;   // chỉ một vòng rAF cho confetti, gọi lại khi đang chạy thì chỉ nạp hạt mới
 function randomColor() { return ["#1b4fc4","#cf2d2d","#e0a400","#2c8a4c","#1d2a4a","#f0b8c8"][Math.floor(Math.random()*6)]; }  // màu bút trên trang vở
 function launchConfetti() {
   confetti = [];
@@ -2670,7 +2676,7 @@ function launchConfetti() {
       shape: Math.random() < 0.5 ? "rect" : "line"
     });
   }
-  animateConfetti();
+  if (!confettiRunning) { confettiRunning = true; animateConfetti(); }
 }
 function animateConfetti() {
   ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2683,6 +2689,7 @@ function animateConfetti() {
   });
   confetti = confetti.filter(p => p.y < canvas.height + 20);
   if (confetti.length > 0) requestAnimationFrame(animateConfetti);
+  else confettiRunning = false;
 }
 
 // Khởi tạo
