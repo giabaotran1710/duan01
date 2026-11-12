@@ -41,6 +41,18 @@ button.on2{background:#3b7ec9}
 .card .row{width:100%;margin-top:14px}
 @keyframes pop{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
 footer{position:fixed;bottom:5px;left:10px;font-size:10px;color:#aaa;opacity:.7;font-family:monospace;pointer-events:none}
+/* màn ngang thấp (điện thoại xoay ngang): bàn bên trái, tiêu đề/HUD/nút bên phải để bàn đủ lớn */
+@media (orientation:landscape) and (max-height:560px){
+  body{display:grid;grid-template-columns:auto minmax(0,340px);grid-template-rows:1fr auto auto 1fr;grid-template-areas:"f h" "f u" "f s" "f c";align-content:center;justify-content:center;column-gap:16px;row-gap:8px;
+    padding:8px max(10px,env(safe-area-inset-right,0px)) 8px max(10px,env(safe-area-inset-left,0px))}
+  h1{grid-area:h;font-size:22px;text-align:center;align-self:end}
+  .hud{grid-area:u;width:100%}
+  .frame{grid-area:f;align-self:center;padding:8px}
+  #sizes{grid-area:s;width:100%}
+  #sizes + .row{grid-area:c;width:100%;align-self:start}
+  #board{--s:min(calc(100vh - 34px),calc(100vw - 400px),540px)}
+  button{min-height:42px}
+}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -329,9 +341,11 @@ function finish(){
 function showWin(){
   S.status='won';
   const time=Math.max(1,Math.round(S.elapsed/1000)),old=loadBest(S.n);
-  const nb={moves:old?Math.min(old.moves,S.moves):S.moves,time:old?Math.min(old.time,time):time};
-  const rec=!old||S.moves<old.moves||time<old.time;
-  saveBest(S.n,nb);
+  // kỷ lục là cặp (lượt, thời gian) của cùng một ván: ưu tiên ít lượt, bằng lượt thì ít thời gian
+  const rec=!old||S.moves<old.moves||(S.moves===old.moves&&time<old.time);
+  const nb=rec?{moves:S.moves,time:time}:old;
+  if(rec)saveBest(S.n,nb);
+  S.elapsed=time*1000;   // thời gian hiển thị khớp với giá trị được lưu
   $('#mt').textContent='Thời gian: '+fmt(S.elapsed);
   $('#mm').textContent='Số lượt: '+S.moves;
   $('#mb').textContent=rec?' Kỷ lục mới!':'Kỷ lục: '+nb.moves+' lượt · '+fmt(nb.time*1000);

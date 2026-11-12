@@ -492,6 +492,7 @@ let correctAnswers = 0;
 
 let roundLocked = false;
 let constellation = null;
+let runId = 0;   // tăng mỗi ván: hẹn giờ của ván cũ không chạm vào ván mới
 
 /*
   Tốc độ chỉ tăng khi sang câu hỏi kế tiếp.
@@ -517,6 +518,16 @@ function resize(){
   ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
 
   makeBackgroundStars();
+
+  // xoay màn / đổi cỡ giữa câu: đưa chòm sao đang hiện về tâm mới, co giãn bán kính theo min(W,H)
+  if(constellation){
+    const unit = Math.min(W, H);
+    const k = constellation.unit ? unit / constellation.unit : 1;
+    constellation.cx = W * .5;
+    constellation.cy = H * .48;
+    constellation.points.forEach(p => { p.radius *= k; });
+    constellation.unit = unit;
+  }
 }
 
 window.addEventListener("resize", resize);
@@ -751,6 +762,7 @@ lastStarCount = count;
     count,
     cx,
     cy,
+    unit: Math.min(W, H),
     points,
     rotation: rand(0, Math.PI * 2),
     birth: performance.now(),
@@ -967,6 +979,7 @@ function startGame(){
     audioCtx.resume();
 }
   running = true;
+  runId++;
   score = 0;
   combo = 0;
   totalAnswers = 0;
@@ -1055,8 +1068,9 @@ playWrongSound();
 
   updateUI();
 
+  const myRun = runId;
   setTimeout(() => {
-  if(!running) return;
+  if(!running || myRun !== runId) return;
 
   questionIndex++;
   createConstellation();
