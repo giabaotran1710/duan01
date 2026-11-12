@@ -2870,7 +2870,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
           let v = Math.max(0, fv(f, m.v) + f.str); if (f.weak > 0) v = Math.floor(v * .75); if (C.vuln > 0) v = Math.floor(v * 1.5);
           const hp = center($('heroCv')); fxSlash(hp.x, hp.y, '#ff4a3a', 1);
           if (C.crit > 0 && v > 0) { v *= 2; C.crit--; fxText(hp.x, hp.y - 70, 'CHÍ MẠNG!', '#ff4a3a', true); }
-          hurtMe(v, false, f); debuffMe(m, true);
+          hurtMe(v, false, f); debuffMe(Object.assign({}, m, { curse: 0 }), true);
           render(); if (R.hp <= 0) break; if (m.hits) await wait(170);
         }
         if (m.curse) debuffMe({ curse: m.curse });
@@ -2918,7 +2918,9 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   const relicChoices = (n, rare) => shuffle(Object.keys(RELICS).filter(k => !R.relics.includes(k) && (rare || RELICS[k].r < 2) && !(R.lost || []).includes(k))).slice(0, n);
   const relicPrice = k => [110, 150, 210][RELICS[k].r] + rint(20);
   function victory() {
-    if (!C || C.over) return; C.over = true; SFX.win(); banner('CHIẾN THẮNG');
+    if (!C || C.over) return;
+    if (R.hp <= 0) return finish(false);   // chết cùng lúc với địch cuối (nổ...) vẫn tính thua
+    C.over = true; SFX.win(); banner('CHIẾN THẮNG');
     const t = C.node.t, g0 = t === 'boss' ? 70 : t === 'elite' ? 35 : 14 + rint(8), g = Math.round(g0 * (1 + rv('tuiv', .5, 1)));
     R.gold += g; if (hasR('bau') && R.hp < R.max / 2) R.hp = Math.min(R.max, R.hp + rv('bau', 10, 18)); R.hp = Math.min(R.max, R.hp + rv('moc', 5, 9) + Math.round(R.max * rv('amthuoc', .06, .1)));
     if (t === 'boss') R.hp = Math.min(R.max, R.hp + Math.round(R.max * .35));
@@ -2961,6 +2963,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   }
 
   function finish(win) {
+    if (!R) return;
     mode = 'over'; busy = true; if (C) C.over = true; win ? SFX.win() : SFX.lose();
     const sc = R.stage, rec = sc > store.best; if (rec) { store.best = sc; save(); } clearRun();
     $('oTitle').textContent = win ? 'ĐẠI THẮNG' : 'THẤT BẠI';
