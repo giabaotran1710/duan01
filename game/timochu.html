@@ -521,7 +521,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
       if (S.solved.every(Boolean)) { S.keySolved = true; return finish(true); }
       select(firstOpen(S.sel + 1));
     } else if (S.sel === 'key' && cellsOf('key').every(function (q) { return known(q[0], q[1]); })) {
-      S.keySolved = true; finish(true);
+      S.keySolved = true; S.keyByHint = true; finish(true);
     }
   }
   function revealRest() {
@@ -541,7 +541,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     S.over = true; S.won = won;
     clearInterval(clockTimer);
     var secs = Math.floor((Date.now() - S.t0) / 1000);
-    var unsolved = S.solved.filter(function (x) { return !x; }).length;
+    // thắng nhờ gợi ý mở hết cột từ khóa thì không có thưởng đoán sớm
+    var unsolved = S.keyByHint ? 0 : S.solved.filter(function (x) { return !x; }).length;
     revealRest();
     $('ans').value = '';
     $('ans').blur();
@@ -549,7 +550,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     var score = 0;
     if (won) {
       // bảng càng lớn điểm gốc càng cao; đoán từ khóa sớm được thưởng theo số hàng chưa giải
-      score = Math.max(50, 200 * S.N - secs - 20 * S.wrongRow - 60 * S.wrongKey + 120 * unsolved + (S.keyDirect ? 150 : 0));
+      score = Math.max(50, 200 * S.N - secs - 20 * S.wrongRow - 60 * S.wrongKey - 80 * S.hints + 120 * unsolved + (S.keyDirect && !S.keyByHint ? 150 : 0));
       s.won++; s.streak++; s.best = Math.max(s.best, score);
       if (window.Scores) Scores.submit('timochu', score);
     } else s.streak = 0;
@@ -561,7 +562,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none}
     $('winScore').textContent = won ? score : '';
     $('winScore').style.display = won ? '' : 'none';
     $('winDet').textContent = won ?
-      'Thời gian ' + fmt(secs) + ' · gợi ý ' + S.hints + ' · trả lời sai ' + (S.wrongRow + S.wrongKey) + (unsolved ? ' · thưởng đoán sớm +' + (120 * unsolved + (S.keyDirect ? 150 : 0)) : '') + (s.streak > 1 ? ' · chuỗi thắng ' + s.streak : '') :
+      'Thời gian ' + fmt(secs) + ' · gợi ý ' + S.hints + (S.hints ? ' (−' + 80 * S.hints + ')' : '') + ' · trả lời sai ' + (S.wrongRow + S.wrongKey) + (unsolved ? ' · thưởng đoán sớm +' + (120 * unsolved + (S.keyDirect && !S.keyByHint ? 150 : 0)) : '') + (s.streak > 1 ? ' · chuỗi thắng ' + s.streak : '') :
       'Chữ màu cam trên bảng là đáp án. Thử một bảng khác nhé!';
     setTimeout(function () { if (S && S.over) $('win').classList.add('on'); }, won ? 650 : 250);
     if (won && !reduced && window.FX) FX.rain({ n: 90, colors: ['#ffd166', '#3fcf74', '#5cc8ff', '#ff6b8a'], size: 9 });

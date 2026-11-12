@@ -5,7 +5,7 @@
   'use strict';
   const $ = id => document.getElementById(id);
   const SAVE_KEY = 'noitu_v1';
-  const V = '20261104b';
+  const V = '20261112a';
   const LEVELS = {
     easy:   { name: 'DỄ',     vocab: .6,  trap: 0,   think: [1100, 1500], time: 40, mult: 1 },
     normal: { name: 'THƯỜNG', vocab: .85, trap: .2, think: [800, 1300],  time: 28, mult: 2 },
@@ -338,9 +338,12 @@
   function pause(on) {
     if (G.mode !== 'solo' || !G.turn) return;
     if (on && !G.paused && !$('over').classList.contains('show')) {
-      G.paused = true; G.left = G.deadline - Date.now(); clearTimeout(G.aiT); $('inp').blur(); show('pause');
+      G.paused = true; G.pausedAt = Date.now(); G.left = G.deadline - Date.now(); clearTimeout(G.aiT); $('inp').blur(); show('pause');
     } else if (!on && G.paused) {
-      G.paused = false; G.deadline = Date.now() + G.left; show(null);
+      G.paused = false;
+      // tạm dừng trong lượt mình chỉ được giữ đồng hồ tối đa 3 giây (chặn mẹo dừng để tra từ)
+      const lost = G.turn === 'me' ? Math.max(0, Date.now() - G.pausedAt - 3000) : 0;
+      G.deadline = Date.now() + Math.max(500, G.left - lost); show(null);
       if (G.turn === 'opp') scheduleAI(); else try { $('inp').focus({ preventScroll: true }); } catch (e) {}
     }
   }

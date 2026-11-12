@@ -482,7 +482,7 @@ const PALETTE=[
 const HINT_BASE_COST=15,HINT_STEP_COST=10,SKIP_BASE_COST=20,SKIP_STEP_COST=15;
 const LEVEL_REWARD_BASE=[20,35,55,80],LEVEL_REWARD_STAR_BONUS=10;
 const MONEY_STORAGE_KEY='noiMach_money';
-let money=parseInt(localStorage.getItem(MONEY_STORAGE_KEY))||60;
+let money=(()=>{const v=parseInt(localStorage.getItem(MONEY_STORAGE_KEY));return Number.isFinite(v)?Math.max(0,v):60;})();
 function saveMoney(){localStorage.setItem(MONEY_STORAGE_KEY,money);}
 let hintUsesThisLevel=0;
 
@@ -543,14 +543,21 @@ function setupTiers(){
   });
 }
 
-async function newGame(){
+let lastPuzzle=null,curIsReplay=false;
+async function newGame(same){
   gameWon=false;
   document.getElementById('modalLayer').classList.remove('show');
   const tier=TIERS[tierIndex];
   SFX.newGame();
-  showToast('Đang tạo màn chơi...');
-  const puzzle=await buildPuzzle(tier.N,tier.K);
+  let puzzle;
+  if(same&&lastPuzzle)puzzle=lastPuzzle;   // chơi lại đúng màn vừa giải
+  else{
+    showToast('Đang tạo màn chơi...');
+    window.__nmGen=true;
+    try{puzzle=await buildPuzzle(tier.N,tier.K);}finally{window.__nmGen=false;}
+  }
   if(!puzzle){SFX.error();showToast('Không tạo được màn, thử lại...');return;}
+  lastPuzzle=puzzle;curIsReplay=!!same;
   N=puzzle.N;K=puzzle.K;
   owner=Array.from({length:N},()=>new Array(N).fill(-1));
   solutionPaths=puzzle.segments;colorPaths=puzzle.segments.map(()=>[]);colorSolved=new Array(K).fill(false);
@@ -670,6 +677,12 @@ function extendDraw(r,c){
   if(!drawing||activeColor<0)return;
   const k=activeColor,path=colorPaths[k];if(path.length===0)return;
   const [lr,lc]=path[path.length-1];if(lr===r&&lc===c)return;
+  // vuốt nhanh nhảy qua nhiều ô cùng hàng/cột trong một lần: đi lần lượt từng ô ở giữa
+  if(Math.abs(r-lr)+Math.abs(c-lc)>1&&(r===lr||c===lc)){
+    const sr=Math.sign(r-lr),sc=Math.sign(c-lc);let cr=lr,cc=lc;
+    while(cr!==r||cc!==c){cr+=sr;cc+=sc;extendDraw(cr,cc);const p2=colorPaths[k],t=p2[p2.length-1];if(!drawing||activeColor!==k||!t||t[0]!==cr||t[1]!==cc)break;}
+    return;
+  }
 
   if(path.length>=2){
     const [pr,pc]=path[path.length-2];
@@ -733,19 +746,19 @@ function showWinModal(){
   const m=String(Math.floor(elapsed/60)).padStart(2,'0'),s=String(elapsed%60).padStart(2,'0');document.getElementById('modalTime').textContent=`${m}:${s}`;document.getElementById('modalMoves').textContent=moves;
   const par=N*N;let stars=1;if(moves<=par*1.15)stars=3;else if(moves<=par*1.4)stars=2;
   document.getElementById('modalStars').textContent='★'.repeat(stars)+'☆'.repeat(3-stars);
-  const reward=LEVEL_REWARD_BASE[tierIndex]+(stars-1)*LEVEL_REWARD_STAR_BONUS;money+=reward;SFX.coin();updateMoneyDisplay();document.getElementById('modalReward').textContent=`+${reward} `;document.getElementById('modalLayer').classList.add('show');
+  const reward=curIsReplay?0:LEVEL_REWARD_BASE[tierIndex]+(stars-1)*LEVEL_REWARD_STAR_BONUS;   // chơi lại màn cũ không nhận thưởng lần nữamoney+=reward;SFX.coin();updateMoneyDisplay();document.getElementById('modalReward').textContent=`+${reward} `;document.getElementById('modalLayer').classList.add('show');
 }
 
 document.getElementById('modalReplay').addEventListener('click',()=>{initAudio();SFX.tap();document.getElementById('modalLayer').classList.remove('show');restartSamePuzzle();});
 document.getElementById('modalNext').addEventListener('click',()=>{initAudio();SFX.tap();document.getElementById('modalLayer').classList.remove('show');newGame();});
-let lastPuzzleSeed=null;
-function restartSamePuzzle(){newGame();}
+function restartSamePuzzle(){newGame(true);}
 
 /* ============================================================
    CONTROLS
    ============================================================ */
 document.getElementById('btnNew').addEventListener('click',()=>{
   initAudio();SFX.tap();
+  if(window.__nmGen)return;   // đang sinh màn mới: bỏ qua bấm lặp (tránh bị trừ tiền oan)
   if(gameWon){newGame();return;}
   const cost=currentSkipCost();
   if(money<cost){SFX.error();showToast(`Không đủ tiền để bỏ qua màn này (cần ${cost}đ)`);return;}

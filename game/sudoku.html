@@ -1122,9 +1122,16 @@
         if (b[r][c] === 0) return;
       }
     }
-    for (let r = 0; r < state.size; r++) {
-      for (let c = 0; c < state.size; c++) {
-        if (b[r][c] !== state.solution[r][c]) return;
+    if (state.variant === 'killer') {
+      // Killer có thể có nhiều lời giải: xét thắng theo luật (hàng/cột/khối không trùng, mỗi lồng đủ tổng và không trùng số)
+      const g = b.map(row => row.slice());
+      for (let r = 0; r < state.size; r++) for (let c = 0; c < state.size; c++) { const v = g[r][c]; g[r][c] = 0; const ok = isValid(g, r, c, v); g[r][c] = v; if (!ok) return; }
+      for (const cage of state.killerCages) { const vs = cage.cells.map(x => b[x.r][x.c]); if (new Set(vs).size !== vs.length || vs.reduce((a, v) => a + v, 0) !== cage.sum) return; }
+    } else {
+      for (let r = 0; r < state.size; r++) {
+        for (let c = 0; c < state.size; c++) {
+          if (b[r][c] !== state.solution[r][c]) return;
+        }
       }
     }
     state.won = true;
@@ -1239,13 +1246,14 @@
     }
     if (el.eraseBtn) {
       el.eraseBtn.addEventListener('click', () => {
+        if (state.won) return;
         if (state.selected) setCellValue(state.selected.r, state.selected.c, 0, true);
       });
     }
     if (el.numpad) {
       el.numpad.addEventListener('click', (e) => {
         const btn = e.target.closest('button');
-        if (!btn || !state.selected) return;
+        if (!btn || !state.selected || state.won) return;
         const val = btn.dataset.value;
         if (val) {
           const num = Number(val);
