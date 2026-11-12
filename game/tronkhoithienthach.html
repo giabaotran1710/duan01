@@ -164,33 +164,50 @@
     console.warn(' Kiểm tra đường dẫn: ../audio/comet.mp3');
   });
 
+  // musicWanted: nhạc nên đang phát (đang trong ván). retryTimer: lần thử phát lại đang chờ.
+  let musicWanted = false;
+  let retryTimer = 0;
+
+  function tryPlay(label) {
+    // Chỉ phát khi vẫn trong ván và tab đang hiện (stopMusic hoặc ẩn tab trước đó thì bỏ qua)
+    if (!musicWanted || document.hidden) return;
+    audio.play().catch(e => console.warn(label, e));
+  }
+
   function playMusic() {
+    musicWanted = true;
+    clearTimeout(retryTimer);
     if (!audioReady) {
       console.warn(' Âm thanh chưa tải xong, thử lại sau 500ms');
       audio.load();
-      setTimeout(() => {
-        if (audioReady) {
-          audio.currentTime = 0;
-          audio.play().catch(e => console.warn('Phát nhạc thất bại:', e));
-        } else {
-          // Thử phát dù chưa ready, có thể vẫn được
-          audio.play().catch(e => console.warn('Phát nhạc thất bại (chưa ready):', e));
-        }
+      retryTimer = setTimeout(() => {
+        if (audioReady) audio.currentTime = 0;
+        // Thử phát dù chưa ready, có thể vẫn được
+        tryPlay('Phát nhạc thất bại:');
       }, 500);
       return;
     }
     audio.currentTime = 0;
+    if (document.hidden) return;
     audio.play().catch(err => {
       console.warn(' Phát nhạc bị chặn hoặc lỗi:', err);
       // Thử lại sau 0.5s
-      setTimeout(() => audio.play().catch(() => {}), 500);
+      retryTimer = setTimeout(() => tryPlay('Phát nhạc thất bại:'), 500);
     });
   }
 
   function stopMusic() {
+    musicWanted = false;
+    clearTimeout(retryTimer);
     audio.pause();
     audio.currentTime = 0;
   }
+
+  // Ẩn tab / khoá máy: tạm dừng nhạc; quay lại thì phát tiếp nếu vẫn đang trong ván
+  document.addEventListener('visibilitychange', () => {
+    if (document.hidden) audio.pause();
+    else tryPlay('Phát lại nhạc thất bại:');
+  });
 
   const state = {
     running:false,

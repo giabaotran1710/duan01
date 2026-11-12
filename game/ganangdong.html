@@ -158,6 +158,7 @@ function playJumpSound() {
 
             // Best score (persisted in localStorage)
             let bestScore = 0;
+            let lastRunNewRecord = false;
             try { bestScore = parseInt(localStorage.getItem('chickenRunBest_v26') || '0') || 0; } catch (e) {}
 
             // Restart button position (calculated on resize)
@@ -2255,7 +2256,9 @@ function playLoseSound() {
                 if (window.Scores) Scores.submit('ganangdong', Math.floor(score));
                 gameOverAnimTimer = 0;
 
-                if (score > bestScore) {
+                // Chỉ là kỷ lục mới khi vượt hẳn kỷ lục cũ (bằng thì không)
+                lastRunNewRecord = Math.floor(score) > bestScore;
+                if (lastRunNewRecord) {
                     bestScore = Math.floor(score);
                     try { localStorage.setItem('chickenRunBest_v26', bestScore); } catch (e) {}
                 }
@@ -2714,7 +2717,7 @@ function playLoseSound() {
                 ctx.font = `bold ${Math.round(34 * k)}px ${UI.font}`;
                 ctx.fillText(String(Math.floor(score)), canvasWidth / 2, y + 118 * k);
                 ctx.font = `${Math.round(14 * k)}px ${UI.font}`;
-                const rec = score > 0 && Math.floor(score) >= Math.floor(bestScore);
+                const rec = lastRunNewRecord;
                 ctx.fillStyle = rec ? UI.redDark : '#6B4F2D';
                 ctx.fillText(rec ? 'Kỷ lục mới!' : `Kỷ lục ${Math.floor(bestScore)}`, canvasWidth / 2, y + 140 * k);
                 // Nút
@@ -2855,6 +2858,26 @@ function playLoseSound() {
 
                 requestAnimationFrame(gameLoop);
             }
+
+            // Xoay màn / đổi cỡ cửa sổ: đo lại canvas (debounce) và giữ gà trên mặt đất mới
+            let resizeTimer = 0;
+            function onViewportResize() {
+                clearTimeout(resizeTimer);
+                resizeTimer = setTimeout(() => {
+                    const oldGround = groundY;
+                    resizeCanvas();
+                    if (chicken && hasStartedPlaying) {
+                        chicken.x = canvasWidth * 0.16;
+                        if (chicken.isOnGround && !chicken.currentPlatform) {
+                            chicken.y = getGroundY() - chicken.height;
+                        } else {
+                            chicken.y += groundY - oldGround;
+                        }
+                    }
+                }, 150);
+            }
+            window.addEventListener('resize', onViewportResize);
+            window.addEventListener('orientationchange', onViewportResize);
 
             resizeCanvas();
             resetGame();

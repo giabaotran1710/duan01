@@ -221,6 +221,7 @@ function resize() {
   const nw = innerWidth, nh = innerHeight;
   if (!nw || !nh) return;   // cửa sổ bằng 0 (iframe ẩn): giữ nguyên, không tạo canvas rỗng
   if (nw === lastW && nh === lastH && clouds.length) return;   // kích thước không đổi: không dựng lại
+  const oldW = W;
   lastW = nw; lastH = nh;
   W = nw; H = nh;
   cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
@@ -230,6 +231,10 @@ function resize() {
   initGrass();
   if (clouds.length) initClouds();
   if (!kite.alive || state.phase !== 'play') { kite.y = kiteBaseY(); }
+  else if (oldW > 0 && oldW !== W) {   // xoay màn giữa ván: co vị trí/vận tốc ngang theo bề rộng mới để diều không bị coi là bay khỏi khung
+    const k = W / oldW;
+    kite.x *= k; kite.vx *= k;
+  }
 }
 const kiteBaseY = () => Math.max(170, H * 0.36);
 
@@ -1045,7 +1050,7 @@ function updateHUD(dt) {
   ti.classList.toggle('danger', tension > 0.8 && state.phase === 'play');
   if (hudT > 0) return;
   hudT = 0.1;
-  $('time').textContent = state.t.toFixed(1) + ' giây';
+  $('time').textContent = (Math.floor(state.t * 10) / 10).toFixed(1) + ' giây';
   $('best').textContent = 'Kỷ lục ' + store.best.toFixed(1) + ' giây';
   const w = wind.x, v = Math.abs(w) / 16;   // m/s (quy ước: 16 đơn vị = 1 m/s)
   $('windText').textContent = v.toFixed(1) + ' m/s';
@@ -1124,7 +1129,8 @@ function start() {
 }
 function gameOver() {
   state.phase = 'over';
-  const t = state.t, nb = t > store.best;
+  // Làm tròn xuống 0,1 giây giống điểm nộp lên bảng xếp hạng (floor(t*10))
+  const t = Math.floor(state.t * 10) / 10, nb = t > store.best;
   if (nb) { store.best = t; save(); }
   if (window.Scores) Scores.submit('thadieu', Math.floor(t * 10));
   $('reason').textContent = state.reason;

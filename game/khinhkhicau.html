@@ -500,6 +500,9 @@ function lerp(a,b,t){
 let W,H,dpr;
 let T = 0;               // đồng hồ hoạt ảnh (giây)
 let lastFrameT = 0;
+let frameStep = 1;          // số "khung 60fps" của khung hiện tại (đặt bởi frameClock)
+let pausedByDevice = false; // ván đang tạm dừng vì điện thoại xoay ngang
+let loopRaf = 0;
 
 let tilt = 0;
 let gameRunning = false;
@@ -807,12 +810,12 @@ function drawStars(){
   });
 
   // sao băng thỉnh thoảng
-  if(!shootingStar && nightFade > .6 && Math.random() < .0035){
+  if(!shootingStar && nightFade > .6 && Math.random() < .0035*frameStep){
     shootingStar = { x:rand(W*.2,W*.95), y:rand(10,H*.25), vx:-rand(7,10), vy:rand(3,5), life:1 };
   }
   if(shootingStar){
     const s = shootingStar;
-    s.x += s.vx; s.y += s.vy; s.life -= .035;
+    s.x += s.vx*frameStep; s.y += s.vy*frameStep; s.life -= .035*frameStep;
     if(s.life <= 0){
       shootingStar = null;
     }else{
@@ -865,7 +868,7 @@ function drawMoon(){
 
 function drawBirds(){
   // vài đàn chim bay ngang trời ban ngày
-  if(nightFade < .25 && birds.length < 2 && Math.random() < .0016){
+  if(nightFade < .25 && birds.length < 2 && Math.random() < .0016*frameStep){
     const dir = Math.random() < .5 ? 1 : -1;
     const n = 3 + Math.floor(Math.random()*3);
     const y0 = rand(H*.14,H*.5);
@@ -884,7 +887,7 @@ function drawBirds(){
   ctx.lineWidth = 1.5;
   ctx.lineCap = "round";
   birds.forEach(b=>{
-    b.x += b.vx;
+    b.x += b.vx*frameStep;
     const f = Math.sin(T*9 + b.ph) * 4 * b.s;
     ctx.beginPath();
     ctx.moveTo(b.x - 8*b.s, b.y - f);
@@ -935,10 +938,10 @@ function drawClouds(fromLayer,toLayer){
 }
 
 // mây trôi ngang + rơi dần khi khí cầu bay lên
-function stepClouds(rising){
+function stepClouds(rising, step = 1){
   clouds.forEach(c=>{
-    if(rising) c.y += c.speed;
-    c.x += c.drift;
+    if(rising) c.y += c.speed*step;
+    c.x += c.drift*step;
     if(c.x > W + c.s*1.5) c.x = -c.s*1.5;
     if(c.x < -c.s*1.6) c.x = W + c.s;
     if(c.y > H + 50){
@@ -1811,8 +1814,8 @@ function updateBalloonFx(step,flameBoost){
     : .75 + .25*Math.sin(T*9) + Math.max(0, Math.sin(T*2.6))*.5;
 }
 
-function emitBalloonSparks(){
-  if(Math.random() < .3){
+function emitBalloonSparks(step = 1){
+  if(Math.random() < .3*step){
     addParticle({
       type:"spark",
       x:balloon.x + rand(-3,3), y:balloon.y + 17,
@@ -1824,7 +1827,7 @@ function emitBalloonSparks(){
 
 function stepPlay(step){
   if(introPlaying){
-    introProgress += 0.026;
+    introProgress += 0.026*step;
 
     const t = Math.min(introProgress, 1);
     const ease = 1 - Math.pow(1 - t, 3);
@@ -1838,21 +1841,21 @@ function stepPlay(step){
       distance = cameraY / 1.2;
     }
   }else{
-    distance += 0.6;
-    skyTime += 0.6;
+    distance += 0.6*step;
+    skyTime += 0.6*step;
     cameraY = Math.min(distance * 1.2, H + 260);
   }
 
   scoreEl.textContent = Math.floor(distance) + "m";
 
-  stepClouds(true);
+  stepClouds(true, step);
 
   // điều khiển nghiêng
   if(gameStarted){
-    balloon.vx += (manualDir ? manualDir * 22 : tilt) * 0.09;
-    balloon.vx *= 0.88;
+    balloon.vx += (manualDir ? manualDir * 22 : tilt) * 0.09 * step;
+    balloon.vx *= Math.pow(0.88, step);
     balloon.vx = Math.max(-8, Math.min(8, balloon.vx));
-    balloon.x += balloon.vx;
+    balloon.x += balloon.vx * step;
   }else{
     balloon.vx = 0;
   }
@@ -1862,7 +1865,7 @@ function stepPlay(step){
   const edgeZone = 42;
 
   if(gameStarted && (balloon.x < edgeZone || balloon.x > W - edgeZone)){
-    edgeCampTimer++;
+    edgeCampTimer += step;
 
     if(edgeCampTimer > modeConfig[currentMode].edgeLimit){
       spawnEdgeBlock();
@@ -1873,7 +1876,7 @@ function stepPlay(step){
   }
 
   if(gameStarted){
-    spawnTimer++;
+    spawnTimer += step;
     if(spawnTimer > modeConfig[currentMode].spawnLimit){
       spawnObstacle();
       spawnTimer = 0;
@@ -1881,7 +1884,7 @@ function stepPlay(step){
   }
 
   obstacles.forEach(o=>{
-    o.y += o.speed;
+    o.y += o.speed*step;
 
     if(gameStarted && !crash && hitRectCircle(o, balloon)){
       startCrash();
@@ -1891,7 +1894,7 @@ function stepPlay(step){
   obstacles = obstacles.filter(o=>o.y < H + 60);
 
   updateBalloonFx(step, introPlaying ? 1.5 : undefined);
-  emitBalloonSparks();
+  emitBalloonSparks(step);
 }
 
 function stepCrash(step){
@@ -1946,6 +1949,7 @@ function frameClock(){
   T = now;
   const step = clamp((now - lastFrameT) * 60, .25, 3);
   lastFrameT = now;
+  frameStep = step;
   return step;
 }
 
@@ -1975,7 +1979,7 @@ function loop(){
   }
 
   if(gameRunning) renderFrame();
-  if(gameRunning) requestAnimationFrame(loop);
+  if(gameRunning) loopRaf = requestAnimationFrame(loop);
 }
 
 /* =========================================================
@@ -1986,9 +1990,9 @@ function drawStartScene(){
   updatePhase();
 
   cameraY = 0;
-  stepClouds(false);
+  stepClouds(false, step);
   updateBalloonFx(step, .8 + .2*Math.sin(T*4));
-  if(Math.random() < .25) emitBalloonSparks();
+  if(Math.random() < .25) emitBalloonSparks(step);
   updateParticles(step);
 
   ctx.setTransform(dpr,0,0,dpr,0,0);
@@ -2009,6 +2013,7 @@ function menuLoop(){
 // Thua → "VỀ MENU": quay lại màn hình chờ như lần mở game đầu tiên
 function backToMenu(){
   gameRunning = false;
+  pausedByDevice = false;
   introPlaying = false;
   introProgress = 0;
   gameStarted = false;
@@ -2075,6 +2080,7 @@ function startGame(){
   phaseTag.dataset.name = "";
 
   gameRunning = true;
+  pausedByDevice = false;
   introPlaying = true;
   introProgress = 0;
   gameStarted = false;
@@ -2099,6 +2105,7 @@ function startGame(){
   launchStartY = balloon.y;
   initStars();
   lastFrameT = performance.now()/1000;
+  cancelAnimationFrame(loopRaf);   // bấm Bắt đầu nhiều lần không sinh thêm vòng lặp
   loop();
 }
 
@@ -2160,8 +2167,16 @@ function checkDevice(){
   deviceBlock.classList.toggle("show", blocked);
 
   if(blocked){
+    // Đang chơi thì tạm dừng ván (không huỷ), xoay dọc lại sẽ chơi tiếp
+    if(gameRunning) pausedByDevice = true;
     gameRunning = false;
     start.style.display = "none";
+  }else if(pausedByDevice){
+    pausedByDevice = false;
+    gameRunning = true;
+    lastFrameT = performance.now()/1000;
+    cancelAnimationFrame(loopRaf);
+    loopRaf = requestAnimationFrame(loop);
   }else{
     if(!gameRunning){
       start.style.display = "flex";
