@@ -5,6 +5,7 @@
 global.window = {};
 const path = require('path');
 require(path.join(__dirname, '../game/thongthai-bank.js'));
+require(path.join(__dirname, '../game/thongthai-bank2.js'));
 require(path.join(__dirname, '../game/thongthai-gen.js'));
 const BANK = window.TT_BANK, GEN = window.TTGen;
 let errors = 0;

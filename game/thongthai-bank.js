@@ -7,7 +7,7 @@
  * Kiểm tra định dạng: node tool/thongthai-check.js */
 (function () {
   'use strict';
-  const CAT = { su: 'Lịch sử', dia: 'Địa lý', van: 'Văn học', tv: 'Tiếng Việt', kh: 'Khoa học', the: 'Thể thao', nt: 'Nghệ thuật', dl: 'Đời sống', cn: 'Công nghệ' };
+  const CAT = { su: 'Lịch sử', dia: 'Địa lý', van: 'Văn học', tv: 'Tiếng Việt', kh: 'Khoa học', the: 'Thể thao', nt: 'Nghệ thuật', dl: 'Đời sống', cn: 'Công nghệ', toan: 'Toán', sv: 'Sinh vật', yt: 'Sức khỏe' };
   const RAW = `
 1|su|Ai là người đọc bản Tuyên ngôn Độc lập ngày 2/9/1945 tại quảng trường Ba Đình?|Chủ tịch Hồ Chí Minh|Đại tướng Võ Nguyên Giáp|Thủ tướng Phạm Văn Đồng|Tổng Bí thư Trường Chinh
 1|su|Ngày Quốc khánh của nước Việt Nam là ngày nào?|2 tháng 9|30 tháng 4|1 tháng 5|19 tháng 8
@@ -640,14 +640,18 @@
 5|the|Giải đua xe đạp Tour de France được tổ chức lần đầu năm nào?|1903|1896|1920|1950
 5|the|Theo Pierre de Coubertin, năm vòng tròn trên lá cờ Olympic tượng trưng cho điều gì?|Năm châu lục|Năm môn thi đấu đầu tiên|Năm thành phố đăng cai đầu tiên|Năm nước sáng lập
 `;
-  const BANK = [];
-  for (const line of RAW.split('\n')) {
-    const s = line.trim(); if (!s) continue;
-    const p = s.split('|');
-    if (p.length !== 7) { if (typeof console !== 'undefined') console.warn('[thongthai] dòng lỗi:', s); continue; }
-    BANK.push({ tier: +p[0], cat: CAT[p[1]] || p[1], q: p[2], a: p.slice(3) });
-  }
-  // Khóa ổn định theo nội dung câu hỏi (không phụ thuộc thứ tự dòng)
-  for (const it of BANK) { let h = 0; const s = it.q + '|' + it.a[0]; for (let i = 0; i < s.length; i++) h = (h * 31 + s.charCodeAt(i)) | 0; it.key = 'b' + (h >>> 0).toString(36); }
-  window.TT_BANK = BANK;
+  const BANK = window.TT_BANK = window.TT_BANK || [];
+  // Các file thongthai-bank*.js khác gọi TT_ADD(chuỗi) để thêm câu theo cùng định dạng.
+  window.TT_ADD = function (raw) {
+    for (const line of raw.split('\n')) {
+      const s = line.trim(); if (!s) continue;
+      const p = s.split('|');
+      if (p.length !== 7) { if (typeof console !== 'undefined') console.warn('[thongthai] dòng lỗi:', s); continue; }
+      const it = { tier: +p[0], cat: CAT[p[1]] || p[1], q: p[2], a: p.slice(3) };
+      let h = 0; const k = it.q + '|' + it.a[0]; for (let i = 0; i < k.length; i++) h = (h * 31 + k.charCodeAt(i)) | 0;
+      it.key = 'b' + (h >>> 0).toString(36);   // khóa ổn định theo nội dung, không phụ thuộc thứ tự dòng
+      BANK.push(it);
+    }
+  };
+  window.TT_ADD(RAW);
 })();
