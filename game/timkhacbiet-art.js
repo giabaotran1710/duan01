@@ -664,27 +664,78 @@
   } });
 
   /* ---------- phông nền chủ đề ---------- */
+  /* bầu trời theo màu thật: trong xanh, nắng vàng cuối chiều, chạng vạng, sương sớm, u ám... */
   var SKIES = [
-    ['#5ec0ff', '#aee4ff', '#e8f8ff'], ['#ff9a8b', '#ffc3a0', '#ffe9c8'], ['#3a2a6b', '#d4587a', '#ffb36b'], ['#2b2a6e', '#6d4c9f', '#f2a0b3'],
-    ['#4ec5c1', '#9be8dc', '#e5fbf0'], ['#ff9ad5', '#ffc9ec', '#fff0fa'], ['#8aa0b5', '#b9c6d3', '#e0e7ee'], ['#8f9bff', '#c0c8ff', '#eef0ff'],
-    ['#6fe3a8', '#b3f2cf', '#effff6'], ['#ffc94d', '#ffe08a', '#fff6d6']
+    ['#3f8fd8', '#8ec3ee', '#dcecf7'], ['#6d8fc4', '#f2b58a', '#fbe3c0'], ['#2b3a67', '#b0647a', '#f5b877'], ['#1f2a56', '#5b5a94', '#e7a6a1'],
+    ['#5aa7c9', '#a9d5e2', '#e6f2ee'], ['#7fa6d6', '#e8b9c8', '#fbe6dc'], ['#8794a3', '#b4bfca', '#dde3e8'], ['#5f7fd0', '#a9bdea', '#e6ecf8'],
+    ['#4a9bd6', '#a5d3ee', '#eef7f4'], ['#5b9fe0', '#b7d9f0', '#fbf1d8']
   ];
   function vgrad(g, y0, y1, stops) {
     var gr = g.createLinearGradient(0, y0, 0, y1), i;
     for (i = 0; i < stops.length; i++) gr.addColorStop(stops[i][0], stops[i][1]);
     g.fillStyle = gr; g.fillRect(0, y0, W, y1 - y0);
   }
-  function skyFill(g, m, y1) { var s = SKIES[m % 10]; vgrad(g, 0, y1, [[0, s[0]], [.55, s[1]], [1, s[2]]]); }
-  function hills(g, r, y, amp, col, freq) {
-    var ph = [r() * 6, r() * 6, r() * 6], x, yy;
-    g.beginPath(); g.moveTo(0, H);
-    for (x = 0; x <= W; x += 8) { yy = y - amp * (Math.sin(x * freq + ph[0]) * .5 + Math.sin(x * freq * 2.3 + ph[1]) * .3 + Math.sin(x * freq * .6 + ph[2]) * .4); g.lineTo(x, yy); }
-    g.lineTo(W, H); g.closePath(); g.fillStyle = col; g.fill();
+  /* một đốm mềm (tâm đậm, rìa tan) — dùng dựng mây, sương, quầng sáng */
+  function puff(g, x, y, rx, ry, col, a) {
+    g.save(); g.translate(x, y); g.scale(1, ry / rx);
+    var gr = g.createRadialGradient(0, 0, 0, 0, 0, rx);
+    gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
+    g.globalAlpha = a; g.fillStyle = gr; g.beginPath(); g.arc(0, 0, rx, 0, TAU); g.fill();
+    g.restore();
   }
+  function skyFill(g, m, y1) {
+    var s = SKIES[m % 10], r = mulberry32(m * 977 + 131), i, k, dark = m % 10 === 2 || m % 10 === 3;
+    vgrad(g, 0, y1, [[0, s[0]], [.55, s[1]], [1, s[2]]]);
+    g.save(); g.beginPath(); g.rect(0, 0, W, y1); g.clip();
+    /* quầng mặt trời thấp gần chân trời */
+    var sx = W * (.18 + r() * .64), sy = y1 * (dark ? .92 : .2 + r() * .3);
+    puff(g, sx, sy, 300, 300, dark ? 'rgba(255,190,120,.9)' : 'rgba(255,250,225,.9)', .55);
+    puff(g, sx, sy, 90, 90, 'rgba(255,255,245,1)', dark ? .35 : .5);
+    /* mây mỏng trải ngang, nhạt dần về chân trời */
+    var n = 3 + Math.floor(r() * 3);
+    for (i = 0; i < n; i++) {
+      var cx = r() * W, cy = y1 * (.12 + r() * .6), w = 120 + r() * 200, h = 10 + r() * 16;
+      for (k = 0; k < 14; k++) {
+        var px = cx + (r() - .5) * w * 2, py = cy + (r() - .5) * h * 1.6, pr = w * (.18 + r() * .3);
+        puff(g, px, py + h * .35, pr, pr * .2, dark ? 'rgba(70,60,95,1)' : 'rgba(150,165,185,1)', .1);
+        puff(g, px, py, pr, pr * .22, dark ? 'rgba(255,205,170,1)' : 'rgba(255,255,255,1)', .2 + r() * .14);
+      }
+    }
+    /* lớp mù sát chân trời */
+    var hz = g.createLinearGradient(0, y1 - 90, 0, y1);
+    hz.addColorStop(0, 'rgba(255,255,255,0)'); hz.addColorStop(1, 'rgba(255,255,255,.4)');
+    g.fillStyle = hz; g.fillRect(0, y1 - 90, W, 90);
+    g.restore();
+  }
+  /* dãy đồi: đường gờ nhiều nhịp nhỏ, phía chân đồi sáng và nhạt dần như có lớp không khí */
+  function hills(g, r, y, amp, col, freq) {
+    var ph = [r() * 6, r() * 6, r() * 6], x, yy, top = y - amp * 1.3;
+    g.beginPath(); g.moveTo(0, H);
+    for (x = 0; x <= W; x += 4) {
+      yy = y - amp * (Math.sin(x * freq + ph[0]) * .5 + Math.sin(x * freq * 2.3 + ph[1]) * .3 + Math.sin(x * freq * .6 + ph[2]) * .4)
+         - amp * .07 * (Math.sin(x * freq * 9.1 + ph[1] * 3) + Math.sin(x * freq * 17.3 + ph[0] * 5) * .6);
+      g.lineTo(x, yy);
+    }
+    g.lineTo(W, H); g.closePath(); g.fillStyle = col; g.fill();
+    g.save(); g.clip();
+    var gr = g.createLinearGradient(0, top, 0, y + amp * 2.2);
+    gr.addColorStop(0, 'rgba(20,30,50,.16)'); gr.addColorStop(.35, 'rgba(255,255,255,0)'); gr.addColorStop(1, 'rgba(255,255,255,.38)');
+    g.fillStyle = gr; g.fillRect(0, top, W, amp * 4);
+    g.restore();
+  }
+  /* cỏ: rất nhiều lá mảnh, xa thì nhỏ và nhạt, gần thì to và đậm, pha vài lá úa */
   function tufts(g, r, y0, n, col) {
-    var i, x, y;
-    g.strokeStyle = col; g.lineWidth = 1.6; g.lineCap = 'round';
-    for (i = 0; i < n; i++) { x = r() * W; y = y0 + r() * (H - y0 - 6); g.beginPath(); g.moveTo(x - 3, y); g.lineTo(x - 1, y - 5); g.moveTo(x, y); g.lineTo(x, y - 7); g.moveTo(x + 3, y); g.lineTo(x + 1, y - 5); g.stroke(); }
+    var i, k, x, y, d, sc, N = n * 26;
+    g.save(); g.lineCap = 'round';
+    for (i = 0; i < N; i++) {
+      d = r(); d = d * d * .35 + d * .65; y = y0 + d * (H - y0 - 2); x = r() * W; sc = .35 + d * 1.25;
+      k = r();
+      g.strokeStyle = k < .14 ? 'rgba(210,200,120,.5)' : k < .5 ? 'rgba(255,255,255,.13)' : col;
+      g.globalAlpha = k < .5 ? 1 : .28 + r() * .3;
+      g.lineWidth = .7 + sc * .7;
+      g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + (r() - .5) * 3 * sc, y - 4 * sc, x + (r() - .5) * 7 * sc, y - (5 + r() * 6) * sc); g.stroke();
+    }
+    g.restore();
   }
   function sparkle(g, r, n, y0, y1, col) {
     var i; g.fillStyle = col;
@@ -692,102 +743,54 @@
   }
 
   var BG = {};
-  BG.village = function (g, m, r) {
-    var gh = 100 + (m * 11) % 40;
-    skyFill(g, m, 380);
-    hills(g, r, 300, 30, hsl(gh + 15, 40, 72), .006); hills(g, r, 340, 26, hsl(gh + 5, 45, 62), .008);
-    vgrad(g, 330, H, [[0, hsl(gh, 52, 52)], [1, hsl(gh, 55, 38)]]);
-    g.fillStyle = hsl(gh, 55, 56, .25); for (var i = 0; i < 6; i++) g.fillRect(0, 350 + i * i * 7 + i * 6, W, 10 + i * 3);
-    tufts(g, r, 340, 70, hsl(gh, 50, 30));
-  };
-  BG.beach = function (g, m, r) {
-    skyFill(g, m, 300);
-    vgrad(g, 300, 470, [[0, '#3fc9d8'], [1, '#157ec0']]);
-    g.strokeStyle = 'rgba(255,255,255,.35)'; g.lineWidth = 2; g.lineCap = 'round';
-    for (var i = 0; i < 26; i++) { var x = r() * W, y = 312 + r() * 130; g.beginPath(); g.moveTo(x, y); g.quadraticCurveTo(x + 10, y - 5, x + 20, y); g.stroke(); }
-    var sand = 38 + (m % 4) * 3;
-    g.beginPath(); g.moveTo(0, 470); g.bezierCurveTo(200, 430, 500, 500, W, 440); g.lineTo(W, H); g.lineTo(0, H); g.closePath();
-    var gr = g.createLinearGradient(0, 440, 0, H); gr.addColorStop(0, hsl(sand, 70, 80)); gr.addColorStop(1, hsl(sand, 60, 66)); g.fillStyle = gr; g.fill();
-    g.beginPath(); g.moveTo(0, 470); g.bezierCurveTo(200, 430, 500, 500, W, 440); g.lineWidth = 6; g.strokeStyle = 'rgba(255,255,255,.8)'; g.stroke();
-    g.fillStyle = hsl(sand, 50, 58, .5); for (i = 0; i < 70; i++) { g.beginPath(); g.arc(r() * W, 490 + r() * 100, .9 + r(), 0, TAU); g.fill(); }
-  };
-  BG.sea = function (g, m, r) {
-    var hb = 196 + (m * 7) % 40, i;
-    vgrad(g, 0, H, [[0, hsl(hb, 80, 62)], [.5, hsl(hb + 8, 80, 38)], [1, hsl(hb + 14, 85, 18)]]);
-    g.fillStyle = 'rgba(255,255,255,.07)';
-    for (i = 0; i < 5; i++) { var x = 80 + i * 170 + r() * 40; poly(g, [x, 0, x + 60, 0, x + 150, 500, x - 20, 500], 'rgba(255,255,255,.06)', 0); }
-    for (i = 0; i < 8; i++) { var bx = r() * W; ell(g, bx, 470 - r() * 20, 26 + r() * 20, 60 + r() * 40, 'rgba(10,40,80,.22)', 0); }
-    g.beginPath(); g.moveTo(0, H); for (var xx = 0; xx <= W; xx += 10) g.lineTo(xx, 525 + Math.sin(xx * .012 + m) * 14 + Math.sin(xx * .031) * 6); g.lineTo(W, H); g.closePath();
-    var gr = g.createLinearGradient(0, 520, 0, H); gr.addColorStop(0, hsl(40, 55, 66)); gr.addColorStop(1, hsl(36, 45, 48)); g.fillStyle = gr; g.fill();
-    g.fillStyle = 'rgba(255,255,255,.35)'; for (i = 0; i < 18; i++) { g.beginPath(); g.arc(r() * W, r() * 480, 1 + r() * 2.4, 0, TAU); g.fill(); }
-  };
-  BG.space = function (g, m, r) {
-    var i, h0 = (m * 36) % 360;
-    vgrad(g, 0, H, [[0, '#04020f'], [1, hsl(h0 + 230, 60, 14)]]);
-    for (i = 0; i < 3; i++) glow(g, 100 + r() * 600, 80 + r() * 440, 170 + r() * 110, hsl(h0 + i * 70, 70, 45, .22));
-    sparkle(g, r, 160, 0, H, 'rgba(255,255,255,.75)'); sparkle(g, r, 40, 0, H, 'rgba(255,230,160,.95)');
-    for (i = 0; i < 10; i++) { var x = r() * W, y = r() * H; g.strokeStyle = 'rgba(255,255,255,.55)'; g.lineWidth = 1; g.beginPath(); g.moveTo(x - 4, y); g.lineTo(x + 4, y); g.moveTo(x, y - 4); g.lineTo(x, y + 4); g.stroke(); }
-  };
-  BG.forest = function (g, m, r) {
-    var gh = 110 + (m * 9) % 40, i, x;
-    vgrad(g, 0, 420, [[0, SKIES[m % 10][1]], [1, hsl(gh + 30, 40, 80)]]);
-    for (i = 0; i < 14; i++) { x = i * 64 - 10 + r() * 20; poly(g, [x, 380, x + 32, 250 + r() * 40, x + 64, 380], hsl(gh + 20, 30, 62), 0); }
-    for (i = 0; i < 12; i++) { x = i * 72 + r() * 24; poly(g, [x, 410, x + 38, 290 + r() * 40, x + 76, 410], hsl(gh + 10, 40, 48), 0); }
-    vgrad(g, 360, H, [[0, hsl(gh, 45, 44)], [1, hsl(gh - 5, 50, 28)]]);
-    g.fillStyle = hsl(gh, 40, 60, .18); for (i = 0; i < 6; i++) { ell(g, r() * W, 420 + r() * 150, 90, 22, hsl(gh, 40, 58, .18), 0); }
-    tufts(g, r, 380, 60, hsl(gh, 45, 22));
-  };
-  BG.city = function (g, m, r) {
-    var i, x, hh;
-    skyFill(g, m, 440);
-    x = -10; while (x < W) { var bw = 30 + r() * 50; hh = 70 + r() * 150; g.fillStyle = 'rgba(50,60,90,.28)'; g.fillRect(x, 440 - hh, bw, hh); x += bw + 2; }
-    g.fillStyle = '#9aa3b4'; g.fillRect(0, 440, W, 34);
-    for (i = 0; i < W / 40; i++) { g.fillStyle = 'rgba(0,0,0,.08)'; g.fillRect(i * 40, 440, 2, 34); }
-    vgrad(g, 474, H, [[0, '#4a4f5e'], [1, '#2f3340']]);
-    g.fillStyle = '#e9e2a6'; for (i = 0; i < 10; i++) g.fillRect(i * 90 + 10, 548, 50, 6);
-    g.fillStyle = 'rgba(255,255,255,.7)'; g.fillRect(0, 478, W, 3);
-  };
-  BG.winter = function (g, m, r) {
-    var hb = 205 + (m * 5) % 25, i, x;
-    vgrad(g, 0, 380, [[0, hsl(hb, 60, 76)], [1, hsl(hb, 60, 94)]]);
-    for (i = 0; i < 12; i++) { x = i * 70 + r() * 20; poly(g, [x, 340, x + 24, 270 + r() * 30, x + 48, 340], hsl(hb + 10, 30, 78), 0); }
-    hills(g, r, 330, 28, '#e8f1fb', .007); hills(g, r, 380, 22, '#f5faff', .009);
-    vgrad(g, 360, H, [[0, '#f4f9ff'], [1, '#d3e4f5']]);
-    sparkle(g, r, 70, 0, H, 'rgba(255,255,255,.9)');
-    g.fillStyle = 'rgba(150,180,220,.25)'; for (i = 0; i < 8; i++) ell(g, r() * W, 400 + r() * 170, 60 + r() * 40, 6, 'rgba(150,180,220,.22)', 0);
-  };
-  BG.desert = function (g, m, r) {
-    var dh = 28 + (m * 4) % 12;
-    skyFill(g, m, 360); glow(g, 600, 110, 220, 'rgba(255,240,190,.5)');
-    hills(g, r, 360, 18, hsl(dh + 4, 60, 76), .007); hills(g, r, 400, 24, hsl(dh, 62, 70), .006);
-    vgrad(g, 400, H, [[0, hsl(dh, 62, 66)], [1, hsl(dh - 4, 56, 54)]]);
-    for (var i = 0; i < 7; i++) { var y = 430 + i * 22; g.beginPath(); g.moveTo(0, y); for (var x = 0; x <= W; x += 16) g.lineTo(x, y + Math.sin(x * .02 + i) * 5); g.lineWidth = 1.6; g.strokeStyle = hsl(dh, 50, 56, .45); g.stroke(); }
-  };
-  BG.castle = function (g, m, r) {
-    var gh = 100 + (m * 8) % 50;
-    skyFill(g, m, 380);
-    hills(g, r, 280, 50, 'rgba(110,100,160,.45)', .005); hills(g, r, 330, 36, hsl(gh + 30, 35, 66), .006); hills(g, r, 370, 24, hsl(gh + 10, 45, 56), .008);
-    vgrad(g, 340, H, [[0, hsl(gh, 52, 48)], [1, hsl(gh, 55, 34)]]);
-    g.beginPath(); g.moveTo(330, H); g.bezierCurveTo(360, 520, 440, 470, 410, 400); g.lineTo(440, 400); g.bezierCurveTo(480, 480, 420, 540, 500, H); g.closePath(); g.fillStyle = hsl(36, 40, 70, .55); g.fill();
-    tufts(g, r, 360, 60, hsl(gh, 50, 26));
-  };
-  BG.party = function (g, m, r) {
-    var hp = (m * 36 + 330) % 360, i;
-    g.fillStyle = hsl(hp, 70, 90); g.fillRect(0, 0, W, 330);
-    if (m % 2 === 0) { g.fillStyle = hsl(hp, 70, 82); for (i = 0; i < 20; i++) g.fillRect(i * 44, 0, 22, 330); }
-    else { g.fillStyle = hsl(hp + 20, 70, 82); for (i = 0; i < 18; i++) for (var j = 0; j < 8; j++) { g.beginPath(); g.arc(i * 46 + (j % 2) * 23, j * 44 + 20, 7, 0, TAU); g.fill(); } }
-    g.fillStyle = hsl(hp, 50, 40, .25); g.fillRect(0, 322, W, 12);
-    g.fillStyle = hsl(hp + 180, 55, 62); g.fillRect(0, 334, W, H - 334);
-    g.fillStyle = 'rgba(255,255,255,.28)'; for (i = 0; i < 20; i++) g.fillRect(i * 44, 334, 22, H - 334);
-    g.fillStyle = 'rgba(255,255,255,.22)'; for (i = 0; i < 14; i++) g.fillRect(0, 334 + i * 44, W, 22);
-    for (i = 0; i < 9; i++) { poly(g, [i * 100 + 6, 0, i * 100 + 50, 0, i * 100 + 28, 30], hsl(hp + i * 40, 75, 62), 1.4); }
-  };
+  /* các phông nền nằm ở timkhacbiet-bg.js */
 
+  /* Lớp "ảnh chụp" phủ lên mọi phông: loang sáng tối tự nhiên của bề mặt, hạt nhiễu mịn, ánh sáng xiên từ một phía,
+     giảm bớt màu rực và tối dần bốn góc. Mọi thứ đều tất định theo hạt giống nên ảnh A và ảnh B giống hệt nhau. */
+  var TEX = {};
+  function noiseTile(seed, n, soft) {
+    var key = seed + ':' + n + ':' + soft;
+    if (TEX[key]) return TEX[key];
+    if (typeof document === 'undefined') return null;
+    var c = document.createElement('canvas'), r = mulberry32(seed), x, i, v, d;
+    c.width = c.height = n;
+    var q = c.getContext('2d'), im = q.createImageData(n, n); d = im.data;
+    for (i = 0; i < n * n; i++) { v = soft ? 128 + (r() + r() + r() - 1.5) * 150 : r() * 255; x = i * 4; d[x] = d[x + 1] = d[x + 2] = v < 0 ? 0 : v > 255 ? 255 : v; d[x + 3] = 255; }
+    q.putImageData(im, 0, 0);
+    var keys = Object.keys(TEX); if (keys.length > 8) delete TEX[keys[0]];
+    return (TEX[key] = c);
+  }
+  function photoPass(g, seed) {
+    var big = noiseTile(seed, 14, 1), mid = noiseTile(seed ^ 0x51ed, 56, 1), fine = noiseTile(seed ^ 0x9e37, 256, 0), gr, r = mulberry32(seed ^ 0x77f1);
+    if (!big) return;
+    g.save();
+    /* bớt rực */
+    g.globalCompositeOperation = 'saturation'; g.globalAlpha = .14; g.fillStyle = '#808080'; g.fillRect(0, 0, W, H);
+    /* loang sáng tối: mảng lớn + mảng vừa (ảnh nhỏ phóng to, trình duyệt tự làm mềm) */
+    g.imageSmoothingEnabled = true; g.imageSmoothingQuality = 'high';
+    g.globalCompositeOperation = 'soft-light';
+    g.globalAlpha = .16; g.drawImage(big, 1, 1, 12, 12, 0, 0, W, H);
+    g.globalAlpha = .06; g.drawImage(mid, 1, 1, 54, 54, 0, 0, W, H);
+    /* hạt mịn như hạt phim */
+    g.globalCompositeOperation = 'overlay'; g.globalAlpha = .09;
+    g.fillStyle = g.createPattern(fine, 'repeat'); g.save(); g.scale(.5, .5); g.fillRect(0, 0, W * 2, H * 2); g.restore();
+    /* ánh sáng xiên: ấm ở phía nguồn sáng, mát và tối ở phía đối diện */
+    var lx = r() < .5 ? 0 : W;
+    gr = g.createRadialGradient(lx, -40, 40, lx, -40, 980);
+    gr.addColorStop(0, 'rgba(255,240,205,.5)'); gr.addColorStop(.5, 'rgba(255,240,205,0)'); gr.addColorStop(1, 'rgba(20,30,70,.3)');
+    g.globalCompositeOperation = 'soft-light'; g.globalAlpha = 1; g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    /* tối dần bốn góc */
+    gr = g.createRadialGradient(W / 2, H / 2, 260, W / 2, H / 2, 560);
+    gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(10,8,20,.22)');
+    g.globalCompositeOperation = 'source-over'; g.fillStyle = gr; g.fillRect(0, 0, W, H);
+    g.restore();
+  }
   function drawBackground(g, theme, mood, seed) {
     var r = mulberry32((seed | 0) ^ 0x5bd1e995);
     g.save(); g.lineCap = 'round'; g.lineJoin = 'round';
     BG[theme](g, mood, r);
     g.restore();
+    photoPass(g, (seed | 0) ^ 0x3c6ef372);
   }
 
   /* ---------- vẽ một vật thể ---------- */
@@ -855,7 +858,7 @@
     drawPlain: function (g, o) { g.save(); drawRaw(g, o); g.restore(); }, drawBackground: drawBackground,
     finalize: finalize, mulberry32: mulberry32, hsl: hsl,
     lib: { mouth: mouth, sb: sb, eye2: eye2, blush: blush, TAU: TAU, OL: OL, fs: fs, circ: circ, ell: ell, poly: poly, rrect: rrect, line: line, arc: arc, blob: blob, star: star, glow: glow,
-           spots: spots, inEll: inEll, clipStripes: clipStripes, hsl: hsl, vgrad: vgrad, skyFill: skyFill, hills: hills, tufts: tufts, sparkle: sparkle, SKIES: SKIES }
+           spots: spots, inEll: inEll, clipStripes: clipStripes, hsl: hsl, vgrad: vgrad, puff: puff, skyFill: skyFill, hills: hills, tufts: tufts, sparkle: sparkle, SKIES: SKIES }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.TKBArt;
 })(typeof window !== 'undefined' ? window : globalThis);
