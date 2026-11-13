@@ -455,6 +455,8 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     vuln: '<path d="M12 3l7 3v6c0 4.5-3 7.5-7 9-4-1.5-7-4.5-7-9V6z"/><path d="M12 3.5l-2.2 5 3.4 2.6-3.2 4 1.8 5.5"/>',
     str: '<path d="M7 11V7a2 2 0 0 1 4 0v4M11 9V6a2 2 0 0 1 4 0v5M15 10a2 2 0 0 1 4 0v4a7 7 0 0 1-7 7h-1a6 6 0 0 1-6-6v-3a2 2 0 0 1 4 0"/>',
     thorn: '<path d="M3 21L21 3M7 13l-3-1M10 10l-1-4M13 13l4 1M16 8l1-4M10 16l-1 4"/>',
+    bolt: '<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+    dodge: '<path d="M12 7V19M12 7C9 3 4 4 3 8c0 4 5 5 9 4M12 7c3-4 8-3 9 1 0 4-5 5-9 4M12 14c-3 0-7 1-6 5 3 1 6-1 6-5M12 14c3 0 7 1 6 5-3 1-6-1-6-5"/>',
     armor: '<path d="M5 4h14v6c0 5-3 8-7 10-4-2-7-5-7-10z"/><path d="M5 10h14M12 4v16"/>',
     regen: '<path d="M12 21s-8-5-8-11a4.5 4.5 0 0 1 8-3 4.5 4.5 0 0 1 8 3c0 6-8 11-8 11z"/><path d="M12 9v6M9 12h6"/>',
     fang: '<path d="M4 5h16M7 5l2 9 2-9M13 5l2 9 2-9"/><path d="M12 18v3"/>',
@@ -2206,6 +2208,10 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   function fxSlash(x, y, col, n) { for (let i = 0; i < (n || 1); i++) FX.push({ k: 'slash', x: x + rand(-14, 14), y: y + rand(-14, 14), a: rand(-.9, -.4) + i * .5, len: rand(70, 100), col, life: .32, t: -i * .07 }); }
   function fxRing(x, y, col, r) { FX.push({ k: 'ring', x, y, r: r || 60, col, life: .45, t: 0 }); }
   function fxText(x, y, txt, col, big) { FX.push({ k: 'txt', x: x + rand(-10, 10), y, txt, col, life: 1.05, t: 0, big }); }
+  // biểu tượng nổi lên (thay cho chữ): tên biểu tượng trong IP, màu, số kèm theo (nếu có)
+  const icoCache = {};
+  function icoImg(n, col) { const k = n + col; if (!icoCache[k]) { const im = new Image(); im.src = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="${col}" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">${IP[n] || ''}</svg>`); icoCache[k] = im; } return icoCache[k]; }
+  function fxIcon(x, y, n, col, val) { FX.push({ k: 'ico', x: x + rand(-8, 8), y, n, col, val, life: 1.1, t: 0 }); }
   function fxRise(x, y, col, n) { for (let i = 0; i < (n || 10); i++) FX.push({ k: 'p', x: x + rand(-30, 30), y: y + rand(-10, 20), vx: rand(-10, 10), vy: rand(-90, -40), g: 0, life: rand(.6, 1), t: 0, s: rand(2, 4), col }); }
   function fxShieldOn(x, y, col) { FX.push({ k: 'hex', x, y, col, life: .55, t: 0 }); }
   function fxBolt(x0, y0, x1, y1, col) { FX.push({ k: 'bolt', x0, y0, x1, y1, col, life: .28, t: 0 }); }
@@ -2223,6 +2229,9 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
       else if (e.k === 'hex') { c.translate(e.x, e.y); c.globalAlpha = (1 - k) * .9; c.strokeStyle = e.col; c.shadowColor = e.col; c.shadowBlur = 18; c.lineWidth = 4; const r = 34 + k * 14; c.beginPath(); for (let j = 0; j < 6; j++) { const a = j * TAU / 6 + Math.PI / 6; c.lineTo(Math.cos(a) * r, Math.sin(a) * r * 1.1); } c.closePath(); c.stroke(); c.globalAlpha *= .25; c.fillStyle = e.col; c.fill(); }
       else if (e.k === 'bolt') { c.globalAlpha = 1 - k; c.strokeStyle = e.col; c.shadowColor = e.col; c.shadowBlur = 18; c.lineWidth = 5 * (1 - k) + 1; c.lineCap = 'round'; const p = Math.min(1, k * 3);
         c.beginPath(); c.moveTo(e.x0, e.y0); c.lineTo(e.x0 + (e.x1 - e.x0) * p, e.y0 + (e.y1 - e.y0) * p); c.stroke(); }
+      else if (e.k === 'ico') { const y = e.y - 38 * Math.min(1, k * 1.6) - k * 18, s = k < .15 ? .6 + k / .15 * .5 : 1.1; c.globalAlpha = k > .7 ? (1 - k) / .3 : 1; c.translate(e.x, y); c.scale(s, s);
+        const im = icoImg(e.n, e.col), w = e.val ? 36 : 44; c.shadowColor = '#000'; c.shadowBlur = 6; const ox = e.val ? -14 : 0; if (im.complete && im.naturalWidth) c.drawImage(im, ox - w / 2, -w / 2, w, w);
+        if (e.val) { c.font = '900 24px "Noto Serif",serif'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.lineWidth = 5; c.strokeStyle = '#1a0805'; c.strokeText(e.val, ox + w / 2 + 2, 1); c.fillStyle = e.col; c.fillText(e.val, ox + w / 2 + 2, 1); } }
       else if (e.k === 'txt') { const y = e.y - 40 * Math.min(1, k * 1.6) - k * 20, s = k < .15 ? .6 + k / .15 * .6 : 1.2 - Math.min(.2, (k - .15)); c.globalAlpha = k > .7 ? (1 - k) / .3 : 1;
         c.translate(e.x, y); c.scale(s, s); c.font = `900 ${e.big ? 30 : 22}px "Noto Serif",serif`; c.textAlign = 'center'; c.textBaseline = 'middle'; c.lineWidth = 5; c.strokeStyle = '#1a0805'; c.strokeText(e.txt, 0, 0); c.fillStyle = e.col; c.fillText(e.txt, 0, 0); }
       c.restore();
@@ -2423,21 +2432,21 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   function onDraw(ci) {
     const c = stats(ci), d = c.dr; if (!d) return;
     const hp = center($('heroCv')); let ln = 0;
-    const say = (t, col) => fxText(hp.x, hp.y - 28 - 22 * ln++, t, col || '#bff2ff');
-    SFX.draw(); say(c.n + '!', '#9fe8ff');
+    const say = (n, val, col) => fxIcon(hp.x, hp.y - 20 - 34 * ln++, n, col || '#bff2ff', val);   // biểu tượng + số, không viết tên thẻ
+    SFX.draw();
     const foesDo = fn => alive().forEach(f => { if (!f.tr.ward && f.tr.resist !== c.el) fn(f); });
     const ring = (f, col) => { const sp = foeSprite(f); if (sp) { const q = center(sp); fxRing(q.x, q.y, col, 50); } };
-    if (d.heal) { const v = healVal({ heal: d.heal }); R.hp = Math.min(R.max, R.hp + v); SFX.heal(); fxRise(hp.x, hp.y, '#7dff9a', 12); say('+' + v + ' máu', '#7dff9a'); }
-    if (d.blk) { const v = blkVal({ blk: d.blk, c: 0, el: c.el }, 0, 0); C.blk += v; SFX.blk(); fxShieldOn(hp.x, hp.y, '#7cc4ff'); say('+' + v + ' giáp', '#9fd2ff'); }
+    if (d.heal) { const v = healVal({ heal: d.heal }); R.hp = Math.min(R.max, R.hp + v); SFX.heal(); fxRise(hp.x, hp.y, '#7dff9a', 12); say('regen', '+' + v, '#7dff9a'); }
+    if (d.blk) { const v = blkVal({ blk: d.blk, c: 0, el: c.el }, 0, 0); C.blk += v; SFX.blk(); fxShieldOn(hp.x, hp.y, '#7cc4ff'); say('shd', '+' + v, '#9fd2ff'); }
     if (d.d) { SFX.slash(); for (const f of alive().filter(x => x.tr.resist !== c.el)) { const sp = foeSprite(f); if (sp) { const q = center(sp); fxBolt(hp.x + 20, hp.y - 20, q.x, q.y, EC[c.el]); } hurtFoe(f, d.d, false, c.el, true); } }
-    if (d.str) { C.str += d.str; fxRise(hp.x, hp.y, '#ffb04a', 10); say('+' + d.str + ' sức mạnh', '#ffb066'); }
-    if (d.regen) { C.regen = (C.regen || 0) + d.regen; say('Hồi ' + C.regen + '/lượt', '#7dff9a'); }
-    if (d.thorns) { C.thorns += d.thorns; fxRing(hp.x, hp.y, '#8acb6a', 60); say('Phản đòn ' + C.thorns, '#8acb6a'); }
-    if (d.armor) { C.armor += d.armor; fxShieldOn(hp.x, hp.y, '#f2c14e'); say('Giáp cứng ' + C.armor, '#f2c14e'); }
-    if (d.dodge) { C.mirror = (C.mirror || 0) + d.dodge; fxShieldOn(hp.x, hp.y, '#e8f0ff'); say('Né ' + C.mirror + ' đòn', '#e8f0ff'); }
-    if (d.en) { C.energy += d.en; const q = center($('orb')); fxBurst(q.x, q.y, '#ffe27a', 14, 180, 4); say('+' + d.en + ' năng lượng', '#ffe27a'); }
-    if (d.gold) { R.gold += d.gold; SFX.buy(); say('+' + d.gold + ' vàng', '#ffe27a'); updateTop(); }
-    if (d.cleanse) { C.weak = 0; C.vuln = 0; C.crit = 0; fxRing(hp.x, hp.y, '#fff2b0', 70); say('Xoá hiệu ứng có hại', '#fff2b0'); }
+    if (d.str) { C.str += d.str; fxRise(hp.x, hp.y, '#ffb04a', 10); say('str', '+' + d.str, '#ffb066'); }
+    if (d.regen) { C.regen = (C.regen || 0) + d.regen; say('regen', C.regen, '#7dff9a'); }
+    if (d.thorns) { C.thorns += d.thorns; fxRing(hp.x, hp.y, '#8acb6a', 60); say('thorn', C.thorns, '#8acb6a'); }
+    if (d.armor) { C.armor += d.armor; fxShieldOn(hp.x, hp.y, '#f2c14e'); say('armor', C.armor, '#f2c14e'); }
+    if (d.dodge) { C.mirror = (C.mirror || 0) + d.dodge; fxShieldOn(hp.x, hp.y, '#e8f0ff'); say('dodge', C.mirror, '#bfe0ff'); }
+    if (d.en) { C.energy += d.en; const q = center($('orb')); fxBurst(q.x, q.y, '#ffe27a', 14, 180, 4); say('bolt', '+' + d.en, '#ffe27a'); }
+    if (d.gold) { R.gold += d.gold; SFX.buy(); say('coin', '+' + d.gold, '#ffe27a'); updateTop(); }
+    if (d.cleanse) { C.weak = 0; C.vuln = 0; C.crit = 0; fxRing(hp.x, hp.y, '#fff2b0', 70); say('imm', '', '#fff2b0'); }
     if (d.sapAll) foesDo(f => { f.str -= d.sapAll; ring(f, '#9fd2ff'); });
     if (d.blindAll) foesDo(f => { f.blind += d.blindAll; ring(f, '#e8e0a0'); });
     if (d.vulnAll) foesDo(f => { f.vuln += d.vulnAll; ring(f, '#ff9a4a'); });
@@ -3167,6 +3176,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (isMe && o.thorns) a.push(`<span class="cp" style="color:#7dff9a">${ic('thorn')}${o.thorns}</span>`);
     if (isMe && o.armor) a.push(`<span class="cp" style="color:#7dff9a">${ic('armor')}${o.armor}</span>`);
     if (isMe && o.regen) a.push(`<span class="cp" style="color:#7dff9a">${ic('regen')}${o.regen}</span>`);
+    if (isMe && o.mirror > 0) a.push(`<span class="cp" style="color:#bfe0ff">${ic('dodge')}${o.mirror}</span>`);
     if (isMe && o.nextEn) a.push(`<span class="cp" style="color:#7dff9a">+${o.nextEn}⚡</span>`);
     return a.join('');
   }
@@ -3209,7 +3219,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     // mình
     const ph = $('pHp'); ph.querySelector('i').style.width = Math.max(0, R.hp / R.max * 100) + '%'; ph.querySelector('u').style.width = Math.max(0, R.hp / R.max * 100) + '%'; ph.querySelector('b').textContent = R.hp + '/' + R.max;
     $('pBlk').innerHTML = C.blk > 0 ? ic('blk') + ' ' + C.blk : ''; $('pBlk').classList.toggle('on', C.blk > 0);
-    $('pSt').innerHTML = chips({ str: C.str, weak: C.weak, vuln: C.vuln, crit: C.crit, immune: C.immune, thorns: C.thorns, armor: C.armor, regen: C.regen, nextEn: C.nextEn }, true);
+    $('pSt').innerHTML = chips({ str: C.str, weak: C.weak, vuln: C.vuln, crit: C.crit, immune: C.immune, thorns: C.thorns, armor: C.armor, regen: C.regen, nextEn: C.nextEn, mirror: C.mirror }, true);
     $('wheel').innerHTML = wheelHTML();
     { const bi = $('bombInd'), bh = C.bombs.map(b => `<span class="bm" title="Bom hẹn giờ">${ic('bomb')}${b.t} lượt · ${b.d}${b.all ? ' mọi địch' : ''}</span>`).join(''); if (bi.dataset.h !== bh) { bi.dataset.h = bh; bi.innerHTML = bh; } }
     $('draw1').disabled = busy || C.over || (C.energy < (C.freeDraw > 0 ? 0 : 1)) || C.hand.length >= HMAX; $('draw1').classList.toggle('used', !!C.drew);
