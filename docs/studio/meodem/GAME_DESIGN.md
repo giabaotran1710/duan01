@@ -18,6 +18,11 @@ Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá gi�
 | `^` `v` | Gai sàn / gai trần | chạm là ngã |
 | `F` `f` | Miệng lửa (2 nhịp lệch nhau) | chu kỳ 2,4 giây: phun 1 giây, nhấp nháy báo trước 0,45 giây |
 | `H` `V` | Lưỡi cưa chạy ngang / dọc | chạy qua lại tới tường hoặc cọc chặn `!` |
+| `O` | Cưa xoay vòng | quay tròn quanh trục, bán kính 34 điểm ảnh |
+| `X` `Y` | Cưa rượt đuổi (sàn / tường) | thấy mèo đi trên sàn (X) hoặc bám tường (Y) trong đoạn ray thì tăng tốc đuổi tới cuối đoạn, rồi chậm rãi về chỗ cũ |
+| `1`-`8` | Đại bác cố định | bắn mỗi 2 giây theo 1 trong 8 hướng (1 phải, theo chiều kim đồng hồ) |
+| `Q` | Đại bác xoay | tới nhịp thì ngắm đúng chỗ mèo đang đứng và bắn |
+| `W` `M` | Đại bác chạy ray | chạy qua lại trên ray, bắn xuống (W) hoặc bắn lên (M) |
 | `T` | Lò xo tre | bật cao khoảng 6,8 ô |
 | `K` `D` | Chìa khóa / cửa gỗ | có chìa thì mọi cửa mở |
 | `*` | Ngọc bích | nhặt để lấy sao |

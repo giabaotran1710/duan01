@@ -189,16 +189,25 @@ var MD = (function(){
   var T = 30, COLS = 32, ROWS = 18, W = COLS*T, H = ROWS*T;
   var P = {run:165, g:1900, jump:620, wallJump:600, slide:110, maxFall:900, bounce:880, coyote:0.08, buffer:0.12,
            pw:18, ph:26, sawR:13, sawSpd:95, fireCycle:2.4, fireOn:1.0, fireWarn:0.45, crumbleDelay:0.45, crumbleBack:2.6};
-  var SOLID = {'#':1, 'F':1, 'f':1, '=':1, 'D':1};
+  var SOLID = {'#':1, 'F':1, 'f':1, '=':1, 'D':1, '1':1,'2':1,'3':1,'4':1,'5':1,'6':1,'7':1,'8':1, 'Q':1};
+  // Khối cứng cố định (đạn bay tới đây thì vỡ)
+  var STATIC = {'#':1, 'F':1, 'f':1, '1':1,'2':1,'3':1,'4':1,'5':1,'6':1,'7':1,'8':1, 'Q':1};
+  // 8 hướng bắn của đại bác cố định: 1 phải, 2 phải-xuống, 3 xuống, 4 trái-xuống, 5 trái, 6 trái-lên, 7 lên, 8 phải-lên
+  var DIRS = [[1,0],[0.7071,0.7071],[0,1],[-0.7071,0.7071],[-1,0],[-0.7071,-0.7071],[0,-1],[0.7071,-0.7071]];
+  var CAN = {period:2.0, speed:210, aimSpeed:190, r:5, railSpd:60, orbitR:34, orbitW:2.1, chaseAcc:700, chaseMax:270, chaseBack:70};
 
   function parse(rows){
-    var L = {g:[], gems:[], saws:[], fires:[], springs:[], doors:[], start:null, chest:null, key:null};
+    var L = {g:[], gems:[], saws:[], fires:[], springs:[], doors:[], orbits:[], chasers:[], cannons:[], rails:[], aims:[], start:null, chest:null, key:null};
     for (var r=0;r<ROWS;r++){
       var line = (rows[r]||'');
       var row = [];
       for (var c=0;c<COLS;c++){
         var ch = line.charAt(c) || '.';
-        if (r===0||r===ROWS-1||c===0||c===COLS-1){ if(!(r===ROWS-1 && c>0 && c<COLS-1 && (ch==='F'||ch==='f'))) ch = '#'; }
+        if (r===0||r===ROWS-1||c===0||c===COLS-1){
+          // Viền ngoài luôn là tường; riêng lửa ở sàn đáy và đại bác gắn trên viền được giữ
+          var corner=(r===0||r===ROWS-1)&&(c===0||c===COLS-1);
+          if(corner || !((r===ROWS-1 && (ch==='F'||ch==='f')) || /[1-8Q]/.test(ch))) ch = '#';
+        }
         if (ch==='S'||ch==='s'){ L.start={c:c,r:r,dir:ch==='S'?1:-1}; ch='.'; }
         else if (ch==='C'){ L.chest={c:c,r:r}; ch='.'; }
         else if (ch==='*'){ L.gems.push({c:c,r:r}); ch='.'; }
@@ -207,13 +216,18 @@ var MD = (function(){
         else if (ch==='T'){ L.springs.push({c:c,r:r}); }
         else if (ch==='F'||ch==='f'){ L.fires.push({c:c,r:r,ph:ch==='f'?0.5:0}); }
         else if (ch==='D'){ L.doors.push({c:c,r:r}); }
+        else if (ch==='O'){ L.orbits.push({c:c,r:r,cx:c*T+T/2,cy:r*T+T/2,a0:((c+r)%4)*Math.PI/2,w:((c*3+r)%2?1:-1)*CAN.orbitW}); ch='.'; }
+        else if (ch==='X'||ch==='Y'){ L.chasers.push({c:c,r:r,h:ch==='X'}); ch='.'; }
+        else if (ch==='W'||ch==='M'){ L.rails.push({c:c,r:r,h:true,down:ch==='W',ph:((c*5+r*3)%4)*0.25,cache:{}}); ch='.'; }
+        else if (/[1-8]/.test(ch)){ L.cannons.push({c:c,r:r,d:DIRS[+ch-1],ph:((c*7+r*3)%4)*0.25}); }
+        else if (ch==='Q'){ L.aims.push({c:c,r:r,ph:((c+r)%4)*0.25}); }
         else if ('#.^v=-!'.indexOf(ch)<0) ch='.';
         row.push(ch);
       }
       L.g.push(row);
     }
     // Đường chạy của lưỡi cưa: tới tường/khối cứng hoặc cột chặn '!'
-    L.saws.forEach(function(s){
+    L.saws.concat(L.chasers, L.rails).forEach(function(s){
       var stop = function(ch){ return SOLID[ch] || ch==='!'; };
       var a, b;
       if (s.h){
@@ -227,8 +241,33 @@ var MD = (function(){
       }
       if (s.p0<s.min) s.p0=s.min; if (s.p0>s.max) s.p0=s.max;
     });
+    // Tầm bay của đạn đại bác cố định: từ miệng nòng tới khối cứng đầu tiên
+    L.cannons.forEach(function(k){
+      k.mx=k.c*T+T/2+k.d[0]*17; k.my=k.r*T+T/2+k.d[1]*17; k.len=rayLen(L,k.mx,k.my,k.d[0],k.d[1]);
+    });
     return L;
   }
+  function staticAt(L,x,y){ var c=Math.floor(x/T), r=Math.floor(y/T); if(c<0||r<0||c>=COLS||r>=ROWS) return true; return !!STATIC[L.g[r][c]]; }
+  function rayLen(L,x,y,dx,dy){ var d=0; while(d<1400 && !staticAt(L,x+dx*d,y+dy*d)) d+=3; return d; }
+
+  /* ---------- Bẫy mới: cưa xoay vòng, đại bác ---------- */
+  function orbitPos(o,t){ var a=o.a0+o.w*t; return {x:o.cx+Math.cos(a)*CAN.orbitR, y:o.cy+Math.sin(a)*CAN.orbitR}; }
+  function railPos(k,t){ var len=k.max-k.min; if(len<=0) return k.min; var d=(k.p0-k.min)+t*CAN.railSpd, m=d%(2*len); return k.min+(m<len?m:2*len-m); }
+  // Đạn của đại bác cố định và đại bác chạy ray tại thời điểm t (tính thẳng từ thời gian, không cần lưu)
+  function shells(L,t,out){
+    out=out||[]; var P0=CAN.period, sp=CAN.speed, i, k, n, tk, d;
+    for(i=0;i<L.cannons.length;i++){ k=L.cannons[i];
+      for(n=Math.floor(t/P0-k.ph); n>=0; n--){ tk=(n+k.ph)*P0; d=(t-tk)*sp; if(d>k.len) break; if(d<0) continue; out.push({x:k.mx+k.d[0]*d, y:k.my+k.d[1]*d}); }
+    }
+    for(i=0;i<L.rails.length;i++){ k=L.rails[i]; var dy=k.down?1:-1;
+      for(n=Math.floor(t/P0-k.ph); n>=0; n--){ tk=(n+k.ph)*P0; d=(t-tk)*sp; if(d<0) continue;
+        var len=k.cache[n]; if(len===undefined){ var x0=railPos(k,tk); len=k.cache[n]={x:x0,l:rayLen(L,x0,k.r*T+T/2+dy*14,0,dy)}; }
+        if(d>len.l) break; out.push({x:len.x, y:k.r*T+T/2+dy*14+dy*d}); }
+    }
+    return out;
+  }
+  // Lúc bắn gần nhất của một khẩu (để vẽ chớp nòng)
+  function lastShot(k,t){ var n=Math.floor(t/CAN.period-k.ph); return n<0? -1 : t-(n+k.ph)*CAN.period; }
 
   function validate(L){
     var e=[];
@@ -253,7 +292,8 @@ var MD = (function(){
 
   function newRun(L){
     return {x:L.start.c*T+(T-P.pw)/2, y:(L.start.r+1)*T-P.ph, vy:0, dir:L.start.dir, gr:false, wall:0, coy:0, buf:0,
-            t:0, gm:0, key:false, cr:{}, dead:false, won:false, ev:[]};
+            t:0, gm:0, key:false, cr:{}, dead:false, won:false, ev:[],
+            ch:L.chasers.map(function(c){ return {p:c.p0,v:0,st:0,d:1}; }), ab:[], qk:L.aims.map(function(){ return -1; })};
   }
 
   function crumbleGone(S,c,r){
@@ -346,6 +386,34 @@ var MD = (function(){
     for(var f=0;f<L.fires.length;f++){ var fi=L.fires[f];
       if(fireState(fi,S.t)===2 && overlap(hx,hy,hw,hh, fi.c*T+7, (fi.r-2)*T+10, T-14, 2*T-10)) return die(S,'fire');
     }
+    // Cưa rượt đuổi: thấy mèo trong đoạn ray thì tăng tốc đuổi tới cuối đoạn, rồi chậm rãi về chỗ cũ
+    var pcx=S.x+P.pw/2, pcy=S.y+P.ph/2;
+    for(var ci=0;ci<L.chasers.length;ci++){ var cz=L.chasers[ci], cs=S.ch[ci], seen=false;
+      if(cs.st===0){
+        if(cz.h) seen = S.gr && S.y<(cz.r+1)*T && S.y+P.ph>cz.r*T && pcx>cz.min-T && pcx<cz.max+T;
+        else seen = !!S.wall && Math.abs(pcx-(cz.c*T+T/2))<T*1.3 && pcy>cz.min-T && pcy<cz.max+T;
+        if(seen){ cs.st=1; cs.v=0; cs.d=((cz.h?pcx:pcy)>=cs.p)?1:-1; S.ev.push('chase'); }
+      } else if(cs.st===1){
+        cs.v=Math.min(CAN.chaseMax,cs.v+CAN.chaseAcc*dt); cs.p+=cs.d*cs.v*dt;
+        if(cs.p<=cz.min||cs.p>=cz.max){ cs.p=Math.max(cz.min,Math.min(cz.max,cs.p)); cs.st=2; cs.v=0; S.ev.push('clang'); }
+      } else {
+        var dd=cz.p0-cs.p, mv=CAN.chaseBack*dt; if(Math.abs(dd)<=mv){ cs.p=cz.p0; cs.st=0; } else cs.p+=dd>0?mv:-mv;
+      }
+    }
+    // Đại bác xoay: tới nhịp thì ngắm thẳng vào mèo và bắn
+    for(var qi=0;qi<L.aims.length;qi++){ var qa=L.aims[qi], qn=Math.floor(S.t/CAN.period-qa.ph);
+      if(qn>=0 && qn!==S.qk[qi]){ S.qk[qi]=qn;
+        var ox=qa.c*T+T/2, oy=qa.r*T+T/2, ax=pcx-ox, ay=pcy-oy, al=Math.sqrt(ax*ax+ay*ay)||1;
+        S.ab.push({x:ox+ax/al*17, y:oy+ay/al*17, vx:ax/al*CAN.aimSpeed, vy:ay/al*CAN.aimSpeed}); S.ev.push('boom');
+      }
+    }
+    for(var bi=S.ab.length-1;bi>=0;bi--){ var bb=S.ab[bi]; bb.x+=bb.vx*dt; bb.y+=bb.vy*dt; if(staticAt(L,bb.x,bb.y)) S.ab.splice(bi,1); }
+    var rr3=(P.sawR-1)*(P.sawR-1), br=CAN.r*CAN.r;
+    function hitC(px,py,r2){ var qx=Math.max(hx,Math.min(px,hx+hw)), qy=Math.max(hy,Math.min(py,hy+hh)); return (qx-px)*(qx-px)+(qy-py)*(qy-py)<r2; }
+    for(var oi=0;oi<L.orbits.length;oi++){ var op=orbitPos(L.orbits[oi],S.t); if(hitC(op.x,op.y,rr3)) return die(S,'saw'); }
+    for(var ci2=0;ci2<L.chasers.length;ci2++){ var cz2=L.chasers[ci2], cp=S.ch[ci2].p; if(hitC(cz2.h?cp:cz2.c*T+T/2, cz2.h?cz2.r*T+T/2:cp, rr3)) return die(S,'saw'); }
+    if(L.cannons.length||L.rails.length){ var sh=shells(L,S.t); for(var si=0;si<sh.length;si++) if(hitC(sh[si].x,sh[si].y,br)) return die(S,'shot'); }
+    for(var ai=0;ai<S.ab.length;ai++) if(hitC(S.ab[ai].x,S.ab[ai].y,br)) return die(S,'shot');
     for(var s=0;s<L.saws.length;s++){ var p=sawPos(L.saws[s],S.t);
       var qx=Math.max(hx,Math.min(p.x,hx+hw)), qy=Math.max(hy,Math.min(p.y,hy+hh));
       if((qx-p.x)*(qx-p.x)+(qy-p.y)*(qy-p.y) < (P.sawR-1)*(P.sawR-1)) return die(S,'saw');
@@ -360,7 +428,9 @@ var MD = (function(){
 
 
   /* ---------- Máy giải: tìm một đường tới rương (tìm theo lớp thời gian, mỗi 0,05 giây chạm hoặc không) ---------- */
-  function cloneRun(S){ var o={}; for(var k in S) o[k]=S[k]; o.cr={}; for(var c in S.cr) o.cr[c]=S.cr[c]; o.ev=[]; return o; }
+  function cloneRun(S){ var o={}; for(var k in S) o[k]=S[k]; o.cr={}; for(var c in S.cr) o.cr[c]=S.cr[c]; o.ev=[];
+    o.ch=S.ch.map(function(x){ return {p:x.p,v:x.v,st:x.st,d:x.d}; }); o.ab=S.ab.map(function(b){ return {x:b.x,y:b.y,vx:b.vx,vy:b.vy}; }); o.qk=S.qk.slice(); return o; }
+  function trapKey(S){ var k=''; for(var i=0;i<S.ch.length;i++) k+='|'+S.ch[i].st+Math.round(S.ch[i].p/8); for(var j=0;j<S.ab.length;j++) k+='|'+Math.round(S.ab[j].x/12)+'.'+Math.round(S.ab[j].y/12); return k; }
   function bitc(n){ var c=0; while(n){ c+=n&1; n>>=1; } return c; }
   function solve(L,opt){
     opt=opt||{}; var maxT=opt.maxT||45, cap=opt.cap||2500, q=opt.q||3, SUB=6, DT=1/120, all=(1<<L.gems.length)-1;
@@ -375,7 +445,7 @@ var MD = (function(){
           if(S.dead) continue;
           if(S.won){ if(!res.first) res.first=S.t; if(S.gm===all && !res.all) res.all=S.t; if(res.all!==null) return res; continue; }
           var gone=0; for(var cc in S.cr) if(S.t-S.cr[cc]>=P.crumbleDelay) gone++;
-          var key=Math.round(S.x/q)+','+Math.round(S.y/q)+','+Math.round(S.vy/(q*20))+','+S.dir+(S.gr?'g':'')+(S.wall?'w':'')+(S.buf>0?'b':'')+','+S.gm+(S.key?'k':'')+';'+gone;
+          var key=Math.round(S.x/q)+','+Math.round(S.y/q)+','+Math.round(S.vy/(q*20))+','+S.dir+(S.gr?'g':'')+(S.wall?'w':'')+(S.buf>0?'b':'')+','+S.gm+(S.key?'k':'')+';'+gone+trapKey(S);
           if(seen[key]) continue; seen[key]=1; next.push(S);
         }
       }
@@ -460,6 +530,9 @@ var MD = (function(){
     var kinds=['spike'];
     if(d>=0.15) kinds.push('fire'); if(d>=0.25) kinds.push('sawH'); if(d>=0.35) kinds.push('sawV');
     if(d>=0.45) kinds.push('crumble'); if(d>=0.55) kinds.push('vspike');
+    if(d>=0.5) kinds.push('orbit'); if(d>=0.55) kinds.push('cannon'); if(d>=0.6) kinds.push('chaser');
+    if(d>=0.7) kinds.push('rail'); if(d>=0.8) kinds.push('aim');
+    var aimed=0;
     var gems=0, maxGems=3;
     lanes.forEach(function(ln){
       var k=Math.min(4,1+Math.floor(d*2.2+R()*1.3)), used=ln.ex.slice();
@@ -474,6 +547,26 @@ var MD = (function(){
         else if(kind==='sawH'){ var s0=Math.max(ln.lo,c-ri(R,2,4)), s1=Math.min(ln.hi,c+ri(R,2,4)); g[F-1][c]='H'; if(g[F-1][s0]==='.') g[F-1][s0]='!'; if(g[F-1][s1]==='.') g[F-1][s1]='!'; for(var u=s0;u<=s1;u++) used.push(u); }
         else if(kind==='sawV'){ if(ln.h<3) continue; g[F-2][c]='V'; if(ln.hall){ g[Math.max(1,F-6)][c]='!'; } }
         else if(kind==='crumble'){ if(ln.bottom) { g[F-1][c]='^'; } else { for(var u2=c-1;u2<=c+1;u2++) if(g[F][u2]==='#') g[F][u2]='='; } }
+        else if(kind==='orbit'){ if(ln.h<3) continue; g[F-2][c]='O'; used.push(c-2,c+2); }
+        else if(kind==='cannon'){
+          // đại bác trên trần bắn thẳng xuống, hoặc chéo nếu sảnh cao
+          var cr0=ln.ceil, dch = ln.h>5 ? pick(R,['3','2','4']) : '3';
+          if(cr0===0 && (c<17||c>23)) continue; // trần ngoài cùng: chỉ đặt ở giữa, tránh bị bảng điểm che
+          if(cr0===0 || g[cr0][c]==='#'){ g[cr0][c]=dch; } else continue;
+        }
+        else if(kind==='chaser'){
+          if(!free(c,4)) continue;
+          var a0=c-4, a1=c+4; if(g[F-1][a0]==='.') g[F-1][a0]='!'; if(g[F-1][a1]==='.') g[F-1][a1]='!';
+          g[F-1][R()<0.5?a0+1:a1-1]='X'; for(var u3=a0;u3<=a1;u3++) used.push(u3);
+        }
+        else if(kind==='rail'){
+          if(ln.h<4) continue; var rr=ln.ceil===0?3:ln.ceil+1, q0=Math.max(ln.lo,c-4), q1=Math.min(ln.hi,c+4);
+          if(ln.F-rr<3) continue;
+          if(g[rr][q0]==='.') g[rr][q0]='!'; if(g[rr][q1]==='.') g[rr][q1]='!'; g[rr][c]='W'; for(var u4=q0;u4<=q1;u4++) used.push(u4);
+        }
+        else if(kind==='aim'){
+          if(aimed || ln.ceil!==0) continue; c=ri(R,17,23); g[0][c]='Q'; aimed++;
+        }
         else if(kind==='vspike'){ if(ln.h<=3 && ln.ceil>0){ g[ln.ceil+1][c]='v'; } else g[F-1][c]='^'; }
         used.push(c); used.push(c-1); used.push(c+1);
         if(gems<maxGems && R()<0.45 && kind!=='sawV' && g[F-2][c]==='.' && g[F-3]&&g[F-3][c]!=='v'){ g[F-2][c]='*'; gems++; hid=true; }
@@ -509,7 +602,7 @@ var MD = (function(){
     return null;
   }
 
-  return {T:T,COLS:COLS,ROWS:ROWS,W:W,H:H,P:P,parse:parse,validate:validate,newRun:newRun,step:step,sawPos:sawPos,fireState:fireState,solidAt:solidAt,crumbleGone:crumbleGone,solve:solve,gen:gen,diffOf:diffOf};
+  return {T:T,COLS:COLS,ROWS:ROWS,W:W,H:H,P:P,parse:parse,validate:validate,newRun:newRun,step:step,sawPos:sawPos,fireState:fireState,solidAt:solidAt,crumbleGone:crumbleGone,solve:solve,gen:gen,diffOf:diffOf,cloneRun:cloneRun,trapKey:trapKey,orbitPos:orbitPos,railPos:railPos,shells:shells,lastShot:lastShot,CAN:CAN};
 })();
 /*CORE-END*/
 /*LEVELS-START*/
@@ -521,7 +614,7 @@ var LEVELS = [{"name":"Cổng sau","par":16,"map":["############################
 {"name":"Cầu gạch mục","par":22,"map":["################################","#..............................#","#..............................#","#..............................#","#...................*..........#","#...........................C..#","#....###########################","#..............................#","#----.....*....................#","#..............................#","#....========##============....#","#..............................#","#...............*..........----#","#..............................#","#.....=====================#####","#.S............................#","######^^^^^^^^^^^^^^^^^^^^^^^^^#","################################"]},
 {"name":"Chìa đồng","par":33,"map":["################################","#..............................#","#..............................#","#..............................#","#.................*............#","#...........###############....#","#..............................#","#..........................----#","#.....*.........^...........K..#","#....###########################","#..............................#","#----..........................#","#........^.....................#","##################......########","#...........*...........D......#","#.................----..D......#","#.S.........^...........D...C..#","################################"]},
 {"name":"Lò xo tre","par":9,"map":["################################","#..............................#","#........................*.....#","#..............................#","#..............................#","#.....................##########","#.......*......................#","#..............................#","#...C..........*...............#","#..#####.......................#","#..................T...........#","#............########..........#","#..............................#","#..............................#","#..............................#","#.S......T.....................#","############^^^^^^^^^^^^^^^^^^^#","################################"]},
-{"name":"Tháp canh","par":24,"map":["################################","#..............................#","#...........*..................#","#........!......H.....!........#","#....#######################...#","#..........................#...#","#..........................#...#","#..........................#...#","#................V.........#.*.#","#..........................#...#","#..........*...............#...#","#..........................#...#","#........................C.#...#","########F#####f#####F#######...#","#..............................#","#..............................#","#..S..............^............#","##########F#####################"]},
+{"name":"Tháp canh","par":26,"map":["################################","#..............................#","#...........*..................#","#........!......H.....!........#","#....#######################..!#","#..........................#...#","#..........................#...#","#..........................#...#","#................V.........#.*.#","#..........................#..Y#","#..........*...............#...#","#..........................#...#","#........................C.#...#","########F#####f#####F#######..!#","#..............................#","#..............................#","#..S..............^............#","##########F#####################"]},
 {"name":"Kho ấn ngọc","par":29,"map":["################################","#.....D........................#","#.....D..*.....................#","#..C..D........................#","############...................#","#..............................#","#........................*.....#","#....V.........................#","#.............T................#","#.......##########F###---------#","#..............................#","#.K............................#","########.......................#","#.............*................#","#.S........................T...#","########=============###########","########^^^^^^^^^^^^^###########","################################"]}];
 /*LEVELS-END*/
 </script>
@@ -590,6 +683,10 @@ var SFX={
   spring:function(){tone(200,700,0.22,'sine',0.16)},
   crack:function(){noise(0.08,0.12,1800)},
   die:function(){noise(0.25,0.25,300);tone(400,90,0.35,'sawtooth',0.08)},
+  boom:function(){noise(0.12,0.16,200);tone(140,60,0.18,'sine',0.14)},
+  thump:function(){tone(110,55,0.12,'sine',0.07)},
+  chase:function(){tone(300,900,0.4,'sawtooth',0.05)},
+  clang:function(){tone(900,0,0.08,'square',0.05);noise(0.05,0.08,2500)},
   win:function(){[523,659,784,1047].forEach(function(f,i){tone(f,0,0.2,'triangle',0.13,i*0.09)})}
 };
 
@@ -683,6 +780,7 @@ function update(dt){
     handleEvents();
     if(S.dead||S.won){ acc=0; break; }
   }
+  if(!S.dead){ var shot=false; L.cannons.concat(L.rails).forEach(function(k){ var ls=MD.lastShot(k,S.t); if(ls>=0 && ls<dt) shot=true; }); if(shot) SFX.thump(); }
   anim.run += dt*(S.gr?14:0);
   anim.squash *= Math.pow(0.0005,dt);
   updateParts(dt);
@@ -697,6 +795,9 @@ function handleEvents(){
     else if(e==='turn'){ dust(cx,cy,3); }
     else if(e==='spring'){ SFX.spring(); anim.squash=-0.4; }
     else if(e==='crack'){ SFX.crack(); }
+    else if(e==='boom'){ SFX.boom(); }
+    else if(e==='chase'){ SFX.chase(); }
+    else if(e==='clang'){ SFX.clang(); }
     else if(e==='gem'){ SFX.gem(); burst(cx,S.y+10,'#3fd6a0',14); updateHud(); }
     else if(e==='key'){ SFX.key(); burst(cx,S.y+10,'#f2c14e',16); staticDirty=true; }
     else if(e==='die'){ SFX.die(); shake=reduceMotion?0:10; deathPoof(cx,S.y+12); if(navigator.vibrate) try{navigator.vibrate(40)}catch(_){} }
@@ -819,10 +920,11 @@ function buildStatic(Lv){
   staticCv.width=cv.width; staticCv.height=cv.height;
   var c=staticCv.getContext('2d'); c.setTransform(scale*dpr,0,0,scale*dpr,0,0);
   drawBackground(c);
-  Lv.saws.forEach(function(s){ sawRail(c,s); });
+  Lv.saws.concat(Lv.chasers,Lv.rails).forEach(function(s){ sawRail(c,s); });
+  Lv.orbits.forEach(function(o){ c.strokeStyle='rgba(185,162,122,.22)'; c.setLineDash([4,6]); c.lineWidth=2; c.beginPath(); c.arc(o.cx,o.cy,MD.CAN.orbitR,0,7); c.stroke(); c.setLineDash([]); });
   for(var r=0;r<ROWS;r++) for(var cc=0;cc<COLS;cc++){
     var ch=Lv.g[r][cc], x=cc*T, y=r*T;
-    if(ch==='#') drawStone(c,x,y,Lv,cc,r);
+    if(ch==='#'||/[1-8Q]/.test(ch)) drawStone(c,x,y,Lv,cc,r);
     else if(ch==='F'||ch==='f'){ drawStone(c,x,y,Lv,cc,r); c.fillStyle='#2a1a14'; c.fillRect(x+5,y,T-10,8); c.fillStyle='#ff7a2a'; c.globalAlpha=.5; c.fillRect(x+8,y+2,T-16,3); c.globalAlpha=1;
       c.fillStyle='#3a2a20'; for(var k=0;k<3;k++) c.fillRect(x+7+k*6,y,2,8); }
     else if(ch==='-'){ c.fillStyle='#8a5a2c'; c.fillRect(x,y,T,7); c.fillStyle='#b57a3c'; c.fillRect(x,y,T,2); c.fillStyle='#5a3a1c'; c.fillRect(x+4,y+7,3,6); c.fillRect(x+T-7,y+7,3,6); c.fillStyle='rgba(0,0,0,.3)'; c.fillRect(x+T-1,y,1,7); }
@@ -872,15 +974,63 @@ function drawFire(c,f,t){
   }
   var gl=c.createRadialGradient(x+T/2,y-T,4,x+T/2,y-T,60); gl.addColorStop(0,'rgba(255,140,60,.25)'); gl.addColorStop(1,'rgba(255,140,60,0)'); c.fillStyle=gl; c.fillRect(x-45,y-T-60,T+90,120);
 }
-function drawSaw(c,p,t){
+function drawSaw(c,p,t,hot){
   var R=P.sawR+2;
-  c.save(); c.translate(p.x,p.y); c.rotate(t*12);
-  c.fillStyle='#b9a27a'; c.beginPath();
+  if(hot){ var gl=c.createRadialGradient(p.x,p.y,4,p.x,p.y,30); gl.addColorStop(0,'rgba(255,70,50,.45)'); gl.addColorStop(1,'rgba(255,70,50,0)'); c.fillStyle=gl; c.fillRect(p.x-30,p.y-30,60,60); }
+  c.save(); c.translate(p.x,p.y); c.rotate(t*(hot?24:12));
+  c.fillStyle=hot?'#d98a6a':'#b9a27a'; c.beginPath();
   for(var i=0;i<12;i++){ var a=i/12*Math.PI*2, a2=a+Math.PI/12; c.lineTo(Math.cos(a)*R,Math.sin(a)*R); c.lineTo(Math.cos(a2)*(R-5),Math.sin(a2)*(R-5)); }
   c.closePath(); c.fill(); c.strokeStyle='#4a3a28'; c.lineWidth=1.2; c.stroke();
   c.fillStyle='#e0cfa6'; c.beginPath(); c.arc(0,0,R-7,0,7); c.fill();
   c.fillStyle='#4a3a28'; c.beginPath(); c.arc(0,0,3,0,7); c.fill(); c.fillRect(-1,-R+7,2,R-7);
   c.restore();
+}
+/* Cưa xoay vòng: trục, cần nối, lưỡi cưa */
+function drawOrbit(c,o,t){
+  var p=MD.orbitPos(o,t);
+  c.strokeStyle='#4a3a28'; c.lineWidth=4; c.lineCap='round'; c.beginPath(); c.moveTo(o.cx,o.cy); c.lineTo(p.x,p.y); c.stroke();
+  c.strokeStyle='#8a7350'; c.lineWidth=1.5; c.stroke();
+  c.fillStyle='#5a4a3a'; c.beginPath(); c.arc(o.cx,o.cy,6,0,7); c.fill(); c.fillStyle='#b9a27a'; c.beginPath(); c.arc(o.cx,o.cy,2.5,0,7); c.fill();
+  drawSaw(c,p,t,false);
+}
+/* Cưa rượt đuổi: mắt đỏ, đỏ rực khi đang đuổi */
+function drawChaser(c,cz,cs,t){
+  var p={x:cz.h?cs.p:cz.c*T+T/2, y:cz.h?cz.r*T+T/2:cs.p};
+  drawSaw(c,p,t,cs.st===1);
+  c.fillStyle= cs.st===1 ? '#ff3b2f' : (Math.sin(t*4)>0?'#a3302a':'#5a1a16'); c.beginPath(); c.arc(p.x,p.y,3.2,0,7); c.fill();
+}
+/* Đại bác đồng: thân khối, nòng theo hướng, đỏ dần khi sắp bắn, chớp lửa khi bắn */
+function drawBarrel(c,x,y,ang,since,len){
+  var warn = since>=0 && MD.CAN.period-since<0.4;
+  c.save(); c.translate(x,y); c.rotate(ang);
+  c.fillStyle=warn?'#b2452a':'#3a3036'; c.fillRect(2,-5.5,len,11); c.fillStyle=warn?'#e0623c':'#6b5a52'; c.fillRect(2,-5.5,len,3);
+  c.fillStyle='#1a1418'; c.fillRect(len-1,-6.5,4,13);
+  if(since>=0 && since<0.12){ c.fillStyle='rgba(255,200,90,'+(1-since/0.12)+')'; c.beginPath(); c.arc(len+8,0,9*(1-since/0.12)+4,0,7); c.fill(); }
+  c.restore();
+}
+function drawCannon(c,k,t){
+  var x=k.c*T+T/2, y=k.r*T+T/2;
+  c.fillStyle='#8a6a3a'; c.fillRect(x-13,y-13,26,26); c.fillStyle='#c79a4a'; c.fillRect(x-13,y-13,26,4); c.strokeStyle='#3a2a14'; c.lineWidth=1.5; c.strokeRect(x-13,y-13,26,26);
+  c.fillStyle='#3a2a14'; [[-9,-9],[9,-9],[-9,9],[9,9]].forEach(function(q){ c.beginPath(); c.arc(x+q[0],y+q[1],1.6,0,7); c.fill(); });
+  drawBarrel(c,x,y,Math.atan2(k.d[1],k.d[0]),MD.lastShot(k,t),13);
+  c.fillStyle='#5a4a3a'; c.beginPath(); c.arc(x,y,6,0,7); c.fill();
+}
+function drawAim(c,k,t,tx,ty){
+  var x=k.c*T+T/2, y=k.r*T+T/2;
+  c.fillStyle='#4a3e58'; c.fillRect(x-14,y-14,28,28); c.strokeStyle='#22192e'; c.lineWidth=1.5; c.strokeRect(x-14,y-14,28,28);
+  drawBarrel(c,x,y,Math.atan2(ty-y,tx-x),MD.lastShot(k,t),14);
+  c.fillStyle='#6d5c86'; c.beginPath(); c.arc(x,y,9,0,7); c.fill();
+  c.fillStyle= Math.sin(t*6)>0 ? '#ff4a3a' : '#7a2020'; c.beginPath(); c.arc(x,y,3,0,7); c.fill();
+}
+function drawRailCannon(c,k,t){
+  var x=MD.railPos(k,t), y=k.r*T+T/2, dy=k.down?1:-1;
+  c.fillStyle='#6b4a2a'; c.fillRect(x-12,y-8,24,16); c.fillStyle='#a87a42'; c.fillRect(x-12,y-8,24,3);
+  c.fillStyle='#2a2028'; c.beginPath(); c.arc(x-7,y-dy*9,3.5,0,7); c.arc(x+7,y-dy*9,3.5,0,7); c.fill();
+  drawBarrel(c,x,y,dy>0?Math.PI/2:-Math.PI/2,MD.lastShot(k,t),10);
+}
+function drawShell(c,x,y){
+  var gl=c.createRadialGradient(x,y,1,x,y,12); gl.addColorStop(0,'rgba(255,150,70,.5)'); gl.addColorStop(1,'rgba(255,150,70,0)'); c.fillStyle=gl; c.fillRect(x-12,y-12,24,24);
+  c.fillStyle='#1d1820'; c.beginPath(); c.arc(x,y,MD.CAN.r+0.5,0,7); c.fill(); c.fillStyle='#8a8090'; c.beginPath(); c.arc(x-1.6,y-1.6,1.6,0,7); c.fill();
 }
 function drawGem(c,x,y,t,i){
   var b=Math.sin(t*3+i)*3; c.save(); c.translate(x+T/2,y+T/2+b);
@@ -957,6 +1107,15 @@ function draw(t){
   }
   L.fires.forEach(function(f){ drawFire(ctx,f,gt) });
   L.saws.forEach(function(s){ drawSaw(ctx, MD.sawPos(s, gt), gt) });
+  L.orbits.forEach(function(o){ drawOrbit(ctx,o,gt) });
+  var run=S||MD.newRun(L);
+  L.chasers.forEach(function(cz,i){ drawChaser(ctx,cz,run.ch[i]||{p:cz.p0,st:0},gt) });
+  L.rails.forEach(function(k){ drawRailCannon(ctx,k,gt) });
+  L.cannons.forEach(function(k){ drawCannon(ctx,k,gt) });
+  var tcx=run.x+P.pw/2, tcy=run.y+P.ph/2;
+  L.aims.forEach(function(k){ drawAim(ctx,k,gt,tcx,tcy) });
+  MD.shells(L,gt).forEach(function(b){ drawShell(ctx,b.x,b.y) });
+  if(mode==='play') run.ab.forEach(function(b){ drawShell(ctx,b.x,b.y) });
   L.gems.forEach(function(g,i){ if(!(S && mode==='play' && (S.gm&(1<<i)))) drawGem(ctx,g.c*T,g.r*T,t,i) });
   if(L.key && !(S && mode==='play' && S.key)) drawKey(ctx,L.key.c*T,L.key.r*T,t);
   if(L.chest) drawChest(ctx,L.chest.c*T,L.chest.r*T, S && S.won);

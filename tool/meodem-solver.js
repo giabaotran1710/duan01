@@ -13,12 +13,12 @@ const LEVELS = new Function(pick('/*LEVELS-START*/', '/*LEVELS-END*/') + '; retu
 const DT = 1 / 120, SUB = 6, MAXT = +process.env.MAXT || 45;
 
 function bitCount(n) { let c = 0; while (n) { c += n & 1; n >>= 1; } return c; }
-function clone(S) { return Object.assign({}, S, { cr: Object.assign({}, S.cr), ev: [] }); }
+function clone(S) { return MD.cloneRun(S); }
 function keyOf(S) {
   let k = Math.round(S.x / 3) + ',' + Math.round(S.y / 3) + ',' + Math.round(S.vy / 60) + ',' + S.dir + (S.gr ? 'g' : '') + (S.wall ? 'w' : '') + (S.buf > 0 ? 'b' : '') + ',' + S.gm + (S.key ? 'k' : '');
   // Gạch mục chỉ tính số viên đang sụp (gộp thô cho nhanh; đường tìm được vẫn được mô phỏng chính xác)
   let gone = 0; for (const c in S.cr) if (S.t - S.cr[c] >= MD.P.crumbleDelay) gone++;
-  k += ';' + gone;
+  k += ';' + gone + MD.trapKey(S);
   return k;
 }
 
