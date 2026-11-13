@@ -18,14 +18,24 @@
   }
 
   const DIFF = {
-    de:   { label: 'Dễ',   shadows: 0, w: [7, 8], h: [6, 7], fill: .58, gates: 1, steps: [8, 14],  slack: 3 },
-    vua:  { label: 'Vừa',  shadows: 1, w: [7, 8], h: [6, 7], fill: .6,  gates: 1, steps: [12, 24], slack: 2 },
-    kho:  { label: 'Khó',  shadows: 1, w: [8, 9], h: [7, 8], fill: .58, gates: 2, steps: [18, 32], slack: 1 },
+    de:   { label: 'Dễ',   shadows: 0, w: [7, 8], h: [6, 7], fill: .58, steps: [8, 14],  slack: 3,
+            variants: [{ doors: [{ plate: 0 }] }] },
+    vua:  { label: 'Vừa',  shadows: 1, w: [7, 8], h: [6, 7], fill: .6,  steps: [12, 26], slack: 1,
+            variants: [{ doors: [{ plate: 0 }] }, { doors: [{ plate: 0 }], guard: true }, { doors: [{ plate: 0 }, { plate: 1 }] }] },
+    // Khó: vòng sát nút, có lính tuần hoặc cửa ngược, và không giải được bằng kiểu "bóng tới bệ rồi đứng im"
+    kho:  { label: 'Khó',  shadows: 1, w: [8, 9], h: [7, 8], fill: .58, steps: [18, 34], slack: 0, hard: true,
+            variants: [
+              { doors: [{ plate: 0 }, { plate: 0, inv: true }] },
+              { doors: [{ plate: 0 }, { plate: 1 }], guard: true },
+              { doors: [{ plate: 0 }, { plate: 0, inv: true }], guard: true },
+              { doors: [{ plate: 0 }], guard: true },
+              { doors: [{ plate: 0 }, { plate: 1 }] },
+            ] },
   };
   const TIPS = {
-    de: 'Đứng lên bệ thì cửa cùng màu mở. Bước thẳng từ bệ vào cửa.',
-    vua: 'Bệ không nằm sát cửa: cần một cái bóng giữ bệ cho bạn.',
-    kho: 'Một bóng, hai cửa. Bóng có thể phải làm hai việc, hoặc đi qua cửa khi bạn giữ bệ.',
+    de: 'Đứng lên bệ, rồi bước thẳng vào cửa cùng màu.',
+    vua: 'Bệ xa cửa: cần một cái bóng giữ bệ cho bạn.',
+    kho: 'Vòng sát nút. Bóng phải làm nhiều hơn là đứng giữ bệ.',
   };
   const SEARCH_LOOP = 16;
   const STATE_LIMIT = 1500000;
@@ -80,12 +90,27 @@
 
   const adj = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
 
+  // Các đoạn thẳng 3-5 ô sàn trống (cho lính tuần), có cắt qua đường đi S→E.
+  function guardTracks(g, onPath) {
+    const res = [];
+    const ok = (x, y) => g[y] && g[y][x] === '.';
+    for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) {
+      for (const [dx, dy] of [[1, 0], [0, 1]]) {
+        if (ok(x - dx, y - dy)) continue; // chỉ bắt đầu ở đầu đoạn
+        const tr = [];
+        let cx = x, cy = y;
+        while (ok(cx, cy) && tr.length < 5) { tr.push([cx, cy]); cx += dx; cy += dy; }
+        if (tr.length >= 3 && tr.some(c => onPath(c))) res.push(tr);
+      }
+    }
+    return res;
+  }
+
   // Thử dựng một màn. Trả về level (đã kiểm có lời giải) hoặc null.
   function attempt(r, key) {
     const P = DIFF[key];
     const w = between(r, P.w[0], P.w[1]), h = between(r, P.h[0], P.h[1]);
     const g = carve(r, w, h, P.fill);
-    // S: ô xa nhất từ một ô bất kỳ, E: ô xa nhất từ S
     const floors = [];
     g.forEach((row, y) => row.forEach((c, x) => { if (c === '.') floors.push([x, y]); }));
     if (floors.length < 10) return null;
@@ -98,63 +123,112 @@
     const [S] = far(pick(r, floors));
     const [E, dSE] = far(S);
     if (dSE < 5) return null;
-    const ch = chokes(g, S, E).filter(c => !adj(c, S) && !adj(c, E));
-    if (ch.length < P.gates) return null;
+    // ô nằm trên một đường ngắn nhất S→E
+    const dS = bfs(g, S[0], S[1]), dE = bfs(g, E[0], E[1]);
+    const onPath = ([x, y]) => dS[y][x] >= 0 && dS[y][x] + dE[y][x] === dSE;
 
-    let gates;
-    if (P.gates === 1) gates = [pick(r, ch)];
+    // Kiểu màn: danh sách cửa (chữ bệ + loại), có lính hay không
+    const variant = pick(r, P.variants);
+    const ch = chokes(g, S, E).filter(c => !adj(c, S) && !adj(c, E));
+    if (ch.length < variant.doors.length) return null;
+    let doorCells;
+    if (variant.doors.length === 1) doorCells = [pick(r, ch)];
     else {
-      // hai cửa cách nhau ít nhất 2 ô dọc đường
       const a = pick(r, ch.slice(0, Math.max(1, ch.length - 1)));
       const later = ch.filter(c => c[2] >= a[2] + 2);
       if (!later.length) return null;
-      gates = [a, pick(r, later)];
+      doorCells = [a, pick(r, later)];
     }
-    gates.forEach((c, i) => { g[c[1]][c[0]] = 'AB'[i]; });
-    const isGateCell = (x, y) => g[y][x] === 'A' || g[y][x] === 'B';
-    const sideS = bfs(g, S[0], S[1], isGateCell); // vùng S đi tới được khi mọi cửa đóng
-    const free = floors.filter(([x, y]) => g[y][x] === '.' && !(x === S[0] && y === S[1]) && !(x === E[0] && y === E[1]));
+    const doorChar = (d) => d.inv ? String(d.plate + 1) : 'AB'[d.plate];
+    variant.doors.forEach((d, i) => { const c = doorCells[i]; g[c[1]][c[0]] = doorChar(d); });
+    const isDoorCell = (x, y) => /[A-C1-3]/.test(g[y][x]);
+    const sideS = bfs(g, S[0], S[1], isDoorCell);
+    const free = () => floors.filter(([x, y]) => g[y][x] === '.' && !(x === S[0] && y === S[1]) && !(x === E[0] && y === E[1]));
 
+    const nPlates = Math.max(...variant.doors.map(d => d.plate)) + 1;
     const plates = [];
     if (key === 'de') {
-      // bệ nằm sát cửa, phía S: tự giữ bệ rồi bước thẳng vào cửa
-      const A = gates[0];
-      const opts = free.filter(c => adj(c, A) && sideS[c[1]][c[0]] >= 0);
+      const A = doorCells[0];
+      const opts = free().filter(c => adj(c, A) && sideS[c[1]][c[0]] >= 0);
       if (!opts.length) return null;
       plates.push(pick(r, opts));
-      // thêm một bệ giả ở xa cho có việc để nghĩ (không bắt buộc)
     } else {
-      gates.forEach((G, i) => {
-        let opts = free.filter(c => !adj(c, G) && !plates.some(p => p[0] === c[0] && p[1] === c[1]));
-        if (i === 0) opts = opts.filter(c => sideS[c[1]][c[0]] >= 1);
-        if (opts.length) plates.push(pick(r, opts));
-      });
-      if (plates.length !== gates.length) return null;
+      for (let pi = 0; pi < nPlates; pi++) {
+        // bệ của cửa thứ nhất nằm phía S; tránh đặt sát cửa của chính nó
+        const first = variant.doors.findIndex(d => d.plate === pi);
+        const G = doorCells[first];
+        let opts = free().filter(c => !adj(c, G) && !plates.some(p => p[0] === c[0] && p[1] === c[1]));
+        if (pi === 0) opts = opts.filter(c => sideS[c[1]][c[0]] >= 1);
+        if (!opts.length) return null;
+        plates.push(pick(r, opts));
+      }
     }
     plates.forEach((c, i) => { g[c[1]][c[0]] = 'ab'[i]; });
     g[S[1]][S[0]] = 'S'; g[E[1]][E[0]] = 'E';
+
+    let guards = [];
+    if (variant.guard) {
+      const trs = guardTracks(g, onPath);
+      if (!trs.length) return null;
+      const tr = pick(r, trs);
+      guards = [r() < .5 ? tr : tr.slice().reverse()];
+    }
 
     // cắt bớt phần tường thừa, chừa 1 ô viền
     let x0 = w, x1 = 0, y0 = h, y1 = 0;
     g.forEach((row, y) => row.forEach((c, x) => { if (c !== '#') { x0 = Math.min(x0, x); x1 = Math.max(x1, x); y0 = Math.min(y0, y); y1 = Math.max(y1, y); } }));
     const map = g.slice(y0 - 1, y1 + 2).map(row => row.slice(x0 - 1, x1 + 2).join(''));
-    const level = { map, loop: SEARCH_LOOP, maxShadows: P.shadows, par: { shadows: P.shadows, steps: 0 } };
+    guards = guards.map(tr => tr.map(([x, y]) => [x - x0 + 1, y - y0 + 1]));
+    const level = { map, guards, loop: SEARCH_LOOP, maxShadows: P.shadows, par: { shadows: P.shadows, steps: 0 } };
     const sol = C.solve(level, STATE_LIMIT);
     if (!sol || sol.shadows.length !== P.shadows) return null;
     if (sol.steps < P.steps[0] || sol.steps > P.steps[1]) return null;
 
-    const need = Math.max(sol.moves.length, ...sol.shadows.map(s => s.length));
-    level.loop = Math.min(SEARCH_LOOP, need + P.slack);
-    if (key === 'kho' && !interesting(level, sol)) return null;
+    const need = Math.max(sol.moves.length, ...sol.shadows.map(x => x.length));
+    if (need > SEARCH_LOOP - P.slack) return null;
+    level.loop = need + P.slack;
+    if (P.hard && !interesting(level, sol)) return null;
 
     // kiểm lại với độ dài vòng thật
     const final = C.solve(level, STATE_LIMIT);
     if (!final || final.shadows.length !== P.shadows) return null;
     const sim = C.simulate(C.parse(level), final.shadows, final.moves);
     if (sim.win < 0) return null;
+    if (P.hard && naiveWorks(level)) return null;
+    // lính phải thật sự gây khó: bỏ lính đi thì màn phải dễ hơn
+    if (guards.length) {
+      const free0 = C.solve(Object.assign({}, level, { guards: [] }), STATE_LIMIT);
+      if (free0 && free0.shadows.length === final.shadows.length && free0.steps >= final.steps) return null;
+    }
     level.par.steps = final.steps;
     level.solution = final;
+    level.tip = tipFor(key, level);
+    if (!guards.length) delete level.guards;
     return level;
+  }
+
+  // Cách chơi "đếm nhẩm": bóng đi thẳng tới một bệ rồi đứng im ở đó. Màn khó không được giải bằng cách này.
+  function naiveWorks(level) {
+    const g = C.parse(level);
+    const plates = [];
+    g.rows.forEach((row, y) => [...row].forEach((c, x) => { if (C.isPlate(c)) plates.push([x, y]); }));
+    for (const P of plates) {
+      // đường ngắn nhất (đi một mình, tránh lính) từ S tới bệ
+      const target = Object.assign({}, level, { map: level.map.map((row, y) => [...row].map((c, x) => (x === P[0] && y === P[1]) ? 'E' : c === 'E' ? '.' : c).join('')), maxShadows: 0 });
+      let rec;
+      try { const s0 = C.solve0(C.parse(target)); rec = s0 && s0.moves; } catch (e) { rec = null; }
+      if (!rec) continue;
+      if (C.solveFrom(g, [rec], '') !== null) return true;
+    }
+    return false;
+  }
+
+  function tipFor(key, level) {
+    const parts = [TIPS[key]];
+    const all = level.map.join('');
+    if (/[1-3]/.test(all)) parts.push('Cửa gạch chéo đóng khi bệ cùng màu bị giẫm.');
+    if (level.guards && level.guards.length) parts.push('Chạm lính là về đầu vòng; lính không bước vào ô có bóng.');
+    return parts.join(' ');
   }
 
   // Màn khó phải bắt bóng làm nhiều hơn "đi tới bệ rồi đứng im": giữ 2 bệ, hoặc vấp cửa, hoặc phải rời bệ.
@@ -189,7 +263,6 @@
           const lv = attempt(r, key);
           if (lv) {
             lv.name = DIFF[key].label + ' #' + seed;
-            lv.tip = TIPS[key];
             lv.generated = { key, seed };
             return lv;
           }
