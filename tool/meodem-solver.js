@@ -10,12 +10,13 @@ const pick = (a, b) => { const i = src.indexOf(a), j = src.indexOf(b); if (i < 0
 const MD = new Function(pick('/*CORE-START*/', '/*CORE-END*/') + '; return MD;')();
 const LEVELS = new Function(pick('/*LEVELS-START*/', '/*LEVELS-END*/') + '; return LEVELS;')();
 
+if (process.env.NOAIR) MD.P.airJumps = 0; // chứng minh hầm qua được kể cả khi không dùng cú nhảy trên không
 const DT = 1 / 120, SUB = 6, MAXT = +process.env.MAXT || 45;
 
 function bitCount(n) { let c = 0; while (n) { c += n & 1; n >>= 1; } return c; }
 function clone(S) { return MD.cloneRun(S); }
 function keyOf(S) {
-  let k = Math.round(S.x / 3) + ',' + Math.round(S.y / 3) + ',' + Math.round(S.vy / 60) + ',' + S.dir + (S.gr ? 'g' : '') + (S.wall ? 'w' : '') + (S.buf > 0 ? 'b' : '') + ',' + S.gm + (S.key ? 'k' : '');
+  let k = Math.round(S.x / 3) + ',' + Math.round(S.y / 3) + ',' + Math.round(S.vy / 60) + ',' + S.dir + (S.gr ? 'g' : '') + (S.wall ? 'w' : '') + (S.buf > 0 ? 'b' : '') + S.aj + ',' + S.gm + (S.key ? 'k' : '');
   // Gạch mục chỉ tính số viên đang sụp (gộp thô cho nhanh; đường tìm được vẫn được mô phỏng chính xác)
   let gone = 0; for (const c in S.cr) if (S.t - S.cr[c] >= MD.P.crumbleDelay) gone++;
   k += ';' + gone + MD.trapKey(S);
@@ -34,7 +35,7 @@ function solve(L) {
     for (let i = 0; i < front.length; i++) {
       const F = front[i].S;
       // Chỉ thử chạm khi chạm có tác dụng ngay (đang trên đất, vừa rời mép hoặc đang bám tường)
-      for (const a of (F.gr || F.coy > 0 || F.wall) ? [0, 1] : [0]) {
+      for (const a of (F.gr || F.coy > 0 || F.wall || F.aj > 0) ? [0, 1] : [0]) {
         const S = clone(F);
         for (let k = 0; k < SUB; k++) { MD.step(L, S, DT, a && k === 0); if (S.dead || S.won) break; }
         if (S.dead) continue;
@@ -54,11 +55,12 @@ function solve(L) {
       }
     }
     if (!next.length) return res;
-    if (next.length > 15000) {
+    const CAPN = +process.env.CAP || 15000;
+    if (next.length > CAPN) {
       // Quá nhiều trạng thái: giữ những trạng thái đã có chìa và nhiều ngọc trước
       const sc = n => (n.S.key ? 1000 : 0) + bitCount(n.S.gm) * 10;
       next.sort((a, b) => sc(b) - sc(a));
-      next.length = 15000;
+      next.length = CAPN;
     }
     front = next;
   }
