@@ -181,14 +181,14 @@
     const place = new Array(N);
     const left = countTray(B.tray);
     const types = Object.keys(left);
-    let best = Infinity, sols = [], nodes = 0;
+    let best = opts.cap != null ? opts.cap : Infinity, found = false, sols = [], nodes = 0, cut = false;
     function rec(used) {
-      if (++nodes > (opts.maxNodes || 3e6)) return;
+      if (++nodes > (opts.maxNodes || 3e6)) { cut = true; return; }
       if (used > best) return;
       const r = simulate(B, place, undecided);
       if (r.pending === undefined) {
         if (r.win) {
-          if (used < best) { best = used; sols = []; }
+          if (used < best || !found) { best = used; sols = []; found = true; }
           if (sols.length < limit) {
             const s = {};
             place.forEach((t, i) => { if (t) s[i] = t; });
@@ -211,7 +211,7 @@
       undecided.add(i);
     }
     rec(0);
-    return { best: best === Infinity ? -1 : best, sols, nodes };
+    return { best: found ? best : -1, sols, nodes, cut };
   }
 
   const api = { DIRS, apply, label, isOp, parse, simulate, solve };

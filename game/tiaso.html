@@ -64,6 +64,23 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 .panel{background:#18222b;border:1px solid #2e404e;border-radius:20px;padding:20px 18px;width:100%;max-width:400px;max-height:90vh;overflow:auto;text-align:center}
 .panel h2{margin:0 0 6px;font:800 22px var(--body)}
 .panel p{color:#c9d3da}
+.layer.sheet{align-items:flex-end;padding:0}
+.layer.sheet .panel{max-width:520px;max-height:88%;border-radius:24px 24px 0 0;padding:14px 16px 28px;text-align:center}
+.grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 12px}
+.sheet h3{margin:14px 0 0;text-align:left;font:700 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.rndRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.rnd{min-height:56px;border-radius:16px;border:0;background:rgba(255,201,77,.14);color:var(--beam);font-weight:800;padding:6px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.rnd small{font-weight:500;color:var(--muted);font-size:12px}
+.rnd:active,.daily:active,.intro:active{transform:scale(.97)}
+.daily{width:100%;margin-top:8px;min-height:54px;border:0;border-radius:16px;background:linear-gradient(135deg,#d6b25a,#8c6d2c);color:#1b1408;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.daily small{font-weight:600;color:#3d2c0c}
+.daily.done{background:rgba(116,224,138,.16);color:var(--ok)}
+.daily.done small{color:#a8d9b2}
+.intro{width:100%;margin-top:8px;min-height:50px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.intro small{font-weight:500;color:var(--muted)}
+.intro svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.intro[aria-expanded=true] svg{transform:rotate(180deg)}
+.genMsg{min-height:20px;font-size:13px;color:var(--muted);margin:10px 0 0}
 .lvGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
 .lv{aspect-ratio:1;border-radius:14px;border:2px solid #34495a;background:#1f2d38;font:800 20px var(--mono);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
 .lv small{font:700 11px var(--body);color:var(--beam);letter-spacing:1px}
@@ -102,12 +119,20 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   <p class="msg" id="msg" aria-live="polite"></p>
 </main>
 
-<div class="layer" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuH">
+<div class="layer sheet" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuH">
   <div class="panel">
-    <h2 id="menuH">Chọn màn</h2>
-    <p id="menuSum"></p>
-    <div class="lvGrid" id="lvGrid"></div>
-    <button class="ghost" id="menuClose" data-no-scene>Đóng</button>
+    <div class="grab"></div>
+    <h2 id="menuH">Tia số</h2>
+    <h3>Ngẫu nhiên</h3>
+    <div class="rndRow">
+      <button class="rnd" data-key="vua" data-no-scene>Vừa<small id="cnt-vua"></small></button>
+      <button class="rnd" data-key="kho" data-no-scene>Khó<small id="cnt-kho"></small></button>
+      <button class="rnd" data-key="rkho" data-no-scene>Rất khó<small id="cnt-rkho"></small></button>
+    </div>
+    <button class="daily" id="dailyBtn" data-no-scene>Hôm nay<small id="dailyInfo"></small></button>
+    <button class="intro" id="introBtn" aria-expanded="false" aria-controls="lvGrid" data-no-scene><span>Hướng dẫn nhập môn<small id="introInfo"></small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <div class="lvGrid" id="lvGrid" hidden></div>
+    <p class="genMsg" id="genMsg" aria-live="polite"></p>
   </div>
 </div>
 <div class="layer" id="help" role="dialog" aria-modal="true" aria-labelledby="helpH">
@@ -122,6 +147,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
       <li>Chạm ô đã đặt để gỡ ra. Dùng ít ô nhất để được 3 sao.</li>
     </ul>
     <button class="big" id="helpClose" data-no-scene>Chơi</button>
+    <button class="ghost" id="helpIntro" data-no-scene>Vào hướng dẫn nhập môn</button>
   </div>
 </div>
 <div class="layer" id="win" role="dialog" aria-modal="true" aria-labelledby="winH">
@@ -136,8 +162,9 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 
 <footer class="tbFooter">Version: D20261113160000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261103ban"></script>
-<script src="tiaso-core.js?v=1"></script>
+<script src="tiaso-core.js?v=2"></script>
 <script src="tiaso-levels.js?v=1"></script>
+<script src="tiaso-gen.js?v=1"></script>
 <script>
 (function () {
   'use strict';
@@ -148,15 +175,27 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   const svg = $('board');
 
   let save = load();
+  const GEN = window.TiaSoGen;
+  const DIFF = { vua: 'Vừa', kho: 'Khó', rkho: 'Rất khó' }, WEIGHT = { vua: 1, kho: 2, rkho: 3 };
   let lvIdx = Math.min(save.unlocked, LEVELS.length - 1);
+  let cur = LEVELS[lvIdx], mode = { kind: 'tut' }, genBusy = false;
   let B = null, place = [], left = {}, sel = null, sim = null, won = false, winTimer = 0, lastPlaced = -1;
 
   function load() {
     try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.stars) return s; } catch (e) {}
     return { unlocked: 0, stars: {}, seenHelp: false };
   }
+  if (!save.rand) save.rand = {};
+  if (!save.daily) save.daily = {};
+  function todayKey() { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); }
+  function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
   function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
-  function score() { return Object.keys(save.stars).reduce((t, k) => t + (+save.stars[k] || 0), 0); }
+  // Điểm: tổng sao hướng dẫn + mỗi màn ngẫu nhiên đã qua (Vừa 1, Khó 2, Rất khó 3) + 2 điểm mỗi ngày làm xong Tia của ngày
+  function score() {
+    const st = Object.keys(save.stars).reduce((t, k) => t + (+save.stars[k] || 0), 0);
+    const rd = Object.keys(save.rand).reduce((t, k) => t + (WEIGHT[k] || 0) * save.rand[k], 0);
+    return st + rd + 2 * Object.keys(save.daily).length;
+  }
   function submitScore() { try { if (window.Scores && score() > 0) Scores.submit('tiaso', score()); } catch (e) {} }
 
   // ---------- âm thanh ----------
@@ -311,7 +350,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   }
 
   function used() { return place.filter(Boolean).length; }
-  function starsFor(u) { const p = LEVELS[lvIdx].par; return u <= p ? 3 : u === p + 1 ? 2 : 1; }
+  function starsFor(u) { const p = cur.par; return u <= p ? 3 : u === p + 1 ? 2 : 1; }
 
   function update() {
     sim = C.simulate(B, place);
@@ -338,28 +377,61 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   function onWin() {
     const u = used(), st = starsFor(u), key = String(lvIdx);
     sfx.win();
-    if (!save.stars[key] || save.stars[key] < st) save.stars[key] = st;
-    if (save.unlocked < lvIdx + 1) save.unlocked = Math.min(lvIdx + 1, LEVELS.length);
+    let nextTxt = 'Màn tiếp', title = 'Mọi đích đã sáng!';
+    if (mode.kind === 'tut') {
+      if (!save.stars[key] || save.stars[key] < st) save.stars[key] = st;
+      if (save.unlocked < lvIdx + 1) save.unlocked = Math.min(lvIdx + 1, LEVELS.length);
+      if (lvIdx === LEVELS.length - 1) { nextTxt = 'Chơi ngẫu nhiên'; title = 'Xong hướng dẫn!'; }
+    } else if (mode.kind === 'rand') {
+      save.rand[mode.diff] = (save.rand[mode.diff] || 0) + 1;
+    } else {
+      if (!save.daily[mode.day]) { save.daily[mode.day] = st; }
+      nextTxt = 'Về menu'; title = 'Xong Tia của ngày!';
+    }
     store(); submitScore();
     $('winStars').innerHTML = [0, 1, 2].map(k => k < st ? '★' : '<span class="off">★</span>').join('');
-    const p = LEVELS[lvIdx].par;
+    const p = cur.par;
     $('winWhy').textContent = st === 3 ? `Dùng ${u} ô, gọn nhất có thể.` : `Dùng ${u} ô. Thử lại với ${p} ô để được 3 sao.`;
-    const last = lvIdx === LEVELS.length - 1;
-    $('nextBtn').textContent = last ? 'Xem các màn' : 'Màn tiếp';
-    $('winH').textContent = last ? 'Hết màn chơi thử!' : 'Mọi đích đã sáng!';
+    $('nextBtn').textContent = nextTxt;
+    $('winH').textContent = title;
     $('win').classList.add('on');
   }
 
-  function start(n) {
-    lvIdx = n; const lv = LEVELS[n];
+  function load1(lv, title, hint) {
+    cur = lv;
     B = C.parse(lv);
     place = new Array(B.cells.length);
     left = {}; lv.tray.forEach(t => { left[t] = (left[t] || 0) + 1; });
     sel = Object.keys(left)[0]; won = false; clearTimeout(winTimer);
-    $('lvTitle').innerHTML = `Tia số<small>Màn ${n + 1}: ${lv.name}</small>`;
-    $('hint').textContent = lv.hint;
+    $('lvTitle').innerHTML = `Tia số<small>${title}</small>`;
+    $('hint').textContent = hint;
     $('parTxt').textContent = lv.par;
     update();
+  }
+  function start(n) {
+    mode = { kind: 'tut' }; lvIdx = n;
+    load1(LEVELS[n], `Hướng dẫn · Màn ${n + 1}: ${LEVELS[n].name}`, LEVELS[n].hint);
+  }
+  const RHINT = 'Màn ngẫu nhiên, luôn có lời giải. Tính ngược từ đích về đèn.';
+  function gen(diff, seed) {
+    let lv = null;
+    for (let k = 0; k < 6 && !lv; k++) lv = GEN.generate(diff, seed + k * 101, 500);
+    return lv;
+  }
+  function startRand(diff, seed, daily) {
+    if (genBusy) return;
+    genBusy = true;
+    $('menu').classList.add('on');
+    $('genMsg').textContent = 'Đang dựng màn...';
+    setTimeout(() => {
+      const lv = gen(diff, seed != null ? seed : (Math.random() * 4e9) >>> 0);
+      genBusy = false;
+      $('genMsg').textContent = '';
+      if (!lv) { $('genMsg').textContent = 'Chưa dựng được màn, thử lại nhé.'; return; }
+      $('menu').classList.remove('on');
+      if (daily) { mode = { kind: 'daily', day: daily }; load1(lv, 'Tia của ngày ' + daily.slice(8) + '/' + daily.slice(5, 7), RHINT); }
+      else { mode = { kind: 'rand', diff }; load1(lv, 'Ngẫu nhiên · ' + DIFF[diff], RHINT); }
+    }, 30);
   }
 
   svg.addEventListener('click', e => {
@@ -380,36 +452,52 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     sel = b.dataset.t; renderTray();
     $('msg').className = 'msg'; $('msg').textContent = 'Chạm ô trống trên bàn để đặt ' + C.label(sel) + '.';
   });
-  $('resetBtn').addEventListener('click', () => start(lvIdx));
+  $('resetBtn').addEventListener('click', () => { if (mode.kind === 'tut') start(lvIdx); else load1(cur, $('lvTitle').querySelector('small').textContent, RHINT); });
 
-  function openMenu() {
+  function fillGrid() {
     const g = $('lvGrid'); g.innerHTML = '';
     LEVELS.forEach((lv, n) => {
       const b = document.createElement('button');
-      b.className = 'lv' + (n === lvIdx ? ' cur' : '');
+      b.className = 'lv' + (mode.kind === 'tut' && n === lvIdx ? ' cur' : '');
       b.setAttribute('data-no-scene', '');
       b.disabled = n > save.unlocked;
-      const s = save.stars[n] || 0;
-      b.innerHTML = `${n + 1}<small>${'★'.repeat(s)}${'☆'.repeat(3 - s)}</small>`;
-      b.setAttribute('aria-label', `Màn ${n + 1}: ${lv.name}, ${s} sao`);
+      const st = save.stars[n] || 0;
+      b.innerHTML = `${n + 1}<small>${'★'.repeat(st)}${'☆'.repeat(3 - st)}</small>`;
+      b.setAttribute('aria-label', `Màn ${n + 1}: ${lv.name}, ${st} sao`);
       b.addEventListener('click', () => { $('menu').classList.remove('on'); start(n); });
       g.appendChild(b);
     });
-    $('menuSum').textContent = `Tổng ${score()} / ${LEVELS.length * 3} sao`;
+    const done = Object.keys(save.stars).length;
+    $('introInfo').textContent = ` · ${done}/${LEVELS.length}`;
+  }
+  function openMenu() {
+    fillGrid();
+    Object.keys(DIFF).forEach(k => { $('cnt-' + k).textContent = save.rand[k] ? 'đã qua ' + save.rand[k] : '\u00a0'; });
+    const day = todayKey(), dn = save.daily[day];
+    $('dailyBtn').className = 'daily' + (dn ? ' done' : '');
+    $('dailyInfo').textContent = dn ? 'Đã xong hôm nay · ' + '★'.repeat(dn) : day.slice(8) + '/' + day.slice(5, 7) + ' · +2 điểm';
+    $('genMsg').textContent = '';
     $('menu').classList.add('on');
   }
+  function openIntro() { openMenu(); const b = $('introBtn'); b.setAttribute('aria-expanded', 'true'); $('lvGrid').hidden = false; }
+  $('introBtn').addEventListener('click', () => { const b = $('introBtn'), open = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', open); $('lvGrid').hidden = !open; });
+  document.querySelectorAll('.rnd').forEach(b => b.addEventListener('click', () => startRand(b.dataset.key)));
+  $('dailyBtn').addEventListener('click', () => { const d = todayKey(); startRand('kho', hashStr('tiaso' + d), d); });
   $('menuBtn').addEventListener('click', openMenu);
-  $('menuClose').addEventListener('click', () => $('menu').classList.remove('on'));
+  $('menu').addEventListener('click', e => { if (e.target === $('menu') && !genBusy) $('menu').classList.remove('on'); });
   $('helpBtn').addEventListener('click', () => $('help').classList.add('on'));
   $('helpClose').addEventListener('click', () => { $('help').classList.remove('on'); save.seenHelp = true; store(); });
+  $('helpIntro').addEventListener('click', () => { $('help').classList.remove('on'); save.seenHelp = true; store(); openIntro(); });
   $('nextBtn').addEventListener('click', () => {
     $('win').classList.remove('on');
-    if (lvIdx < LEVELS.length - 1) start(lvIdx + 1); else openMenu();
+    if (mode.kind === 'tut') { if (lvIdx < LEVELS.length - 1) start(lvIdx + 1); else startRand('vua'); }
+    else if (mode.kind === 'rand') startRand(mode.diff);
+    else openMenu();
   });
   $('againBtn').addEventListener('click', () => $('win').classList.remove('on'));
   document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.layer.on').forEach(l => l.classList.remove('on')); });
 
-  start(lvIdx);
+  if (save.unlocked < LEVELS.length) start(lvIdx); else startRand('vua');
   if (!save.seenHelp) $('help').classList.add('on');
   submitScore();
 })();
