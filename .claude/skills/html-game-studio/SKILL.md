@@ -67,6 +67,7 @@ Mức lỗi: **P0** game không chơi được / mất dữ liệu; **P1** sai l
 - Chụp ảnh ở 390×844 (điện thoại) và một khổ ngang; ảnh gửi người dùng dùng `deviceScaleFactor: 2`.
 - Hoạt ảnh canvas kiểm bằng cách đặt thời gian giả hoặc chụp nhiều khung; hoạt ảnh CSS kiểm bằng `document.getAnimations()`.
 - Mỗi thay đổi người chơi thấy được thì thêm vào `patchnote.txt` (mục "CẬP NHẬT VỀ TRÒ CHƠI" của ngày mới nhất), trừ khi người dùng nói đó là bí mật.
+- Cách viết patchnote: **ngắn gọn nhưng đủ ý** để người chơi hiểu bản cập nhật có gì. Mỗi trò chơi một mục `## Tên trò chơi` riêng, mỗi ý một dòng ngắn. Không liệt kê dài tên thẻ/cổ vật, không ghi con số cân bằng hay cách tính, không nhắc tên file hay thuật ngữ kỹ thuật nội bộ. Văn tự nhiên, không máy móc.
 - Trả lời người dùng bằng tiếng Việt, gửi ảnh khi đổi giao diện.
 
 ## 5. Chọn công nghệ đồ họa theo mục đích
