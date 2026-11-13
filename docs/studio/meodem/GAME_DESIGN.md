@@ -3,7 +3,7 @@
 Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá giống cơ chế của game King of Thieves." Làm game nguyên bản cùng thể loại (nền tảng một chạm, nhân vật tự chạy), không dùng tên, nhân vật, hình, nhạc hay màn của game kia.
 
 ## Vòng lặp chơi
-- Mèo tự chạy, đụng tường khi đang trên đất thì quay đầu.
+- Mèo tự chạy. Đụng tường khi đang trên đất thì mèo đứng yên chờ; chạm để nhảy ngay sát tường thì mèo nhảy và quay đầu.
 - Một nút: chạm / phím cách / mũi tên lên để nhảy. Nhảy cao cố định (khoảng 3,4 ô), xa khoảng 3,5 ô.
 - Giữa không trung còn 1 cú nhảy thứ hai (lực 560, hơi yếu hơn nhảy đất 620). Chạm đất, bám tường hoặc đạp lò xo thì nạp lại. Hằng số `P.airJumps` (hiện là 1) quyết định số cú nhảy trên không.
 - Giữa không trung mà chạm tường thì bám và trượt chậm; chạm tiếp để bật ngược ra (leo giếng bằng bật tường).
@@ -37,7 +37,7 @@ Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá gi�
 
 ## Sao và điểm
 Mỗi hầm 3 sao độc lập: mở rương, nhặt đủ ngọc trong một lượt, về đích trong thời gian mốc.
-Mốc giờ hầm nhập môn = thời gian nhanh nhất × 1,3 + 2 giây; hầm dựng mới = × 1,35 + 2 giây (làm tròn lên).
+Mốc giờ = thời gian nhanh nhất khi nhặt đủ ngọc × 1,3 + 2 giây (hầm nhập môn) hoặc × 1,35 + 2 giây (hầm dựng mới), làm tròn lên, nên một lượt chơi hoàn hảo lấy được cả 3 sao.
 Điểm bảng xếp hạng `meodem` = số hầm xa nhất đã qua (càng cao càng tốt, giữ cao nhất).
 
 ## Kiểm màn

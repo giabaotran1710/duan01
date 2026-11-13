@@ -57,10 +57,18 @@ function solve(L) {
     if (!next.length) return res;
     const CAPN = +process.env.CAP || 15000;
     if (next.length > CAPN) {
-      // Quá nhiều trạng thái: giữ những trạng thái đã có chìa và nhiều ngọc trước
+      // Quá nhiều trạng thái: giữ đa dạng vị trí (tối đa m trạng thái mỗi ô lưới), ưu tiên đã có chìa và nhiều ngọc
+      const bk = n => Math.floor(n.S.x / 30) + ',' + Math.floor(n.S.y / 30) + ',' + n.S.dir + (n.S.gr ? 'g' : '') + n.S.aj + ',' + n.S.gm + (n.S.key ? 'k' : '');
       const sc = n => (n.S.key ? 1000 : 0) + bitCount(n.S.gm) * 10;
       next.sort((a, b) => sc(b) - sc(a));
-      next.length = CAPN;
+      let m = 1, kept = [];
+      for (; m <= 64; m *= 2) {
+        const cnt = new Map(); const t = [];
+        for (const n of next) { const k = bk(n), c = (cnt.get(k) || 0) + 1; cnt.set(k, c); if (c <= m) t.push(n); }
+        if (t.length > CAPN) break; kept = t; if (t.length === next.length) break;
+      }
+      if (!kept.length) { const cnt = new Map(); for (const n of next) { const k = bk(n), c = (cnt.get(k) || 0) + 1; cnt.set(k, c); if (c <= 1) kept.push(n); } }
+      next.length = 0; for (let i = 0; i < kept.length && i < CAPN; i++) next.push(kept[i]);
     }
     front = next;
   }
