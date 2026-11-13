@@ -962,6 +962,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   const GENPOOL = POOL.filter(k => !CARDS[k].gone && !CARDS[k].gen && !CARDS[k].tutor && !CARDS[k].dr);
   const inst = (k, up, tmp) => tmp ? { k, up: !!up, tmp: true } : { k, up: !!up };
   const deadCard = c => !!(c.dr || (c.curse && !c.use));   // lá không đánh được (bài nguyền thường, bài kích hoạt khi rút)
+  const MIRROR_MAX = 3;   // số lượt né cộng dồn tối đa (chặn lặp thẻ Né bằng Sao chép để né vô hạn)
   function stats(ci) {
     const s0 = stats0(ci); if (!ci.gb || !CARDS[ci.k].grow) return s0;
     const u = Object.assign({}, s0), g = CARDS[ci.k].grow; for (const k in g) u[k] = (u[k] || 0) + g[k] * ci.gb; return u;
@@ -1117,7 +1118,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (c.tutor) S.push('chọn ' + c.tutor + ' lá trong chồng bài rút đưa lên tay');
     if (c.gen) S.push('nhận ' + c.gen + ' lá ' + ({ atk: 'tấn công ', sup: 'hỗ trợ ', el: 'hệ ' + EN[c0.el] + ' ' }[c0.genT] || '') + 'ngẫu nhiên (lá tạm)');
     if (c0.free) S.push('lá kế tiếp miễn phí' + (c0.free > 1 ? ' (' + c0.free + ' lá)' : ''));
-    if (c0.dodge) S.push('né ' + c0.dodge + ' đòn tấn công tới');
+    if (c0.dodge) S.push('né ' + c0.dodge + ' đòn tấn công tới (tối đa ' + MIRROR_MAX + ')');
     if (c0.purge) S.push('thanh tẩy mọi lá nguyền thường');
     if (c0.copy) S.push('sao chép lá vừa đánh trước đó (lá tạm)');
     if (c0.redraw) S.push('bỏ cả tay rồi rút lại số lá đó +' + c0.redraw);
@@ -2454,7 +2455,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (hasR('latre')) C.blk += rv('latre', 4, 7) * C.foes.length;
     if (hasR('daomuc')) R.hp = Math.min(R.max, R.hp + rv('daomuc', 4, 8));
     if (hasR('vongbac')) C.foes.forEach(f => { if (!f.tr.ward) f.vuln += rv('vongbac', 1, 2); });
-    if (hasR('longchim')) C.mirror = (C.mirror || 0) + rv('longchim', 1, 2);
+    if (hasR('longchim')) C.mirror = Math.min(MIRROR_MAX, (C.mirror || 0) + rv('longchim', 1, 2));
     C.floor = { str: C.str, regen: C.regen || 0, thorns: C.thorns, armor: C.armor };   // phần có sẵn đầu trận (cổ vật) không bị suy giảm
     if (hasR('tram') && node.t === 'boss') { R.hp = R.max; C.blk += rv('tram', 0, 15); toast('Lư Trầm: hồi đầy máu'); }
     C.target = C.foes[0].id; mode = 'battle'; show(null); lastHandKey = ''; startTurn(true);
@@ -2486,7 +2487,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     if (d.regen) { C.regen = (C.regen || 0) + d.regen; say('regen', C.regen, '#7dff9a'); }
     if (d.thorns) { C.thorns += d.thorns; fxRing(hp.x, hp.y, '#8acb6a', 60); say('thorn', C.thorns, '#8acb6a'); }
     if (d.armor) { C.armor += d.armor; fxShieldOn(hp.x, hp.y, '#f2c14e'); say('armor', C.armor, '#f2c14e'); }
-    if (d.dodge) { C.mirror = (C.mirror || 0) + d.dodge; fxShieldOn(hp.x, hp.y, '#e8f0ff'); say('dodge', C.mirror, '#bfe0ff'); }
+    if (d.dodge) { C.mirror = Math.min(MIRROR_MAX, (C.mirror || 0) + d.dodge); fxShieldOn(hp.x, hp.y, '#e8f0ff'); say('dodge', C.mirror, '#bfe0ff'); }
     if (d.en) { C.energy += d.en; const q = center($('orb')); fxBurst(q.x, q.y, '#ffe27a', 14, 180, 4); say('bolt', '+' + d.en, '#ffe27a'); }
     if (d.gold) { R.gold += d.gold; SFX.buy(); say('coin', '+' + d.gold, '#ffe27a'); updateTop(); }
     if (d.cleanse) { C.weak = 0; C.vuln = 0; C.crit = 0; fxRing(hp.x, hp.y, '#fff2b0', 70); say('imm', '', '#fff2b0'); }
@@ -2830,7 +2831,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     }
     if (c.immune) { C.immune = Math.max(C.immune, c.immune); C.weak = 0; C.vuln = 0; C.crit = 0; fxShieldOn(hp.x, hp.y, '#fff2b0'); fxRing(hp.x, hp.y, '#fff2b0', 80); fxText(hp.x, hp.y - 60, 'Miễn nhiễm ' + C.immune + ' lượt', '#fff2b0'); }
     if (c.free) { C.freeN += c.free; const q = center($('orb')); fxText(q.x, q.y - 40, 'Lá kế tiếp miễn phí', '#ffe27a'); }
-    if (c.dodge) { C.mirror = (C.mirror || 0) + c.dodge; fxShieldOn(hp.x, hp.y, '#e8f0ff'); fxText(hp.x, hp.y - 56, 'Né ' + C.mirror + ' đòn', '#e8f0ff'); }
+    if (c.dodge) { C.mirror = Math.min(MIRROR_MAX, (C.mirror || 0) + c.dodge); fxShieldOn(hp.x, hp.y, '#e8f0ff'); fxText(hp.x, hp.y - 56, 'Né ' + C.mirror + ' đòn', '#e8f0ff'); }
     if (c.purge) { let n = 0; ['hand', 'draw', 'disc'].forEach(k => { const keep = C[k].filter(x => !(CARDS[x.k].curse && !CARDS[x.k].perm)); n += C[k].length - keep.length; C[k] = keep; }); fxText(hp.x, hp.y - 56, n ? 'Thanh tẩy ' + n + ' lá' : 'Không có lá nguyền', '#fff2b0'); fxRing(hp.x, hp.y, '#fff2b0', 70); }
     if (c.bomb) { const b = c.bomb; C.bombs.push({ t: b.t, d: b.d, all: !!b.all, tid: tgt ? tgt.id : null, el: c.el }); fxText(hp.x, hp.y - 56, 'Bom hẹn giờ ' + b.t, '#ffb04a'); SFX.fire(); }
     if (c.copy && C.lastCard) { const cp = inst(C.lastCard.k, C.lastCard.up, true); if (C.hand.length < HMAX) C.hand.push(cp); else C.disc.push(cp); fxText(hp.x, hp.y - 70, 'Sao chép ' + CARDS[cp.k].n, '#d8d0c4'); SFX.draw(); }
