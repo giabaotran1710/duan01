@@ -2232,14 +2232,28 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     FX.push({ k: 'orb', x0, y0, x1, y1, col: '#ff7a2a', life: .34, t: 0 });
     fxFlames(x1, y1); fxDelay(12, .3); fxBurst(x1, y1, '#ffb04a', 22, 300, 6); fxDelay(22, .3); fxRing(x1, y1, '#ff9a3a', 90); fxDelay(1, .3); return 300;
   }
+  // màu vết đánh theo hành (Thổ = nâu...)
+  const FXC = { kim: '#f4e2a0', moc: '#6fd66f', thuy: '#7cc4ff', hoa: '#ff8a4a', tho: '#b3794a', vo: '#d8d0ee' };
+  // vết chém (vũ khí sắc): các đường chém màu theo hành + tia lửa cùng màu
+  function fxEdge(x, y, el) { const col = FXC[el] || '#fff'; fxSlash(x, y, col, 3); fxBurst(x, y, col, 12, 320, 3); if (el === 'hoa') fxFlames(x, y); if (el === 'thuy') fxBurst(x, y, '#e8f8ff', 6, 220, 3); if (el === 'moc') fxBurst(x, y, '#2f8a3e', 6, 200, 3); return 110; }
+  // vết đập (vũ khí nặng): vết toả tia + sóng chấn động màu theo hành, rung màn
+  function fxBlunt(x, y, el) { const col = FXC[el] || '#fff'; FX.push({ k: 'imp', x, y, a: rand(0, 1), r: 92, col, life: .5, t: 0 }); fxRing(x, y, col, 74); fxBurst(x, y, col, 14, 300, 5); if (el === 'hoa') fxFlames(x, y); flashCls($('field'), 'shake'); return 100; }
   function fxLeaves(x, y) { for (let i = 0; i < 12; i++) { const a = rand(0, TAU), v = rand(80, 240); FX.push({ k: 'leaf', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 90, r: rand(0, 6), sp: rand(-6, 6), s: rand(7, 12), col: pick(['#5fcf6b', '#3fae5f', '#8ae07a', '#2f8a3e']), life: rand(.7, 1), t: 0 }); } fxSlash(x, y, '#8ae07a', 2); return 90; }
   function fxSplash(x, y) { fxBurst(x, y, '#7cc4ff', 20, 300, 5); fxBurst(x, y, '#e8f8ff', 10, 220, 3); fxRing(x, y, '#5aa9ff', 80); fxRing(x, y, '#bfe4ff', 50); return 90; }
   function fxMetal(x, y) { fxSlash(x, y, '#fff4c0', 3); fxBurst(x, y, '#fff8d0', 12, 360, 3); return 100; }
   function fxMagic(x, y) { fxBurst(x, y, '#e8e0ff', 14, 280, 4); fxBurst(x, y, '#ffe27a', 8, 200, 3); fxRing(x, y, '#c9b8ff', 70); return 90; }
   // hiệu ứng ra đòn theo hành của thẻ (sấm sét giáng từ trời, đá rơi, cầu lửa, lá bay, nước bắn, lưỡi chém...); trả về thời gian chờ (ms) trước khi nhận sát thương
   const isThunder = c => /sấm|sét|lôi|thunder/i.test((c.n || '') + ' ' + (c.g || ''));
+  // phân loại theo bản chất thẻ (tên + hình), không chỉ theo hành: vũ khí sắc, vũ khí nặng, đá núi, tia chớp...
+  const RE_BLUNT = /hammer|mace|ironrod|\bram\b|fist|gavel|pestle|sp_chuy|pickaxe|counter|stake|trashbin|búa|chùy|chày|roi sắt|cuốc|va chạm|đấm|quyền/i;
+  const RE_EDGE = /sword|blade|spear|dagger|axe|stab|chop|rapier|sickle|claw|guillotine|cutlass|scratch|swipe|scythe|slash|ironfan|tusk|fang|paw|tiger|ribbon|dart|arrow|sp_ten|r_kiem|r_cung|duel|kiếm|đao|rìu|đâm|chém|dao|giáo|liềm|vuốt|nanh|nọc|tên|tiêu|gươm/i;
+  const RE_ROCK = /mountain|quake|slide|boulder|avalanche|movemount|ruins|rollrock|darkrock|^rock$|sandstorm|pebble|volcano|núi|động đất|đá lở|đá tảng|đá lăn|tàn tích|dời non/i;
   function fxCast(c, q, h) {
     if (isThunder(c)) return fxLightning(q.x, q.y);
+    const key = (c.g || '') + ' ' + (c.n || '');
+    if (RE_ROCK.test(key)) return fxRocks(q.x, q.y);
+    if (RE_BLUNT.test(key)) return fxBlunt(q.x, q.y, c.el);
+    if (RE_EDGE.test(key)) return fxEdge(q.x, q.y, c.el);
     switch (c.el) {
       case 'tho': return fxRocks(q.x, q.y);
       case 'hoa': return fxFireball(h.x + 20, h.y - 20, q.x, q.y);
@@ -2268,6 +2282,9 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
         const line = pts => { c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.stroke(); };
         c.shadowColor = '#ffe27a'; c.shadowBlur = 26; c.strokeStyle = '#ffd84a'; c.lineWidth = 13; line(e.pts); e.br.forEach(b => { c.lineWidth = 6; line(b); });
         c.shadowBlur = 8; c.strokeStyle = '#fffef0'; c.lineWidth = 5; line(e.pts); e.br.forEach(b => { c.lineWidth = 2.2; line(b); }); }
+      else if (e.k === 'imp') { c.translate(e.x, e.y); c.globalAlpha = 1 - k; const L = e.r * (.35 + .8 * Math.min(1, k * 2.2)); c.lineCap = 'round'; c.shadowColor = e.col; c.shadowBlur = 14; c.strokeStyle = e.col;
+        for (let j = 0; j < 9; j++) { const a = j * TAU / 9 + e.a, l0 = L * .25, l1 = L * (j % 2 ? .75 : 1); c.lineWidth = (j % 2 ? 4 : 7) * (1 - k); c.beginPath(); c.moveTo(Math.cos(a) * l0, Math.sin(a) * l0); c.lineTo(Math.cos(a) * l1, Math.sin(a) * l1); c.stroke(); }
+        c.fillStyle = e.col; c.globalAlpha = (1 - k) * .45; c.beginPath(); c.arc(0, 0, L * .3, 0, TAU); c.fill(); }
       else if (e.k === 'flash') { c.globalAlpha = (1 - k) * (e.a || .4); c.fillStyle = e.col; c.fillRect(0, 0, innerWidth, innerHeight); }
       else if (e.k === 'rock') { const kk = Math.min(1, k / .7), y = e.y0 + (e.y1 - e.y0) * kk * kk; c.globalAlpha = k > .7 ? 0 : 1; c.translate(e.x, y); c.rotate(e.r + k * e.sp); c.fillStyle = e.col; c.strokeStyle = '#2a1608'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-e.s, -e.s * .4); c.lineTo(-e.s * .3, -e.s); c.lineTo(e.s, -e.s * .5); c.lineTo(e.s * .8, e.s * .7); c.lineTo(-e.s * .5, e.s); c.closePath(); c.fill(); c.stroke(); }
       else if (e.k === 'orb') { const kk = Math.min(1, k / .85), x = e.x0 + (e.x1 - e.x0) * kk, y = e.y0 + (e.y1 - e.y0) * kk - Math.sin(kk * Math.PI) * 30; c.globalAlpha = k > .85 ? 0 : 1; c.shadowColor = e.col; c.shadowBlur = 22;
