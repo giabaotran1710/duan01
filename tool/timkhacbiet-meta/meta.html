@@ -1,0 +1,47 @@
+<!doctype html><meta charset=utf-8><title>Đo số đo vật thể - Tìm điểm khác biệt</title>
+<!-- Đo lại timkhacbiet-meta.js: vẽ từng loại vật ra canvas rồi đếm số điểm ảnh đổi khi lật, đổi kiểu, đổi hoạ tiết, đổi màu...
+     Chạy bằng tool/timkhacbiet-meta/run.js (Playwright), hoặc mở trang này và xem window.META khi xong. -->
+<script src="../../game/timkhacbiet-art.js"></script><script src="../../game/timkhacbiet-art2.js"></script><script src="../../game/timkhacbiet-art3.js"></script><script src="../../game/timkhacbiet-art4.js"></script>
+<script>
+(function () {
+  var A = TKBArt, T = A.TYPES, N = 320, C = N / 2, THR = +(new URLSearchParams(location.search).get('thr') || 60);
+  var cv = document.createElement('canvas'); cv.width = cv.height = N; var g = cv.getContext('2d', { willReadFrequently: true });
+  function base(n) { var t = T[n]; return { t: n, x: C, y: C, s: 1, h: (t.hue[0] + t.hue[1]) / 2, sat: t.sat, l: t.lit, v: 0, p: t.pat ? t.pat[0] : 0, k: 987654, m: 0 }; }
+  function px(o) { g.setTransform(1, 0, 0, 1, 0, 0); g.clearRect(0, 0, N, N); A.drawPlain(g, o); return g.getImageData(0, 0, N, N).data; }
+  /* điểm ảnh so trên nền trắng */
+  function diff(a, b) {
+    var n = 0, i, d, aa, ba;
+    for (i = 0; i < a.length; i += 4) {
+      aa = a[i + 3] / 255; ba = b[i + 3] / 255;
+      if (!aa && !ba) continue;
+      d = Math.abs((a[i] * aa + 255 * (1 - aa)) - (b[i] * ba + 255 * (1 - ba))) + Math.abs((a[i + 1] * aa + 255 * (1 - aa)) - (b[i + 1] * ba + 255 * (1 - ba))) + Math.abs((a[i + 2] * aa + 255 * (1 - aa)) - (b[i + 2] * ba + 255 * (1 - ba)));
+      if (d > THR) n++;
+    }
+    return n;
+  }
+  function cp(o, k) { var r = {}, x; for (x in o) r[x] = o[x]; for (x in k) r[x] = k[x]; return r; }
+  function measure(n) {
+    var t = T[n], o = base(n), P = px(o), m = {}, i, j, v, x0 = N, y0 = N, x1 = 0, y1 = 0, a = 0, k;
+    for (v = 0; v < t.vmax; v++) {
+      var Q = px(cp(o, { v: v }));
+      for (i = 0; i < Q.length; i += 4) if (Q[i + 3] > 24) { k = i / 4; var x = k % N, y = (k / N) | 0; if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; if (!v && Q[i + 3] > 100) a++; }
+    }
+    m.e = [x0 - C, y0 - C, x1 + 1 - C, y1 + 1 - C];
+    /* nét mặt: lấy cặp khác nhau ít nhất trong 3 nét (cười / bình thường / buồn) */
+    var mv = t.moodOn && !t.moodOn({ v: 0 }) ? 1 : 0, M0 = px(cp(o, { m: 0, v: mv })), M1 = px(cp(o, { m: 1, v: mv })), M2 = px(cp(o, { m: 2, v: mv }));
+    m.mo = t.mood ? Math.min(diff(M0, M1), diff(M0, M2), diff(M1, M2)) : null;
+    m.a = a;
+    m.f = []; for (v = 0; v < t.vmax; v++) m.f.push(diff(px(cp(o, { v: v })), px(cp(o, { v: v, f: -1 }))));
+    m.v = []; var VP = []; for (v = 0; v < t.vmax; v++) VP.push(px(cp(o, { v: v })));
+    for (i = 0; i < t.vmax; i++) { m.v.push([]); for (j = 0; j < t.vmax; j++) m.v[i].push(i === j ? 0 : diff(VP[i], VP[j])); }
+    m.p = []; if (t.pat) for (i = t.pat[0]; i < t.pat[1]; i++) m.p.push(diff(px(cp(o, { p: i })), px(cp(o, { p: i + 1 }))));
+    var dir = o.l > 55 ? -1 : 1;
+    m.c = diff(P, px(cp(o, t.low ? { h: o.h + 36, l: o.l + dir * 18 } : { h: o.h + 36 }))); m.c2 = 0;
+    m.t = diff(P, px(cp(o, { r: .2 }))); m.x = diff(P, px(cp(o, { sx: 1.2 })));
+    m.d = diff(P, px(cp(o, { l: o.l + dir * 14 })));
+    return m;
+  }
+  var out = {}; Object.keys(T).sort().forEach(function (n) { try { out[n] = measure(n); } catch (e) { out[n] = { err: String(e) }; } });
+  window.META = out; window.DONE = true;
+})();
+</script>
