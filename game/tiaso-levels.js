@@ -33,7 +33,23 @@
     { name: 'Đảo ngược', hint: 'Ô ⇄ đọc ngược con số: 19 thành 91. Một tia phải nuôi hai đích.',
       map: [',,,T,,', 'A....#', ',,,.,,', ',,,.,,', ',,,U,,'],
       ents: { A: { t: 'src', d: 'R', v: 14 }, T: { t: 'tgt', v: 91 }, U: { t: 'tgt', v: 182 } },
-      tray: ['split', 'rev', '+5', '*2', '/2', '-1'], par: 4 }
+      tray: ['split', 'rev', '+5', '*2', '/2', '-1'], par: 4 },
+    { name: 'Tổng chữ số', hint: 'Ô Σ cộng các chữ số lại: 38 thành 3 + 8 = 11. Đặt nó trước hay sau phép nhân?',
+      map: [',,,,,,', 'A....B', ',,,,,,'],
+      ents: { A: { t: 'src', d: 'R', v: 38 }, B: { t: 'tgt', v: 22 } },
+      tray: ['sum', '*2', '+4'], par: 2 },
+    { name: 'Cổng chẵn', hint: 'Cổng CHẴN chỉ cho số chẵn đi qua, số lẻ thì tia tắt. Cổng LẺ thì ngược lại.',
+      map: [',,,,,,,', 'A.G..HB', ',,,,,,,'],
+      ents: { A: { t: 'src', d: 'R', v: 5 }, G: { t: 'gate', p: 'even' }, H: { t: 'gate', p: 'odd' }, B: { t: 'tgt', v: 17 } },
+      tray: ['+1', '+3', '*2', '+1'], par: 3 },
+    { name: 'Cổng dịch chuyển', hint: 'Tia đi vào một cổng tím thì hiện ra ở cổng tím kia, vẫn giữ hướng cũ. Ô khắc sẵn trên bàn không gỡ được.',
+      map: ['A...P#,,,', ',,,,,#,,,', ',,,,,#QKB'],
+      ents: { A: { t: 'src', d: 'R', v: 4 }, P: { t: 'portal', id: 1 }, Q: { t: 'portal', id: 1 }, K: { t: 'op', op: '+3' }, B: { t: 'tgt', v: 30 } },
+      tray: ['*3', '*2', '+1', '+2'], par: 3 },
+    { name: 'Số dư', hint: 'Ô %5 giữ lại phần dư khi chia cho 5: 17 thành 2. Hai đích, hai cách nghĩ.',
+      map: [',,,B,', ',,,.,', 'A...#', ',,,.,', ',,,C,'],
+      ents: { A: { t: 'src', d: 'R', v: 17 }, B: { t: 'tgt', v: 2 }, C: { t: 'tgt', v: 8 } },
+      tray: ['split', '%5', 'sum', '*2'], par: 3 }
   ];
   if (typeof module !== 'undefined' && module.exports) module.exports = L;
   else root.TIASO_LEVELS = L;

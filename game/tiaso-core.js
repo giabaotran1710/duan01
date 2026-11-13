@@ -10,13 +10,14 @@
   const BACK = { R: 'D', D: 'R', L: 'U', U: 'L' };
   const MAXV = 9999;
 
-  function isOp(t) { return /^([+\-*\/]\d+|sq|rev)$/.test(t); }
+  function isOp(t) { return /^([+\-*\/%]\d+|sq|rev|sum)$/.test(t); }
 
   // Đổi giá trị khi tia đi qua ô phép tính. Trả về null nếu tia tắt.
   function apply(op, v) {
     let r;
     if (op === 'sq') r = v * v;
     else if (op === 'rev') r = Number(String(v).split('').reverse().join(''));
+    else if (op === 'sum') r = String(v).split('').reduce((t, c) => t + Number(c), 0);
     else {
       const n = Number(op.slice(1));
       switch (op[0]) {
@@ -24,6 +25,7 @@
         case '-': r = v - n; break;
         case '*': r = v * n; break;
         case '/': if (v % n !== 0) return null; r = v / n; break;
+        case '%': r = v % n; break;
       }
     }
     if (r < 0 || r > MAXV || !Number.isInteger(r)) return null;
@@ -33,6 +35,7 @@
   function label(t) {
     if (t === 'sq') return 'x²';
     if (t === 'rev') return '⇄';
+    if (t === 'sum') return 'Σ';
     if (t === 'split') return '◇';
     if (t === '/' || t === '\\') return t;
     return t.replace('*', '×').replace('/', '÷').replace('-', '−');
@@ -41,6 +44,7 @@
   // Dựng bàn từ dữ liệu màn.
   // Ký tự: '.' ô đặt được, ',' sàn không đặt được, '#' tường, '/' '\' gương cố định, 'o' tách cố định,
   // chữ cái khác tra trong lv.ents: {t:'src',d,v} | {t:'tgt',v} | {t:'op',op} | {t:'merge',d}
+  //   | {t:'gate',p:'even'|'odd'} cổng chẵn/lẻ | {t:'portal',id} cổng dịch chuyển (hai ô cùng id là một cặp)
   function parse(lv) {
     const H = lv.map.length, W = lv.map[0].length;
     const cells = [];
@@ -59,11 +63,20 @@
         else if (e.t === 'tgt') c = { k: 'tgt', v: e.v };
         else if (e.t === 'op') c = { k: 'fix', t: e.op };
         else if (e.t === 'merge') c = { k: 'merge', d: e.d };
+        else if (e.t === 'gate') c = { k: 'gate', p: e.p };
+        else if (e.t === 'portal') c = { k: 'portal', id: e.id };
         else throw new Error('Thực thể lạ');
       }
       cells.push(c);
     }
-    return { W, H, cells, tray: lv.tray.slice() };
+    const pair = {};
+    cells.forEach((c, i) => {
+      if (c.k !== 'portal') return;
+      const j = cells.findIndex((o, k) => k !== i && o.k === 'portal' && o.id === c.id);
+      if (j < 0) throw new Error('Cổng dịch chuyển thiếu cặp');
+      pair[i] = j;
+    });
+    return { W, H, cells, pair, tray: lv.tray.slice() };
   }
 
   // Mô phỏng. place: mảng (theo chỉ số ô) chứa tên ô người chơi đặt, hoặc undefined.
@@ -112,6 +125,21 @@
           segs.push({ x0: sx, y0: sy, x1: x - DIRS[d][0] * 0.32, y1: y - DIRS[d][1] * 0.32, v });
           (hits[i] = hits[i] || []).push(v);
           break;
+        }
+        if (c.k === 'gate') {
+          if ((v % 2 === 0) === (c.p === 'even')) continue;
+          segs.push({ x0: sx, y0: sy, x1: x - DIRS[d][0] * 0.3, y1: y - DIRS[d][1] * 0.3, v });
+          deaths.push({ i, why: 'gate' });
+          break;
+        }
+        if (c.k === 'portal') {
+          segs.push({ x0: sx, y0: sy, x1: x, y1: y, v });
+          const j = B.pair[i];
+          x = j % W; y = (j / W) | 0; sx = x; sy = y;
+          const k2 = j * 4 + 'RLUD'.indexOf(d);
+          if (seen.has(k2)) { loop = true; deaths.push({ i: j, why: 'loop' }); break; }
+          seen.add(k2);
+          continue;
         }
         if (c.k === 'merge') {
           segs.push({ x0: sx, y0: sy, x1: x, y1: y, v });

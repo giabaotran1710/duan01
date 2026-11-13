@@ -8,12 +8,18 @@
   const LEFT = { R: 'U', U: 'L', L: 'D', D: 'R' }, RIGHT = { R: 'D', D: 'L', L: 'U', U: 'R' };
   const SLASH = { R: 'U', U: 'R', L: 'D', D: 'L' };
 
+  // gate: xác suất đặt cổng chẵn/lẻ ở mỗi bước thẳng (tối đa gateMax), portal: xác suất màn có một cặp cổng dịch chuyển,
+  // fixOp: xác suất mỗi ô phép tính của lời giải được khắc sẵn trên bàn
   const CFG = {
-    vua:  { W: 6, H: 6, len: [7, 11], ops: 2, opsMax: 3, mirrors: [1, 2], split: 0,  decoy: 1, fixMirror: .5, maxSols: 6, minPar: 2, extra: .25, kinds: ['+', '-', '*'], maxNodes: 1e4 },
-    kho:  { W: 7, H: 7, len: [9, 14], ops: 3, opsMax: 4, mirrors: [1, 3], split: .5, decoy: 2, fixMirror: .25, maxSols: 3, minPar: 4, extra: .35, kinds: ['+', '-', '*', '/', 'sq'], maxNodes: 2e4 },
+    vua:  { W: 6, H: 6, len: [7, 11], ops: 2, opsMax: 3, mirrors: [1, 2], split: 0,  decoy: 1, fixMirror: .5, maxSols: 6, minPar: 2, extra: .25,
+            kinds: ['+', '-', '*'], gate: .06, gateMax: 1, portal: .25, fixOp: .3, maxNodes: 1e4 },
+    kho:  { W: 7, H: 7, len: [9, 14], ops: 3, opsMax: 4, mirrors: [1, 3], split: .5, decoy: 2, fixMirror: .25, maxSols: 3, minPar: 4, extra: .35,
+            kinds: ['+', '-', '*', '/', 'sq', 'sum'], gate: .08, gateMax: 2, portal: .45, fixOp: .2, maxNodes: 2e4 },
+    rkho: { W: 7, H: 8, len: [11, 16], ops: 4, opsMax: 5, mirrors: [2, 3], split: 1, decoy: 3, fixMirror: 0, maxSols: 2, minPar: 6, extra: .45,
+            kinds: ['+', '-', '*', '/', 'sq', 'rev', 'sum', '%'], gate: .08, gateMax: 2, portal: .55, fixOp: .15, maxNodes: 4e4 },
     // Siêu khó: bàn 8×8, hai lần tách tia (ba đích), không gương dựng sẵn, nhiều ô gây nhiễu; trong game số trên tia bị ẩn
-    skho: { W: 8, H: 8, len: [12, 18], ops: 5, opsMax: 6, mirrors: [3, 4], split: 1, split2: 1, minTargets: 3, decoy: 4, fixMirror: 0, maxSols: 2, minPar: 9, extra: .5, kinds: ['+', '-', '*', '/', 'sq', 'rev'], maxNodes: 6e4 },
-    rkho: { W: 7, H: 8, len: [11, 16], ops: 4, opsMax: 5, mirrors: [2, 3], split: 1, decoy: 3, fixMirror: 0, maxSols: 2, minPar: 6, extra: .45, kinds: ['+', '-', '*', '/', 'sq', 'rev'], maxNodes: 4e4 }
+    skho: { W: 8, H: 8, len: [12, 18], ops: 5, opsMax: 6, mirrors: [3, 4], split: 1, split2: 1, minTargets: 3, decoy: 4, fixMirror: 0, maxSols: 2, minPar: 9, extra: .5,
+            kinds: ['+', '-', '*', '/', 'sq', 'rev', 'sum', '%'], gate: .1, gateMax: 3, portal: .65, fixOp: .1, maxNodes: 6e4 }
   };
 
   function rng(seed) {
@@ -31,6 +37,8 @@
       else if (kind === '*') { if (v > 60) continue; op = '*' + (2 + ((R() * 3) | 0)); }
       else if (kind === '/') { const ds = [2, 3, 4, 5].filter(d => v % d === 0 && v > d); if (!ds.length) continue; op = '/' + ds[(R() * ds.length) | 0]; }
       else if (kind === 'sq') { if (v < 2 || v > 15) continue; op = 'sq'; }
+      else if (kind === 'sum') { if (v < 10) continue; op = 'sum'; }
+      else if (kind === '%') { if (v < 7) continue; op = '%' + (3 + ((R() * Math.min(6, v - 4)) | 0)); }
       else if (kind === 'rev') { if (v < 12 || v % 10 === 0 || String(v) === String(v).split('').reverse().join('')) continue; op = 'rev'; }
       const nv = C.apply(op, v);
       if (nv === null || nv < 1 || nv > 999 || nv === v) continue;
@@ -55,6 +63,8 @@
     const wantMir = cfg.mirrors[0] + ((R() * (cfg.mirrors[1] - cfg.mirrors[0] + 1)) | 0);
     const doSplit = R() < cfg.split;
     let opsLeft = cfg.ops + ((R() * (cfg.opsMax - cfg.ops + 1)) | 0);
+    let gatesLeft = cfg.gateMax || 0, portalLeft = R() < (cfg.portal || 0) ? 1 : 0;
+    const gates = [], portals = [];
 
     // đi một nhánh; trả về false nếu kẹt
     function walk(x, y, d, v, len, mir, allowSplit) {
@@ -87,6 +97,27 @@
           continue;
         }
         if (mustTurn) return false;
+        if (gatesLeft > 0 && steps > 1 && R() < cfg.gate) {
+          grid[i] = { k: 'gate', p: v % 2 === 0 ? 'even' : 'odd' }; gatesLeft--;
+          continue;
+        }
+        if (portalLeft > 0 && steps > 1 && R() < .25) {
+          // tìm ô ra: trống, không sát đường cũ, ô kế tiếp theo hướng d cũng trống
+          const free = [];
+          for (let yy = 0; yy < H; yy++) for (let xx = 0; xx < W; xx++) {
+            if (grid[id(xx, yy)] || (xx === x && yy === y)) continue;
+            const ax = xx + DX[d], ay = yy + DY[d];
+            if (!inside(ax, ay) || grid[id(ax, ay)] || (ax === x && ay === y)) continue;
+            if (Math.abs(xx - x) + Math.abs(yy - y) < 3) continue;
+            free.push([xx, yy]);
+          }
+          if (free.length) {
+            const [px, py] = free[(R() * free.length) | 0];
+            grid[i] = { k: 'portal', id: 1 }; grid[id(px, py)] = { k: 'portal', id: 1 };
+            portalLeft--; x = px; y = py;
+            continue;
+          }
+        }
         if (opsLeft > 0 && r < .5 && steps > 0) {
           const op = pickOp(R, v, cfg.kinds);
           if (op) { grid[i] = { k: 'sol', t: op }; sols.push({ i, t: op }); v = C.apply(op, v); opsLeft--; continue; }
@@ -102,7 +133,9 @@
 
     // dựng map
     const fixed = new Set();
-    sols.forEach(s => { if (s.mirror && R() < cfg.fixMirror) fixed.add(s.i); });
+    sols.forEach(s => {
+      if (s.mirror ? R() < cfg.fixMirror : (s.t !== 'split' && R() < (cfg.fixOp || 0))) fixed.add(s.i);
+    });
     const ch = new Array(W * H).fill(',');
     const ents = {};
     let letter = 65;
@@ -111,7 +144,12 @@
       if (!g) return;
       if (g.k === 'src') { const L = nextL(); ents[L] = { t: 'src', d: g.d, v: g.v }; ch[i] = L; }
       else if (g.k === 'tgt') { const L = nextL(); ents[L] = { t: 'tgt', v: targets.find(t => t.i === i).v }; ch[i] = L; }
-      else if (g.k === 'sol' && fixed.has(i)) ch[i] = g.t;
+      else if (g.k === 'gate') { const L = nextL(); ents[L] = { t: 'gate', p: g.p }; ch[i] = L; }
+      else if (g.k === 'portal') { const L = nextL(); ents[L] = { t: 'portal', id: g.id }; ch[i] = L; }
+      else if (g.k === 'sol' && fixed.has(i)) {
+        if (g.t === '/' || g.t === '\\') ch[i] = g.t;
+        else { const L = nextL(); ents[L] = { t: 'op', op: g.t }; ch[i] = L; }
+      }
       else ch[i] = '.';
     });
     // ô trống thêm quanh đường tia, và vài bức tường
