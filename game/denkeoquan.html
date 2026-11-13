@@ -173,9 +173,9 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
     <h3>Đèn ngẫu nhiên</h3>
     <p>Máy dựng màn mới mỗi lần bấm, và giải thử trước khi đưa cho bạn: màn nào cũng có đường tới trăng.</p>
     <div class="rndRow" id="rndRow">
-      <button class="rnd" data-key="de" data-no-scene>Dễ<small id="cnt-de"></small></button>
       <button class="rnd" data-key="vua" data-no-scene>Vừa<small id="cnt-vua"></small></button>
       <button class="rnd" data-key="kho" data-no-scene>Khó<small id="cnt-kho"></small></button>
+      <button class="rnd" data-key="rkho" data-no-scene>Rất khó<small id="cnt-rkho"></small></button>
     </div>
     <button class="daily" id="dailyBtn" data-no-scene>Đèn của ngày<small id="dailyInfo"></small></button>
     <p class="genMsg" id="genMsg" aria-live="polite"></p>
@@ -252,26 +252,55 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
       : 'Đèn ngẫu nhiên · ' + GEN.DIFF[m.key].label + ' · mã ' + m.seed;
     recompute(false); layout();
     say(lv.tip);
+    if (m.kind === 'rand') prefetch(m.key);
     $('menu').classList.remove('show'); $('win').classList.remove('show');
   }
 
   const dayLabel = seed => (seed % 100) + '/' + (Math.floor(seed / 100) % 100);
   let genJob = 0;
   // Sinh màn từng chút một (mỗi lần ~25 ms) để trang không bị đứng.
-  function startGenerated(key, seed, kind) {
-    const job = ++genJob, gen = GEN.create(key, seed);
-    $('genMsg').textContent = 'Đang dán giấy đèn...';
+  function startGenerated(key, seed, kind, gen) {
+    const job = ++genJob;
+    gen = gen || GEN.create(key, seed);
+    const loading = 'Đang dán giấy đèn' + (key === 'rkho' ? ' (màn Rất khó cần vài giây)' : '') + '...';
+    $('genMsg').textContent = loading;
+    if (!$('menu').classList.contains('show')) { $('win').classList.remove('show'); say(loading); }
     const tick = () => {
       if (job !== genJob) return;
       const level = gen.run(25);
       if (level === null) return setTimeout(tick, 0);
       $('genMsg').textContent = '';
-      if (!level) { $('genMsg').textContent = 'Lần này máy chưa dựng được màn. Bấm lại để thử mã khác.'; return; }
+      if (!level) { $('genMsg').textContent = 'Lần này máy chưa dựng được màn. Bấm lại để thử mã khác.'; say($('genMsg').textContent); return; }
       playLevel(level, { kind, key, seed });
     };
     tick();
   }
   const newSeed = () => 1 + Math.floor(Math.random() * 999999);
+
+  // Dựng sẵn màn kế tiếp trong lúc người chơi đang chơi, để bấm "Đèn mới" là có ngay.
+  let pre = null;
+  function prefetch(key) {
+    if (pre && pre.key === key) return;
+    const seed = newSeed(), p = pre = { key, seed, gen: GEN.create(key, seed), level: null };
+    const tick = () => {
+      if (pre !== p || p.level || p.taken) return;
+      const l = p.gen.run(12);
+      if (l === null) return setTimeout(tick, 40);
+      if (!l) { pre = null; return; }
+      p.level = l;
+    };
+    setTimeout(tick, 400);
+  }
+  function startRandom(key) {
+    const p = pre;
+    if (p && p.key === key) {
+      pre = null;
+      if (p.level) return playLevel(p.level, { kind: 'rand', key, seed: p.seed });
+      p.taken = true;
+      return startGenerated(key, p.seed, 'rand', p.gen);
+    }
+    startGenerated(key, newSeed(), 'rand');
+  }
 
   // Bóng "vấp" = bước đã ghi bị một cánh cửa đóng chặn (va tường là việc đã có từ vòng ghi, không tính).
   function gateBump(frames, t, i, rec) {
@@ -668,7 +697,8 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
       h += '<button class="lv" data-lv="' + i + '"' + (locked ? ' disabled aria-label="Màn ' + (i + 1) + ' chưa mở"' : ' aria-label="Màn ' + (i + 1) + ': ' + L.name + ', ' + st + ' sao"') + ' data-no-scene><b>' + (i + 1) + '</b><span>' + L.name + '</span><i>' + '★'.repeat(st) + '☆'.repeat(3 - st) + '</i></button>';
     });
     $('levels').innerHTML = h;
-    Object.keys(GEN.DIFF).forEach(k => { $('cnt-' + k).textContent = save.rand[k] ? 'Đã qua ' + save.rand[k] : (GEN.DIFF[k].shadows ? '1 bóng' : 'Không bóng'); });
+    const DESC = { vua: '1 bóng, 1-2 cửa', kho: 'Vòng sát nút', rkho: '3 cửa, có lính' };
+    Object.keys(DESC).forEach(k => { $('cnt-' + k).textContent = save.rand[k] ? 'Đã qua ' + save.rand[k] : DESC[k]; });
     const ds = GEN.dailySeed(), d = save.daily[ds];
     $('dailyInfo').textContent = 'Ngày ' + dayLabel(ds) + ' · ' + (d ? 'đã qua, ' + '★'.repeat(d.st) + ' ' + d.steps + ' bước' : 'mức Khó, giống nhau với mọi người');
     $('genMsg').textContent = '';
@@ -677,9 +707,9 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
   }
   $('levels').addEventListener('click', e => { const b = e.target.closest('.lv'); if (b && !b.disabled) startLevel(+b.dataset.lv); });
   $('menuBtn').onclick = showMenu;
-  $('rndRow').addEventListener('click', e => { const b = e.target.closest('.rnd'); if (b) startGenerated(b.dataset.key, newSeed(), 'rand'); });
+  $('rndRow').addEventListener('click', e => { const b = e.target.closest('.rnd'); if (b) startRandom(b.dataset.key); });
   $('dailyBtn').onclick = () => startGenerated('kho', GEN.dailySeed(), 'daily');
-  $('nextBtn').onclick = () => mode.kind === 'rand' ? startGenerated(mode.key, newSeed(), 'rand') : startLevel(Math.min(lvIdx + 1, LEVELS.length - 1));
+  $('nextBtn').onclick = () => mode.kind === 'rand' ? startRandom(mode.key) : startLevel(Math.min(lvIdx + 1, LEVELS.length - 1));
   $('againBtn').onclick = () => playLevel(lv, mode);
 
   // ---------- nút & phím ----------
