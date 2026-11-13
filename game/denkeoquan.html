@@ -99,7 +99,12 @@ header h1{font:700 17px/1.2 var(--body);margin:0;color:var(--text);flex:1;text-a
 .grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 12px}
 .sum{font-size:14px;color:var(--muted);margin:0 0 12px}
 .panel p{margin:6px 0 12px;color:var(--muted)}
-.string{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+.string{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:10px}
+.string[hidden]{display:none}
+.intro{width:100%;margin-top:8px;min-height:48px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:var(--text);font-weight:700;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.intro small{font-weight:500;color:var(--muted)}
+.intro svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.intro[aria-expanded=true] svg{transform:rotate(180deg)}
 .lv{position:relative;height:64px;border:0;border-radius:16px;background:rgba(255,255,255,.08);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;padding:0}
 .lv b{font:700 20px/1 var(--body);color:var(--text)}
 .lv i{font-style:normal;font-size:11px;color:#ffd27a;letter-spacing:1px}
@@ -171,7 +176,6 @@ header h1{font:700 17px/1.2 var(--body);margin:0;color:var(--text);flex:1;text-a
   <div class="panel">
     <div class="grab"></div>
     <h2 id="menuH">Đèn kéo quân</h2>
-    <div class="string" id="levels"></div>
     <h3>Ngẫu nhiên</h3>
     <div class="rndRow" id="rndRow">
       <button class="rnd" data-key="vua" data-no-scene>Vừa<small id="cnt-vua"></small></button>
@@ -179,6 +183,8 @@ header h1{font:700 17px/1.2 var(--body);margin:0;color:var(--text);flex:1;text-a
       <button class="rnd" data-key="rkho" data-no-scene>Rất khó<small id="cnt-rkho"></small></button>
     </div>
     <button class="daily" id="dailyBtn" data-no-scene>Hôm nay<small id="dailyInfo"></small></button>
+    <button class="intro" id="introBtn" aria-expanded="false" aria-controls="levels" data-no-scene><span>Nhập môn<small id="introInfo"></small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <div class="string" id="levels" hidden></div>
     <p class="genMsg" id="genMsg" aria-live="polite"></p>
   </div>
 </div>
@@ -192,7 +198,7 @@ header h1{font:700 17px/1.2 var(--body);margin:0;color:var(--text);flex:1;text-a
   </div>
 </div>
 
-<footer class="tbFooter">Version: D20261113130000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261113150000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261103ban"></script>
 <script src="denkeoquan-core.js?v=2"></script>
 <script src="denkeoquan-levels.js?v=1"></script>
@@ -736,13 +742,20 @@ header h1{font:700 17px/1.2 var(--body);margin:0;color:var(--text);flex:1;text-a
       h += '<button class="lv" data-lv="' + i + '"' + (locked ? ' disabled aria-label="Màn ' + (i + 1) + ' chưa mở"' : ' aria-label="Màn ' + (i + 1) + ': ' + L.name + ', ' + st + ' sao"') + ' data-no-scene><b>' + (i + 1) + '</b><i>' + '★'.repeat(st) + '☆'.repeat(3 - st) + '</i></button>';
     });
     $('levels').innerHTML = h;
+    const got = Object.keys(save.stars).length;
+    $('introInfo').textContent = ' · ' + got + '/' + LEVELS.length;
+    // người mới (chưa chơi gì) thì mở sẵn Nhập môn; sau đó thu gọn
+    const fresh = !got && !save.unlocked && !Object.keys(save.rand).length && !Object.keys(save.daily).length;
+    setIntro(fresh);
     ['vua', 'kho', 'rkho'].forEach(k => { $('cnt-' + k).textContent = save.rand[k] ? ' · ' + save.rand[k] : ''; });
     const ds = GEN.dailySeed(), d = save.daily[ds];
     $('dailyInfo').textContent = ' · ' + dayLabel(ds) + (d ? ' ' + '★'.repeat(d.st) : '');
     $('genMsg').textContent = '';
     $('menu').classList.add('show');
-    const first = $('levels').querySelector('.lv:not(:disabled)'); if (first) first.focus();
+    const first = fresh ? $('levels').querySelector('.lv:not(:disabled)') : $('dailyBtn'); if (first) first.focus();
   }
+  function setIntro(open) { $('levels').hidden = !open; $('introBtn').setAttribute('aria-expanded', open ? 'true' : 'false'); }
+  $('introBtn').onclick = () => setIntro($('levels').hidden);
   $('levels').addEventListener('click', e => { const b = e.target.closest('.lv'); if (b && !b.disabled) startLevel(+b.dataset.lv); });
   $('menuBtn').onclick = showMenu;
   $('rndRow').addEventListener('click', e => { const b = e.target.closest('.rnd'); if (b) startRandom(b.dataset.key); });
