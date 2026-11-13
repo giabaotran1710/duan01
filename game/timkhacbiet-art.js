@@ -22,24 +22,53 @@
   }
 
   /* ---------- hàm vẽ nhỏ ---------- */
-  var OL = 'rgba(25,15,40,.4)';
+  var OL = 'rgba(28,16,40,.55)';
+  /* tô khối có đổ bóng mềm: sau màu nền phủ thêm một lớp sáng (phía trên/trái) - tối (phía dưới) theo khung hình (B),
+     để vật trông có khối thay vì tô phẳng. Màu bán trong suốt (ánh sáng, bóng) thì giữ phẳng. */
+  var B = null;
+  function solid(f) { return typeof f === 'string' && f.indexOf('rgba') < 0 && f.indexOf('hsla') < 0; }
+  function shadeFill(g, b) {
+    var gr, w = b[2] - b[0], h = b[3] - b[1];
+    if (b[4]) {
+      var rx = w / 2, ry = h / 2, cx = b[0] + rx, cy = b[1] + ry, R = Math.max(rx, ry);
+      gr = g.createRadialGradient(cx - rx * .38, cy - ry * .45, R * .05, cx, cy, R * 1.08);
+      gr.addColorStop(0, 'rgba(255,255,255,.34)'); gr.addColorStop(.42, 'rgba(255,255,255,.06)');
+      gr.addColorStop(.78, 'rgba(0,0,0,.04)'); gr.addColorStop(1, 'rgba(20,8,30,.24)');
+    } else {
+      gr = g.createLinearGradient(b[0] + w * .2, b[1], b[0] + w * .8, b[3]);
+      gr.addColorStop(0, 'rgba(255,255,255,.26)'); gr.addColorStop(.45, 'rgba(255,255,255,0)');
+      gr.addColorStop(1, 'rgba(20,8,30,.2)');
+    }
+    g.fillStyle = gr; g.fill();
+  }
   function fs(g, fill, lw) {
+    var b = B; B = null;
     g.fillStyle = fill; g.fill();
+    if (b && solid(fill) && b[2] - b[0] > 4 && b[3] - b[1] > 4) shadeFill(g, b);
     if (lw !== 0) { g.lineWidth = lw || 2; g.strokeStyle = OL; g.lineJoin = 'round'; g.stroke(); }
   }
-  function circ(g, x, y, r, fill, lw) { g.beginPath(); g.arc(x, y, r, 0, TAU); fs(g, fill, lw); }
-  function ell(g, x, y, rx, ry, fill, lw, rot) { g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU); fs(g, fill, lw); }
+  function circ(g, x, y, r, fill, lw) { g.beginPath(); g.arc(x, y, r, 0, TAU); B = [x - r, y - r, x + r, y + r, 1]; fs(g, fill, lw); }
+  function ell(g, x, y, rx, ry, fill, lw, rot) {
+    g.beginPath(); g.ellipse(x, y, rx, ry, rot || 0, 0, TAU);
+    if (!rot) B = [x - rx, y - ry, x + rx, y + ry, 1];
+    else { var m = Math.max(rx, ry), n = Math.min(rx, ry), q = (m + n) / 2; B = [x - q, y - q, x + q, y + q, 1]; }
+    fs(g, fill, lw);
+  }
   function poly(g, p, fill, lw) {
+    var x0 = p[0], y0 = p[1], x1 = p[0], y1 = p[1], i;
     g.beginPath(); g.moveTo(p[0], p[1]);
-    for (var i = 2; i < p.length; i += 2) g.lineTo(p[i], p[i + 1]);
-    g.closePath(); fs(g, fill, lw);
+    for (i = 2; i < p.length; i += 2) {
+      g.lineTo(p[i], p[i + 1]);
+      if (p[i] < x0) x0 = p[i]; if (p[i] > x1) x1 = p[i]; if (p[i + 1] < y0) y0 = p[i + 1]; if (p[i + 1] > y1) y1 = p[i + 1];
+    }
+    g.closePath(); B = [x0, y0, x1, y1, 0]; fs(g, fill, lw);
   }
   function rrect(g, x, y, w, h, r, fill, lw) {
     r = Math.min(r, w / 2, h / 2);
     g.beginPath(); g.moveTo(x + r, y);
     g.arcTo(x + w, y, x + w, y + h, r); g.arcTo(x + w, y + h, x, y + h, r);
     g.arcTo(x, y + h, x, y, r); g.arcTo(x, y, x + w, y, r);
-    g.closePath(); fs(g, fill, lw);
+    g.closePath(); B = [x, y, x + w, y + h, 0]; fs(g, fill, lw);
   }
   function line(g, x1, y1, x2, y2, w, col) {
     g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2);
@@ -54,7 +83,14 @@
     g.lineJoin = 'round'; g.strokeStyle = OL; g.lineWidth = 4;
     for (i = 0; i < L.length; i++) { s = L[i]; g.beginPath(); g.ellipse(s[0], s[1], s[2], s[3] || s[2], 0, 0, TAU); g.stroke(); }
     g.fillStyle = fill;
-    for (i = 0; i < L.length; i++) { s = L[i]; g.beginPath(); g.ellipse(s[0], s[1], s[2], s[3] || s[2], 0, 0, TAU); g.fill(); }
+    var x0 = 1e9, y0 = 1e9, x1 = -1e9, y1 = -1e9;
+    g.beginPath();
+    for (i = 0; i < L.length; i++) {
+      s = L[i]; g.moveTo(s[0] + s[2], s[1]); g.ellipse(s[0], s[1], s[2], s[3] || s[2], 0, 0, TAU);
+      x0 = Math.min(x0, s[0] - s[2]); x1 = Math.max(x1, s[0] + s[2]); y0 = Math.min(y0, s[1] - (s[3] || s[2])); y1 = Math.max(y1, s[1] + (s[3] || s[2]));
+    }
+    g.fill('nonzero');
+    if (solid(fill)) shadeFill(g, [x0, y0, x1, y1, 1]);
   }
   function star(g, n, ro, ri, fill, lw, rot) {
     var i, a, r;
@@ -70,6 +106,14 @@
     gr.addColorStop(0, col); gr.addColorStop(1, 'rgba(255,255,255,0)');
     g.fillStyle = gr; g.beginPath(); g.arc(x, y, r, 0, TAU); g.fill();
   }
+  /* cho hàm vẽ tự dựng đường (bezier...) được đổ bóng khối như circ/ell: gọi sb([x0,y0,x1,y1,tròn?]) ngay trước fs */
+  function sb(b) { B = b; }
+  /* mắt bóng: tròng đen hơi dài, hai đốm sáng */
+  function eye2(g, x, y, r, col) {
+    ell(g, x, y, r * .84, r, col || '#1b1420', 0);
+    circ(g, x + r * .3, y - r * .38, r * .36, '#fff', 0); circ(g, x - r * .28, y + r * .4, r * .15, 'rgba(255,255,255,.75)', 0);
+  }
+  function blush(g, x, y, r) { ell(g, x, y, r, r * .62, 'rgba(255,110,130,.38)', 0); }
   function pick(r, a) { return a[Math.floor(r() * a.length) % a.length]; }
   /* nét mặt của con vật: m = 0 cười, 1 bình thường (không cười, không buồn), 2 buồn; (x,y) = giữa miệng, w = bề rộng miệng */
   function mouth(g, m, x, y, w, col) {
@@ -130,14 +174,6 @@
     blob(g, [[-30, 8, 18], [-8, -4, 24], [22, 0, 21], [44, 10, 13], [2, 14, 44, 12]], c());
     var xs = [-24, 22, -2, 40], i;
     for (i = 0; i < o.p; i++) { g.beginPath(); g.moveTo(xs[i], 27); g.quadraticCurveTo(xs[i] - 7, 38, xs[i], 41); g.quadraticCurveTo(xs[i] + 7, 38, xs[i], 27); fs(g, '#4aa3ff', 1); }
-  } });
-  def('bird', { w: 56, h: 40, zone: 'sky', hue: [0, 360], sat: 70, lit: 55, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
-    poly(g, [-16, 0, -31, -8, -29, 6], c(0, 0, -8));
-    ell(g, 0, 2, 19, 13, c()); circ(g, 15, -7, 9, c(0, 0, 4)); poly(g, [22, -9, 32, -5, 22, -2], '#ff9d2e', 1.5);
-    circ(g, 17, -9, 2, '#222', 0);
-    var up = o.v === 1, i, wx = up ? -2 : -3, wy = up ? -9 : 7, rot = up ? -.9 : .5;
-    ell(g, wx, wy, 13, 6.5, c(0, 0, -14), 2, rot);
-    for (i = 0; i < o.p; i++) { var t = (i + 1) / (o.p + 1) * 2 - 1; g.save(); g.translate(wx, wy); g.rotate(rot); line(g, t * 10, -4.5, t * 10, 4.5, 2, c(0, -10, 22)); g.restore(); }
   } });
   def('balloon', { w: 62, h: 98, zone: 'sky', hue: [0, 360], sat: 80, lit: 55, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
     var env = function () { g.beginPath(); g.ellipse(0, -16, 28, 34, 0, 0, TAU); };
@@ -239,15 +275,6 @@
     rrect(g, -54, -8, 108, 7, 2, c(0, 0, -8)); rrect(g, -54, 10, 108, 7, 2, c(0, 0, -8));
     for (i = 0; i < n; i++) { x = -48 + i * (96 / (n - 1)); poly(g, [x - 6, 24, x - 6, -14, x, -22, x + 6, -14, x + 6, 24], c()); }
   } });
-  def('sheep', { w: 74, h: 58, zone: 'ground', hue: [0, 360], sat: 50, lit: 90, vmax: 3, asym: true, low: true, mood: true, pat: [0, 3], draw: function (g, o, c) {
-    line(g, -14, 14, -14, 26, 5, '#3c3340'); line(g, 4, 14, 4, 26, 5, '#3c3340'); line(g, 16, 14, 16, 26, 5, '#3c3340'); line(g, -26, 12, -26, 26, 5, '#3c3340');
-    blob(g, [[-18, -2, 16], [0, -10, 18], [18, -2, 16], [-4, 8, 17], [12, 8, 15]], c());
-    var P = [[-18, -4], [4, -12], [-4, 8]], i;
-    for (i = 0; i < o.p; i++) ell(g, P[i][0], P[i][1], 6.5, 5, '#5a4e5e', 0);
-    ell(g, 28, 0, 10, 12, '#3c3340'); ell(g, 21, -9, 4, 6, '#3c3340', 1.5, .5); circ(g, 31, -3, 1.8, '#fff', 0); mouth(g, o.m || 0, 30, 6, 11, '#f7e4ee');
-    if (o.v === 1) circ(g, 23, 14, 4, '#ffd23f', 1.5);
-    if (o.v === 2) { poly(g, [20, -14, 28, -9, 28, -19], '#ff6fa5', 1.2); poly(g, [20, -14, 12, -19, 12, -9], '#ff6fa5', 1.2); }
-  } });
   def('windmill', { w: 92, h: 136, zone: 'ground', hue: [0, 360], sat: 55, lit: 62, vmax: 2, pat: [3, 5], draw: function (g, o, c) {
     var i, n = o.p, a = [.2, .55][o.v];
     poly(g, [-19, 66, 19, 66, 11, -14, -11, -14], c()); poly(g, [-14, -12, 0, -34, 14, -12], c(180, 10, -26));
@@ -276,29 +303,6 @@
     for (var i = 0; i < o.p; i++) rrect(g, -6, 28 - i * 15, 12, 7, 2, '#7d879a', 0);
     if (o.v === 0) glow(g, 0, -42, 30, c(0, 0, 10, .55));
     rrect(g, -9, -56, 18, 24, 5, o.v === 0 ? c() : '#8b93a1'); poly(g, [-12, -56, 12, -56, 0, -66], '#3b4252');
-  } });
-  def('snail', { w: 54, h: 42, zone: 'ground', hue: [0, 360], sat: 60, lit: 62, asym: true, pat: [1, 3], draw: function (g, o, c) {
-    ell(g, 2, 14, 24, 6, '#d9c9a8'); ell(g, 22, 6, 8, 10, '#d9c9a8'); line(g, 22, -2, 20, -12, 2, '#a99877'); line(g, 26, -2, 29, -11, 2, '#a99877');
-    circ(g, 20, -12, 2, '#222', 0); circ(g, 29, -11, 2, '#222', 0);
-    circ(g, -4, 0, 17, c());
-    for (var i = 0; i < o.p; i++) arc(g, -4, 0, 13 - i * 4.2, 0, TAU * .85, 2.4, c(0, 0, -20));
-  } });
-  def('owl', { w: 54, h: 68, zone: 'ground', hue: [20, 40], sat: 40, lit: 45, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
-    poly(g, [-18, -22, -12, -34, -6, -24], c(0, 0, -8)); poly(g, [18, -22, 12, -34, 6, -24], c(0, 0, -8));
-    ell(g, 0, 4, 22, 28, c()); ell(g, 0, 12, 13, 17, c(0, -10, 22), 0);
-    var P = [[-6, 4], [6, 4], [0, 12], [-6, 20], [6, 20]], i;
-    for (i = 0; i < o.p; i++) { g.beginPath(); g.moveTo(P[i][0] - 4.5, P[i][1] - 3); g.lineTo(P[i][0], P[i][1] + 2.5); g.lineTo(P[i][0] + 4.5, P[i][1] - 3); g.lineWidth = 3; g.strokeStyle = c(0, 0, -22); g.stroke(); }
-    line(g, -8, 30, -8, 34, 3, '#e69a2c'); line(g, 8, 30, 8, 34, 3, '#e69a2c');
-    if (o.v === 1) { arc(g, -9, -8, 6, .15, Math.PI - .15, 2.4, '#2a1d14'); arc(g, 9, -8, 6, .15, Math.PI - .15, 2.4, '#2a1d14'); }
-    else { circ(g, -9, -8, 8, '#fff', 1.5); circ(g, 9, -8, 8, '#fff', 1.5); circ(g, -9, -8, 3.4, '#222', 0); circ(g, 9, -8, 3.4, '#222', 0); }
-    poly(g, [-4, -2, 4, -2, 0, 5], '#e69a2c', 1.5);
-  } });
-  def('bunny', { w: 50, h: 70, zone: 'ground', hue: [0, 360], sat: 20, lit: 88, vmax: 3, low: true, mood: true, draw: function (g, o, c) {
-    var down = o.v === 2;
-    if (down) { ell(g, -13, -14, 5, 15, c(0, 0, -6), 2, 1.2); ell(g, 13, -14, 5, 15, c(0, 0, -6), 2, -1.2); }
-    else { ell(g, -9, -26, 5.5, 17, c(0, 0, -4)); ell(g, 9, -26, 5.5, 17, c(0, 0, -4)); ell(g, -9, -26, 2.4, 11, '#ffc4d4', 0); ell(g, 9, -26, 2.4, 11, '#ffc4d4', 0); }
-    ell(g, 0, 18, 19, 20, c()); circ(g, 0, -4, 15, c()); circ(g, -5, -6, 2, '#222', 0); circ(g, 5, -6, 2, '#222', 0); circ(g, 0, -2, 2.2, '#ff8fa8', 0); mouth(g, o.m || 0, 0, 1, 12, '#7a3a50');
-    if (o.v === 1) { poly(g, [14, 8, 30, 12, 16, 24], '#ff8a2e', 1.5); poly(g, [14, 8, 20, 2, 24, 6], '#4fae48', 1.2); }
   } });
 
   /* ===== bãi biển ===== */
@@ -329,16 +333,6 @@
     var P = [[13, -35], [26, -33], [19, -27], [8, -29]];
     for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 6, '#6b4a2b');
   } });
-  def('crab', { w: 66, h: 46, zone: 'ground', hue: [0, 12], sat: 80, lit: 52, vmax: 2, pat: [0, 3], draw: function (g, o, c) {
-    var i, up = o.v === 0;
-    for (i = 0; i < 3; i++) { line(g, -16, 6 + i * 5, -30, 12 + i * 5, 3, c(0, 0, -12)); line(g, 16, 6 + i * 5, 30, 12 + i * 5, 3, c(0, 0, -12)); }
-    ell(g, 0, 8, 22, 15, c());
-    var P = [[-9, 8], [9, 8], [0, 14]];
-    for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.8, c(0, 0, 24), 0);
-    line(g, -14, -2, -26, up ? -12 : 4, 4, c(0, 0, -8)); line(g, 14, -2, 26, up ? -12 : 4, 4, c(0, 0, -8));
-    circ(g, -28, up ? -16 : 8, 8, c()); circ(g, 28, up ? -16 : 8, 8, c());
-    line(g, -6, -4, -6, -12, 2.4, c(0, 0, -12)); line(g, 6, -4, 6, -12, 2.4, c(0, 0, -12)); circ(g, -6, -14, 3.6, '#fff'); circ(g, 6, -14, 3.6, '#fff'); circ(g, -6, -14, 1.6, '#222', 0); circ(g, 6, -14, 1.6, '#222', 0);
-  } });
   def('starfish', { w: 50, h: 50, zone: 'ground', hue: [10, 40], sat: 85, lit: 58, pat: [0, 5], draw: function (g, o, c) {
     star(g, 5, 23, 9, c(), 2.2);
     for (var i = 0; i < o.p; i++) circ(g, Math.cos(-Math.PI / 2 + i * TAU / 5) * 12, Math.sin(-Math.PI / 2 + i * TAU / 5) * 12, 4, c(0, 0, 24), 0);
@@ -368,15 +362,6 @@
   } });
 
   /* ===== dưới biển ===== */
-  def('fish', { w: 74, h: 48, zone: 'water', hue: [0, 360], sat: 80, lit: 58, vmax: 2, asym: true, pat: [1, 4], mood: true, draw: function (g, o, c) {
-    poly(g, [-22, 0, -40, -16, -36, 0, -40, 16], c(0, 0, -10));
-    poly(g, [-4, -16, 6, -26, 14, -14], c(0, 0, -10));
-    ell(g, 0, 0, 28, 17, c());
-    var body = function () { g.beginPath(); g.ellipse(0, 0, 28, 17, 0, 0, TAU); }, i;
-    if (o.v === 0) { g.save(); body(); g.clip(); g.fillStyle = c(0, 0, 20); for (i = 0; i < o.p; i++) g.fillRect(-16 + i * 9, -20, 5, 40); g.restore(); }
-    else { var P = [[-7, 5], [4, -7], [7, 7], [-15, -3]]; for (i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 5, c(0, 0, 26), 0); }
-    circ(g, 16, -4, 4.5, '#fff', 1.2); circ(g, 17, -4, 2, '#222', 0); arc(g, 10, 2, 9, -.9, .9, 1.6, OL); mouth(g, o.m || 0, 22, 5, 12, '#2a1020');
-  } });
   def('jelly', { w: 56, h: 80, zone: 'water', hue: [280, 340], sat: 70, lit: 70, vmax: 2, pat: [3, 6], mood: true, draw: function (g, o, c) {
     var i, n = o.p, x;
     for (i = 0; i < n; i++) { x = -18 + i * (36 / (n - 1)); g.beginPath(); g.moveTo(x, 4); g.bezierCurveTo(x - 7, 16, x + 7, 26, x, 36); g.lineWidth = 3; g.strokeStyle = c(0, 0, -10); g.lineCap = 'round'; g.stroke(); }
@@ -419,14 +404,6 @@
     rrect(g, -8, -24, 28, 14, 5, c(0, 0, -6));
     ell(g, 0, 4, 46, 19, c()); poly(g, [-44, 0, -52, -10, -52, 14], c(0, 0, -12)); rrect(g, -56, -4, 7, 16, 2, '#555', 1);
     for (i = 0; i < n; i++) circ(g, -26 + i * 13, 4, 4.6, '#bfe6ff', 2);
-  } });
-  def('turtle', { w: 86, h: 58, zone: 'water', hue: [95, 135], sat: 55, lit: 42, asym: true, pat: [3, 6], mood: true, draw: function (g, o, c) {
-    ell(g, -28, 8, 10, 5, c(0, 0, -6), 1.5, .6); ell(g, 14, 20, 10, 5, c(0, 0, -6), 1.5, -.4); ell(g, -12, -16, 10, 5, c(0, 0, -6), 1.5, -.6);
-    poly(g, [-34, 6, -44, 2, -36, 12], c(0, 0, -6), 1.2);
-    ell(g, 36, -2, 11, 9, c(0, 0, 10)); circ(g, 40, -4, 2, '#222', 0); mouth(g, o.m || 0, 41, 2, 14, '#111');
-    g.beginPath(); g.ellipse(0, 0, 32, 22, 0, Math.PI, 0); g.closePath(); fs(g, c(30, 0, 6));
-    var P = [[-15, -6], [0, -13], [15, -6], [-6, -3], [8, -3], [-24, -3]];
-    for (var i = 0; i < o.p; i++) circ(g, P[i][0], P[i][1], 4.6, c(30, 0, 22), 1);
   } });
 
   /* ===== vũ trụ ===== */
@@ -550,16 +527,6 @@
     }
     circ(g, 0, 0, 4, c(0, 0, 10), 0);
   } });
-  def('penguin', { w: 56, h: 80, zone: 'ground', hue: [0, 360], sat: 80, lit: 55, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
-    ell(g, -10, 36, 9, 4.5, '#ff9d2e', 1.2); ell(g, 10, 36, 9, 4.5, '#ff9d2e', 1.2);
-    ell(g, 0, 4, 22, 34, c(0, -28, -22)); ell(g, 0, 10, 14, 25, '#f7fbff', 0);
-    ell(g, -22, 6, 6, 18, c(0, -28, -22), 1.4, .25); ell(g, 22, 6, 6, 18, c(0, -28, -22), 1.4, -.25);
-    circ(g, -7, -16, 4.4, '#fff', 1); circ(g, 7, -16, 4.4, '#fff', 1); circ(g, -6, -16, 1.8, '#111', 0); circ(g, 8, -16, 1.8, '#111', 0);
-    poly(g, [-4, -10, 12, -9, -4, -4], '#ff9d2e', 1.2);
-    rrect(g, -17, -2, 34, 7, 3, c(), 1.4); rrect(g, 8, 2, 8, 18, 2, c(), 1.4);
-    for (var i = 0; i < o.p; i++) rrect(g, 7, 3 + i * 5.2, 10, 4.4, 0, '#fff', 0);
-    if (o.v === 1) { g.beginPath(); g.arc(0, -26, 13, Math.PI, 0); g.closePath(); fs(g, c()); circ(g, 0, -39, 3.4, '#fff', 1); }
-  } });
   def('gift', { w: 52, h: 52, zone: 'ground', hue: [0, 360], sat: 75, lit: 55, vmax: 2, pat: [2, 5], draw: function (g, o, c) {
     var i, box = function () { g.beginPath(); g.rect(-22, -14, 44, 36); };
     rrect(g, -22, -14, 44, 36, 3, c());
@@ -602,18 +569,6 @@
     tri(); g.lineWidth = 2; g.strokeStyle = OL; g.stroke();
     poly(g, [-14, 30, -4, 0, 8, 30], '#3b2a1a', 1.4);
     if (o.v === 0) { line(g, -4, -32, -4, -44, 2, '#8b6b4a'); poly(g, [-4, -44, 12, -40, -4, -36], '#ffd23f', 1); }
-  } });
-  def('camel', { w: 116, h: 94, zone: 'ground', hue: [30, 40], sat: 55, lit: 60, vmax: 2, asym: true, pat: [0, 3], draw: function (g, o, c) {
-    var i;
-    for (i = 0; i < 2; i++) { rrect(g, -30 + i * 8, 14, 8, 36, 3, c(0, 0, -10)); rrect(g, 22 + i * 8, 14, 8, 36, 3, c(0, 0, -10)); }
-    g.beginPath(); g.moveTo(26, -4); g.bezierCurveTo(38, -10, 40, -34, 46, -44); g.lineTo(58, -42); g.lineTo(56, -34); g.bezierCurveTo(50, -26, 48, -4, 40, 12); g.closePath(); fs(g, c(0, 0, 4));
-    ell(g, 54, -44, 12, 8, c(0, 0, 6), 2, -.2); circ(g, 55, -48, 1.8, '#222', 0);
-    ell(g, 0, 4, 38, 18, c());
-    if (o.v === 1) { g.beginPath(); g.moveTo(-14, -8); g.quadraticCurveTo(0, -38, 14, -8); fs(g, c(0, 0, 4)); }
-    else { g.beginPath(); g.moveTo(-24, -8); g.quadraticCurveTo(-16, -34, -6, -8); fs(g, c(0, 0, 4)); g.beginPath(); g.moveTo(4, -8); g.quadraticCurveTo(14, -34, 24, -8); fs(g, c(0, 0, 4)); }
-    rrect(g, -18, -4, 36, 14, 3, '#d1495b', 1.4);
-    for (i = 0; i < o.p; i++) rrect(g, -18 + (i + 1) * 36 / (o.p + 1) - 2.6, -4, 5.2, 14, 0, '#ffd23f', 0);
-    line(g, -38, 0, -44, 20, 3, c(0, 0, -6));
   } });
 
   /* ===== lâu đài ===== */
@@ -836,14 +791,35 @@
   }
 
   /* ---------- vẽ một vật thể ---------- */
-  function drawObject(g, o) {
+  /* Mỗi vật được vẽ riêng ra một canvas phụ rồi mới dán vào tranh, kèm bóng đổ mềm phía dưới
+     (vật nổi khối, tách khỏi phông). Không có canvas phụ (vd. chạy trong Node) thì vẽ thẳng như cũ. */
+  var OFF = null, OG = null;
+  function drawRaw(g, o) {
     var t = T[o.t];
-    g.save();
     g.translate(o.x, o.y);
     if (o.r) g.rotate(o.r);
     g.scale(o.s * (o.f || 1) * (o.sx || 1), o.s);
     var c = function (dh, ds, dl, a) { return hsl(o.h + (dh || 0), o.sat + (ds || 0), o.l + (dl || 0), a); };
     t.draw(g, o, c, mulberry32(o.k | 0));
+  }
+  function drawObject(g, o) {
+    var t = T[o.t], m = g.getTransform && g.getTransform();
+    if (!OFF && typeof document !== 'undefined') { OFF = document.createElement('canvas'); OG = OFF.getContext('2d'); }
+    if (!OFF || !m) { g.save(); drawRaw(g, o); g.restore(); return; }
+    /* khung bao của vật trên điểm ảnh thật (đủ rộng cho viền, ánh sáng, xoay, kéo giãn) */
+    var e = t.ext || [-t.w / 2, -t.h / 2, t.w / 2, t.h / 2];
+    var R = Math.max(Math.abs(e[0]), Math.abs(e[2]), Math.abs(e[1]), Math.abs(e[3])) * o.s * Math.max(1, o.sx || 1) * 1.08 + 6;
+    var ds = Math.sqrt(m.a * m.a + m.b * m.b) || 1;
+    var cx = m.a * o.x + m.c * o.y + m.e, cy = m.b * o.x + m.d * o.y + m.f, rp = Math.ceil(R * ds);
+    var bx = Math.floor(cx - rp), by = Math.floor(cy - rp), bw = rp * 2 + 2, bh = rp * 2 + 2;
+    if (OFF.width < bw || OFF.height < bh) { OFF.width = Math.max(OFF.width, bw); OFF.height = Math.max(OFF.height, bh); }
+    OG.setTransform(1, 0, 0, 1, 0, 0); OG.clearRect(0, 0, bw, bh);
+    OG.setTransform(m.a, m.b, m.c, m.d, m.e - bx, m.f - by);
+    OG.save(); drawRaw(OG, o); OG.restore();
+    g.save();
+    g.setTransform(1, 0, 0, 1, 0, 0);
+    g.shadowColor = 'rgba(24,12,36,.3)'; g.shadowBlur = 5 * ds * Math.min(1.4, o.s + .2); g.shadowOffsetY = 3 * ds * Math.min(1.4, o.s + .2);
+    g.drawImage(OFF, 0, 0, bw, bh, bx, by, bw, bh);
     g.restore();
   }
 
@@ -875,9 +851,10 @@
   }
 
   root.TKBArt = {
-    W: W, H: H, TYPES: T, BG: BG, META: (root.TKBArt && root.TKBArt.META) || {}, def: def, drawObject: drawObject, drawBackground: drawBackground,
+    W: W, H: H, TYPES: T, BG: BG, META: (root.TKBArt && root.TKBArt.META) || {}, def: def, drawObject: drawObject,
+    drawPlain: function (g, o) { g.save(); drawRaw(g, o); g.restore(); }, drawBackground: drawBackground,
     finalize: finalize, mulberry32: mulberry32, hsl: hsl,
-    lib: { mouth: mouth, TAU: TAU, OL: OL, fs: fs, circ: circ, ell: ell, poly: poly, rrect: rrect, line: line, arc: arc, blob: blob, star: star, glow: glow,
+    lib: { mouth: mouth, sb: sb, eye2: eye2, blush: blush, TAU: TAU, OL: OL, fs: fs, circ: circ, ell: ell, poly: poly, rrect: rrect, line: line, arc: arc, blob: blob, star: star, glow: glow,
            spots: spots, inEll: inEll, clipStripes: clipStripes, hsl: hsl, vgrad: vgrad, skyFill: skyFill, hills: hills, tufts: tufts, sparkle: sparkle, SKIES: SKIES }
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = root.TKBArt;
