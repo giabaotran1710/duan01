@@ -57,6 +57,7 @@
     { id: 'daibacvutru', name: 'Đại bác vũ trụ' },
     { id: 'truottuyet3d', name: 'Trượt tuyết' },
     { id: 'daokhobau', name: 'Đào kho báu' },
+    { id: 'nhodovat', name: 'Nhớ đồ vật', fmt: v => v + ' vòng' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
