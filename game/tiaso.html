@@ -19,6 +19,7 @@
   --body:'Be Vietnam Pro',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
 }
 *{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
 html{background:var(--bg2)}
 body{margin:0;min-height:100vh;min-height:100dvh;color:var(--text);font:500 14px/1.4 var(--body);
   background:radial-gradient(80% 45% at 50% 35%,rgba(255,201,77,.08),transparent 70%),linear-gradient(var(--bg),var(--bg2)) fixed;
@@ -68,9 +69,11 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 .layer.sheet .panel{max-width:520px;max-height:88%;border-radius:24px 24px 0 0;padding:14px 16px 28px;text-align:center}
 .grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 12px}
 .sheet h3{margin:14px 0 0;text-align:left;font:700 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
-.rndRow{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:8px}
+.rndRow{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;margin-top:8px}
 .rnd{min-height:56px;border-radius:16px;border:0;background:rgba(255,201,77,.14);color:var(--beam);font-weight:800;padding:6px 4px;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .rnd small{font-weight:500;color:var(--muted);font-size:12px}
+.rnd.hot{background:linear-gradient(160deg,rgba(255,107,91,.32),rgba(255,157,46,.18));color:#ffb39e;box-shadow:inset 0 0 0 1px rgba(255,107,91,.45)}
+.rnd.hot small{color:#e8a493}
 .rnd:active,.daily:active,.intro:active{transform:scale(.97)}
 .daily{width:100%;margin-top:8px;min-height:54px;border:0;border-radius:16px;background:linear-gradient(135deg,#d6b25a,#8c6d2c);color:#1b1408;font-weight:800;display:flex;flex-direction:column;align-items:center;justify-content:center}
 .daily small{font-weight:600;color:#3d2c0c}
@@ -128,6 +131,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
       <button class="rnd" data-key="vua" data-no-scene>Vừa<small id="cnt-vua"></small></button>
       <button class="rnd" data-key="kho" data-no-scene>Khó<small id="cnt-kho"></small></button>
       <button class="rnd" data-key="rkho" data-no-scene>Rất khó<small id="cnt-rkho"></small></button>
+      <button class="rnd hot" data-key="skho" data-no-scene>Siêu khó<small id="cnt-skho"></small></button>
     </div>
     <button class="daily" id="dailyBtn" data-no-scene>Hôm nay<small id="dailyInfo"></small></button>
     <button class="intro" id="introBtn" aria-expanded="false" aria-controls="lvGrid" data-no-scene><span>Hướng dẫn nhập môn<small id="introInfo"></small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
@@ -164,7 +168,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 <script src="../scores.js?v=20261103ban"></script>
 <script src="tiaso-core.js?v=2"></script>
 <script src="tiaso-levels.js?v=1"></script>
-<script src="tiaso-gen.js?v=1"></script>
+<script src="tiaso-gen.js?v=2"></script>
 <script>
 (function () {
   'use strict';
@@ -176,7 +180,9 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 
   let save = load();
   const GEN = window.TiaSoGen;
-  const DIFF = { vua: 'Vừa', kho: 'Khó', rkho: 'Rất khó' }, WEIGHT = { vua: 1, kho: 2, rkho: 3 };
+  const DIFF = { vua: 'Vừa', kho: 'Khó', rkho: 'Rất khó', skho: 'Siêu khó' }, WEIGHT = { vua: 1, kho: 2, rkho: 3, skho: 5 };
+  // Siêu khó: số trên tia bị ẩn, đích chỉ báo đúng hoặc sai
+  const hideNums = () => mode.kind === 'rand' && mode.diff === 'skho';
   let lvIdx = Math.min(save.unlocked, LEVELS.length - 1);
   let cur = LEVELS[lvIdx], mode = { kind: 'tut' }, genBusy = false;
   let B = null, place = [], left = {}, sel = null, sim = null, won = false, winTimer = 0, lastPlaced = -1;
@@ -305,7 +311,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     cells.forEach((c, i) => { if (c.k === 'src') pills.push({ i, d: c.d, v: c.v, src: true }); });
     sim.marks.forEach(m => pills.push(m));
     const seenPill = new Set();
-    pills.forEach(p => {
+    if (!hideNums()) pills.forEach(p => {
       if (p.src) return; // đèn đã ghi số
       const x = p.i % W, y = (p.i / W) | 0;
       const dx = C.DIRS[p.d][0], dy = p.d ? C.DIRS[p.d][1] : 0;
@@ -362,7 +368,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     else if (sim.overload.length) { m.textContent = 'Ô hợp chỉ nhận đúng hai tia.'; m.className = 'msg err'; }
     else if (Object.values(sim.tg).some(t => t.st === 'bad')) {
       const bad = Object.values(sim.tg).find(t => t.st === 'bad');
-      m.textContent = bad.got.length > 1 ? 'Một đích chỉ nhận một tia.' : 'Đích nhận ' + bad.got[0] + ', sai số rồi.';
+      m.textContent = bad.got.length > 1 ? 'Một đích chỉ nhận một tia.' : hideNums() ? 'Có đích nhận sai số.' : 'Đích nhận ' + bad.got[0] + ', sai số rồi.';
       m.className = 'msg err';
     } else if (sim.deaths.some(d => d.why === 'op')) m.textContent = 'Có tia bị tắt: chia không hết hoặc ra số âm.';
     else m.textContent = sel ? 'Chạm ô trống trên bàn để đặt ' + C.label(sel) + '.' : '';
@@ -413,6 +419,8 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     load1(LEVELS[n], `Hướng dẫn · Màn ${n + 1}: ${LEVELS[n].name}`, LEVELS[n].hint);
   }
   const RHINT = 'Màn ngẫu nhiên, luôn có lời giải. Tính ngược từ đích về đèn.';
+  const SHINT = 'Siêu khó: số trên tia bị ẩn, đích chỉ báo đúng hay sai. Phải tự tính nhẩm từng bước.';
+  const hintFor = () => hideNums() ? SHINT : RHINT;
   function gen(diff, seed) {
     let lv = null;
     for (let k = 0; k < 6 && !lv; k++) lv = GEN.generate(diff, seed + k * 101, 500);
@@ -430,7 +438,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
       if (!lv) { $('genMsg').textContent = 'Chưa dựng được màn, thử lại nhé.'; return; }
       $('menu').classList.remove('on');
       if (daily) { mode = { kind: 'daily', day: daily }; load1(lv, 'Tia của ngày ' + daily.slice(8) + '/' + daily.slice(5, 7), RHINT); }
-      else { mode = { kind: 'rand', diff }; load1(lv, 'Ngẫu nhiên · ' + DIFF[diff], RHINT); }
+      else { mode = { kind: 'rand', diff }; load1(lv, 'Ngẫu nhiên · ' + DIFF[diff], hintFor()); }
     }, 30);
   }
 
@@ -452,7 +460,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     sel = b.dataset.t; renderTray();
     $('msg').className = 'msg'; $('msg').textContent = 'Chạm ô trống trên bàn để đặt ' + C.label(sel) + '.';
   });
-  $('resetBtn').addEventListener('click', () => { if (mode.kind === 'tut') start(lvIdx); else load1(cur, $('lvTitle').querySelector('small').textContent, RHINT); });
+  $('resetBtn').addEventListener('click', () => { if (mode.kind === 'tut') start(lvIdx); else load1(cur, $('lvTitle').querySelector('small').textContent, hintFor()); });
 
   function fillGrid() {
     const g = $('lvGrid'); g.innerHTML = '';

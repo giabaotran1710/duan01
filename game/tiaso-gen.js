@@ -11,6 +11,8 @@
   const CFG = {
     vua:  { W: 6, H: 6, len: [7, 11], ops: 2, opsMax: 3, mirrors: [1, 2], split: 0,  decoy: 1, fixMirror: .5, maxSols: 6, minPar: 2, extra: .25, kinds: ['+', '-', '*'], maxNodes: 1e4 },
     kho:  { W: 7, H: 7, len: [9, 14], ops: 3, opsMax: 4, mirrors: [1, 3], split: .5, decoy: 2, fixMirror: .25, maxSols: 3, minPar: 4, extra: .35, kinds: ['+', '-', '*', '/', 'sq'], maxNodes: 2e4 },
+    // Siêu khó: bàn 8×8, hai lần tách tia (ba đích), không gương dựng sẵn, nhiều ô gây nhiễu; trong game số trên tia bị ẩn
+    skho: { W: 8, H: 8, len: [12, 18], ops: 5, opsMax: 6, mirrors: [3, 4], split: 1, split2: 1, minTargets: 3, decoy: 4, fixMirror: 0, maxSols: 2, minPar: 9, extra: .5, kinds: ['+', '-', '*', '/', 'sq', 'rev'], maxNodes: 6e4 },
     rkho: { W: 7, H: 8, len: [11, 16], ops: 4, opsMax: 5, mirrors: [2, 3], split: 1, decoy: 3, fixMirror: 0, maxSols: 2, minPar: 6, extra: .45, kinds: ['+', '-', '*', '/', 'sq', 'rev'], maxNodes: 4e4 }
   };
 
@@ -45,7 +47,7 @@
     // đèn ở mép trái hoặc mép trên
     let sx, sy, sd;
     if (R() < .5) { sx = 0; sy = 1 + ((R() * (H - 2)) | 0); sd = 'R'; } else { sy = 0; sx = 1 + ((R() * (W - 2)) | 0); sd = 'D'; }
-    const sv = cfg === CFG.rkho ? 2 + ((R() * 11) | 0) : 1 + ((R() * 9) | 0);
+    const sv = (cfg === CFG.rkho || cfg === CFG.skho) ? 2 + ((R() * 11) | 0) : 1 + ((R() * 9) | 0);
     grid[id(sx, sy)] = { k: 'src', d: sd, v: sv };
     const sols = [];   // {i, t}
     const targets = [];
@@ -69,7 +71,8 @@
           grid[i] = { k: 'sol', t: 'split' }; sols.push({ i, t: 'split' });
           const half = Math.max(3, ((len - steps) * .7) | 0);
           const m1 = Math.ceil(mirLeft / 2), m2 = mirLeft - m1;
-          return walk(x, y, LEFT[d], v, half, m1, false) && walk(x, y, RIGHT[d], v, half, m2, false);
+          const nest = !!cfg.split2 && R() < cfg.split2;
+          return walk(x, y, LEFT[d], v, half, m1, nest) && walk(x, y, RIGHT[d], v, half, m2, false);
         }
         const r = R();
         const mustTurn = !ahead(d);
@@ -92,6 +95,7 @@
       }
     }
     if (!walk(sx, sy, sd, sv, wantLen, wantMir, doSplit)) return null;
+    if (cfg.minTargets && targets.length < cfg.minTargets) return null;
     if (opsLeft > 0 && sols.filter(s => !s.mirror && s.t !== 'split').length < cfg.ops) return null;
     // đích phải khác số đèn
     if (targets.some(t => t.v === sv)) return null;

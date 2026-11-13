@@ -5,7 +5,7 @@ const G = require('../game/tiaso-gen.js');
 const C = require('../game/tiaso-core.js');
 const N = +process.argv[2] || 30;
 let bad = 0;
-for (const d of ['vua', 'kho', 'rkho']) {
+for (const d of ['vua', 'kho', 'rkho', 'skho']) {
   let tot = 0, mx = 0, fail = 0, pars = 0;
   for (let s = 1; s <= N; s++) {
     const t0 = Date.now(); const lv = G.generate(d, s * 7919 + 13); const dt = Date.now() - t0;
