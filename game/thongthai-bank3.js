@@ -471,4 +471,8 @@ window.TT_ADD(`
 5|dl|Trương Vĩnh Ký (Pétrus Ký) nổi tiếng là?|Học giả biết nhiều ngoại ngữ, có công phổ biến chữ Quốc ngữ|Nhà thơ yêu nước|Tướng lĩnh kháng Pháp|Thầy thuốc nổi tiếng
 5|dl|Tờ báo tiếng Việt đầu tiên in bằng chữ Quốc ngữ ở Việt Nam là?|Gia Định báo (1865)|Đại Việt|Nam Phong|Phụ nữ tân văn
 5|dl|Ngày Quốc tế Nữ quyền (8/3) bắt nguồn từ phong trào của phụ nữ ở đâu?|Hoa Kỳ và châu Âu đầu thế kỷ XX|Ấn Độ|Trung Quốc|Việt Nam
+4|toan|Phương trình bậc hai ax² + bx + c = 0 có biệt thức Δ được tính bằng?|b² − 4ac|b² + 4ac|a² − 4bc|2b − 4ac
+4|toan|Tổng các góc ngoài (mỗi đỉnh lấy một góc) của một đa giác lồi luôn bằng?|360°|180°|540°|720°
+4|toan|Số e (cơ số logarit tự nhiên) xấp xỉ bằng?|2,718|3,141|1,618|1,414
+4|toan|Tỉ lệ vàng (φ) xấp xỉ bằng?|1,618|3,141|2,718|1,414
 `);

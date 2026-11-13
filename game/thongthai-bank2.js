@@ -408,4 +408,32 @@ window.TT_ADD(`
 3|yt|Bệnh sởi do tác nhân nào gây ra?|Virus|Vi khuẩn|Ký sinh trùng|Nấm
 3|yt|Bệnh uốn ván do vi khuẩn xâm nhập qua đâu?|Vết thương hở|Đường thở bình thường|Thức ăn chín|Ánh nắng
 3|yt|Vitamin K có vai trò quan trọng trong quá trình nào?|Đông máu|Nhìn trong tối|Hấp thụ canxi|Chống hoại huyết
+1|toan|Hình tam giác có bao nhiêu cạnh?|3|4|5|6
+1|toan|Hình vuông có bao nhiêu góc vuông?|4|2|3|0
+1|toan|Hình nào không có góc nào?|Hình tròn|Hình vuông|Hình tam giác|Hình chữ nhật
+2|toan|Một góc vuông có số đo bao nhiêu độ?|90°|180°|45°|60°
+2|toan|Tổng ba góc của một tam giác bằng bao nhiêu độ?|180°|90°|360°|270°
+2|toan|Số π (pi) xấp xỉ bằng bao nhiêu?|3,14|2,71|1,41|1,73
+2|toan|Hình có 6 mặt đều là hình vuông gọi là?|Hình lập phương|Hình hộp chữ nhật|Hình chóp|Hình trụ
+2|toan|Một hình có 5 cạnh gọi là hình gì?|Ngũ giác|Lục giác|Tứ giác|Bát giác
+2|toan|Một hình lục giác có bao nhiêu cạnh?|6|5|7|8
+2|toan|Một thiên niên kỷ là bao nhiêu năm?|1.000 năm|100 năm|10.000 năm|500 năm
+3|toan|Định lý Pytago áp dụng cho loại tam giác nào?|Tam giác vuông|Tam giác đều|Tam giác cân bất kỳ|Mọi tam giác
+3|toan|Một số chia hết cho 9 khi nào?|Tổng các chữ số chia hết cho 9|Chữ số tận cùng là 9|Là số lẻ|Có hai chữ số giống nhau
+3|toan|Một số chia hết cho 3 khi nào?|Tổng các chữ số chia hết cho 3|Chữ số tận cùng là 3|Là số lẻ|Chữ số đầu là 3
+3|toan|Một số chia hết cho 5 khi nào?|Chữ số tận cùng là 0 hoặc 5|Tổng các chữ số chia hết cho 5|Là số lẻ|Có chữ số 5
+3|toan|Số 1 có phải là số nguyên tố không?|Không phải số nguyên tố|Là số nguyên tố|Là hợp số|Là số nguyên tố chẵn
+3|toan|Tam giác có ba cạnh bằng nhau gọi là tam giác gì?|Tam giác đều|Tam giác vuông|Tam giác tù|Tam giác vuông cân
+3|toan|Mỗi góc của tam giác đều bằng bao nhiêu độ?|60°|90°|45°|30°
+3|toan|Tổng các góc trong của một tứ giác bằng bao nhiêu?|360°|180°|540°|270°
+3|toan|Đường thẳng đi qua tâm và nối hai điểm trên đường tròn gọi là gì?|Đường kính|Bán kính|Dây cung tùy ý|Tiếp tuyến
+3|toan|Chu vi hình tròn được tính bằng công thức nào?|C = 2πr|C = πr²|C = 4r|C = r²
+3|toan|Diện tích hình tròn được tính bằng công thức nào?|S = πr²|S = 2πr|S = 4r²|S = πd
+3|toan|Số La Mã "L" có giá trị bằng bao nhiêu?|50|100|500|1.000
+3|toan|Số La Mã "D" có giá trị bằng bao nhiêu?|500|50|100|1.000
+3|toan|Ai được xem là "cha đẻ của hình học" với bộ sách "Cơ sở" (Elements)?|Euclid|Pytago|Archimedes|Thales
+3|toan|Nhà khoa học nào đã reo lên "Eureka!" khi phát hiện ra nguyên lý lực đẩy của chất lỏng?|Archimedes|Euclid|Pytago|Aristotle
+3|toan|Dãy số 1, 1, 2, 3, 5, 8, 13,... được gọi là dãy số gì?|Dãy Fibonacci|Dãy số nguyên tố|Dãy số chính phương|Dãy cấp số nhân
+3|toan|Đồ thị của hàm số y = ax + b (a ≠ 0) là đường gì?|Đường thẳng|Đường parabol|Đường tròn|Đường hyperbol
+3|toan|Đồ thị của hàm số y = ax² (a ≠ 0) là đường gì?|Đường parabol|Đường thẳng|Đường tròn|Đường elip
 `);

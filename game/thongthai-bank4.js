@@ -432,4 +432,22 @@ window.TT_ADD(`
 4|the|Mỗi hiệp đấu quyền anh chuyên nghiệp kéo dài bao lâu?|3 phút|2 phút|5 phút|10 phút
 4|the|Trong bóng chuyền trong nhà, một set thông thường kết thúc khi một đội đạt bao nhiêu điểm (cách biệt ít nhất 2)?|25|21|15|30
 5|the|Trong bóng chuyền trong nhà, set quyết định (set 5) chơi đến bao nhiêu điểm?|15|25|21|11
+5|toan|Khối mười hai mặt đều có bao nhiêu cạnh?|30|12|20|24
+5|toan|Khối hai mươi mặt đều có bao nhiêu đỉnh?|12|20|30|24
+4|toan|Mỗi mặt của khối mười hai mặt đều là hình gì?|Ngũ giác đều|Tam giác đều|Hình vuông|Lục giác đều
+4|toan|Có tất cả bao nhiêu loại khối đa diện đều (khối Platon)?|5|4|6|7
+5|toan|Theo công thức Euler cho đa diện lồi, số đỉnh trừ số cạnh cộng số mặt bằng bao nhiêu?|2|0|1|4
+4|toan|Ai là người chứng minh Định lý lớn Fermat (công bố 1994 – 1995)?|Andrew Wiles|Grigori Perelman|Terence Tao|Ngô Bảo Châu
+4|toan|Giả thuyết Poincaré được chứng minh bởi nhà toán học nào?|Grigori Perelman|Andrew Wiles|John Nash|Alexander Grothendieck
+3|toan|Số π làm tròn đến 4 chữ số thập phân là bao nhiêu?|3,1416|3,1415|3,1428|3,1406
+5|toan|Số hoàn hảo nhỏ nhất (bằng tổng các ước thực sự của nó) là số nào?|6|28|12|1
+3|toan|Căn bậc hai của 2 là loại số nào?|Số vô tỉ|Số nguyên|Số hữu tỉ|Số chính phương
+4|toan|Thể tích khối cầu bán kính r được tính theo công thức nào?|4/3·π·r³|4·π·r²|π·r³|2/3·π·r³
+4|toan|Một radian xấp xỉ bằng bao nhiêu độ?|57,3°|45°|60°|90°
+4|toan|Hệ trục tọa độ vuông góc được gọi theo tên nhà toán học nào?|René Descartes|Blaise Pascal|Pierre de Fermat|Leonhard Euler
+4|toan|Cùng với Isaac Newton, ai được coi là người sáng lập phép tính vi tích phân?|Gottfried Leibniz|Leonhard Euler|Carl Friedrich Gauss|Blaise Pascal
+5|toan|Bài toán "Bảy cây cầu ở Königsberg" do Euler giải đã mở đầu cho ngành nào?|Lý thuyết đồ thị|Lý thuyết số|Xác suất thống kê|Hình học giải tích
+5|toan|Định lý bốn màu được chứng minh lần đầu (1976) nhờ sự trợ giúp của công cụ nào?|Máy tính điện tử|Thước và compa|Bàn tính|Máy chiếu
+4|toan|Một googol bằng 10 mũ bao nhiêu?|100|10|1000|1.000.000
+4|toan|Tam giác Pascal liệt kê các số gì?|Hệ số nhị thức|Số nguyên tố|Số Fibonacci|Số chính phương
 `);
