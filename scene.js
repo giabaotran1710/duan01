@@ -45,6 +45,7 @@
     truottuyet3d: ['diagonal', '#0c4a6e', '#38bdf8', '#ffffff'],
     daokhobau: ['diagonal', '#2b1d14', '#8a5a36', '#f4c542'],
     nhodovat: ['curtain', '#0a0d24', '#a3213f', '#f2f5ff'],
+    meodem: ['iris', '#0b0d1c', '#2a2c5a', '#f2c14e'],
     demsao: ['iris', '#020617', '#312e81', '#fde68a'],
     bongnay: ['iris', '#7c2d12', '#ea580c', '#fed7aa'],
     demech: ['tiles', '#14532d', '#22c55e', '#fef9c3'],

@@ -58,6 +58,7 @@
     { id: 'truottuyet3d', name: 'Trượt tuyết' },
     { id: 'daokhobau', name: 'Đào kho báu' },
     { id: 'nhodovat', name: 'Nhớ đồ vật', fmt: v => v + ' vòng' },
+    { id: 'meodem', name: 'Mèo đêm đột nhập', fmt: v => 'hầm ' + v },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
