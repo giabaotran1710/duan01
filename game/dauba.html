@@ -2214,6 +2214,39 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
   function fxIcon(x, y, n, col, val) { FX.push({ k: 'ico', x: x + rand(-8, 8), y, n, col, val, life: 1.1, t: 0 }); }
   function fxRise(x, y, col, n) { for (let i = 0; i < (n || 10); i++) FX.push({ k: 'p', x: x + rand(-30, 30), y: y + rand(-10, 20), vx: rand(-10, 10), vy: rand(-90, -40), g: 0, life: rand(.6, 1), t: 0, s: rand(2, 4), col }); }
   function fxShieldOn(x, y, col) { FX.push({ k: 'hex', x, y, col, life: .55, t: 0 }); }
+  // trì hoãn n hiệu ứng vừa tạo d giây (để rơi xuống rồi mới nổ)
+  const fxDelay = (n, d) => { for (let i = Math.max(0, FX.length - n); i < FX.length; i++) FX[i].t = -d; };
+  function fxLightning(x, y) {
+    const pts = [[x + rand(-40, 40), -10]], N = 9; for (let i = 1; i < N; i++) { const f = i / N; pts.push([x + (pts[0][0] - x) * (1 - f) + rand(-26, 26) * (1 - f * .6), -10 + (y + 10) * f]); } pts.push([x, y]);
+    const br = []; for (let b = 0; b < 2; b++) { const i = 2 + Math.floor(rand(0, 5)), o = pts[i], sg = b ? 1 : -1, bp = [o]; for (let j = 1; j <= 3; j++) bp.push([o[0] + sg * j * rand(14, 26), o[1] + j * rand(18, 30)]); br.push(bp); }
+    FX.push({ k: 'lit', pts, br, life: .55, t: 0 }); FX.push({ k: 'flash', col: '#fffbd0', a: .5, life: .22, t: 0 });
+    fxBurst(x, y, '#fff6a0', 18, 340, 5); fxRing(x, y, '#ffe27a', 80); flashCls($('field'), 'shake'); return 110;
+  }
+  function fxRocks(x, y) {
+    for (let i = 0; i < 6; i++) FX.push({ k: 'rock', x: x + rand(-46, 46), y0: y - rand(260, 420), y1: y + rand(-14, 22), r: rand(0, 6), sp: rand(-5, 5), s: rand(9, 17), col: pick(['#a8845a', '#8a6a44', '#c2a070']), life: .32, t: -i * .03 });
+    fxBurst(x, y + 14, '#c9a56a', 18, 240, 6); fxDelay(18, .3); fxRing(x, y + 14, '#d8b878', 70); fxDelay(1, .3); setTimeout(() => flashCls($('field'), 'shake'), 280); return 300;
+  }
+  function fxFireball(x0, y0, x1, y1) {
+    FX.push({ k: 'orb', x0, y0, x1, y1, col: '#ff7a2a', life: .34, t: 0 });
+    fxFlames(x1, y1); fxDelay(12, .3); fxBurst(x1, y1, '#ffb04a', 22, 300, 6); fxDelay(22, .3); fxRing(x1, y1, '#ff9a3a', 90); fxDelay(1, .3); return 300;
+  }
+  function fxLeaves(x, y) { for (let i = 0; i < 12; i++) { const a = rand(0, TAU), v = rand(80, 240); FX.push({ k: 'leaf', x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - 90, r: rand(0, 6), sp: rand(-6, 6), s: rand(7, 12), col: pick(['#5fcf6b', '#3fae5f', '#8ae07a', '#2f8a3e']), life: rand(.7, 1), t: 0 }); } fxSlash(x, y, '#8ae07a', 2); return 90; }
+  function fxSplash(x, y) { fxBurst(x, y, '#7cc4ff', 20, 300, 5); fxBurst(x, y, '#e8f8ff', 10, 220, 3); fxRing(x, y, '#5aa9ff', 80); fxRing(x, y, '#bfe4ff', 50); return 90; }
+  function fxMetal(x, y) { fxSlash(x, y, '#fff4c0', 3); fxBurst(x, y, '#fff8d0', 12, 360, 3); return 100; }
+  function fxMagic(x, y) { fxBurst(x, y, '#e8e0ff', 14, 280, 4); fxBurst(x, y, '#ffe27a', 8, 200, 3); fxRing(x, y, '#c9b8ff', 70); return 90; }
+  // hiệu ứng ra đòn theo hành của thẻ (sấm sét giáng từ trời, đá rơi, cầu lửa, lá bay, nước bắn, lưỡi chém...); trả về thời gian chờ (ms) trước khi nhận sát thương
+  const isThunder = c => /sấm|sét|lôi|thunder/i.test((c.n || '') + ' ' + (c.g || ''));
+  function fxCast(c, q, h) {
+    if (isThunder(c)) return fxLightning(q.x, q.y);
+    switch (c.el) {
+      case 'tho': return fxRocks(q.x, q.y);
+      case 'hoa': return fxFireball(h.x + 20, h.y - 20, q.x, q.y);
+      case 'moc': return fxLeaves(q.x, q.y);
+      case 'thuy': return fxSplash(q.x, q.y);
+      case 'kim': return fxMetal(q.x, q.y);
+      default: return fxMagic(q.x, q.y);
+    }
+  }
   function fxBolt(x0, y0, x1, y1, col) { FX.push({ k: 'bolt', x0, y0, x1, y1, col, life: .28, t: 0 }); }
   function fxFlames(x, y) { for (let i = 0; i < 12; i++) FX.push({ k: 'p', x: x + rand(-26, 26), y: y + rand(0, 26), vx: rand(-14, 14), vy: rand(-120, -60), g: 0, life: rand(.4, .7), t: 0, s: rand(3, 6), col: pick(['#ffb04a', '#ff6a2a', '#ffe27a']) }); }
   function fxStep(dt) {
@@ -2229,6 +2262,16 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
       else if (e.k === 'hex') { c.translate(e.x, e.y); c.globalAlpha = (1 - k) * .9; c.strokeStyle = e.col; c.shadowColor = e.col; c.shadowBlur = 18; c.lineWidth = 4; const r = 34 + k * 14; c.beginPath(); for (let j = 0; j < 6; j++) { const a = j * TAU / 6 + Math.PI / 6; c.lineTo(Math.cos(a) * r, Math.sin(a) * r * 1.1); } c.closePath(); c.stroke(); c.globalAlpha *= .25; c.fillStyle = e.col; c.fill(); }
       else if (e.k === 'bolt') { c.globalAlpha = 1 - k; c.strokeStyle = e.col; c.shadowColor = e.col; c.shadowBlur = 18; c.lineWidth = 5 * (1 - k) + 1; c.lineCap = 'round'; const p = Math.min(1, k * 3);
         c.beginPath(); c.moveTo(e.x0, e.y0); c.lineTo(e.x0 + (e.x1 - e.x0) * p, e.y0 + (e.y1 - e.y0) * p); c.stroke(); }
+      else if (e.k === 'lit') { const fl = k < .35 ? 1 : Math.max(0, 1 - (k - .35) / .65); c.globalAlpha = fl * (.75 + .25 * Math.sin(e.t * 90)); c.lineCap = 'round'; c.lineJoin = 'round';
+        const line = pts => { c.beginPath(); pts.forEach((q, i) => i ? c.lineTo(q[0], q[1]) : c.moveTo(q[0], q[1])); c.stroke(); };
+        c.shadowColor = '#ffe27a'; c.shadowBlur = 26; c.strokeStyle = '#ffd84a'; c.lineWidth = 13; line(e.pts); e.br.forEach(b => { c.lineWidth = 6; line(b); });
+        c.shadowBlur = 8; c.strokeStyle = '#fffef0'; c.lineWidth = 5; line(e.pts); e.br.forEach(b => { c.lineWidth = 2.2; line(b); }); }
+      else if (e.k === 'flash') { c.globalAlpha = (1 - k) * (e.a || .4); c.fillStyle = e.col; c.fillRect(0, 0, innerWidth, innerHeight); }
+      else if (e.k === 'rock') { const kk = Math.min(1, k / .7), y = e.y0 + (e.y1 - e.y0) * kk * kk; c.globalAlpha = k > .7 ? 0 : 1; c.translate(e.x, y); c.rotate(e.r + k * e.sp); c.fillStyle = e.col; c.strokeStyle = '#2a1608'; c.lineWidth = 2.5; c.beginPath(); c.moveTo(-e.s, -e.s * .4); c.lineTo(-e.s * .3, -e.s); c.lineTo(e.s, -e.s * .5); c.lineTo(e.s * .8, e.s * .7); c.lineTo(-e.s * .5, e.s); c.closePath(); c.fill(); c.stroke(); }
+      else if (e.k === 'orb') { const kk = Math.min(1, k / .85), x = e.x0 + (e.x1 - e.x0) * kk, y = e.y0 + (e.y1 - e.y0) * kk - Math.sin(kk * Math.PI) * 30; c.globalAlpha = k > .85 ? 0 : 1; c.shadowColor = e.col; c.shadowBlur = 22;
+        for (let j = 5; j >= 0; j--) { const kj = Math.max(0, kk - j * .05), xj = e.x0 + (e.x1 - e.x0) * kj, yj = e.y0 + (e.y1 - e.y0) * kj - Math.sin(kj * Math.PI) * 30; c.globalAlpha = (k > .85 ? 0 : .5) * (1 - j / 6); c.fillStyle = e.col; c.beginPath(); c.arc(xj, yj, 14 - j * 1.5, 0, TAU); c.fill(); }
+        c.globalAlpha = k > .85 ? 0 : 1; c.fillStyle = '#fff2b0'; c.beginPath(); c.arc(x, y, 9, 0, TAU); c.fill(); }
+      else if (e.k === 'leaf') { e.x += e.vx * dt; e.y += e.vy * dt; e.vy += 140 * dt; e.vx *= .985; c.globalAlpha = k > .6 ? (1 - k) / .4 : 1; c.translate(e.x, e.y); c.rotate(e.r + k * e.sp); c.fillStyle = e.col; c.strokeStyle = '#143a14'; c.lineWidth = 1.6; c.beginPath(); c.ellipse(0, 0, e.s, e.s * .45, 0, 0, TAU); c.fill(); c.stroke(); c.beginPath(); c.moveTo(-e.s, 0); c.lineTo(e.s, 0); c.stroke(); }
       else if (e.k === 'ico') { const y = e.y - 38 * Math.min(1, k * 1.6) - k * 18, s = k < .15 ? .6 + k / .15 * .5 : 1.1; c.globalAlpha = k > .7 ? (1 - k) / .3 : 1; c.translate(e.x, y); c.scale(s, s);
         const im = icoImg(e.n, e.col), w = e.val ? 36 : 44; c.shadowColor = '#000'; c.shadowBlur = 6; const ox = e.val ? -14 : 0; if (im.complete && im.naturalWidth) c.drawImage(im, ox - w / 2, -w / 2, w, w);
         if (e.val) { c.font = '900 24px "Noto Serif",serif'; c.textAlign = 'left'; c.textBaseline = 'middle'; c.lineWidth = 5; c.strokeStyle = '#1a0805'; c.strokeText(e.val, ox + w / 2 + 2, 1); c.fillStyle = e.col; c.fillText(e.val, ox + w / 2 + 2, 1); } }
@@ -2438,7 +2481,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
     const ring = (f, col) => { const sp = foeSprite(f); if (sp) { const q = center(sp); fxRing(q.x, q.y, col, 50); } };
     if (d.heal) { const v = healVal({ heal: d.heal }); R.hp = Math.min(R.max, R.hp + v); SFX.heal(); fxRise(hp.x, hp.y, '#7dff9a', 12); say('regen', '+' + v, '#7dff9a'); }
     if (d.blk) { const v = blkVal({ blk: d.blk, c: 0, el: c.el }, 0, 0); C.blk += v; SFX.blk(); fxShieldOn(hp.x, hp.y, '#7cc4ff'); say('shd', '+' + v, '#9fd2ff'); }
-    if (d.d) { SFX.slash(); for (const f of alive().filter(x => x.tr.resist !== c.el)) { const sp = foeSprite(f); if (sp) { const q = center(sp); fxBolt(hp.x + 20, hp.y - 20, q.x, q.y, EC[c.el]); } hurtFoe(f, d.d, false, c.el, true); } }
+    if (d.d) { SFX.slash(); for (const f of alive().filter(x => x.tr.resist !== c.el)) { const sp = foeSprite(f); if (sp) { const q = center(sp); fxCast(c, q, hp); } hurtFoe(f, d.d, false, c.el, true); } }
     if (d.str) { C.str += d.str; fxRise(hp.x, hp.y, '#ffb04a', 10); say('str', '+' + d.str, '#ffb066'); }
     if (d.regen) { C.regen = (C.regen || 0) + d.regen; say('regen', C.regen, '#7dff9a'); }
     if (d.thorns) { C.thorns += d.thorns; fxRing(hp.x, hp.y, '#8acb6a', 60); say('thorn', C.thorns, '#8acb6a'); }
@@ -2720,8 +2763,8 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
       SFX.slash(); if (c.el === 'hoa') SFX.fire();
       flashCls($('hero'), 'atk');
       const hp = center($('heroCv'));
-      for (const f of list) { const s = foeSprite(f); if (s) { const q = center(s); fxBolt(hp.x + 20, hp.y - 20, q.x, q.y, EC[c.el]); } }
-      await wait(90);
+      let castMs = 90; for (const f of list) { const s = foeSprite(f); if (s) { const q = center(s); castMs = Math.max(castMs, fxCast(c, q, hp)); } }
+      await wait(castMs);
       const hits = c.hits || 1, aliveB = new Set(list.filter(f => !f.dead));
       for (let h = 0; h < hits; h++) {
         const hl = c.rh ? (alive().length ? [pick(alive())] : []) : list;
@@ -2901,7 +2944,7 @@ s.old{color:#9a7a5a;text-decoration:line-through;text-decoration-thickness:2px}
         if (--b.t > 0) { C.bombs.push(b); continue; }
         banner('BOM NỔ!'); SFX.fire();
         const tl = b.all ? alive() : (alive().find(x => x.id === b.tid) ? [alive().find(x => x.id === b.tid)] : (alive().length ? [pick(alive())] : []));
-        for (const f of tl) { const sp = foeSprite(f); if (sp) { const q = center(sp); fxBurst(q.x, q.y, '#ff9a3a', 30, 340, 7); fxRing(q.x, q.y, '#ffb04a', 90); } hurtFoe(f, b.d, false, b.el, true); render(); await wait(300); }
+        for (const f of tl) { const sp = foeSprite(f); if (sp) { const q = center(sp); fxBurst(q.x, q.y, '#ff9a3a', 30, 340, 7); fxFlames(q.x, q.y); fxRing(q.x, q.y, '#ffb04a', 90); fxRing(q.x, q.y, '#fff2b0', 50); flashCls($('field'), 'shake'); } hurtFoe(f, b.d, false, b.el, true); render(); await wait(300); }
       }
       if (!alive().length) { await wait(400); return victory(); }
     }
