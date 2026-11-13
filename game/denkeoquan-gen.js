@@ -95,19 +95,40 @@
     return res.sort((a, b) => a[2] - b[2]);
   }
 
+  const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const adj = (a, b) => Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) === 1;
 
-  // Các đoạn thẳng 3-5 ô sàn trống (cho lính tuần), có cắt qua đường đi S→E.
-  function guardTracks(g, onPath) {
-    const res = [];
+  // Đường tuần cho lính: 3-7 ô sàn trống liền nhau, có thể rẽ (vd →→↑↑←), cắt qua đường đi S→E.
+  // Một nửa là đoạn thẳng, nửa còn lại là đường gấp khúc đi bộ ngẫu nhiên không tự cắt mình.
+  function guardTracks(g, onPath, r) {
+    const res = [], seen = new Set();
     const ok = (x, y) => g[y] && g[y][x] === '.';
+    const add = tr => {
+      const k = tr.map(c => c.join()).join('|'), k2 = tr.slice().reverse().map(c => c.join()).join('|');
+      if (seen.has(k) || seen.has(k2)) return;
+      seen.add(k);
+      if (tr.some(c => onPath(c))) res.push(tr);
+    };
     for (let y = 1; y < g.length - 1; y++) for (let x = 1; x < g[0].length - 1; x++) {
+      if (!ok(x, y)) continue;
       for (const [dx, dy] of [[1, 0], [0, 1]]) {
-        if (ok(x - dx, y - dy)) continue; // chỉ bắt đầu ở đầu đoạn
+        if (ok(x - dx, y - dy)) continue;
         const tr = [];
         let cx = x, cy = y;
         while (ok(cx, cy) && tr.length < 5) { tr.push([cx, cy]); cx += dx; cy += dy; }
-        if (tr.length >= 3 && tr.some(c => onPath(c))) res.push(tr);
+        if (tr.length >= 3) add(tr);
+      }
+      for (let k = 0; k < 6; k++) { // đi bộ ngẫu nhiên, buộc phải rẽ ít nhất một lần
+        const len = 4 + Math.floor(r() * 4), tr = [[x, y]], vis = new Set([x + ',' + y]);
+        let cx = x, cy = y, turns = 0, ld = null;
+        while (tr.length < len) {
+          const opts = DIRS4.filter(([dx, dy]) => ok(cx + dx, cy + dy) && !vis.has((cx + dx) + ',' + (cy + dy)));
+          if (!opts.length) break;
+          const [dx, dy] = opts[Math.floor(r() * opts.length)];
+          if (ld && (ld[0] !== dx || ld[1] !== dy)) turns++;
+          ld = [dx, dy]; cx += dx; cy += dy; tr.push([cx, cy]); vis.add(cx + ',' + cy);
+        }
+        if (tr.length >= 4 && turns >= 1) add(tr);
       }
     }
     return res;
@@ -174,7 +195,7 @@
     for (let k = 0; k < (variant.guard === true ? 1 : variant.guard || 0); k++) {
       // lính sau không đi chung ô với lính trước
       const used = new Set(guards.flat().map(c => c.join()));
-      const trs = guardTracks(g, onPath).filter(tr => !tr.some(c => used.has(c.join())));
+      const trs = guardTracks(g, onPath, r).filter(tr => !tr.some(c => used.has(c.join())));
       if (!trs.length) return null;
       const tr = pick(r, trs);
       guards.push(r() < .5 ? tr : tr.slice().reverse());
@@ -246,7 +267,7 @@
     const parts = [TIPS[key]];
     const all = level.map.join('');
     if (/[1-3]/.test(all)) parts.push('Cửa gạch chéo đóng khi bệ cùng màu bị giẫm.');
-    if (level.guards && level.guards.length) parts.push('Chạm lính là về đầu vòng; lính không bước vào ô có bóng.');
+    if (level.guards && level.guards.length) parts.push('Lính đi theo đường vạch đỏ (có thể rẽ), tới cuối thì quay lại. Chạm lính là về đầu vòng; lính không bước vào ô có bóng.');
     return parts.join(' ');
   }
 
