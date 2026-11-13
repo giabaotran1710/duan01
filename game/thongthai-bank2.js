@@ -25,14 +25,6 @@ window.TT_ADD(`
 1|yt|Cơ quan nào giúp chúng ta nhìn thấy?|Mắt|Tai|Mũi|Lưỡi
 1|yt|Cơ quan nào giúp chúng ta nghe?|Tai|Mắt|Mũi|Da
 1|yt|Con người có mấy giác quan cơ bản thường được nhắc tới?|5|3|4|7
-1|toan|Hình tam giác có bao nhiêu cạnh?|3|4|5|6
-1|toan|Hình vuông có bao nhiêu góc vuông?|4|2|3|0
-1|toan|Số nào là số chẵn?|8|7|9|11
-1|toan|Số nhỏ nhất có hai chữ số là?|10|11|9|99
-1|toan|Số lớn nhất có ba chữ số là?|999|900|1.000|990
-1|toan|Một tá bằng bao nhiêu cái?|12|10|6|20
-1|toan|Nửa của 100 là bao nhiêu?|50|25|20|200
-1|toan|Hình nào không có góc nào?|Hình tròn|Hình vuông|Hình tam giác|Hình chữ nhật
 1|dl|Trong bộ bài tây 52 lá có mấy chất (cơ, rô, chuồn, bích)?|4|2|3|5
 1|dl|Mỗi chiếc xe đạp thông thường có mấy bánh?|2|3|1|4
 1|dl|Ngày Quốc tế Lao động là ngày nào?|1/5|1/6|8/3|2/9
@@ -107,19 +99,6 @@ window.TT_ADD(`
 2|yt|Ngủ đủ giấc giúp ích gì cho học sinh?|Cơ thể phục hồi và trí nhớ tốt hơn|Làm mắt cận nhanh hơn|Làm giảm chiều cao|Không có tác dụng gì
 2|yt|Cơ quan nào chịu trách nhiệm điều khiển mọi hoạt động của cơ thể?|Não|Tim|Dạ dày|Gan
 2|yt|Ở người, quá trình trao đổi khí oxi và cacbon đioxit diễn ra chủ yếu ở đâu?|Phế nang trong phổi|Dạ dày|Tim|Thận
-2|toan|Một góc vuông có số đo bao nhiêu độ?|90°|180°|45°|60°
-2|toan|Tổng ba góc của một tam giác bằng bao nhiêu độ?|180°|90°|360°|270°
-2|toan|Số π (pi) xấp xỉ bằng bao nhiêu?|3,14|2,71|1,41|1,73
-2|toan|Số nguyên tố nhỏ nhất là?|2|1|3|0
-2|toan|Số nguyên tố chẵn duy nhất là?|2|4|0|6
-2|toan|Hình có 6 mặt đều là hình vuông gọi là?|Hình lập phương|Hình hộp chữ nhật|Hình chóp|Hình trụ
-2|toan|Một hình có 5 cạnh gọi là hình gì?|Ngũ giác|Lục giác|Tứ giác|Bát giác
-2|toan|Một hình lục giác có bao nhiêu cạnh?|6|5|7|8
-2|toan|Một thiên niên kỷ là bao nhiêu năm?|1.000 năm|100 năm|10.000 năm|500 năm
-2|toan|Kết quả của phép chia một số khác 0 cho chính nó là?|1|0|Chính số đó|Không xác định
-2|toan|Bất kỳ số nào nhân với 0 đều bằng?|0|1|Chính số đó|10
-2|toan|Số 0,5 bằng phân số nào?|1/2|1/5|5/1|1/4
-2|toan|25% bằng phân số nào?|1/4|1/2|2/5|1/25
 2|dl|Trong âm nhạc, có bao nhiêu nốt nhạc cơ bản (Đô, Rê, Mi, Pha, Son, La, Si)?|7|5|8|12
 2|dl|Cầu thang cuốn và thang máy thường dùng loại năng lượng nào để chạy?|Điện|Than|Gió|Hơi nước
 2|dl|Phở bò truyền thống được cho là có xuất xứ từ vùng nào?|Miền Bắc (Nam Định, Hà Nội)|Miền Tây Nam Bộ|Tây Nguyên|Miền Trung
@@ -316,26 +295,6 @@ window.TT_ADD(`
 3|kh|Ai là bác sĩ người Việt nổi tiếng được tôn vinh là một trong những nhà khoa học hàng đầu về phẫu thuật, có "phương pháp mổ gan khô"?|Tôn Thất Tùng|Đặng Văn Ngữ|Phạm Ngọc Thạch|Hồ Đắc Di
 3|kh|Giáo sư Ngô Bảo Châu nhận Huy chương Fields năm 2010 nhờ chứng minh điều gì?|Bổ đề cơ bản của chương trình Langlands|Định lý lớn Fermat|Giả thuyết Poincaré|Giả thuyết Riemann
 3|kh|Huy chương Fields là giải thưởng danh giá trong lĩnh vực nào?|Toán học|Vật lý|Hóa học|Y học
-3|toan|Định lý Pytago áp dụng cho loại tam giác nào?|Tam giác vuông|Tam giác đều|Tam giác cân bất kỳ|Mọi tam giác
-3|toan|Một số chia hết cho 9 khi nào?|Tổng các chữ số chia hết cho 9|Chữ số tận cùng là 9|Là số lẻ|Có hai chữ số giống nhau
-3|toan|Một số chia hết cho 3 khi nào?|Tổng các chữ số chia hết cho 3|Chữ số tận cùng là 3|Là số lẻ|Chữ số đầu là 3
-3|toan|Một số chia hết cho 5 khi nào?|Chữ số tận cùng là 0 hoặc 5|Tổng các chữ số chia hết cho 5|Là số lẻ|Có chữ số 5
-3|toan|Số 1 có phải là số nguyên tố không?|Không phải số nguyên tố|Là số nguyên tố|Là hợp số|Là số nguyên tố chẵn
-3|toan|Tam giác có ba cạnh bằng nhau gọi là tam giác gì?|Tam giác đều|Tam giác vuông|Tam giác tù|Tam giác vuông cân
-3|toan|Mỗi góc của tam giác đều bằng bao nhiêu độ?|60°|90°|45°|30°
-3|toan|Tổng các góc trong của một tứ giác bằng bao nhiêu?|360°|180°|540°|270°
-3|toan|Đường thẳng đi qua tâm và nối hai điểm trên đường tròn gọi là gì?|Đường kính|Bán kính|Dây cung tùy ý|Tiếp tuyến
-3|toan|Chu vi hình tròn được tính bằng công thức nào?|C = 2πr|C = πr²|C = 4r|C = r²
-3|toan|Diện tích hình tròn được tính bằng công thức nào?|S = πr²|S = 2πr|S = 4r²|S = πd
-3|toan|Số nào là số chính phương?|49|50|48|47
-3|toan|Giai thừa của 5 (5!) bằng bao nhiêu?|120|25|60|15
-3|toan|Số La Mã "L" có giá trị bằng bao nhiêu?|50|100|500|1.000
-3|toan|Số La Mã "D" có giá trị bằng bao nhiêu?|500|50|100|1.000
-3|toan|Ai được xem là "cha đẻ của hình học" với bộ sách "Cơ sở" (Elements)?|Euclid|Pytago|Archimedes|Thales
-3|toan|Nhà khoa học nào đã reo lên "Eureka!" khi phát hiện ra nguyên lý lực đẩy của chất lỏng?|Archimedes|Euclid|Pytago|Aristotle
-3|toan|Dãy số 1, 1, 2, 3, 5, 8, 13,... được gọi là dãy số gì?|Dãy Fibonacci|Dãy số nguyên tố|Dãy số chính phương|Dãy cấp số nhân
-3|toan|Đồ thị của hàm số y = ax + b (a ≠ 0) là đường gì?|Đường thẳng|Đường parabol|Đường tròn|Đường hyperbol
-3|toan|Đồ thị của hàm số y = ax² (a ≠ 0) là đường gì?|Đường parabol|Đường thẳng|Đường tròn|Đường elip
 3|nt|Bức tượng Phật Bà Quan Âm nghìn mắt nghìn tay nổi tiếng ở chùa nào?|Chùa Bút Tháp|Chùa Một Cột|Chùa Thiên Mụ|Chùa Hương
 3|nt|Chùa Một Cột được xây dựng dưới triều vua nào?|Lý Thái Tông|Lý Thái Tổ|Trần Nhân Tông|Lê Thánh Tông
 3|nt|Chùa Thiên Mụ nằm bên bờ sông nào?|Sông Hương|Sông Hồng|Sông Hàn|Sông Đáy

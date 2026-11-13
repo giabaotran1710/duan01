@@ -188,21 +188,6 @@ window.TT_ADD(`
 4|kh|Muối ăn tan trong nước tạo ra dung dịch có tính chất gì?|Dẫn điện|Cách điện|Có tính axit mạnh|Có tính bazơ mạnh
 4|kh|Khí thoát ra khi cho kẽm tác dụng với axit clohiđric là?|Hiđro|Oxi|Clo|Cacbon đioxit
 4|kh|Nước cứng chứa nhiều ion nào?|Canxi và magie|Natri và kali|Sắt và đồng|Clo và flo
-4|toan|Phương trình bậc hai ax² + bx + c = 0 có biệt thức Δ được tính bằng?|b² − 4ac|b² + 4ac|a² − 4bc|2b − 4ac
-4|toan|Nghiệm của phương trình x² = 49 là?|x = ±7|x = 7|x = 24,5|x = −7
-4|toan|Tổng các góc ngoài (mỗi đỉnh lấy một góc) của một đa giác lồi luôn bằng?|360°|180°|540°|720°
-4|toan|Giá trị của sin 30° bằng?|1/2|√3/2|1|√2/2
-4|toan|Giá trị của cos 60° bằng?|1/2|√3/2|1|0
-4|toan|Giá trị của tan 45° bằng?|1|0|√3|1/2
-4|toan|Số e (cơ số logarit tự nhiên) xấp xỉ bằng?|2,718|3,141|1,618|1,414
-4|toan|Tỉ lệ vàng (φ) xấp xỉ bằng?|1,618|3,141|2,718|1,414
-4|toan|log₁₀ 1000 bằng?|3|2|10|1.000
-4|toan|Đạo hàm của x² là?|2x|x|x²|2
-4|toan|Tích phân của 2x dx (không tính hằng số) là?|x²|2x²|x|2
-4|toan|Có bao nhiêu cách sắp xếp 4 người vào hàng ngang?|24|16|12|8
-4|toan|Số tổ hợp chập 2 của 5 phần tử (C(5,2)) bằng?|10|20|5|15
-4|toan|Xác suất tung đồng xu cân đối ra mặt sấp là?|1/2|1/3|1/4|1
-4|toan|Xác suất tung xúc xắc 6 mặt cân đối ra số chẵn là?|1/2|1/3|1/6|2/3
 5|su|Triều Trần mở khoa thi Thái học sinh đầu tiên vào năm nào?|1232|1075|1442|1010
 5|su|Danh hiệu "Tam khôi" gồm những ai trong khoa thi Đình?|Trạng nguyên, Bảng nhãn, Thám hoa|Trạng nguyên, Hoàng giáp, Tiến sĩ|Bảng nhãn, Hoàng giáp, Cử nhân|Trạng nguyên, Thám hoa, Cử nhân
 5|su|Khoa thi Hương cuối cùng ở Bắc Kỳ được tổ chức năm nào?|1915|1919|1906|1945
