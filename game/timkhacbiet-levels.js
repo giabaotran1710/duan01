@@ -7,7 +7,7 @@
 (function (root) {
   'use strict';
   var A = root.TKBArt;
-  if (!A && typeof require !== 'undefined') { require('./timkhacbiet-art.js'); require('./timkhacbiet-art2.js'); require('./timkhacbiet-art3.js'); require('./timkhacbiet-meta.js'); A = root.TKBArt; }
+  if (!A && typeof require !== 'undefined') { require('./timkhacbiet-art.js'); require('./timkhacbiet-art2.js'); require('./timkhacbiet-art3.js'); require('./timkhacbiet-art4.js'); require('./timkhacbiet-bg.js'); require('./timkhacbiet-meta.js'); A = root.TKBArt; }
   A.finalize();
   var W = A.W, H = A.H, TYPES = A.TYPES, mulberry32 = A.mulberry32;
 
