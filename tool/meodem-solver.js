@@ -1,5 +1,5 @@
 // Máy giải kiểm màn cho game Mèo đêm đột nhập (game/meodem.html).
-// Chạy: node tool/meodem-solver.js [số màn bắt đầu từ 1]
+// Chạy: node tool/meodem-solver.js [số hầm nhập môn 1-10]   hoặc   node tool/meodem-solver.js gen 11 40
 // Tìm đường nhanh nhất tới rương (và nhanh nhất khi nhặt đủ ngọc) bằng tìm kiếm theo lớp thời gian:
 // mỗi 0,05 giây được chọn chạm hay không chạm, gộp các trạng thái giống nhau trong cùng một thời điểm.
 'use strict';
@@ -65,6 +65,16 @@ function solve(L) {
   return res;
 }
 
+// node tool/meodem-solver.js gen 11 40  -> dựng thử các hầm vô hạn (giống trong game) và in thời gian
+if (process.argv[2] === 'gen') {
+  const a = +process.argv[3] || 11, b = +process.argv[4] || a;
+  for (let n = a; n <= b; n++) {
+    const t0 = Date.now(), r = MD.gen(n);
+    console.log(`Hầm ${n}: ${r ? `"${r.name}" nhanh nhất ${r.best.toFixed(2)}s, mốc ${r.par}s, thử ${r.tries} bản` : 'KHÔNG DỰNG ĐƯỢC'} [${Date.now() - t0}ms]`);
+    if (process.env.SHOW && r) console.log(r.map.join('\n'));
+  }
+  process.exit(0);
+}
 const only = +process.argv[2] || 0;
 LEVELS.forEach((lv, i) => {
   if (only && only !== i + 1) return;

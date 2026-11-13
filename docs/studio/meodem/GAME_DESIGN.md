@@ -6,6 +6,7 @@ Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá gi�
 - Mèo tự chạy, đụng tường khi đang trên đất thì quay đầu.
 - Một nút: chạm / phím cách / mũi tên lên để nhảy. Nhảy cao cố định (khoảng 3,4 ô), xa khoảng 3,5 ô.
 - Giữa không trung mà chạm tường thì bám và trượt chậm; chạm tiếp để bật ngược ra (leo giếng bằng bật tường).
+- Hầm nối hầm, không có hầm cuối. Hầm 1-10 là hầm nhập môn làm tay (mỗi hầm giới thiệu một loại bẫy). Từ hầm 11, hầm được dựng tự động theo số hầm (cùng số thì giống nhau trên mọi máy), độ khó tăng tới hầm 29 rồi giữ nguyên.
 - Mỗi hầm là một màn hình 32×18 ô. Chạm rương là thắng. Chạm bẫy là ngã, hầm chơi lại ngay từ đầu (đếm số lần ngã).
 
 ## Bẫy và vật thể
@@ -22,14 +23,16 @@ Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá gi�
 | `*` | Ngọc bích | nhặt để lấy sao |
 | `S` `s` / `C` | Mèo (quay phải / trái) / rương | |
 
-## Sao và điểm
-Mỗi hầm 3 sao độc lập, giữ vĩnh viễn: mở rương, nhặt đủ ngọc trong một lượt, về đích trong thời gian mốc.
-Mốc giờ = thời gian nhanh nhất máy giải tìm được × 1,3 + 2 giây (làm tròn lên).
-Điểm bảng xếp hạng `meodem` = tổng số sao của các hầm có sẵn (càng cao càng tốt, giữ cao nhất).
+## Dựng hầm vô hạn (`MD.gen(n)`)
+- Hai kiểu: các tầng zíc zắc nối bằng ván một chiều, hoặc sảnh lớn với cầu thang lơ lửng; lật trái phải ngẫu nhiên.
+- Bẫy mở dần theo độ khó: gai, lửa, cưa ngang, cưa dọc, gạch mục, gai trần, chìa và cửa.
+- Mỗi bản dựng chạy qua máy giải (`MD.solve`); chỉ giữ bản mở được rương VÀ nhặt đủ ngọc được, nếu không thì thử bản kế tiếp (tối đa 40).
+- Trong trình duyệt việc dựng chạy trong Web Worker (dựng sẵn hầm kế tiếp khi đang chơi), lưu tạm 40 hầm gần nhất trong localStorage.
 
-## Tự xây hầm
-Vẽ ô trên lưới, chạy thử. Hầm chỉ lấy được mã chia sẻ khi chính người xây đã phá được nó (sửa bản đồ thì mất trạng thái kiểm chứng).
-Mã dạng `MEODEM1:` + base64 của JSON {tên, bản đồ nén lặp ký tự}. Tối đa 12 hầm, 5 ngọc mỗi hầm.
+## Sao và điểm
+Mỗi hầm 3 sao độc lập: mở rương, nhặt đủ ngọc trong một lượt, về đích trong thời gian mốc.
+Mốc giờ hầm nhập môn = thời gian nhanh nhất × 1,3 + 2 giây; hầm dựng mới = × 1,35 + 2 giây (làm tròn lên).
+Điểm bảng xếp hạng `meodem` = số hầm xa nhất đã qua (càng cao càng tốt, giữ cao nhất).
 
 ## Kiểm màn
-`node tool/meodem-solver.js [số hầm]` tìm đường nhanh nhất (và nhanh nhất khi nhặt đủ ngọc) bằng tìm kiếm theo lớp thời gian 0,05 giây. Mọi hầm có sẵn phải giải được cả hai.
+`node tool/meodem-solver.js [số hầm]` (hầm nhập môn) hoặc `node tool/meodem-solver.js gen 11 40` (hầm dựng mới) tìm đường nhanh nhất (và nhanh nhất khi nhặt đủ ngọc) bằng tìm kiếm theo lớp thời gian 0,05 giây. Mọi hầm có sẵn phải giải được cả hai.
