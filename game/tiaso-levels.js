@@ -38,7 +38,7 @@
       map: [',,,,,,', 'A....B', ',,,,,,'],
       ents: { A: { t: 'src', d: 'R', v: 38 }, B: { t: 'tgt', v: 22 } },
       tray: ['sum', '*2', '+4'], par: 2 },
-    { name: 'Cổng chẵn', hint: 'Cổng CHẴN chỉ cho số chẵn đi qua, số lẻ thì tia tắt. Cổng LẺ thì ngược lại.',
+    { name: 'Cổng C và L', hint: 'Cổng C chỉ cho số chẵn đi qua, số lẻ thì tia tắt. Cổng L (lẻ) thì ngược lại.',
       map: [',,,,,,,', 'A.G..HB', ',,,,,,,'],
       ents: { A: { t: 'src', d: 'R', v: 5 }, G: { t: 'gate', p: 'even' }, H: { t: 'gate', p: 'odd' }, B: { t: 'tgt', v: 17 } },
       tray: ['+1', '+3', '*2', '+1'], par: 3 },
