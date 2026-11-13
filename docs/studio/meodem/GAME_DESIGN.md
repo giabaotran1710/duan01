@@ -5,7 +5,7 @@ Yêu cầu gốc (13/11/2026): "Làm một trò chơi màn hình ngang khá gi�
 ## Vòng lặp chơi
 - Mèo tự chạy. Đụng tường khi đang trên đất thì mèo đứng yên chờ; chạm để nhảy ngay sát tường thì mèo nhảy và quay đầu.
 - Một nút: chạm / phím cách / mũi tên lên để nhảy. Nhảy cao cố định (khoảng 3,4 ô), xa khoảng 3,5 ô.
-- Giữa không trung còn 1 cú nhảy thứ hai (lực 560, hơi yếu hơn nhảy đất 620). Chạm đất, bám tường hoặc đạp lò xo thì nạp lại. Hằng số `P.airJumps` (hiện là 1) quyết định số cú nhảy trên không.
+- Giữa không trung còn 1 cú nhảy thứ hai (lực 310, bằng một nửa nhảy đất 620). Chạm đất, bám tường hoặc đạp lò xo thì nạp lại. Hằng số `P.airJumps` (hiện là 1) quyết định số cú nhảy trên không.
 - Giữa không trung mà chạm tường thì bám và trượt chậm; chạm tiếp để bật ngược ra (leo giếng bằng bật tường).
 - Hầm nối hầm, không có hầm cuối. Hầm 1-10 là hầm nhập môn làm tay (mỗi hầm giới thiệu một loại bẫy). Từ hầm 11, hầm được dựng tự động theo số hầm (cùng số thì giống nhau trên mọi máy), độ khó tăng tới hầm 29 rồi giữ nguyên.
 - Mỗi hầm là một màn hình 32×18 ô. Chạm rương là thắng. Chạm bẫy là ngã, hầm chơi lại ngay từ đầu (đếm số lần ngã).
