@@ -388,7 +388,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   let held = -1, locked = null, usedLock = false;
   let lives = 3, passed = 0, tutIdx = 0, paused = true;
   let parts = [], shake = 0, flash = null, lastResult = '';
-  const Z0 = 7.5;
+  const Z0 = 7.5, OBJ_ALPHA = .55;
 
   function cfgEndless(n) {
     const D = DIFF[mode.diff], p = Math.min(1, n / 22);
@@ -463,7 +463,8 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   }
 
   // ================= VẼ =================
-  const cv = $('cv'), cx = cv.getContext('2d');
+  const cv = $('cv'); let cx = cv.getContext('2d');
+  let objC = null, objX = null;
   let CW = 0, CH = 0, DPR = 1, U = 1, VX = 0, VY = 0, CY = 0, camY = 0, bgC = null;
   const FLOOR = 1.55, CEIL = -1.95, SIDE = 2.15, THICK = .35;
   function resize() {
@@ -473,6 +474,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
     U = CW / 4.15; VX = CW / 2; VY = CH * .4; CY = CH * .53; camY = (VY - CY) / U;
     buildBg();
+    objC = document.createElement('canvas'); objC.width = cv.width; objC.height = cv.height; objX = objC.getContext('2d');
   }
   const P = (x, y, zz) => [VX + x * U / zz, VY + (y - camY) * U / zz];
   function buildBg() {
@@ -629,7 +631,12 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     const objFirst = z < 1;
     if (!objFirst) drawWall(z, wallAlpha);
     if (showObj) {
+      // khi tường còn ở phía sau vật thì vẽ vật trong suốt một nửa để vẫn nhìn thấy lỗ trên tường
+      const main = cx; cx = objX;
+      cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, objC.width, objC.height); cx.setTransform(DPR, 0, 0, DPR, 0, 0);
       if (held >= 0) drawObj(W.tray[held], ps, 1); else drawGhost(ps);
+      cx = main;
+      cx.save(); cx.globalAlpha = objFirst ? 1 : OBJ_ALPHA; cx.drawImage(objC, 0, 0, CW, CH); cx.restore();
       if (locked && st === 'go') drawLockMark(ps);
     }
     if (objFirst) drawWall(z, wallAlpha);
