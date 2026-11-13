@@ -168,7 +168,7 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
 <div class="layer" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuH">
   <div class="panel">
     <h2 id="menuH">Đèn ông sao</h2>
-    <p>Chương 1 · bản chơi thử 6 màn</p>
+    <p>Chương 1 · bản chơi thử 7 màn</p>
     <div class="string" id="levels"></div>
     <h3>Đèn ngẫu nhiên</h3>
     <p>Máy dựng màn mới mỗi lần bấm, và giải thử trước khi đưa cho bạn: màn nào cũng có đường tới trăng.</p>
@@ -236,6 +236,7 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
     step: () => tone(880, .06, 'square', .04),
     bump: () => tone(160, .12, 'sine', .14),
     gate: () => tone(420, .1, 'triangle', .08, 620),
+    crack: () => { tone(120, .18, 'sawtooth', .09, 50); setTimeout(() => tone(80, .2, 'triangle', .07, 40), 90); },
     spin: () => { for (let i = 0; i < 6; i++) setTimeout(() => tone(300 + i * 40, .05, 'square', .04), i * 120); setTimeout(() => tone(700, .25, 'sine', .08, 1200), 760); },
     caught: () => { tone(220, .12, 'square', .1); setTimeout(() => tone(140, .3, 'sawtooth', .08, 70), 110); },
     win: () => [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, .22, 'triangle', .1), i * 110)),
@@ -307,7 +308,8 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
     const a = rec[t], f = frames[t + 1];
     if (!a || a === 'W' || !f || !f.bumped[i]) return false;
     const p = frames[t].pos[i], d = C.DIRS[a];
-    return C.isDoor(C.cell(g, p[0] + d[0], p[1] + d[1]));
+    const c = C.cell(g, p[0] + d[0], p[1] + d[1]);
+    return C.isDoor(c) || C.isCrumble(c);
   }
 
   function recompute(animate) {
@@ -320,6 +322,7 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
       const vap = shadows.map((r, i) => gateBump(sim.frames, t, i, r));
       anim = { from: prev.pos, to: cur.pos, gFrom: prev.guards, t0: performance.now() }; vapNow = vap;
       if (vap.some(Boolean)) { bumpAt = performance.now(); sfx.bump(); }
+      else if (Object.keys(cur.fallen || {}).length > Object.keys(prev.fallen || {}).length) sfx.crack();
       else if (Object.keys(cur.open).join() !== Object.keys(prev.open).join()) sfx.gate();
       else sfx.step();
     } else anim = null;
@@ -537,6 +540,27 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
     });
   }
 
+  // Ván mục: tấm ván tre nứt; sụp thì thành hố tối.
+  function drawPlank(c, x, y, fallen, loaded) {
+    const px = x * tile, py = y * tile, m = tile * .08;
+    if (fallen) {
+      c.fillStyle = '#1a0f08'; c.fillRect(px + 1, py + 1, tile - 2, tile - 2);
+      c.fillStyle = 'rgba(0,0,0,.55)'; c.beginPath(); c.ellipse(px + tile / 2, py + tile / 2, tile * .38, tile * .3, 0, 0, 7); c.fill();
+      c.strokeStyle = '#6b4320'; c.lineWidth = Math.max(1.5, tile * .04);
+      c.beginPath(); c.moveTo(px + m, py + tile * .25); c.lineTo(px + tile * .3, py + tile * .35);
+      c.moveTo(px + tile - m, py + tile * .7); c.lineTo(px + tile * .72, py + tile * .62); c.stroke();
+      return;
+    }
+    c.fillStyle = '#b57a3c'; c.fillRect(px + m, py + m, tile - 2 * m, tile - 2 * m);
+    c.fillStyle = '#9a6430';
+    for (let k = 1; k < 3; k++) c.fillRect(px + m, py + m + (tile - 2 * m) * k / 3 - 1, tile - 2 * m, 2);
+    c.strokeStyle = loaded ? '#5a2a10' : 'rgba(70,35,12,.75)'; c.lineWidth = Math.max(1.5, tile * .035);
+    c.beginPath();
+    c.moveTo(px + tile * .3, py + m); c.lineTo(px + tile * .42, py + tile * .38); c.lineTo(px + tile * .34, py + tile * .55);
+    c.moveTo(px + tile * .42, py + tile * .38); c.lineTo(px + tile * .66, py + tile * .46); c.lineTo(px + tile * .72, py + tile - m);
+    c.stroke();
+  }
+
   function drawPlate(c, x, y, ch, pressed) {
     const px = x * tile, py = y * tile, col = PLATE_HEX[ch.toUpperCase()];
     c.fillStyle = 'rgba(60,30,10,.25)'; c.beginPath(); c.ellipse(px + tile / 2, py + tile * .56, tile * .36, tile * .3, 0, 0, 7); c.fill();
@@ -661,6 +685,7 @@ header h1 small{display:block;font:500 13px/1.3 var(--body);color:var(--muted)}
       const ch = g.rows[y][x];
       if (C.isPlate(ch)) drawPlate(ctx, x, y, ch, occupied(x, y));
       if (C.isDoor(ch)) drawGate(ctx, x, y, ch, C.doorOpen(ch, cur.open) || occupied(x, y));
+      if (C.isCrumble(ch)) drawPlank(ctx, x, y, cur.fallen && cur.fallen[x + ',' + y], occupied(x, y));
     }
     // xem trước đường đi của một bóng
     if (peek >= 0 && peek < shadows.length) {

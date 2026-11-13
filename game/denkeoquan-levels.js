@@ -53,6 +53,16 @@
         '###.##B#',
         '#S.....#',
         '########'] },
+    { name: 'Ván mục', loop: 10, maxShadows: 1, par: { shadows: 1, steps: 15 },
+      tip: 'Ván mục chỉ chịu một người: bước khỏi là sụp. Bóng và bạn không đi chung lối tắt được.',
+      map: [
+        '########',
+        '######E#',
+        '######.#',
+        '#S##..A#',
+        '#.~.a..#',
+        '#......#',
+        '########'] },
   ];
   if (typeof module !== 'undefined' && module.exports) module.exports = LEVELS;
   else root.DKQ_LEVELS = LEVELS;

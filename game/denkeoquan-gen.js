@@ -18,25 +18,30 @@
   }
 
   const DIFF = {
-    vua:  { label: 'Vừa',  shadows: 1, w: [7, 8], h: [6, 7], fill: .6,  steps: [12, 26], slack: 1,
-            variants: [{ doors: [{ plate: 0 }] }, { doors: [{ plate: 0 }], guard: true }, { doors: [{ plate: 0 }, { plate: 1 }] }] },
+    vua:  { label: 'Vừa',  shadows: 1, crumbleP: .7, w: [7, 8], h: [6, 7], fill: .6,  steps: [12, 26], slack: 1,
+            variants: [{ doors: [{ plate: 0 }] }, { doors: [{ plate: 0 }], guard: true }, { doors: [{ plate: 0 }, { plate: 1 }] },
+                       { doors: [{ plate: 0 }, { plate: 1 }], crumble: 1 }, { doors: [{ plate: 0 }], guard: true, crumble: 1 }] },
     // Khó: vòng sát nút, có lính tuần hoặc cửa ngược, và không giải được bằng kiểu "bóng tới bệ rồi đứng im"
-    kho:  { label: 'Khó',  shadows: 1, w: [8, 9], h: [7, 8], fill: .58, steps: [18, 34], slack: 0, hard: true,
+    kho:  { label: 'Khó',  shadows: 1, crumbleP: .7, w: [8, 9], h: [7, 8], fill: .58, steps: [18, 34], slack: 0, hard: true,
             variants: [
               { doors: [{ plate: 0 }, { plate: 0, inv: true }] },
               { doors: [{ plate: 0 }, { plate: 1 }], guard: true },
               { doors: [{ plate: 0 }, { plate: 0, inv: true }], guard: true },
               { doors: [{ plate: 0 }], guard: true },
               { doors: [{ plate: 0 }, { plate: 1 }] },
+              { doors: [{ plate: 0 }, { plate: 0, inv: true }], crumble: 1 },
+              { doors: [{ plate: 0 }], guard: true, crumble: 1 },
             ] },
     // Rất khó: bản đồ lớn, 3 cửa (luôn có cửa ngược), có lính, vòng dài hơn nhưng không dư bước
-    rkho: { label: 'Rất khó', shadows: 1, w: [9, 10], h: [8, 9], fill: .56, steps: [24, 40], slack: 0, hard: true, search: 18,
+    rkho: { label: 'Rất khó', shadows: 1, crumbleP: .7, w: [9, 10], h: [8, 9], fill: .56, steps: [24, 40], slack: 0, hard: true, search: 18,
             variants: [
               { doors: [{ plate: 0 }, { plate: 0, inv: true }, { plate: 1 }], guard: 1 },
               { doors: [{ plate: 0 }, { plate: 1 }, { plate: 1, inv: true }], guard: 1 },
               { doors: [{ plate: 0 }, { plate: 1 }, { plate: 0, inv: true }], guard: 1 },
               { doors: [{ plate: 0 }, { plate: 0, inv: true }], guard: 2 },
               { doors: [{ plate: 0 }, { plate: 1, inv: true }, { plate: 1 }], guard: 2 },
+              { doors: [{ plate: 0 }, { plate: 0, inv: true }, { plate: 1 }], guard: 1, crumble: 1 },
+              { doors: [{ plate: 0 }, { plate: 1 }, { plate: 0, inv: true }], guard: 1, crumble: 2 },
             ] },
   };
   const TIPS = {
@@ -240,11 +245,71 @@
         if (one && one.shadows.length === final.shadows.length && one.steps >= final.steps) return null;
       }
     }
-    level.par.steps = final.steps;
-    level.solution = final;
+    let best = final;
+    // ván mục: kiểu màn có ghi số ván thì bắt buộc; còn lại thử thêm một ván với xác suất P.crumbleP, không được thì thôi
+    const nCr = variant.crumble || (r() < (P.crumbleP || 0) ? 1 : 0);
+    if (nCr) {
+      const withCr = addCrumble(r, level, P, nCr, final);
+      if (withCr) best = withCr;
+      else if (variant.crumble) return null;
+    }
+    level.par.steps = best.steps;
+    level.solution = best;
     level.tip = tipFor(key, level);
     if (!guards.length) delete level.guards;
     return level;
+  }
+
+  // Ván mục ('~'): thử vài chỗ trên đường đi tới bệ/trăng, giữ chỗ làm màn khó hơn hẳn (tổng bước tăng).
+  // Màn đã có lời giải flat (chưa có ván). Trả về lời giải mới (và sửa level.map, level.loop) hoặc null.
+  function addCrumble(r, level, P, nCr, flat) {
+    const grid = level.map.map(row => [...row]);
+    const find = ch => { for (let y = 0; y < grid.length; y++) { const x = grid[y].indexOf(ch); if (x >= 0) return [x, y]; } return null; };
+    const S = find('S'), E = find('E');
+    const plates = ['a', 'b', 'c'].map(find).filter(Boolean);
+    const dS = bfs(grid, S[0], S[1]);
+    const onTo = T => { const dT = bfs(grid, T[0], T[1]), d = dS[T[1]][T[0]]; return ([x, y]) => dS[y][x] >= 0 && dT[y][x] >= 0 && dS[y][x] + dT[y][x] === d; };
+    const routes = [E].concat(plates).map(onTo);
+    const track = new Set((level.guards || []).flat().map(c => c.join()));
+    // chỗ lời giải cũ có cả bóng lẫn người đi qua (hoặc một người đi qua hai lần): đặt ván ở đây mới phá được lời giải cũ
+    const sim0 = C.simulate(C.parse(level), flat.shadows, flat.moves);
+    const who = {};
+    sim0.frames.forEach((f, t) => f.pos.forEach(([x, y], i) => {
+      const k = x + ',' + y, w = who[k] || (who[k] = { actors: new Set(), last: {}, again: false });
+      if (w.last[i] !== undefined && w.last[i] < t - 1) w.again = true;
+      w.actors.add(i); w.last[i] = t;
+    }));
+    const hot = k => who[k] && (who[k].actors.size > 1 || who[k].again);
+    const opts = [], rest = [];
+    grid.forEach((row, y) => row.forEach((c, x) => {
+      if (c !== '.' || adj([x, y], E) || track.has(x + ',' + y)) return;
+      if (hot(x + ',' + y)) opts.push([x, y]);
+      else if (routes.some(f => f([x, y]))) rest.push([x, y]);
+    }));
+    if (!opts.length || opts.length + rest.length < nCr) return null;
+    const SL = P.search || SEARCH_LOOP;
+    let solves = 0;
+    for (let tryN = 0; tryN < 20 && solves < 4; tryN++) {
+      const pickd = [pick(r, opts)], pool = opts.concat(rest).filter(q => q !== pickd[0]);
+      for (let i = 1; i < nCr; i++) pickd.push(pool.splice(Math.floor(r() * pool.length), 1)[0]);
+      const map = grid.map((row, y) => row.map((c, x) => pickd.some(q => q[0] === x && q[1] === y) ? '~' : c).join(''));
+      const lv = Object.assign({}, level, { map, loop: SL });
+      // lọc nhanh: lời giải cũ vẫn chạy được thì ván chẳng làm khó gì
+      if (C.simulate(C.parse(lv), flat.shadows, flat.moves).win >= 0) continue;
+      solves++;
+      const sol = C.solve(lv, STATE_LIMIT);
+      if (!sol || sol.shadows.length !== P.shadows || sol.steps > P.steps[1] + 6) continue;
+      const need = Math.max(sol.moves.length, ...sol.shadows.map(x => x.length));
+      if (need > SL - P.slack) continue;
+      lv.loop = Math.max(level.loop, need + P.slack);
+      const fin = C.solve(lv, STATE_LIMIT);
+      if (!fin || fin.shadows.length !== P.shadows) continue;
+      // ván đã phá được lời giải cũ (bóng và bạn không còn đi chung đường như trước); không bắt buộc phải tốn thêm bước
+      if (C.simulate(C.parse(lv), fin.shadows, fin.moves).win < 0) continue;
+      level.map = map; level.loop = lv.loop;
+      return fin;
+    }
+    return null;
   }
 
   // Cách chơi "đếm nhẩm": bóng đi thẳng tới một bệ rồi đứng im ở đó. Màn khó không được giải bằng cách này.
@@ -267,6 +332,7 @@
     const parts = [TIPS[key]];
     const all = level.map.join('');
     if (/[1-3]/.test(all)) parts.push('Cửa gạch chéo đóng khi bệ cùng màu bị giẫm.');
+    if (/~/.test(all)) parts.push('Ván mục chỉ chịu một người: bước khỏi là sụp, nên bóng và bạn không đi chung được.');
     if (level.guards && level.guards.length) parts.push('Lính đi theo đường vạch đỏ (có thể rẽ), tới cuối thì quay lại. Chạm lính là về đầu vòng; lính không bước vào ô có bóng.');
     return parts.join(' ');
   }
