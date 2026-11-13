@@ -1,0 +1,735 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js?v=20261103ban" data-game="xuyentuong"></script>
+<script src="../scene.js" data-game="xuyentuong"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#10222a">
+<title>Vật thể xuyên tường</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700;800&family=Baloo+2:wght@700;800&display=swap">
+<style>
+/* Kế hoạch thiết kế: hộp đồ chơi thả hình. Đường hầm xanh lam sẫm, bức tường gỗ bạch dương có lỗ khoét,
+   vật là khối nhựa màu bóng loáng. Nguyên tắc: (1) vật và lỗ luôn cùng một cỡ thật khi tường chạm vật, nên người chơi
+   so được bằng mắt; (2) kết quả không chỉ dựa vào màu - có chữ "Lọt!", "Sát nút!", "Kẹt!" và lý do; (3) khoảnh khắc
+   chính là lúc tường lướt qua, vật nằm gọn trong lỗ. */
+:root{
+  --bg:#10222a; --bg2:#0a161c; --panel:#162b34; --line:#2a4652;
+  --wood:#e7c895; --wood2:#b98a52; --acc:#ffb547; --acc2:#ff7a45; --ok:#6fe08f; --bad:#ff6b5b;
+  --text:#f1f6f7; --muted:#97adb6;
+  --body:'Be Vietnam Pro',system-ui,sans-serif; --disp:'Baloo 2','Be Vietnam Pro',system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:var(--bg2)}
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--text);font:500 14px/1.4 var(--body);
+  background:radial-gradient(80% 45% at 50% 30%,rgba(255,181,71,.07),transparent 70%),linear-gradient(var(--bg),var(--bg2)) fixed;
+  display:flex;flex-direction:column;align-items:center;overflow-x:hidden;touch-action:manipulation;user-select:none;-webkit-user-select:none}
+main{width:100%;max-width:520px;padding:10px 16px 26px;display:flex;flex-direction:column;gap:10px;flex:1}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+header{display:flex;align-items:center;gap:6px;min-height:48px}
+header h1{font:800 17px/1.2 var(--body);margin:0;flex:1;text-align:center}
+header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
+.ico{width:44px;height:44px;border-radius:14px;border:0;background:rgba(255,255,255,.07);display:grid;place-items:center;padding:0}
+.ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.ico:active{transform:scale(.94)}
+
+.stage{position:relative;border-radius:20px;overflow:hidden;box-shadow:0 14px 40px rgba(0,0,0,.5),inset 0 0 0 1px rgba(255,255,255,.06);background:#0c1a20}
+#cv{display:block;width:100%;aspect-ratio:1/1.02;touch-action:none;cursor:pointer}
+.hud{position:absolute;left:10px;right:10px;top:8px;display:flex;justify-content:space-between;align-items:center;pointer-events:none;font-weight:800}
+.hud .pill{background:rgba(6,14,18,.62);border-radius:999px;padding:4px 11px;font-size:13px;display:flex;gap:6px;align-items:center}
+.hearts{color:#ff6b7d;letter-spacing:1px;font-size:14px}
+.hearts i{font-style:normal;opacity:.22}
+.hearts i.on{opacity:1}
+.toast{position:absolute;left:0;right:0;top:20%;text-align:center;font:800 34px/1 var(--disp);color:#fff;text-shadow:0 3px 0 rgba(0,0,0,.35),0 0 24px rgba(0,0,0,.4);pointer-events:none;opacity:0;transform:scale(.7);transition:opacity .15s,transform .2s cubic-bezier(.3,1.6,.5,1)}
+.toast.on{opacity:1;transform:scale(1)}
+.toast small{display:block;font:700 14px var(--body);margin-top:6px;color:#e8eef0}
+.toast.good{color:var(--ok)} .toast.gold{color:#ffd166} .toast.bad{color:var(--bad)}
+
+.hint{background:rgba(255,255,255,.05);border-left:3px solid var(--acc);border-radius:10px;padding:8px 12px;font-size:13px;color:#d6e1e5;margin:0}
+.trayH{font-size:13px;color:var(--muted);display:flex;justify-content:space-between}
+.tray{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+.tile{position:relative;aspect-ratio:1;max-height:92px;border-radius:16px;border:2px solid #31515e;background:linear-gradient(160deg,#21404c,#152a32);display:grid;place-items:center;padding:6px}
+.tile svg{width:100%;height:100%;overflow:visible}
+.tile .k{position:absolute;left:7px;top:4px;font:800 11px var(--body);color:var(--muted)}
+.tile.sel{border-color:var(--acc);box-shadow:0 0 0 3px rgba(255,181,71,.25),0 0 18px rgba(255,181,71,.3);transform:translateY(-2px)}
+.tile:disabled{opacity:.45;cursor:default}
+.tile.sel:disabled{opacity:1}
+.lockBtn{width:100%;min-height:56px;border:0;border-radius:18px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#2a1505;font:800 17px var(--body);display:flex;align-items:center;justify-content:center;gap:8px;box-shadow:0 5px 0 #a8461d}
+.lockBtn svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2.4;stroke-linecap:round;stroke-linejoin:round}
+.lockBtn:active{transform:translateY(3px);box-shadow:0 2px 0 #a8461d}
+.lockBtn.locked{background:#27434e;color:#cfe0e6;box-shadow:0 5px 0 #15262d}
+.lockBtn:disabled{opacity:.5}
+
+.layer{position:fixed;inset:0;background:rgba(4,10,13,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.layer.on{display:flex}
+.panel{background:var(--panel);border:1px solid #2c4955;border-radius:20px;padding:20px 18px;width:100%;max-width:400px;max-height:90vh;overflow:auto;text-align:center}
+.panel h2{margin:0 0 6px;font:800 22px var(--body)}
+.panel p{color:#cbd8dd}
+.tick{width:64px;height:64px;margin:6px auto;border-radius:50%;background:rgba(111,224,143,.16);border:3px solid var(--ok);display:grid;place-items:center}
+.tick svg{width:34px;height:34px;fill:none;stroke:var(--ok);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.bigNum{font:800 54px/1 var(--disp);color:var(--acc);margin:6px 0}
+.big{width:100%;min-height:52px;border:0;border-radius:16px;background:var(--acc);color:#2a1505;font-weight:800;font-size:16px;margin-top:8px}
+.ghost{width:100%;min-height:46px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;margin-top:8px}
+.rules{text-align:left;padding-left:20px;margin:8px 0;color:#cbd8dd;font-size:14px}
+.rules li{margin:6px 0}
+@media (orientation:landscape) and (max-height:560px){
+  main{max-width:920px;display:grid;grid-template-columns:minmax(0,auto) minmax(0,1fr);column-gap:18px;align-items:start}
+  header{grid-column:1/-1}
+  .stage{grid-row:2/7;width:min(52vw,calc(100dvh - 80px))}
+  .hint,.trayH,.tray,.lockBtn{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+</head>
+<body>
+<main>
+  <header>
+    <button class="ico" id="restartBtn" aria-label="Chơi lại từ đầu" title="Chơi lại từ đầu" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+    <h1 id="title">Vật thể xuyên tường<small id="sub"></small></h1>
+    <button class="ico" id="helpBtn" aria-label="Cách chơi" title="Cách chơi" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg></button>
+    <button class="ico" id="pauseBtn" aria-label="Tạm dừng" title="Tạm dừng" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button>
+  </header>
+  <div class="stage">
+    <canvas id="cv" aria-label="Đường hầm, bức tường đang tiến lại"></canvas>
+    <div class="hud"><span class="pill hearts" id="hearts"></span><span class="pill" id="count"></span></div>
+    <div class="toast" id="toast"></div>
+  </div>
+  <p class="hint" id="hint"></p>
+  <div class="trayH"><span>Chọn vật vừa lỗ</span><span id="trayInfo"></span></div>
+  <div class="tray" id="tray"></div>
+  <button class="lockBtn" id="lockBtn" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="5" y="11" width="14" height="9" rx="2"/><path d="M8 11V8a4 4 0 0 1 8 0v3"/></svg><span id="lockTxt">Khóa góc</span></button>
+</main>
+
+<div class="layer" id="help" role="dialog" aria-modal="true" aria-labelledby="helpH">
+  <div class="panel">
+    <h2 id="helpH">Cách chơi</h2>
+    <ul class="rules">
+      <li>Bức tường gỗ từ xa tiến lại, trên tường có một lỗ khoét.</li>
+      <li><b>Chọn vật</b> trong khay có đúng hình dạng của lỗ. Có vật giống mà to hơn, hoặc là hình soi gương: chúng không lọt.</li>
+      <li>Vật quay tròn liên tục. Bấm <b>Khóa góc</b> (hoặc chạm vào đường hầm, phím cách) đúng lúc vật nằm cùng góc với lỗ.</li>
+      <li>Lỗ rộng hơn vật một chút nên lệch vài độ vẫn lọt. Lệch nhiều hơn thì vật bị tường hất văng.</li>
+      <li>Càng đi xa càng khó: tường lao tới nhanh hơn, vật quay nhanh hơn, khay có thêm vật dễ nhầm. Từ bức tường thứ 10 chỉ được khóa một lần, về sau vật còn trôi qua lại.</li>
+      <li>Có 3 trái tim. Điểm là số bức tường vượt qua được.</li>
+    </ul>
+    <button class="big" id="helpClose" data-no-scene>Chơi</button>
+  </div>
+</div>
+<div class="layer" id="over" role="dialog" aria-modal="true" aria-labelledby="overH">
+  <div class="panel">
+    <h2 id="overH">Hết lượt</h2>
+    <div id="overTick" class="tick" aria-hidden="true" hidden><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <div class="bigNum" id="overNum">0</div>
+    <p id="overWhy"></p>
+    <button class="big" id="againBtn" data-no-scene>Chơi lại</button>
+  </div>
+</div>
+<div class="layer" id="pause" role="dialog" aria-modal="true" aria-labelledby="pauseH">
+  <div class="panel">
+    <h2 id="pauseH">Tạm dừng</h2>
+    <button class="big" id="resumeBtn" data-no-scene>Chơi tiếp</button>
+    <button class="ghost" id="pauseRestart" data-no-scene>Chơi lại từ đầu</button>
+  </div>
+</div>
+
+<footer class="tbFooter">Version: D20261113190000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../scores.js?v=20261103ban"></script>
+<script>
+(function () {
+  'use strict';
+  const $ = id => document.getElementById(id);
+  const SAVE = 'xuyentuong_v2';
+  const DEG = Math.PI / 180;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const pick = a => a[(Math.random() * a.length) | 0];
+  const shuffle = a => { for (let i = a.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [a[i], a[j]] = [a[j], a[i]]; } return a; };
+
+  // ================= HÌNH =================
+  function poly(n, r, rot) { const p = []; for (let i = 0; i < n; i++) { const a = (rot || -90) * DEG + i * 2 * Math.PI / n; p.push([r * Math.cos(a), r * Math.sin(a)]); } return p; }
+  function star(n, ro, ri) { const p = []; for (let i = 0; i < 2 * n; i++) { const a = -Math.PI / 2 + i * Math.PI / n, r = i % 2 ? ri : ro; p.push([r * Math.cos(a), r * Math.sin(a)]); } return p; }
+  function heart() { const p = [[0, -3]]; for (let i = 4; i <= 40; i++) { const t = i / 44 * 2 * Math.PI, s = Math.sin(t); p.push([16 * s * s * s, -(13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t))]); } return p; }
+  function moon() {
+    const p = [], d = .45, r2 = .85;
+    const ix = (d * d + 1 - r2 * r2) / (2 * d), iy = Math.sqrt(1 - ix * ix);
+    const a0 = Math.atan2(iy, ix), b0 = Math.atan2(iy, ix - d);
+    for (let i = 0; i <= 24; i++) { const a = a0 + (2 * Math.PI - 2 * a0) * i / 24; p.push([Math.cos(a), Math.sin(a)]); }
+    for (let i = 1; i < 18; i++) { const b = (2 * Math.PI - b0) - (2 * Math.PI - 2 * b0) * i / 18; p.push([d + r2 * Math.cos(b), r2 * Math.sin(b)]); }
+    return p;
+  }
+  // k: bậc đối xứng quay (0 = tròn), chiral: soi gương ra hình khác
+  const RAW = {
+    tron:   { n: 'Tròn', k: 0, fam: 'cong', col: '#4fc3f7', p: poly(40, 1) },
+    vuong:  { n: 'Vuông', k: 4, fam: 'da', col: '#ffca28', p: poly(4, 1, -45) },
+    tamgiac:{ n: 'Tam giác', k: 3, fam: 'da', col: '#66bb6a', p: poly(3, 1) },
+    ngugiac:{ n: 'Ngũ giác', k: 5, fam: 'da', col: '#ab47bc', p: poly(5, 1) },
+    lucgiac:{ n: 'Lục giác', k: 6, fam: 'da', col: '#26a69a', p: poly(6, 1) },
+    chunhat:{ n: 'Chữ nhật', k: 2, fam: 'da', col: '#ffa726', p: [[-1, -.5], [1, -.5], [1, .5], [-1, .5]] },
+    thoi:   { n: 'Thoi', k: 2, fam: 'da', col: '#ec407a', p: [[0, -1], [.6, 0], [0, 1], [-.6, 0]] },
+    sao5:   { n: 'Sao năm cánh', k: 5, fam: 'sao', col: '#ffd54f', p: star(5, 1, .45) },
+    sao4:   { n: 'Sao bốn cánh', k: 4, fam: 'sao', col: '#4dd0e1', p: star(4, 1, .4) },
+    sao6:   { n: 'Sao sáu cánh', k: 6, fam: 'sao', col: '#f06292', p: star(6, 1, .56) },
+    chuthap:{ n: 'Chữ thập', k: 4, fam: 'sao', col: '#ef5350', p: [[-.3, -1], [.3, -1], [.3, -.3], [1, -.3], [1, .3], [.3, .3], [.3, 1], [-.3, 1], [-.3, .3], [-1, .3], [-1, -.3], [-.3, -.3]] },
+    chuL:   { n: 'Chữ L', k: 1, chiral: 1, fam: 'khoi', col: '#7e57c2', p: [[-.5, -1], [.05, -1], [.05, .45], [.65, .45], [.65, 1], [-.5, 1]] },
+    chuT:   { n: 'Chữ T', k: 1, fam: 'khoi', col: '#29b6f6', p: [[-.9, -.8], [.9, -.8], [.9, -.25], [.28, -.25], [.28, 1], [-.28, 1], [-.28, -.25], [-.9, -.25]] },
+    chuS:   { n: 'Khối S', k: 2, chiral: 1, fam: 'khoi', col: '#9ccc65', p: [[0, -1], [1.4, -1], [1.4, -.3], [.7, -.3], [.7, .4], [-.7, .4], [-.7, -.3], [0, -.3]] },
+    tim:    { n: 'Trái tim', k: 1, fam: 'cong', col: '#ff5c8a', p: heart() },
+    trang:  { n: 'Trăng khuyết', k: 1, fam: 'cong', col: '#ffe082', p: moon() },
+    muiten: { n: 'Mũi tên', k: 1, fam: 'dau', col: '#ff8a65', p: [[-1, -.25], [.15, -.25], [.15, -.65], [1, 0], [.15, .65], [.15, .25], [-1, .25]] },
+    tiachop:{ n: 'Tia chớp', k: 1, chiral: 1, fam: 'dau', col: '#ffee58', p: [[-.15, -1], [.6, -1], [.18, -.22], [.62, -.22], [-.4, 1], [-.08, .12], [-.52, .12]] },
+    nha:    { n: 'Ngôi nhà', k: 1, fam: 'dau', col: '#a1887f', p: [[-.8, 1], [-.8, -.1], [0, -.95], [.8, -.1], [.8, 1]] },
+  };
+  // chuẩn hoá: đưa trọng tâm về gốc, bán kính lớn nhất = 1
+  const SH = {};
+  for (const id in RAW) {
+    const s = RAW[id]; let p = s.p, A = 0, cx = 0, cy = 0;
+    for (let i = 0; i < p.length; i++) { const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], c = x0 * y1 - x1 * y0; A += c; cx += (x0 + x1) * c; cy += (y0 + y1) * c; }
+    A /= 2; cx /= 6 * A; cy /= 6 * A;
+    p = p.map(([x, y]) => [x - cx, y - cy]);
+    if (A < 0) p.reverse();
+    const m = Math.max(...p.map(([x, y]) => Math.hypot(x, y)));
+    SH[id] = Object.assign({}, s, { id, p: p.map(([x, y]) => [x / m, y / m]) });
+  }
+  const BIG = 1.32, HOLE_EXTRA = .08;
+  // một "vật" = hình + soi gương + cỡ
+  function ptsOf(o) { const s = SH[o.sid]; let p = s.p.map(([x, y]) => [(o.mir ? -x : x) * o.sc, y * o.sc]); if (o.mir) p.reverse(); return p; }
+  function samples(p) {
+    const out = [];
+    for (let i = 0; i < p.length; i++) {
+      const [x0, y0] = p[i], [x1, y1] = p[(i + 1) % p.length], n = Math.max(1, Math.ceil(Math.hypot(x1 - x0, y1 - y0) / .035));
+      for (let k = 0; k < n; k++) out.push([x0 + (x1 - x0) * k / n, y0 + (y1 - y0) * k / n]);
+    }
+    return out;
+  }
+  function xform(p, a, s, dx) { const c = Math.cos(a), si = Math.sin(a); return p.map(([x, y]) => [dx + s * (x * c - y * si), s * (x * si + y * c)]); }
+  function pip(x, y, p) {
+    let ins = false;
+    for (let i = 0, j = p.length - 1; i < p.length; j = i++) {
+      const [xi, yi] = p[i], [xj, yj] = p[j];
+      if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) ins = !ins;
+    }
+    return ins;
+  }
+  // vật (đã lấy mẫu biên) ở góc a, lệch ngang dx có nằm gọn trong lỗ không
+  function fits(smp, a, dx, hole) {
+    const c = Math.cos(a), s = Math.sin(a);
+    for (let i = 0; i < smp.length; i++) { const [x, y] = smp[i]; if (!pip(dx + x * c - y * s, x * s + y * c, hole)) return false; }
+    return true;
+  }
+  // nới đa giác (ngược chiều kim đồng hồ) ra ngoài một khoảng m: góc lồi bo tròn, góc lõm giao hai cạnh
+  function offsetPoly(p, m) {
+    const n = p.length, out = [];
+    const nrm = (a, b) => { const dx = b[0] - a[0], dy = b[1] - a[1], l = Math.hypot(dx, dy) || 1; return [dy / l, -dx / l]; };
+    for (let i = 0; i < n; i++) {
+      const a = p[(i - 1 + n) % n], b = p[i], c = p[(i + 1) % n];
+      const n1 = nrm(a, b), n2 = nrm(b, c);
+      const cr = (b[0] - a[0]) * (c[1] - b[1]) - (b[1] - a[1]) * (c[0] - b[0]);
+      if (cr > 1e-9) {
+        const a1 = Math.atan2(n1[1], n1[0]); let da = Math.atan2(n2[1], n2[0]) - a1;
+        while (da <= 0) da += 2 * Math.PI; while (da > Math.PI) da -= 2 * Math.PI;
+        const st = Math.max(1, Math.ceil(da / (18 * DEG)));
+        for (let k = 0; k <= st; k++) { const an = a1 + da * k / st; out.push([b[0] + m * Math.cos(an), b[1] + m * Math.sin(an)]); }
+      } else {
+        const d = 1 + n1[0] * n2[0] + n1[1] * n2[1];
+        if (d < .05) out.push([b[0] + m * n1[0], b[1] + m * n1[1]]);
+        else out.push([b[0] + m * (n1[0] + n2[0]) / d, b[1] + m * (n1[1] + n2[1]) / d]);
+      }
+    }
+    return out;
+  }
+  const sameObj = (a, b) => a.sid === b.sid && !!a.mir === !!b.mir && a.sc === b.sc;
+
+  // ================= ĐỘ KHÓ TĂNG DẦN =================
+  const EASY = ['vuong', 'tamgiac', 'sao5', 'chuthap', 'tim', 'nha', 'chunhat', 'muiten', 'lucgiac', 'chuT', 'thoi'];
+  const ALL = Object.keys(SH).filter(k => k !== 'tron');
+  // các mốc: tới bức tường thứ n thì thêm thử thách mới
+  const STEPS = [
+    [4, 'Lỗ có hình gần giống nhau'],
+    [8, 'Khay có 4 vật'],
+    [10, 'Từ giờ chỉ được khóa một lần'],
+    [14, 'Có vật cùng hình nhưng to hơn'],
+    [18, 'Có hình soi gương'],
+    [22, 'Vật bắt đầu trôi qua lại'],
+  ];
+  function cfgAt(n) {
+    const p = Math.min(1, n / 40);
+    const kinds = n < 4 ? ['xa'] : n < 14 ? ['ho', 'xa'] : n < 18 ? ['ho', 'to', 'xa'] : ['guong', 'to', 'ho'];
+    return {
+      kinds, choices: n < 8 ? 3 : 4, T: 6.4 - 3.4 * p, tol: 9 - 3.5 * p, win: .24 - .13 * p,
+      relock: n < 10, drift: n >= 22 && Math.random() < Math.min(.7, .3 + (n - 22) * .03),
+      pool: n < 3 ? ['vuong', 'tamgiac', 'chunhat'] : n < 10 ? EASY : ALL,
+    };
+  }
+
+  // dựng một bức tường: lỗ, khay vật, tốc độ quay, sai số
+  function buildWall(sid, holeDeg, o) {
+    const correct = { sid, mir: false, sc: 1 };
+    const S = SH[sid], k = S.k;
+    const alpha = k === 0 ? 0 : holeDeg * DEG;
+    const csmp = samples(ptsOf(correct));
+    const posTol = o.drift ? .05 : 0;
+    const tol = (o.tol || 8) * DEG;
+    // lỗ = viền vật nới đều ra một khoảng m: vừa đủ để lệch ±tol vẫn lọt, nhưng không quá 0,16 (bán kính vật = 1)
+    const base = xform(S.p, alpha, 1, 0);
+    let m = .04, hole;
+    for (; m <= .16; m += .005) {
+      hole = offsetPoly(base, m);
+      let ok = true;
+      for (const da of [-tol, -tol / 2, 0, tol / 2, tol]) for (const dx of posTol ? [-posTol, posTol] : [0]) if (ok && !fits(csmp, alpha + da, dx, hole)) ok = false;
+      if (ok) break;
+    }
+    m = Math.min(m, .16); hole = offsetPoly(base, m);
+    const hs = m;
+    // khoảng lệch góc thực tế còn lọt
+    let win = 0;
+    if (k === 0) win = 180; else while (win < 25 && fits(csmp, alpha + (win + .25) * DEG, 0, hole) && fits(csmp, alpha - (win + .25) * DEG, 0, hole)) win += .25;
+    // nới thêm 8% bán kính vật cho dễ lọt (tốc độ quay vẫn tính theo khoảng lệch trước khi nới)
+    hole = offsetPoly(base, m + HOLE_EXTRA);
+    // vật gây nhiễu
+    const cands = [];
+    for (const kind of shuffle((o.kinds || []).slice())) {
+      if (kind === 'to') cands.push({ sid, mir: false, sc: BIG });
+      if (kind === 'guong' && S.chiral) { cands.push({ sid, mir: true, sc: 1 }); if (Math.random() < .5) cands.push({ sid, mir: true, sc: BIG }); }
+      if (kind === 'ho') shuffle(Object.keys(SH).filter(x => x !== sid && SH[x].fam === S.fam)).slice(0, 2).forEach(x => cands.push({ sid: x, mir: false, sc: 1 }));
+      if (kind === 'xa') shuffle(Object.keys(SH).filter(x => x !== sid && SH[x].fam !== S.fam)).slice(0, 3).forEach(x => cands.push({ sid: x, mir: false, sc: 1 }));
+    }
+    shuffle(Object.keys(SH).filter(x => x !== sid)).forEach(x => cands.push({ sid: x, mir: false, sc: 1 }));
+    const decoys = [];
+    for (const c of cands) {
+      if (decoys.length >= (o.choices || 3) - 1) break;
+      if (sameObj(c, correct) || decoys.some(d => sameObj(d, c))) continue;
+      const smp = samples(ptsOf(c));
+      let bad = false;
+      for (let a = 0; a < 360 && !bad; a += 1.5) if (fits(smp, a * DEG, 0, hole)) bad = true;
+      if (!bad) decoys.push(c);
+    }
+    const tray = shuffle([correct].concat(decoys));
+    // tốc độ quay: cửa sổ khớp kéo dài ít nhất o.win giây, và khớp ít nhất 2 lần trước khi tường tới
+    let T = o.T || 6, omega = 0, tau = 1, dir = Math.random() < .5 ? -1 : 1, theta0 = alpha;
+    if (o.spin === false) omega = 0;
+    else if (k === 0) omega = 70 * DEG;
+    else {
+      const per = 2 * Math.PI / k;
+      omega = Math.min(2 * win * DEG / (o.win || .2), per / Math.max(1.1, (T - 1) / 2.2));
+      tau = per / omega;
+      if (T < tau + 1.4) T = Math.min(tau + 1.4, T * 1.5);
+      if (tau * .2 > T - 1.1) { tau = (T - 1.1) / .2; omega = per / tau; }
+      // một lần khớp luôn rơi vào ~0,5 giây trước khi tường tới, để chọn vật muộn vẫn còn kịp canh
+      const f = ((T - .5) % tau) / tau;
+      theta0 = alpha - dir * f * per;
+      tau = { per: tau, first: f * tau };
+    }
+    const drift = !!o.drift && k !== 0 && omega > 0;
+    return { sid, alpha, hole, hs, win, tray, correct, T, omega: omega * dir, theta0, tau, drift, relock: !!o.relock };
+  }
+
+  // ================= LƯU =================
+  let save = (function () { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && typeof s.best === 'number') return s; } catch (e) {} return { best: 0, seenHelp: false }; })();
+  function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
+  const score = () => save.best || 0;
+  function submitScore() { try { if (window.Scores && score() > 0) Scores.submit('xuyentuong', score()); } catch (e) {} }
+
+  // ================= ÂM THANH =================
+  let ac = null;
+  function tone(f, d, vol, type, delay, f2) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t); if (f2) o.frequency.exponentialRampToValueAtTime(f2, t + d);
+      g.gain.setValueAtTime(vol || .06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  const sfx = {
+    pick() { tone(520, .07, .05, 'triangle'); },
+    lock() { tone(300, .06, .07, 'square'); tone(900, .05, .03, 'triangle', .03); },
+    unlock() { tone(600, .06, .04, 'triangle', 0, 300); },
+    pass() { tone(240, .35, .06, 'sawtooth', 0, 900); tone(1047, .18, .05, 'sine', .18); },
+    perfect() { [784, 988, 1319].forEach((f, i) => tone(f, .2, .05, 'sine', .15 + i * .07)); },
+    hit() { tone(120, .35, .12, 'square', 0, 50); tone(80, .4, .1, 'sawtooth', .02, 40); },
+  };
+
+  // ================= TRẠNG THÁI =================
+  let W = null;               // bức tường hiện tại
+  let st = 'idle';            // idle | go | pass | hit
+  let t = 0, z = 0, phase = 0, stT = 0;
+  let held = -1, locked = null, usedLock = false;
+  let lives = 3, passed = 0, paused = true;
+  let parts = [], shake = 0, flash = null, lastResult = '';
+  const Z0 = 7.5, OBJ_ALPHA = .55;
+
+  function newWall() {
+    const o = cfgAt(passed);
+    // hình nào không đủ vật nhiễu (mọi vật khác đều lọt lỗ) thì bốc hình khác
+    for (let k = 0; k < 6; k++) { W = buildWall(pick(o.pool), ((Math.random() * 24) | 0) * 15, o); if (W.tray.length >= o.choices) break; }
+    const stp = STEPS.find(x => x[0] === passed);
+    if (stp) setTimeout(() => toast('Khó hơn!', 'gold', stp[1]), 250);
+    setHint();
+    st = 'go'; t = 0; phase = 0; z = Z0; held = -1; locked = null; usedLock = false;
+    if (W.tray.length === 1) held = 0;
+    renderTray(); updLock(); updHud();
+  }
+  // tư thế của vật theo "pha quay" (pha chỉ chạy khi chưa khóa)
+  function pose(ph) {
+    const th = W.theta0 + W.omega * ph;
+    let dx = 0;
+    if (W.drift) dx = .45 * Math.sin(Math.PI * (ph - W.tau.first) / W.tau.per);
+    return { th, dx };
+  }
+  function curPose() { return locked || pose(phase); }
+
+  function angErr(th) {
+    const k = SH[W.sid].k; if (k === 0) return 0;
+    const per = 2 * Math.PI / k; let d = ((th - W.alpha) % per + per) % per; if (d > per / 2) d = per - d; return d / DEG;
+  }
+
+  function resolve() {
+    const p = curPose();
+    if (held < 0) return fail('Chưa chọn vật nào');
+    const o = W.tray[held];
+    const ok = fits(samples(ptsOf(o)), p.th, p.dx, W.hole);
+    if (ok) {
+      const e = angErr(p.th), perfect = e <= Math.max(1.5, W.win / 3) && Math.abs(p.dx) < .03;
+      st = 'pass'; stT = 0; passed++; sfx.pass(); if (perfect) sfx.perfect();
+      toast(perfect ? 'Sát nút!' : 'Lọt!', perfect ? 'gold' : 'good', '');
+      sparkle(perfect);
+      updHud();
+    } else {
+      let why = 'Lệch góc ' + Math.round(angErr(p.th)) + '°';
+      if (!sameObj(o, W.correct)) why = o.sid !== W.sid ? 'Sai hình: ' + SH[o.sid].n.toLowerCase() : o.sc > 1 ? 'Vật to hơn lỗ' : 'Hình bị soi gương';
+      else if (Math.abs(p.dx) > .05 && angErr(p.th) < W.win) why = 'Lệch sang ' + (p.dx > 0 ? 'phải' : 'trái');
+      fail(why);
+    }
+  }
+  function fail(why) {
+    st = 'hit'; stT = 0; shake = .4; sfx.hit(); lastResult = why;
+    if (navigator.vibrate) try { navigator.vibrate(120); } catch (e) {}
+    toast('Kẹt!', 'bad', why);
+    shatter();
+    lives--; updHud();
+  }
+  function afterPass() { newWall(); }
+  function afterHit() { if (lives <= 0) return endRun(); newWall(); }
+  function endRun() {
+    st = 'idle';
+    const prev = save.best || 0;
+    if (passed > prev) save.best = passed;
+    store(); submitScore();
+    showOver(prev);
+  }
+
+  // ================= VẼ =================
+  const cv = $('cv'); let cx = cv.getContext('2d');
+  let objC = null, objX = null;
+  let CW = 0, CH = 0, DPR = 1, U = 1, VX = 0, VY = 0, CY = 0, camY = 0, bgC = null;
+  const FLOOR = 1.55, CEIL = -1.95, SIDE = 2.15, THICK = .35;
+  function resize() {
+    const r = cv.getBoundingClientRect();
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    CW = Math.max(200, r.width); CH = Math.max(200, r.height);
+    cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+    U = CW / 4.15; VX = CW / 2; VY = CH * .4; CY = CH * .53; camY = (VY - CY) / U;
+    buildBg();
+    objC = document.createElement('canvas'); objC.width = cv.width; objC.height = cv.height; objX = objC.getContext('2d');
+  }
+  const P = (x, y, zz) => [VX + x * U / zz, VY + (y - camY) * U / zz];
+  function buildBg() {
+    bgC = document.createElement('canvas'); bgC.width = cv.width; bgC.height = cv.height;
+    const g = bgC.getContext('2d'); g.setTransform(DPR, 0, 0, DPR, 0, 0);
+    const zf = 16, zn = .3;
+    const quad = (pts, fill) => { g.beginPath(); pts.forEach((p, i) => i ? g.lineTo(p[0], p[1]) : g.moveTo(p[0], p[1])); g.closePath(); g.fillStyle = fill; g.fill(); };
+    // trần, tường bên, sàn
+    let gr = g.createLinearGradient(0, 0, 0, VY); gr.addColorStop(0, '#0b1d24'); gr.addColorStop(1, '#183843');
+    quad([P(-SIDE, CEIL, zn), P(SIDE, CEIL, zn), P(SIDE, CEIL, zf), P(-SIDE, CEIL, zf)], gr);
+    gr = g.createLinearGradient(0, 0, CW / 2, 0); gr.addColorStop(0, '#13303a'); gr.addColorStop(1, '#1d4652');
+    quad([P(-SIDE, CEIL, zn), P(-SIDE, CEIL, zf), P(-SIDE, FLOOR, zf), P(-SIDE, FLOOR, zn)], gr);
+    gr = g.createLinearGradient(CW, 0, CW / 2, 0); gr.addColorStop(0, '#13303a'); gr.addColorStop(1, '#1d4652');
+    quad([P(SIDE, CEIL, zn), P(SIDE, CEIL, zf), P(SIDE, FLOOR, zf), P(SIDE, FLOOR, zn)], gr);
+    gr = g.createLinearGradient(0, VY, 0, CH); gr.addColorStop(0, '#2c5560'); gr.addColorStop(1, '#173540');
+    quad([P(-SIDE, FLOOR, zn), P(SIDE, FLOOR, zn), P(SIDE, FLOOR, zf), P(-SIDE, FLOOR, zf)], gr);
+    // cuối hầm: ánh sáng
+    const e = [P(-SIDE, CEIL, zf), P(SIDE, FLOOR, zf)];
+    gr = g.createRadialGradient(VX, (e[0][1] + e[1][1]) / 2, 2, VX, (e[0][1] + e[1][1]) / 2, (e[1][0] - e[0][0]));
+    gr.addColorStop(0, '#fff3d6'); gr.addColorStop(1, '#6fb3c0');
+    g.fillStyle = gr; g.fillRect(e[0][0], e[0][1], e[1][0] - e[0][0], e[1][1] - e[0][1]);
+    // vạch sàn và đèn trần
+    g.lineWidth = 1;
+    for (let zz = 1; zz < zf; zz *= 1.28) {
+      const a = Math.min(.35, .5 / zz);
+      g.strokeStyle = `rgba(160,220,230,${a})`;
+      const l = P(-SIDE, FLOOR, zz), r = P(SIDE, FLOOR, zz); g.beginPath(); g.moveTo(l[0], l[1]); g.lineTo(r[0], r[1]); g.stroke();
+      const c0 = P(-.5, CEIL, zz), c1 = P(.5, CEIL, zz);
+      g.fillStyle = `rgba(255,236,190,${Math.min(.8, 1.4 / zz)})`; g.fillRect(c0[0], c0[1], c1[0] - c0[0], Math.max(1, 5 / zz));
+    }
+    g.strokeStyle = 'rgba(160,220,230,.18)';
+    for (const x of [-1.4, -.7, 0, .7, 1.4]) { const a = P(x, FLOOR, zn), b = P(x, FLOOR, zf); g.beginPath(); g.moveTo(a[0], a[1]); g.lineTo(b[0], b[1]); g.stroke(); }
+    // bóng tối gần camera
+    gr = g.createRadialGradient(VX, VY, CW * .2, VX, VY, CW * .85); gr.addColorStop(0, 'rgba(0,0,0,0)'); gr.addColorStop(1, 'rgba(0,0,0,.45)');
+    g.fillStyle = gr; g.fillRect(0, 0, CW, CH);
+  }
+  function pathPoly(p, zz, dx, dy) {
+    for (let i = 0; i < p.length; i++) { const q = P(p[i][0] + (dx || 0), p[i][1] + (dy || 0), zz); i ? cx.lineTo(q[0], q[1]) : cx.moveTo(q[0], q[1]); }
+    cx.closePath();
+  }
+  function drawWall(zz, alpha) {
+    if (zz < .12) return;
+    cx.save(); cx.globalAlpha = alpha;
+    const hole = W.hole;
+    // bóng tường trên sàn
+    const s0 = P(-SIDE, FLOOR, zz), s1 = P(SIDE, FLOOR, zz + THICK);
+    cx.fillStyle = 'rgba(0,0,0,.25)'; cx.fillRect(s0[0], s0[1] - 2, s1[0] - s0[0], 4 + 30 / zz);
+    // thành lỗ (mặt trong) + nhìn xuyên qua lỗ ra phía sau
+    // (khi tường đã lướt qua vật thì lỗ để trống, nhìn thấy vật bên trong)
+    if (zz >= 1) {
+      cx.save(); cx.beginPath(); pathPoly(hole, zz); cx.clip();
+      cx.fillStyle = '#8a5f33'; cx.fillRect(0, 0, CW, CH);
+      cx.beginPath(); pathPoly(hole, zz + THICK); cx.clip();
+      cx.drawImage(bgC, 0, 0, CW, CH);
+      cx.restore();
+    }
+    // mặt trước tường gỗ
+    const a = P(-SIDE, CEIL, zz), b = P(SIDE, FLOOR, zz);
+    cx.beginPath(); cx.rect(a[0], a[1], b[0] - a[0], b[1] - a[1]); pathPoly(hole, zz);
+    const gr = cx.createLinearGradient(a[0], a[1], b[0], b[1]); gr.addColorStop(0, '#f1d6a6'); gr.addColorStop(.6, '#ddb57d'); gr.addColorStop(1, '#c79a63');
+    cx.fillStyle = gr; cx.fill('evenodd');
+    // vân gỗ
+    cx.save(); cx.clip('evenodd');
+    cx.strokeStyle = 'rgba(140,90,40,.22)'; cx.lineWidth = Math.max(.6, 2.2 / zz);
+    for (let i = 0; i < 9; i++) {
+      const y = CEIL + (FLOOR - CEIL) * (i + .5) / 9;
+      cx.beginPath();
+      for (let x = -SIDE; x <= SIDE + .01; x += .3) { const q = P(x, y + .05 * Math.sin(x * 2.3 + i * 1.7), zz); x === -SIDE ? cx.moveTo(q[0], q[1]) : cx.lineTo(q[0], q[1]); }
+      cx.stroke();
+    }
+    cx.restore();
+    cx.strokeStyle = 'rgba(90,55,20,.55)'; cx.lineWidth = Math.max(1, 3 / zz); cx.strokeRect(a[0], a[1], b[0] - a[0], b[1] - a[1]);
+    // viền lỗ
+    cx.beginPath(); pathPoly(hole, zz); cx.strokeStyle = '#fff1d0'; cx.lineWidth = Math.max(1, 3 / zz); cx.stroke();
+    // sương xa
+    const fog = Math.min(.5, Math.max(0, (zz - 2.5) / 9));
+    if (fog > 0) { cx.fillStyle = `rgba(28,62,72,${fog})`; cx.fillRect(a[0] - 1, a[1] - 1, b[0] - a[0] + 2, b[1] - a[1] + 2); }
+    cx.restore();
+  }
+  function shade(hex, k) {
+    const n = parseInt(hex.slice(1), 16); let r = n >> 16, g = (n >> 8) & 255, b = n & 255;
+    if (k < 0) { r *= 1 + k; g *= 1 + k; b *= 1 + k; } else { r += (255 - r) * k; g += (255 - g) * k; b += (255 - b) * k; }
+    return `rgb(${r | 0},${g | 0},${b | 0})`;
+  }
+  function drawObj(o, ps, zz, alpha) {
+    const p = xform(ptsOf(o), ps.th, 1, ps.dx), col = SH[o.sid].col;
+    cx.save(); cx.globalAlpha = alpha == null ? 1 : alpha;
+    // khối nổi: chồng nhiều lớp từ sau ra trước
+    for (let i = 6; i >= 1; i--) { cx.beginPath(); pathPoly(p, zz + .2 * i / 6); cx.fillStyle = shade(col, -.45 + i * .02); cx.fill(); }
+    cx.beginPath(); pathPoly(p, zz);
+    const c = P(ps.dx, 0, zz), gr = cx.createRadialGradient(c[0] - U * .3 / zz, c[1] - U * .4 / zz, 2, c[0], c[1], U * 1.2 / zz);
+    gr.addColorStop(0, shade(col, .45)); gr.addColorStop(1, col);
+    cx.fillStyle = gr; cx.fill();
+    cx.lineWidth = 2; cx.strokeStyle = shade(col, -.35); cx.stroke();
+    cx.restore();
+  }
+  function drawGhost(ps) {
+    cx.save(); cx.setLineDash([6, 6]); cx.strokeStyle = 'rgba(255,255,255,.55)'; cx.lineWidth = 2;
+    const c = P(ps.dx, 0, 1); cx.beginPath(); cx.arc(c[0], c[1], U * .8, 0, Math.PI * 2); cx.stroke();
+    cx.setLineDash([]); cx.fillStyle = 'rgba(255,255,255,.75)'; cx.font = `800 ${Math.round(U * .7)}px 'Baloo 2',sans-serif`; cx.textAlign = 'center'; cx.textBaseline = 'middle'; cx.fillText('?', c[0], c[1] + 2);
+    cx.restore();
+  }
+  function drawLockMark(ps) {
+    const c = P(ps.dx, 0, 1), r = U * 1.12;
+    cx.save(); cx.strokeStyle = 'rgba(255,181,71,.9)'; cx.lineWidth = 3;
+    for (let i = 0; i < 4; i++) { const a = i * Math.PI / 2 + Math.PI / 4; cx.beginPath(); cx.arc(c[0], c[1], r, a - .3, a + .3); cx.stroke(); }
+    cx.restore();
+  }
+  function sparkle(gold) {
+    for (let i = 0; i < 26; i++) {
+      const a = Math.random() * Math.PI * 2, v = rnd(1.5, 3.5);
+      parts.push({ x: Math.cos(a) * .9, y: Math.sin(a) * .9, vx: Math.cos(a) * v, vy: Math.sin(a) * v, life: rnd(.4, .8), t: 0, c: gold ? '#ffd166' : '#ffffff', r: rnd(2, 4), tri: false });
+    }
+  }
+  function shatter() {
+    if (held < 0) return;
+    const o = W.tray[held], ps = curPose(), p = xform(ptsOf(o), ps.th, 1, ps.dx);
+    for (let i = 0; i < p.length; i++) {
+      const a = p[i], b = p[(i + 1) % p.length], mx = (a[0] + b[0] + ps.dx) / 3, my = (a[1] + b[1]) / 3;
+      const v = rnd(1.5, 3.2), ang = Math.atan2(my, mx - ps.dx * 2 / 3) + rnd(-.4, .4);
+      parts.push({ tri: [[ps.dx - mx, -my], [a[0] - mx, a[1] - my], [b[0] - mx, b[1] - my]], x: mx, y: my, vx: Math.cos(ang) * v, vy: Math.sin(ang) * v - 1.5, rot: 0, vr: rnd(-6, 6), life: 1.1, t: 0, c: SH[o.sid].col });
+    }
+  }
+  function drawParts(dt) {
+    parts = parts.filter(q => (q.t += dt) < q.life);
+    for (const q of parts) {
+      q.x += q.vx * dt; q.y += q.vy * dt;
+      const al = 1 - q.t / q.life;
+      if (q.tri) {
+        q.vy += 7 * dt; q.rot += q.vr * dt;
+        const c = Math.cos(q.rot), s = Math.sin(q.rot);
+        cx.save(); cx.globalAlpha = al; cx.beginPath();
+        q.tri.forEach(([x, y], i) => { const r = P(q.x + x * c - y * s, q.y + x * s + y * c, 1); i ? cx.lineTo(r[0], r[1]) : cx.moveTo(r[0], r[1]); });
+        cx.closePath(); cx.fillStyle = q.c; cx.fill(); cx.strokeStyle = 'rgba(0,0,0,.3)'; cx.stroke(); cx.restore();
+      } else {
+        const r = P(q.x, q.y, 1); cx.globalAlpha = al; cx.fillStyle = q.c; cx.beginPath(); cx.arc(r[0], r[1], q.r, 0, Math.PI * 2); cx.fill(); cx.globalAlpha = 1;
+      }
+    }
+  }
+  function draw(dt) {
+    cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    let sx = 0, sy = 0;
+    if (shake > 0) { sx = rnd(-1, 1) * shake * 22; sy = rnd(-1, 1) * shake * 22; }
+    cx.translate(sx, sy);
+    cx.drawImage(bgC, -2, -2, CW + 4, CH + 4);
+    if (!W) return;
+    const ps = curPose();
+    const showObj = !(st === 'hit');
+    const wallAlpha = st === 'pass' ? Math.max(0, Math.min(1, (z - .15) / .6)) : st === 'hit' ? Math.max(0, 1 - Math.max(0, stT - .7) / .4) : 1;
+    // bóng vật trên sàn
+    if (showObj) {
+      const c = P(ps.dx, FLOOR, 1.05); cx.fillStyle = 'rgba(0,0,0,.28)'; cx.beginPath(); cx.ellipse(c[0], c[1], U * .8, U * .12, 0, 0, Math.PI * 2); cx.fill();
+    }
+    const objFirst = z < 1;
+    if (!objFirst) drawWall(z, wallAlpha);
+    if (showObj) {
+      // khi tường còn ở phía sau vật thì vẽ vật trong suốt một nửa để vẫn nhìn thấy lỗ trên tường
+      const main = cx; cx = objX;
+      cx.setTransform(1, 0, 0, 1, 0, 0); cx.clearRect(0, 0, objC.width, objC.height); cx.setTransform(DPR, 0, 0, DPR, 0, 0);
+      if (held >= 0) drawObj(W.tray[held], ps, 1); else drawGhost(ps);
+      cx = main;
+      cx.save(); cx.globalAlpha = objFirst ? 1 : OBJ_ALPHA; cx.drawImage(objC, 0, 0, CW, CH); cx.restore();
+      if (locked && st === 'go') drawLockMark(ps);
+    }
+    if (objFirst) drawWall(z, wallAlpha);
+    drawParts(dt);
+    // thanh khoảng cách
+    if (st === 'go') {
+      const p = Math.min(1, t / W.T), y = CH - 10;
+      cx.fillStyle = 'rgba(0,0,0,.35)'; cx.fillRect(14, y, CW - 28, 5);
+      cx.fillStyle = p > .8 ? '#ff6b5b' : '#ffb547'; cx.fillRect(14, y, (CW - 28) * p, 5);
+    }
+  }
+
+  // ================= VÒNG LẶP =================
+  let last = 0;
+  function loop(now) {
+    const dt = Math.min(.05, (now - (last || now)) / 1000); last = now;
+    if (!paused && W) step(dt);
+    if (shake > 0) shake = Math.max(0, shake - dt);
+    draw(paused ? 0 : dt);
+    requestAnimationFrame(loop);
+  }
+  function step(dt) {
+    if (st === 'go') {
+      t += dt; if (!locked) phase += dt;
+      z = Z0 - (Z0 - 1) * Math.min(1, t / W.T);
+      if (t >= W.T) resolve();
+    } else if (st === 'pass') {
+      stT += dt; z = Math.max(.1, 1 - stT * 2);
+      if (stT > .55) afterPass();
+    } else if (st === 'hit') {
+      stT += dt; z = 1;
+      if (stT > 1.15) afterHit();
+    }
+  }
+
+  // ================= GIAO DIỆN =================
+  const NS = 'http://www.w3.org/2000/svg';
+  function iconSvg(o) {
+    const p = ptsOf(o), col = SH[o.sid].col;
+    const d = 'M' + p.map(([x, y]) => (x * .9).toFixed(3) + ' ' + (y * .9).toFixed(3)).join('L') + 'Z';
+    return `<svg viewBox="-1.25 -1.25 2.5 2.5" aria-hidden="true"><path d="${d}" transform="translate(.06 .07)" fill="rgba(0,0,0,.35)"/><path d="${d}" fill="${col}" stroke="${shade(col, -.35)}" stroke-width=".06" stroke-linejoin="round"/></svg>`;
+  }
+  function objName(o) { return SH[o.sid].n + (o.mir ? ' (soi gương)' : '') + (o.sc > 1 ? ' (to)' : ''); }
+  function renderTray() {
+    const tr = $('tray'); tr.innerHTML = '';
+    tr.style.gridTemplateColumns = `repeat(${Math.max(3, W.tray.length)},minmax(0,1fr))`;
+    W.tray.forEach((o, i) => {
+      const b = document.createElement('button');
+      b.className = 'tile' + (i === held ? ' sel' : ''); b.setAttribute('data-no-scene', ''); b.setAttribute('aria-label', objName(o));
+      b.innerHTML = iconSvg(o) + `<span class="k">${i + 1}</span>`;
+      b.disabled = !!locked || st !== 'go';
+      b.onclick = () => choose(i);
+      tr.appendChild(b);
+    });
+    $('trayInfo').textContent = W.tray.length > 1 ? W.tray.length + ' vật' : '';
+  }
+  function choose(i) {
+    if (!W || st !== 'go' || locked || paused || i >= W.tray.length) return;
+    held = i; sfx.pick(); renderTray(); updLock();
+  }
+  function toggleLock() {
+    if (!W || st !== 'go' || paused) return;
+    if (locked) { if (!W.relock) return; locked = null; sfx.unlock(); }
+    else {
+      if (held < 0) { toast('Chọn vật trước', 'bad', ''); return; }
+      if (usedLock && !W.relock) return;
+      locked = pose(phase); usedLock = true; sfx.lock();
+    }
+    renderTray(); updLock();
+  }
+  function updLock() {
+    const b = $('lockBtn');
+    b.classList.toggle('locked', !!locked);
+    $('lockTxt').textContent = locked ? (W.relock ? 'Đã khóa, bấm để mở' : 'Đã khóa') : 'Khóa góc';
+    b.disabled = !W || st !== 'go' || (locked && !W.relock);
+  }
+  function updHud() {
+    $('hearts').innerHTML = [0, 1, 2].map(i => `<i class="${i < lives ? 'on' : ''}">♥</i>`).join('');
+    $('count').textContent = 'Tường ' + passed;
+  }
+  let toastT = 0;
+  function toast(txt, cls, small) {
+    const e = $('toast'); e.className = 'toast on ' + cls; e.innerHTML = txt + (small ? `<small>${small}</small>` : '');
+    clearTimeout(toastT); toastT = setTimeout(() => { e.className = 'toast'; }, 900);
+  }
+  function setHint() {
+    $('sub').textContent = save.best ? 'Kỷ lục ' + save.best + ' tường' : '';
+    const got = STEPS.filter(x => x[0] <= passed).map(x => x[1]);
+    $('hint').textContent = got.length ? 'Đang có: ' + got.join(', ').toLowerCase() + '.' : 'Chọn vật cùng hình với lỗ, rồi khóa góc lúc vật khớp lỗ. Lúc đầu được mở khóa để canh lại.';
+  }
+  function start() {
+    lives = 3; passed = 0; parts = [];
+    closeAll(); paused = false; newWall();
+  }
+  function layer(id, on) { $(id).classList.toggle('on', on); }
+  const LAYERS = ['help', 'over', 'pause'];
+  function closeAll() { LAYERS.forEach(i => layer(i, false)); }
+  function anyOpen() { return LAYERS.some(i => $(i).classList.contains('on')); }
+  function showOver(prev) {
+    paused = true;
+    const first = prev == null;
+    $('overTick').hidden = true;
+    $('overH').textContent = first ? 'Vật thể xuyên tường' : 'Hết lượt';
+    $('overNum').textContent = first ? (save.best || 0) : passed;
+    $('overWhy').innerHTML = first ? 'Kỷ lục của bạn (số bức tường vượt qua).'
+      : `Vượt <b>${passed}</b> bức tường.` + (passed > prev && passed > 0 ? ' <b>Kỷ lục mới!</b>' : ' Kỷ lục: ' + (save.best || 0) + '.') + `<br>Lần cuối: ${lastResult.toLowerCase()}.`;
+    $('againBtn').textContent = first ? 'Bắt đầu' : 'Chơi lại';
+    layer('over', true);
+  }
+
+  // ================= SỰ KIỆN =================
+  $('againBtn').onclick = start;
+  $('restartBtn').onclick = () => { if (st === 'idle' && !W) return; start(); };
+  $('pauseRestart').onclick = start;
+  $('helpBtn').onclick = () => { paused = true; closeAll(); layer('help', true); };
+  $('helpClose').onclick = () => { closeAll(); save.seenHelp = true; store(); if (!W || st === 'idle') start(); else paused = false; };
+  $('pauseBtn').onclick = () => { if (!W || st === 'idle') return; paused = true; closeAll(); layer('pause', true); };
+  $('resumeBtn').onclick = () => { closeAll(); paused = false; };
+  $('lockBtn').onclick = toggleLock;
+  cv.addEventListener('pointerdown', e => { e.preventDefault(); toggleLock(); });
+  document.addEventListener('keydown', e => {
+    if (anyOpen()) return;
+    if (e.code === 'Space' || e.key === 'Enter') { e.preventDefault(); toggleLock(); }
+    else if (/^[1-4]$/.test(e.key)) choose(+e.key - 1);
+  });
+  document.addEventListener('visibilitychange', () => { if (document.hidden && W && st !== 'idle' && !anyOpen()) { paused = true; layer('pause', true); } });
+  window.addEventListener('resize', resize);
+  if (window.ResizeObserver) new ResizeObserver(resize).observe(cv);
+
+  // để kiểm thử
+  window.__XT = { get W() { return W; }, get st() { return st; }, pose: () => curPose(), fits, samples, ptsOf, buildWall, cfgAt, SH, start, choose, toggleLock, get passed() { return passed; }, get lives() { return lives; } };
+
+  resize(); updHud(); setHint();
+  if (!save.seenHelp) layer('help', true); else showOver(null);
+  requestAnimationFrame(loop);
+})();
+</script>
+</body>
+</html>
