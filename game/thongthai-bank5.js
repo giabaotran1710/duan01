@@ -139,8 +139,6 @@ window.TT_ADD(`
 4|toan|Đa giác có 8 cạnh gọi là gì?|Bát giác|Lục giác|Thất giác|Cửu giác
 5|toan|Khối đa diện đều có 20 mặt là tam giác đều gọi là gì?|Khối hai mươi mặt đều|Khối mười hai mặt đều|Khối bát diện đều|Khối tứ diện đều
 4|toan|Hình lập phương có bao nhiêu cạnh?|12|8|6|24
-4|toan|Diện tích mặt cầu bán kính r tính theo công thức nào?|4πr²|πr²|(4/3)πr³|2πr
-5|toan|Thể tích khối nón có bán kính đáy r, chiều cao h tính theo công thức nào?|(1/3)πr²h|πr²h|(4/3)πr³|πrh
 5|toan|Ai công bố bảng logarit đầu tiên năm 1614?|John Napier|Isaac Newton|René Descartes|Leonhard Euler
 5|toan|Giáo sư Ngô Bảo Châu được trao Huy chương Fields năm nào?|2010|2006|2014|2002
 5|toan|Grigori Perelman nổi tiếng vì chứng minh giả thuyết nào?|Giả thuyết Poincaré|Giả thuyết Riemann|Định lý lớn Fermat|Giả thuyết Goldbach
