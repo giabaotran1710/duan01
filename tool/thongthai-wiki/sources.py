@@ -152,3 +152,72 @@ SOURCES = {
 
 SOURCES['country_border'] = ("SELECT ?s ?sL ?sEn ?sl ?o ?oL WHERE { ?s wdt:P31 wd:Q3624078; wdt:P47 ?o; wikibase:sitelinks ?sl. "
                              "?o wdt:P31 wd:Q3624078. ?o rdfs:label ?oL FILTER(lang(?oL)='vi') " + vi('s') + en('s') + "}")
+
+
+# ---------------------------------------------------------------------------
+# Đợt 2 (14/11): sự kiện, văn học, tư tưởng, kiến trúc, triều đại, người và
+# đóng góp, phát minh, vũ trụ, thành lập. Chỉ dùng cho câu từ mức Khó trở lên.
+# ---------------------------------------------------------------------------
+def yr(types, prop, minsl, path='wdt:P31'):
+    """Năm của một mốc thời gian, chỉ lấy ngày có độ chính xác tới năm trở lên."""
+    vals = ' '.join('wd:' + t for t in types)
+    return (f"SELECT ?s ?sL ?sEn ?sl ?o ?oL ?o2 WHERE {{ VALUES ?t {{ {vals} }} ?s {path} ?t; wikibase:sitelinks ?sl. FILTER(?sl>={minsl}) "
+            f"?s p:{prop}/psv:{prop} ?v. ?v wikibase:timeValue ?d; wikibase:timePrecision ?pr. FILTER(?pr>=9) "
+            f"BIND(YEAR(?d) AS ?o) BIND(STR(YEAR(?d)) AS ?oL) "
+            f"OPTIONAL{{?s wdt:{prop} ?o2 FILTER(YEAR(?o2) != YEAR(?d))}} " + vi('s') + en('s') + "}")
+
+
+LIT = ['Q7725634', 'Q8261', 'Q5185279', 'Q25379', 'Q1279564', 'Q49084', 'Q12106333', 'Q37484', 'Q4294641']
+BUILDING = ['Q41176', 'Q811979', 'Q16970', 'Q2977', 'Q11303', 'Q570116', 'Q33506', 'Q12518', 'Q483110', 'Q24354',
+            'Q4989906', 'Q1440300', 'Q16560', 'Q23413', 'Q44539', 'Q32815', 'Q839954', 'Q12280', 'Q1081138', 'Q2065736']
+ORG = ['Q484652', 'Q245065', 'Q1335818', 'Q163740', 'Q7210356', 'Q4120211', 'Q15911314']
+EVENT = ['Q10931', 'Q3839081', 'Q7944', 'Q8065', 'Q45382', 'Q124734', 'Q175331', 'Q168983', 'Q8068', 'Q1361229', 'Q3002772', 'Q8016240']
+SPACE = ['Q40218', 'Q26529', 'Q2133344', 'Q5916', 'Q697175', 'Q752783', 'Q60054', 'Q62832']
+DEEPSKY = ['Q318', 'Q1054444', 'Q2154519', 'Q11276', 'Q11387', 'Q13632', 'Q204107', 'Q190426', 'Q1151284', 'Q202444']
+OCC = ['Q49757', 'Q36180', 'Q1028181', 'Q36834', 'Q42973', 'Q1281618', 'Q2526255', 'Q169470', 'Q593644', 'Q170790',
+       'Q4964182', 'Q11063', 'Q39631', 'Q81096', 'Q901', 'Q205375', 'Q201788', 'Q1622272']
+
+SOURCES.update({
+    'monarch_successor': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { VALUES ?m {wd:Q116 wd:Q39018 wd:Q12097 wd:Q2304859 wd:Q207978} "
+                          "?pos wdt:P279 ?m. ?s p:P39 ?st. ?st ps:P39 ?pos; pq:P1366 ?o. ?s wikibase:sitelinks ?sl. FILTER(?sl>=12) ?o wdt:P31 wd:Q5. "
+                          "OPTIONAL{?s p:P39/pq:P1366 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+    'pope_successor': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s p:P39 ?st. ?st ps:P39 wd:Q19546; pq:P1366 ?o. ?s wikibase:sitelinks ?sl. FILTER(?sl>=12) "
+                       "OPTIONAL{?s p:P39/pq:P1366 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+    'person_field': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P31 wd:Q5; wdt:P101 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=40) "
+                     "OPTIONAL{?s wdt:P101 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+    'person_movement': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P31 wd:Q5; wdt:P135 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=20) "
+                        "OPTIONAL{?s wdt:P135 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+    'creator_country': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { VALUES ?occ { " + ' '.join('wd:' + x for x in OCC) + " } "
+                        "?s wdt:P31 wd:Q5; wdt:P106 ?occ; wdt:P27 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=30) ?o wdt:P31 wd:Q3624078. "
+                        "OPTIONAL{?s wdt:P27 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} "
+                        "?occ rdfs:label ?sEn FILTER(lang(?sEn)='vi') " + vi('s') + vi('o') + "}"),
+    'work_year': yr(LIT, 'P577', 15),
+    'film_year': yr(['Q11424'], 'P577', 50),
+    'character_work': rel(['Q95074', 'Q15632617', 'Q15773347', 'Q15711870', 'Q3658341', 'Q1569167'], 'P1441', 15),
+    'work_setting': rel(LIT + ['Q11424'], 'P840', 25),
+    'idea_founder': rel(['Q12909644', 'Q7257', 'Q968159', 'Q2198855', 'Q1387659', 'Q13442814'], 'P112', 10),
+    'discoverer': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P61 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=20) ?o wdt:P31 wd:Q5. "
+                   "FILTER NOT EXISTS {?s wdt:P31 wd:Q11344} "
+                   "OPTIONAL{?s wdt:P61 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+    'discovery_year': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?o2 WHERE { ?s p:P575/psv:P575 ?v. ?v wikibase:timeValue ?d; wikibase:timePrecision ?pr. FILTER(?pr>=9) "
+                       "?s wikibase:sitelinks ?sl. FILTER(?sl>=25) FILTER NOT EXISTS {?s wdt:P31 wd:Q11344} "
+                       "BIND(YEAR(?d) AS ?o) BIND(STR(YEAR(?d)) AS ?oL) OPTIONAL{?s wdt:P575 ?o2 FILTER(YEAR(?o2) != YEAR(?d))} " + vi('s') + en('s') + "}"),
+    'building_opening': yr(BUILDING, 'P1619', 12),
+    'building_style': rel(BUILDING, 'P149', 12),
+    'landmark_country': rel(BUILDING, 'P17', 25),
+    'bridge_crosses': rel(['Q12280', 'Q158218', 'Q537127', 'Q1825472', 'Q14276458'], 'P177', 8),
+    'org_hq': rel(ORG, 'P159', 20),
+    'org_year': yr(ORG, 'P571', 20),
+    'univ_year': yr(['Q3918', 'Q902104', 'Q875538'], 'P571', 40),
+    'event_country': rel(EVENT, 'P17', 15),
+    'battle_country': rel(['Q178561', 'Q188055', 'Q831663', 'Q645883'], 'P17', 15),
+    'spacecraft_launch': yr(SPACE, 'P619', 10),
+    'deepsky_constellation': rel(DEEPSKY, 'P59', 12),
+    'moon_planet': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { VALUES ?o {wd:Q2 wd:Q111 wd:Q319 wd:Q193 wd:Q324 wd:Q332 wd:Q339} "
+                    "?s wdt:P397 ?o; wdt:P31/wdt:P279* wd:Q2537; wikibase:sitelinks ?sl. FILTER(?sl>=8) "
+                    "OPTIONAL{?s wdt:P397 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
+})
+NEW2 = ['monarch_successor', 'pope_successor', 'person_field', 'person_movement', 'creator_country', 'work_year', 'film_year',
+        'character_work', 'work_setting', 'idea_founder', 'discoverer', 'discovery_year', 'building_opening', 'building_style',
+        'landmark_country', 'bridge_crosses', 'org_hq', 'org_year', 'univ_year', 'event_country', 'battle_country',
+        'spacecraft_launch', 'deepsky_constellation', 'moon_planet']

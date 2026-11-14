@@ -8,12 +8,12 @@ window.TT_ADD(`
 1|sv|Con vật nào kêu "meo meo"?|Mèo|Chó|Gà|Vịt
 1|sv|Con trâu thường giúp nhà nông làm việc gì?|Cày ruộng|Bắt chuột|Giữ nhà|Gáy báo sáng
 1|sv|Con vật nào có mai cứng và bò rất chậm?|Rùa|Thỏ|Sóc|Chó
-1|sv|Loài cá nào lớn nhất thế giới?|Cá mập voi|Cá voi xanh|Cá mập trắng|Cá đuối
-1|sv|Con vật nào ngủ đông trong mùa lạnh?|Gấu nâu|Gà|Bò|Ngựa
+2|sv|Loài cá nào lớn nhất thế giới?|Cá mập voi|Cá voi xanh|Cá mập trắng|Cá đuối
+2|sv|Con vật nào ngủ đông trong mùa lạnh?|Gấu nâu|Gà|Bò|Ngựa
 1|sv|Con vật nào nhả tơ để làm kén?|Con tằm|Con ong|Con kiến|Con ve
 1|sv|Ngựa vằn có bộ lông như thế nào?|Sọc đen trắng|Đốm vàng|Toàn màu nâu|Toàn màu xám
 1|sv|Loài động vật nào có cổ dài nhất?|Hươu cao cổ|Lạc đà|Đà điểu|Ngựa
-1|sv|Lạc đà có cái bướu trên lưng chủ yếu để dự trữ gì?|Mỡ|Nước|Sữa|Không khí
+2|sv|Lạc đà có cái bướu trên lưng chủ yếu để dự trữ gì?|Mỡ|Nước|Sữa|Không khí
 1|sv|Cây lúa cho ra loại hạt nào?|Hạt thóc (gạo)|Hạt ngô|Hạt đậu|Hạt lạc
 1|sv|Loại quả nào có nhiều gai bên ngoài và mùi rất nồng?|Sầu riêng|Chuối|Cam|Nho
 1|sv|Cây nào thường được trồng lấy quả làm dầu dừa và nước giải khát?|Cây dừa|Cây cau|Cây thông|Cây tre
@@ -32,10 +32,10 @@ window.TT_ADD(`
 1|dl|Lễ Giáng sinh (Noel) là ngày nào?|25/12|1/1|31/12|24/11
 1|dl|Đêm Giao thừa là thời khắc chuyển giao giữa?|Năm cũ và năm mới|Ngày và đêm|Mùa hè và mùa thu|Tháng này và tháng sau
 1|dl|"Lì xì" đầu năm thường được đựng trong bao màu gì?|Đỏ|Đen|Trắng|Xanh lá
-1|dl|Mâm ngũ quả ngày Tết thường có bao nhiêu loại quả?|5|3|7|9
+2|dl|Mâm ngũ quả ngày Tết thường có bao nhiêu loại quả?|5|3|7|9
 1|dl|Bánh tét là loại bánh Tết phổ biến ở miền nào?|Miền Nam và miền Trung|Miền Bắc|Chỉ ở Tây Bắc|Chỉ ở Hà Nội
 1|dl|Nước mắm được làm chủ yếu từ nguyên liệu nào?|Cá và muối|Đậu nành|Thịt lợn|Gạo nếp
-1|dl|Cốm làng Vòng là đặc sản nổi tiếng của địa phương nào?|Hà Nội|Huế|Đà Lạt|Cần Thơ
+2|dl|Cốm làng Vòng là đặc sản nổi tiếng của địa phương nào?|Hà Nội|Huế|Đà Lạt|Cần Thơ
 1|dl|Bánh mì Việt Nam thường được làm từ loại bột nào?|Bột mì|Bột gạo nếp|Bột sắn|Bột đậu xanh
 1|the|Môn thể thao nào thi đấu dưới nước bằng cách bơi nhanh nhất?|Bơi lội|Bóng chuyền|Điền kinh|Cầu lông
 1|the|Môn võ nào có nguồn gốc từ Việt Nam, còn gọi là Việt Võ Đạo?|Vovinam|Karate|Taekwondo|Judo
@@ -47,7 +47,7 @@ window.TT_ADD(`
 1|cn|Biểu tượng hình quả táo bị cắn dở là logo của công ty nào?|Apple|Samsung|Microsoft|Google
 1|cn|Phím nào trên bàn phím dùng để tạo khoảng trống giữa các chữ?|Phím cách (Space)|Phím Enter|Phím Shift|Phím Esc
 1|nt|Nhạc cụ nào được thổi bằng miệng và làm từ ống trúc có lỗ bấm?|Sáo|Đàn tranh|Trống|Đàn nhị
-1|nt|Trống đồng Đông Sơn là cổ vật nổi tiếng của nền văn hóa nào?|Văn hóa Đông Sơn của người Việt cổ|Văn hóa Chăm Pa|Văn hóa Óc Eo|Văn hóa Hy Lạp
+2|nt|Trống đồng Đông Sơn là cổ vật nổi tiếng của nền văn hóa nào?|Văn hóa Đông Sơn của người Việt cổ|Văn hóa Chăm Pa|Văn hóa Óc Eo|Văn hóa Hy Lạp
 1|nt|Bài hát "Kìa con bướm vàng" là bài hát dành cho ai?|Thiếu nhi|Người lớn tuổi|Bộ đội|Học sinh cấp ba
 1|van|Trong truyện "Thánh Gióng", Gióng lớn nhanh như thổi sau khi nghe tiếng gì?|Tiếng sứ giả tìm người tài đánh giặc|Tiếng trống hội làng|Tiếng sấm|Tiếng chim hót
 1|van|Trong truyện "Cây tre trăm đốt", anh Khoai dùng câu thần chú nào để nối các đốt tre?|"Khắc nhập, khắc nhập"|"Vừng ơi mở ra"|"Biến, biến"|"Úm ba la"
@@ -72,7 +72,7 @@ window.TT_ADD(`
 1|kh|Mặt Trời là gì?|Một ngôi sao|Một hành tinh|Một vệ tinh|Một sao chổi
 1|kh|Hành tinh chúng ta đang sống tên là gì?|Trái Đất|Sao Hỏa|Sao Kim|Sao Mộc
 1|kh|Khi trời có sấm chớp, ta thường thấy chớp trước rồi mới nghe tiếng sấm vì sao?|Ánh sáng truyền nhanh hơn âm thanh|Âm thanh truyền nhanh hơn ánh sáng|Tai nghe chậm hơn mắt|Sấm xảy ra sau chớp rất lâu
-1|kh|Nước chiếm khoảng bao nhiêu phần bề mặt Trái Đất?|Khoảng 71%|Khoảng 30%|Khoảng 50%|Khoảng 90%
+2|kh|Nước chiếm khoảng bao nhiêu phần bề mặt Trái Đất?|Khoảng 71%|Khoảng 30%|Khoảng 50%|Khoảng 90%
 1|kh|Vật nào sau đây nổi trên mặt nước?|Miếng gỗ khô|Hòn đá|Chiếc đinh sắt|Đồng xu
 1|kh|Mây được tạo thành chủ yếu từ gì?|Những giọt nước hoặc tinh thể băng rất nhỏ|Khói bụi|Bông|Khí oxi
 1|kh|Nguồn năng lượng nào sau đây là năng lượng tái tạo?|Năng lượng mặt trời|Than đá|Dầu mỏ|Khí đốt

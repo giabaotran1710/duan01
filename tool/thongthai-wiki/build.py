@@ -14,12 +14,16 @@ import glob, json, os, random, re, sys, unicodedata
 from collections import defaultdict
 import wd
 from sources import SOURCES
-from types_cfg import TYPES
+from types_cfg import TYPES, TYPES2
 
 ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', '..'))
-OUT = os.path.join(ROOT, 'game', 'thongthai-wiki.js')
-AUDIT = os.path.join(os.path.dirname(__file__), 'audit.tsv')
-TARGET_EASY = int(os.environ.get('TT_EASY', '1555'))     # mức 1-2 cần thêm
+# TT_SET=2: đợt 2 (dạng câu mới, chỉ mức Khó trở lên) ghi ra file riêng, không đụng đợt 1
+SET2 = os.environ.get('TT_SET') == '2'
+OUT = os.path.join(ROOT, 'game', 'thongthai-wiki2.js' if SET2 else 'thongthai-wiki.js')
+AUDIT = os.path.join(os.path.dirname(__file__), 'audit2.tsv' if SET2 else 'audit.tsv')
+if SET2:
+    TYPES = TYPES2 + [t for t in TYPES if t.name == 'moon_planet']
+TARGET_EASY = int(os.environ.get('TT_EASY', '0' if os.environ.get('TT_SET') == '2' else '1555'))     # mức 1-2 cần thêm
 TARGET_HARD = int(os.environ.get('TT_HARD', '6500'))     # mức 3-5 cần thêm
 
 rnd = random.Random(20261114)
@@ -52,9 +56,24 @@ def adjust(it):
         it['q'] = it['q'].replace('Hãng xe ', 'Hãng ', 1)
     if it['type'] == 'club_country' and it['a'][0] == 'Litva':
         it['tier'] = max(it['tier'], 4)   # CLB Litva có nhiều trang wiki nhưng ít người biết
+    if it['tier'] == 1 and (it['pop'] < EASY1.get(it['type'], 10 ** 9) or it['subj'] in DENY1):
+        it['tier'] = 2
     it['q'] = cap(it['q'])
     it['a'] = [cap(x) for x in it['a']]
     return it
+
+
+SPORT_OCC = {'Q2066131', 'Q937857', 'Q10833314', 'Q3665646', 'Q10843402', 'Q11338576', 'Q10871364', 'Q13141064', 'Q11774891',
+             'Q10873124', 'Q2309784', 'Q11513337', 'Q628099', 'Q15117302', 'Q10841764', 'Q12840545', 'Q14089670', 'Q11303721',
+             'Q18515558', 'Q13381753', 'Q16029547', 'Q19204627', 'Q13382355', 'Q41583', 'Q3014296', 'Q10843263', 'Q13474373',
+             'Q4009406', 'Q13381863', 'Q17361156', 'Q15306067', 'Q19841381', 'Q13382533', 'Q2730732', 'Q15972912', 'Q4144610',
+             'Q10349745', 'Q9149093', 'Q11124885', 'Q12299841', 'Q9017214', 'Q13219587', 'Q13381572'}
+
+# mức Dễ chỉ dành cho kiến thức gần như ai cũng biết: loại câu + ngưỡng số trang Wikipedia các ngôn ngữ
+EASY1 = {'city_country': 265, 'country_capital': 380, 'country_continent': 370, 'person_sport': 100,
+         'club_country': 120, 'company_country': 115, 'carbrand_country': 110}
+DENY1 = {'Edirne', 'Tirana', 'Santiago', 'Bogotá', 'Coritiba Foot Ball Club', 'Baskin Robbins', 'SpaceX', 'Albania', 'Algérie',
+         'Iran', 'Israel', 'México', 'Ấn Độ', 'Sankt-Peterburg', 'Helsinki', 'Warszawa'}
 
 
 ALIAS = {'Vương quốc Liên hiệp Anh và Bắc Ireland': 'Vương quốc Anh', 'Cộng hòa Nhân dân Trung Hoa': 'Trung Quốc'}
@@ -79,7 +98,8 @@ def clean(label):
 
 def load_existing():
     qs, pairs = set(), []
-    for f in sorted(glob.glob(os.path.join(ROOT, 'game', 'thongthai-bank*.js'))):
+    files = glob.glob(os.path.join(ROOT, 'game', 'thongthai-bank*.js')) + glob.glob(os.path.join(ROOT, 'game', 'thongthai-wiki*.js'))
+    for f in sorted(x for x in files if os.path.abspath(x) != OUT):
         for line in open(f, encoding='utf-8'):
             p = line.rstrip('\n').split('|')
             if len(p) == 7 and p[0] in '12345':
@@ -89,9 +109,20 @@ def load_existing():
 
 
 def main():
-    data = {name: wd.run(sql, name) for name, sql in SOURCES.items() if os.environ.get('TT_ONLY') is None or name in os.environ['TT_ONLY'].split(',')}
+    want = {t.src for t in TYPES} | {'country_border'}
+    data = {name: wd.run(sql, name) for name, sql in SOURCES.items() if name in want and (os.environ.get('TT_ONLY') is None or name in os.environ['TT_ONLY'].split(','))}
     ctx = {'data': data, 'rnd': rnd, 'clean': clean}
     # biên giới & châu lục để chọn phương án sai cho câu "ở nước nào"
+    # nghề nghiệp của người trong câu "nổi tiếng ở môn thể thao nào": chỉ giữ người làm nghề thể thao
+    if 'person_sport' in data:
+        ids = sorted({r['s'] for r in data['person_sport']})
+        occ = defaultdict(set)
+        for i in range(0, len(ids), 250):
+            rows = wd.q('SELECT ?s ?o WHERE { VALUES ?s { ' + ' '.join('wd:' + x for x in ids[i:i + 250]) + ' } ?s wdt:P106 ?o. }', 'occ')
+            for r in rows:
+                occ[r['s']].add(r['o'])
+        nonsport = {'Q82955', 'Q116', 'Q36180', 'Q611644', 'Q250867', 'Q2285706', 'Q193391', 'Q49757', 'Q6625963', 'Q1234713'}
+        data['person_sport'] = [r for r in data['person_sport'] if occ[r['s']] & SPORT_OCC and not occ[r['s']] & nonsport]
     border = defaultdict(set)
     for r in data.get('country_border', []):
         border[r['s']].add(r['o']); border[r['o']].add(r['s'])
@@ -201,12 +232,12 @@ def main():
     chosen.sort(key=lambda x: (x['tier'], x['type'], x['q']))
     lines = []
     with open(AUDIT, 'w', encoding='utf-8') as fa:
-        fa.write('muc\tloai\tchu_de\tdap_an\tcau\n')
+        fa.write('muc\tloai\tchu_de\tdap_an\tso_trang_wiki\tcau\n')
         for it in chosen:
             fields = [str(it['tier']), it['cat'], it['q']] + it['a']
             assert len(fields) == 7 and all('|' not in f and f.strip() for f in fields), fields
             lines.append('|'.join(fields))
-            fa.write(f"{it['tier']}\t{it['type']}\t{it['sid']}\t{it.get('aid', '')}\t{it['q']}\n")
+            fa.write(f"{it['tier']}\t{it['type']}\t{it['sid']}\t{it.get('aid', '')}\t{it['pop']}\t{it['q']}\n")
     with open(OUT, 'w', encoding='utf-8') as f:
         f.write('/* Thông thái trắc nghiệm - câu hỏi suy ra từ dữ liệu Wikipedia/Wikidata (tool/thongthai-wiki/build.py).\n'
                 ' * Mỗi câu có nguồn ở tool/thongthai-wiki/audit.tsv (mã thực thể Wikidata). */\n')

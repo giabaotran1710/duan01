@@ -14,7 +14,7 @@
 1|su|Theo truyền thuyết, Lạc Long Quân và Âu Cơ sinh ra bao nhiêu người con?|100|50|18|1.000
 1|su|Ngày Giỗ Tổ Hùng Vương là ngày nào âm lịch?|10 tháng 3|15 tháng 8|5 tháng 5|1 tháng 1
 1|su|Ai là người lãnh đạo khởi nghĩa Lam Sơn chống quân Minh?|Lê Lợi|Lý Thường Kiệt|Trần Hưng Đạo|Quang Trung
-1|su|Hai Bà Trưng khởi nghĩa chống lại ách đô hộ của triều đại nào?|Nhà Hán|Nhà Minh|Nhà Thanh|Nhà Nguyên
+2|su|Hai Bà Trưng khởi nghĩa chống lại ách đô hộ của triều đại nào?|Nhà Hán|Nhà Minh|Nhà Thanh|Nhà Nguyên
 1|su|Vị anh hùng nào đánh tan quân Nam Hán trên sông Bạch Đằng năm 938?|Ngô Quyền|Lê Hoàn|Trần Hưng Đạo|Đinh Bộ Lĩnh
 1|su|Thánh Gióng đánh đuổi giặc nào?|Giặc Ân|Giặc Minh|Giặc Nguyên|Giặc Thanh
 1|su|Hà Nội xưa có tên gọi nổi tiếng nào?|Thăng Long|Phú Xuân|Gia Định|Hoa Lư
@@ -95,7 +95,7 @@
 1|van|"Dế Mèn phiêu lưu ký" là tác phẩm của nhà văn nào?|Tô Hoài|Nam Cao|Kim Lân|Nguyễn Nhật Ánh
 1|van|"Ăn quả nhớ kẻ ..." - điền từ còn thiếu.|trồng cây|hái quả|bán quả|tưới cây
 1|van|"Lá lành đùm lá ..." - điền từ còn thiếu.|rách|úa|khô|xanh
-1|nt|Đàn bầu có bao nhiêu dây?|1|2|3|4
+2|nt|Đàn bầu có bao nhiêu dây?|1|2|3|4
 1|nt|Bức tranh "Mona Lisa" do ai vẽ?|Leonardo da Vinci|Pablo Picasso|Vincent van Gogh|Claude Monet
 1|nt|"Harry Potter" là bộ truyện của nhà văn nào?|J. K. Rowling|J. R. R. Tolkien|Roald Dahl|C. S. Lewis
 1|nt|Trong truyện tranh, chú mèo máy Doraemon đến từ thế kỷ nào?|Thế kỷ 22|Thế kỷ 21|Thế kỷ 25|Thế kỷ 30

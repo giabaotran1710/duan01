@@ -244,7 +244,7 @@ TYPES = [
     T('band_country', 'band_country', 'nt', lambda e: f'Ban nhạc/nhóm nhạc "{e["L"]}" đến từ quốc gia nào?', tiers=[(.1, 2), (.45, 3), (.8, 4), (1, 5)], cap=250, geo=True),
     T('album_artist', 'album_artist', 'nt', lambda e: f'Album "{e["L"]}" là của nghệ sĩ nào?', tiers=HARDISH, cap=250),
     T('tvseries_country', 'tvseries_country', 'nt', lambda e: f'Phim truyền hình "{e["L"]}" được sản xuất ở quốc gia nào?', tiers=NORMAL, cap=200),
-    T('city_country', 'city_country', 'dia', lambda e: f'Thành phố {e["L"]} thuộc quốc gia nào?', tiers=EASYISH, cap=600, geo=True),
+    T('city_country', 'city_country', 'dia', lambda e: f'{pre("Thành phố", e["L"])} thuộc quốc gia nào?', tiers=EASYISH, cap=600, geo=True),
     T('country_capital', 'country_capital', 'dia', lambda e: f'Thủ đô của {e["L"]} là thành phố nào?', tiers=EASYISH, cap=200),
     T('country_currency', 'country_currency', 'dl', lambda e: f'Đơn vị tiền tệ chính thức của {e["L"]} là gì?', tiers=[(.1, 2), (.4, 3), (.75, 4), (1, 5)], cap=200),
     T('country_continent', 'country_continent', 'dia', lambda e: f'{e["L"]} thuộc châu lục nào?', tiers=[(.25, 1), (.6, 2), (1, 3)], cap=200, fixed=CONTINENTS, minpool=4),
@@ -308,9 +308,41 @@ TYPES = [
     T('proglang_designer', 'proglang_designer', 'cn', lambda e: f'Ngôn ngữ lập trình {e["L"]} do ai thiết kế?', tiers=HARDISH, cap=100),
     T('proglang_year', 'proglang_year', 'cn', lambda e: f'Ngôn ngữ lập trình {e["L"]} ra đời năm nào?', mode='year', tiers=HARDISH, cap=100),
     T('software_developer', 'software_developer', 'cn', lambda e: f'"{e["L"]}" do công ty/tổ chức nào phát triển?', tiers=[(.15, 2), (.5, 3), (.85, 4), (1, 5)], cap=200),
-    T('club_country', 'club_country', 'the', lambda e: f'Câu lạc bộ {e["L"]} thuộc quốc gia nào?', tiers=[(.1, 1), (.35, 2), (.7, 3), (1, 4)], cap=350, geo=True),
-    T('club_city', 'club_city', 'the', lambda e: f'Câu lạc bộ {e["L"]} có trụ sở ở thành phố nào?', tiers=[(.15, 2), (.5, 3), (.85, 4), (1, 5)], cap=300),
+    T('club_country', 'club_country', 'the', lambda e: f'{pre("Câu lạc bộ", e["L"])} thuộc quốc gia nào?', tiers=[(.1, 1), (.35, 2), (.7, 3), (1, 4)], cap=350, geo=True),
+    T('club_city', 'club_city', 'the', lambda e: f'{pre("Câu lạc bộ", e["L"])} có trụ sở ở thành phố nào?', tiers=[(.15, 2), (.5, 3), (.85, 4), (1, 5)], cap=300),
     T('festival_country', 'festival_country', 'dl', lambda e: f'{e["L"]} gắn với quốc gia nào?', tiers=[(.15, 2), (.5, 3), (1, 4)], cap=100,
       subj_ok=lambda e: starts(e['L'], ('lễ hội', 'tết', 'hội'))),
     T('religion_founder', 'religion_founder', 'dl', lambda e: f'Ai là người sáng lập {e["L"]}?', tiers=HARDISH, cap=60),
+]
+
+
+# --- Đợt 2 (14/11): chỉ mức Khó trở lên ----------------------------------
+H3 = [(.3, 3), (.7, 4), (1, 5)]
+Q = lambda s: f'"{s}"'
+TYPES2 = [
+    T('monarch_successor', 'monarch_successor', 'su', lambda e: f'Ai là người kế vị {e["L"]}?', tiers=H3, cap=300),
+    T('pope_successor', 'pope_successor', 'su', lambda e: f'Ai là người kế nhiệm {e["L"]} trên ngôi Giáo hoàng?', tiers=HARDEST, cap=80),
+    T('person_field', 'person_field', 'dl', lambda e: f'{e["L"]} nổi tiếng với hoạt động trong lĩnh vực nào?', tiers=H3, cap=250),
+    T('person_movement', 'person_movement', 'nt', lambda e: f'{e["L"]} gắn với trào lưu, trường phái nào?', tiers=H3, cap=250),
+    T('creator_country', 'creator_country', 'dl', lambda e: f'{(e["en"] or "Nhân vật")} {e["L"]} là người nước nào?', tiers=H3, cap=300, geo=True,
+      subj_ok=lambda e: bool(e['en']) and len(e['en']) < 30),
+    T('work_year', 'work_year', 'van', lambda e: f'Tác phẩm {Q(e["L"])} được xuất bản lần đầu vào năm nào?', mode='year', tiers=H3, cap=250),
+    T('film_year', 'film_year', 'nt', lambda e: f'Bộ phim {Q(e["L"])} ra mắt năm nào?', mode='year', tiers=H3, cap=200),
+    T('character_work', 'character_work', 'van', lambda e: f'Nhân vật {e["L"]} xuất hiện trong tác phẩm nào?', tiers=H3, cap=250),
+    T('work_setting', 'work_setting', 'van', lambda e: f'Tác phẩm {Q(e["L"])} lấy bối cảnh chủ yếu ở đâu?', tiers=H3, cap=200),
+    T('idea_founder', 'idea_founder', 'dl', lambda e: f'Ai được coi là người khởi xướng {e["L"]}?', tiers=H3, cap=120),
+    T('discoverer', 'discoverer', 'kh', lambda e: f'Ai được ghi nhận là người phát hiện hoặc phát minh ra {e["L"]}?', tiers=H3, cap=300),
+    T('discovery_year', 'discovery_year', 'kh', lambda e: f'{e["L"]} được phát hiện hoặc phát minh vào năm nào?', mode='year', tiers=H3, cap=250),
+    T('building_opening', 'building_opening', 'nt', lambda e: f'Công trình {e["L"]} được khánh thành vào năm nào?', mode='year', tiers=H3, cap=200),
+    T('building_style', 'building_style', 'nt', lambda e: f'Công trình {e["L"]} mang phong cách kiến trúc nào?', tiers=H3, cap=200),
+    T('landmark_country', 'landmark_country', 'dia', lambda e: f'Công trình {e["L"]} nằm ở quốc gia nào?', tiers=H3, cap=250, geo=True),
+    T('bridge_crosses', 'bridge_crosses', 'dia', lambda e: f'{pre("Cầu", e["L"])} bắc qua đâu?', tiers=H3, cap=120),
+    T('org_hq', 'org_hq', 'dl', lambda e: f'Trụ sở của {e["L"]} đặt tại thành phố nào?', tiers=H3, cap=150),
+    T('org_year', 'org_year', 'su', lambda e: f'{e["L"]} được thành lập vào năm nào?', mode='year', tiers=H3, cap=150),
+    T('univ_year', 'univ_year', 'dl', lambda e: f'{e["L"]} được thành lập vào năm nào?', mode='year', tiers=H3, cap=150),
+    T('event_country', 'event_country', 'su', lambda e: f'Sự kiện "{e["L"]}" diễn ra ở quốc gia nào?', tiers=H3, cap=250, geo=True),
+    T('battle_country', 'battle_country', 'su', lambda e: f'{e["L"]} diễn ra trên lãnh thổ quốc gia nào ngày nay?', tiers=H3, cap=250, geo=True,
+      subj_ok=lambda e: starts(e['L'], ('trận', 'cuộc', 'chiến dịch', 'vây hãm', 'cuộc vây hãm', 'hải chiến'))),
+    T('spacecraft_launch', 'spacecraft_launch', 'kh', lambda e: f'Tàu/sứ mệnh vũ trụ {e["L"]} được phóng vào năm nào?', mode='year', tiers=H3, cap=150),
+    T('deepsky_constellation', 'deepsky_constellation', 'kh', lambda e: f'Thiên thể {e["L"]} nằm trong chòm sao nào?', tiers=H3, cap=120),
 ]
