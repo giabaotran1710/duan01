@@ -278,8 +278,13 @@
   $('lbName').addEventListener('keydown', e => { if (e.key === 'Enter') $('lbSave').click(); if (e.key === 'Escape') { e.stopPropagation(); $('lbCancel').click(); } });
   document.addEventListener('keydown', e => { if (e.key === 'Escape' && modal.classList.contains('show')) close(); });
 
-  // ---------- Lần đầu vào trang chủ: bắt buộc đặt tên (chỉ hỏi một lần) ----------
-  Scores.ready.then(() => { if (!Scores.hasName()) {
+  // ---------- Trang chủ: nhắc đặt tên (có nút Bỏ qua) ----------
+  // Người mới vào chưa chơi gì thì không hỏi, để thấy ngay danh sách game. Chỉ nhắc khi đã có điểm
+  // lưu trên máy mà chưa có tên, và mỗi phiên trình duyệt nhắc tối đa một lần.
+  const playedSomething = () => { try { const d = JSON.parse(localStorage.getItem('scores_local_v1') || '{}'); return !!d && Object.keys(d).length > 0; } catch (e) { return false; } };
+  const askedThisSession = () => { try { return sessionStorage.getItem('lb_home_asked') === '1'; } catch (e) { return false; } };
+  Scores.ready.then(() => { if (!Scores.hasName() && playedSomething() && !askedThisSession()) {
+    try { sessionStorage.setItem('lb_home_asked', '1'); } catch (e) {}
     const introGone = () => {
       const ov = document.getElementById('intro-overlay');
       if (!ov || !ov.isConnected) return true;
@@ -289,7 +294,7 @@
     const wait = setInterval(() => {
       if (!introGone()) return;
       clearInterval(wait);
-      if (!Scores.hasName()) Scores.askName({ required: true });
+      if (!Scores.hasName()) Scores.askName({ required: false });
     }, 400);
   } });
 })();
