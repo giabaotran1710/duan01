@@ -109,8 +109,14 @@ def load_existing():
 
 
 def main():
-    want = {t.src for t in TYPES} | {'country_border'}
-    data = {name: wd.run(sql, name) for name, sql in SOURCES.items() if name in want and (os.environ.get('TT_ONLY') is None or name in os.environ['TT_ONLY'].split(','))}
+    want = ({t.src for t in TYPES} | {'country_border'}) - set(os.environ.get('TT_SKIP','').split(','))
+    data = {}
+    for name, sql in SOURCES.items():
+        if name in want and (os.environ.get('TT_ONLY') is None or name in os.environ['TT_ONLY'].split(',')):
+            try:
+                data[name] = wd.run(sql, name)
+            except RuntimeError as e:
+                print('bỏ nguồn', name, e)
     ctx = {'data': data, 'rnd': rnd, 'clean': clean}
     # biên giới & châu lục để chọn phương án sai cho câu "ở nước nào"
     # nghề nghiệp của người trong câu "nổi tiếng ở môn thể thao nào": chỉ giữ người làm nghề thể thao
@@ -168,6 +174,7 @@ def main():
     # đối chiếu với bài Wikipedia tiếng Việt của chủ đề: chỉ giữ câu mà bài có nhắc tới đáp án
     if os.environ.get('TT_NOVERIFY') is None:
         import wiki
+        import sys; _c=wiki._load("vititles.json"); print("kept",len(kept),"thiếu tiêu đề",len({it["sid"] for it in kept}-set(_c)),file=sys.stderr,flush=True)
         titles = wiki.title_of([it['sid'] for it in kept])
         texts = wiki.text_of([t for t in titles.values() if t])
         ok = []
