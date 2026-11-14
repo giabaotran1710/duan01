@@ -48,30 +48,6 @@
     return numQ(r, `Số tiếp theo của dãy: ${s.map(fmt).join(', ')}, ... là?`, ans, c, 'Tư duy');
   }, 1.2);
 
-  // ---------- Đơn vị đo ----------
-  const UNITS = [
-    // [tier, từ, sang, hệ số, min, max]
-    [1, 'm', 'cm', 100, 1, 20], [1, 'km', 'm', 1000, 1, 15], [1, 'kg', 'g', 1000, 1, 12], [1, 'giờ', 'phút', 60, 1, 8], [1, 'phút', 'giây', 60, 1, 10], [1, 'ngày', 'giờ', 24, 1, 5], [1, 'dm', 'cm', 10, 1, 30],
-    [2, 'yến', 'kg', 10, 2, 30], [2, 'tạ', 'kg', 100, 2, 30], [2, 'tấn', 'kg', 1000, 2, 25], [2, 'lít', 'ml', 1000, 2, 15], [2, 'm²', 'dm²', 100, 2, 30], [2, 'tuần', 'ngày', 7, 3, 20], [2, 'giờ', 'giây', 3600, 1, 5],
-    [3, 'ha', 'm²', 10000, 2, 15], [3, 'km²', 'ha', 100, 2, 40], [3, 'm³', 'lít', 1000, 2, 20], [3, 'tấn', 'yến', 100, 2, 30], [3, 'm²', 'cm²', 10000, 2, 12], [3, 'ngày', 'phút', 1440, 1, 4],
-    [4, 'km²', 'm²', 1000000, 2, 9], [4, 'm³', 'cm³', 1000000, 2, 9], [4, 'tạ', 'g', 100000, 2, 9], [4, 'tuần', 'giờ', 168, 2, 6]
-  ];
-  add([1, 2, 3, 4], 600, (r, t) => {
-    const list = UNITS.filter(u => u[0] === t), u = pick(r, list);
-    const x = int(r, u[4], u[5]), ans = x * u[3];
-    if (r() < .5) return numQ(r, `${fmt(x)} ${u[1]} bằng bao nhiêu ${u[2]}?`, ans, [ans * 10, ans / 10, x * (u[3] === 60 ? 100 : u[3] * 10), ans + u[3], x * 100].filter(Number.isInteger), 'Đo lường', ' ' + u[2], 1);
-    return numQ(r, `${fmt(ans)} ${u[2]} bằng bao nhiêu ${u[1]}?`, x, [x * 10, x + 1, x * 100, Math.max(1, x - 1), x + 10], 'Đo lường', ' ' + u[1], 1);
-  }, 1.2);
-  add([3, 4], 40, (r) => { const k = int(r, 1, 8); return numQ(r, `${18 * k} km/giờ bằng bao nhiêu m/giây?`, 5 * k, [18 * k / 3.6 * 2, 6 * k, 4 * k, 18 * k * 1000 / 60 | 0, 5 * k + 2], 'Đo lường', ' m/giây', 1); }, .4);
-  add([2, 3], 5000, (r, t) => {
-    const h1 = int(r, 6, 13), m1 = int(r, 0, 11) * 5, dur = int(r, t === 2 ? 2 : 7, t === 2 ? 30 : 60) * 5 + (t === 2 ? 60 : 0);
-    const tot = h1 * 60 + m1 + dur, h2 = Math.floor(tot / 60), m2 = tot % 60;
-    const T = x => (x >= 60 ? Math.floor(x / 60) + ' giờ' + (x % 60 ? ' ' + (x % 60) + ' phút' : '') : x + ' phút');
-    const cand = [dur + 10, dur - 10, dur + 40, dur - 40, dur + 60].filter(x => x > 0).map(T);
-    const w = cand.filter((x, i) => cand.indexOf(x) === i && x !== T(dur));
-    return { q: `Từ ${h1} giờ ${m1 ? m1 + ' phút' : 'đúng'} đến ${h2} giờ ${m2 ? m2 + ' phút' : 'đúng'} cùng ngày là bao lâu?`, a: [T(dur)].concat(shuffle(r, w).slice(0, 3)), cat: 'Đo lường' };
-  }, .6);
-
   // ---------- Hình học ----------
   add([1, 2, 3, 4, 5], 3000, (r, t) => {
     if (t === 1) { if (r() < .5) { const a = int(r, 2, 15); return numQ(r, `Hình vuông có cạnh ${a} cm thì chu vi là bao nhiêu?`, 4 * a, [a * a, 2 * a, 4 * a + 4, 3 * a], 'Hình học', ' cm', 1); }
