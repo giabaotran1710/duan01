@@ -8,6 +8,7 @@ require(path.join(__dirname, '../game/thongthai-bank.js'));
 require(path.join(__dirname, '../game/thongthai-bank2.js'));
 require(path.join(__dirname, '../game/thongthai-bank3.js'));
 require(path.join(__dirname, '../game/thongthai-bank4.js'));
+require(path.join(__dirname, '../game/thongthai-bank5.js'));
 require(path.join(__dirname, '../game/thongthai-wiki.js'));
 require(path.join(__dirname, '../game/thongthai-gen.js'));
 const BANK = window.TT_BANK, GEN = window.TTGen;
