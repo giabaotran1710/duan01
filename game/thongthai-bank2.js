@@ -427,8 +427,6 @@ window.TT_ADD(`
 3|toan|Mỗi góc của tam giác đều bằng bao nhiêu độ?|60°|90°|45°|30°
 3|toan|Tổng các góc trong của một tứ giác bằng bao nhiêu?|360°|180°|540°|270°
 3|toan|Đường thẳng đi qua tâm và nối hai điểm trên đường tròn gọi là gì?|Đường kính|Bán kính|Dây cung tùy ý|Tiếp tuyến
-3|toan|Chu vi hình tròn được tính bằng công thức nào?|C = 2πr|C = πr²|C = 4r|C = r²
-3|toan|Diện tích hình tròn được tính bằng công thức nào?|S = πr²|S = 2πr|S = 4r²|S = πd
 3|toan|Số La Mã "L" có giá trị bằng bao nhiêu?|50|100|500|1.000
 3|toan|Số La Mã "D" có giá trị bằng bao nhiêu?|500|50|100|1.000
 3|toan|Ai được xem là "cha đẻ của hình học" với bộ sách "Cơ sở" (Elements)?|Euclid|Pytago|Archimedes|Thales
