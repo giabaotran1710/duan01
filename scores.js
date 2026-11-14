@@ -62,6 +62,7 @@
     { id: 'denkeoquan', name: 'Đèn kéo quân', fmt: v => v + ' điểm' },
     { id: 'tiaso', name: 'Tia số', fmt: v => v + ' điểm' },
     { id: 'xuyentuong', name: 'Vật thể xuyên tường', fmt: v => v + ' tường' },
+    { id: 'thongthai', name: 'Thông thái trắc nghiệm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
 
