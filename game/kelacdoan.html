@@ -142,7 +142,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   const PANTS = ['#2c3156', '#3a2a4f', '#24405a', '#4a2f2a'];
   const WHY = {
     ao: 'Mặc áo khác màu', mu: 'Đội mũ khác', muMau: 'Mũ khác màu', do: 'Cầm đồ khác', doMau: 'Đồ cầm khác màu',
-    nhip: 'Bước lệch nhịp', nguoc: 'Đi giật lùi', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
+    nhip: 'Bước khác nhịp (nhanh hoặc chậm hơn cả đoàn)', nguoc: 'Đi giật lùi', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
   };
   // mốc: bắt được n đoàn thì có thử thách mới
   const STEPS = [
@@ -168,7 +168,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       rows: n < 8 ? 1 : n < 20 ? 2 : 3,
       T: Math.max(6.5, 14 - n * .3),
       hueD: Math.max(26, 140 - n * 7),
-      nhip: n < 14 ? .5 : n < 24 ? .38 : .3,
+      nhip: n < 14 ? 1.75 : n < 24 ? 1.5 : 1.35,
       vary: n >= 16,
     };
   }
@@ -182,7 +182,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const base = {
       shirt: rint(0, 359), shL: 54, pants: pick(PANTS), skin: pick(SKINS),
       hat: { t: pick(HATS), h: rint(0, 359) }, item: { t: pick(ITEMS), h: rint(0, 359) },
-      hand: 1, dir: 1, face: 1, eyes: 1, off: 0, hs: 1,
+      hand: 1, dir: 1, face: 1, eyes: 1, off: 0, hs: 1, tempo: 1, amp: 1,
     };
     let kind = pick(c.kinds);
     if (kind === 'tay' && base.item.t === 'trong') kind = 'nhip';
@@ -194,7 +194,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     else if (kind === 'muMau') { odd.hat.h += dh; odd.hat.dl = dl; }
     else if (kind === 'do') odd.item.t = pick(ITEMS.filter(x => x !== base.item.t));
     else if (kind === 'doMau') { odd.item.h += dh; odd.item.dl = dl; }
-    else if (kind === 'nhip') odd.off = c.nhip;
+    else if (kind === 'nhip') { odd.tempo = Math.random() < .5 ? c.nhip : 1 / c.nhip; odd.off = .5; odd.amp = 1.35; }
     else if (kind === 'nguoc') odd.dir = -1;
     else if (kind === 'tay') odd.hand = -1;
     else if (kind === 'ngoanh') odd.face = -1;
@@ -403,8 +403,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const lk = k.look, sc = s * (lk.hs || 1), kp = k.col || 0;
     c.save(); c.translate(x, y); c.scale(sc * lk.dir, sc);
     c.lineCap = 'round'; c.lineJoin = 'round';
-    const a = Math.sin(ph * TAU) * .5;
-    const bob = -(1 - Math.abs(Math.sin(ph * TAU))) * 5 + (extra && extra.hop ? -extra.hop : 0);
+    const amp = lk.amp || 1, a = Math.sin(ph * TAU) * .5 * amp;
+    const bob = -(1 - Math.abs(Math.sin(ph * TAU))) * 5 * amp * amp + (extra && extra.hop ? -extra.hop : 0);
     c.fillStyle = 'rgba(0,0,0,.28)'; c.beginPath(); c.ellipse(2, 2, 34, 7, 0, 0, TAU); c.fill();
     const shirt = hsl(lk.shirt, 68, lk.shL), shirtD = hsl(lk.shirt, 60, lk.shL - 16), trim = hsl(lk.shirt, 80, Math.min(88, lk.shL + 30));
     const sash = hsl(lk.shirt + 160, 75, 56);
@@ -592,7 +592,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const R = ROWS[k.row];
     return { x: P.head + k.dx, y: R.y, s: R.s };
   }
-  function kidPhase(k) { return P.t * cadence(P.speed) + k.look.off; }
+  function kidPhase(k) { return P.t * cadence(P.speed) * (k.look.tempo || 1) + k.look.off; }
 
   function hit(px, py) {
     let best = null, bd = 1e9;
@@ -710,10 +710,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     c.fillStyle = '#ffd166'; c.font = '800 34px "Be Vietnam Pro",sans-serif';
     c.fillText(WHY[card.kind], W / 2, y + 116);
     const ph = tm * 1.5;
+    const pn = card.normal.look, po = card.odd.look;
     rr(c, x + 70, y + 146, 270, 330, 24); c.fillStyle = 'rgba(255,255,255,.05)'; c.fill();
     rr(c, x + w - 340, y + 146, 270, 330, 24); c.fillStyle = 'rgba(255,209,102,.1)'; c.fill();
-    drawKid(c, card.normal, x + 196, y + 430, 1.25, ph + card.normal.look.off, tm, {});
-    drawKid(c, card.odd, x + w - 214, y + 430, 1.25, ph + card.odd.look.off, tm, {});
+    drawKid(c, card.normal, x + 196, y + 430, 1.25, ph * (pn.tempo || 1) + pn.off, tm, {});
+    drawKid(c, card.odd, x + w - 214, y + 430, 1.25, ph * (po.tempo || 1) + po.off, tm, {});
     c.font = '700 26px "Be Vietnam Pro",sans-serif'; c.fillStyle = '#b4a8d6'; c.fillText('Cả đoàn', x + 205, y + 512);
     c.fillStyle = '#ffd166'; c.fillText('Kẻ lạc đoàn', x + w - 205, y + 512);
     c.font = '600 20px "Be Vietnam Pro",sans-serif'; c.fillStyle = 'rgba(255,255,255,.5)';
