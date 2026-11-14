@@ -44,19 +44,22 @@ def _get(url, params):
 
 
 def title_of(qids):
-    """Tiêu đề bài vi.wikipedia của từng thực thể, lấy qua máy chủ SPARQL theo lô."""
-    import wd
+    """Tiêu đề bài vi.wikipedia của từng thực thể, lấy qua API Wikidata (wbgetentities) theo lô 50."""
     cache = _load('vititles.json')
     need = [q for q in dict.fromkeys(qids) if q not in cache]
-    for i in range(0, len(need), 300):
-        chunk = need[i:i + 300]
-        rows = wd.q('SELECT ?s ?t WHERE { VALUES ?s { ' + ' '.join('wd:' + q for q in chunk) + ' } '
-                    '?a schema:about ?s; schema:isPartOf <https://vi.wikipedia.org/>; schema:name ?t. }', 'titles')
+    for i in range(0, len(need), 50):
+        chunk = need[i:i + 50]
+        d = _get('https://www.wikidata.org/w/api.php', {'action': 'wbgetentities', 'ids': '|'.join(chunk), 'props': 'sitelinks',
+                                                        'sitefilter': 'viwiki', 'format': 'json'})
         for q in chunk:
             cache[q] = None
-        for r in rows:
-            cache[r['s']] = r['t']
-        _save('vititles.json', cache)
+        for q, e in d.get('entities', {}).items():
+            sl = (e.get('sitelinks') or {}).get('viwiki')
+            if sl:
+                cache[q] = sl['title']
+        if i % 1000 == 0:
+            _save('vititles.json', cache)
+    _save('vititles.json', cache)
     return {q: cache.get(q) for q in qids}
 
 

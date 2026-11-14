@@ -107,6 +107,8 @@ class T:
             tier = self.tier_of(rank, len(subs))
             if self.mode == 'year':
                 wrong = year_wrong(rnd, int(float(ans['id'])), tier)
+                if not wrong:
+                    continue
                 a_txt = yfmt(int(float(ans['id'])))
                 if re.search(r'(?<!\d)' + str(int(float(ans['id']))) + r'(?!\d)', e['L']):
                     continue
@@ -146,11 +148,15 @@ def year_wrong(rnd, y, tier):
     if y < 1500:
         span *= 3
     opts = set()
-    while len(opts) < 3:
+    for _ in range(400):
+        if len(opts) == 3:
+            break
         d = rnd.randint(1, span) * rnd.choice((-1, 1))
         v = y + d
         if v != y and (y > 0) == (v > 0) and v <= 2026:
             opts.add(v)
+    if len(opts) < 3:
+        return None
     return [yfmt(v) for v in opts]
 
 

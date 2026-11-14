@@ -183,7 +183,7 @@ SOURCES.update({
                           "OPTIONAL{?s p:P39/pq:P1366 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
     'pope_successor': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s p:P39 ?st. ?st ps:P39 wd:Q19546; pq:P1366 ?o. ?s wikibase:sitelinks ?sl. FILTER(?sl>=12) "
                        "OPTIONAL{?s p:P39/pq:P1366 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
-    'person_field': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P31 wd:Q5; wdt:P101 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=40) "
+    'person_field': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P31 wd:Q5; wdt:P101 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=70) "
                      "OPTIONAL{?s wdt:P101 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
     'person_movement': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { ?s wdt:P31 wd:Q5; wdt:P135 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=20) "
                         "OPTIONAL{?s wdt:P135 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
@@ -214,7 +214,7 @@ SOURCES.update({
     'spacecraft_launch': yr(SPACE, 'P619', 10),
     'deepsky_constellation': rel(DEEPSKY, 'P59', 12),
     'moon_planet': ("SELECT ?s ?sL ?sEn ?sl ?o ?oL ?osl ?o2 WHERE { VALUES ?o {wd:Q2 wd:Q111 wd:Q319 wd:Q193 wd:Q324 wd:Q332 wd:Q339} "
-                    "?s wdt:P397 ?o; wdt:P31/wdt:P279* wd:Q2537; wikibase:sitelinks ?sl. FILTER(?sl>=8) "
+                    "?s wdt:P397 ?o; wikibase:sitelinks ?sl. FILTER(?sl>=8) "
                     "OPTIONAL{?s wdt:P397 ?o2 FILTER(?o2 != ?o)} OPTIONAL{?o wikibase:sitelinks ?osl} " + vi('s') + vi('o') + en('s') + "}"),
 })
 NEW2 = ['monarch_successor', 'pope_successor', 'person_field', 'person_movement', 'creator_country', 'work_year', 'film_year',
