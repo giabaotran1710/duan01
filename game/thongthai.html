@@ -323,7 +323,7 @@ header .mid small{color:var(--muted);font-size:12.5px}
   const TIER_OF = i => Math.min(5, Math.floor(i / 3) + 1);
   const TIER_NAME = ['', 'Dễ', 'Vừa', 'Khó', 'Rất khó', 'Siêu khó'];
   const TIME = [0, 30, 30, 45, 45, 60];              // giây cho mỗi câu theo mức
-  const HAND_RATIO = [0, .55, .6, .62, .58, .55];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
+  const HAND_RATIO = [0, 1, .75, .62, .58, .55];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
   const KEYS = ['A', 'B', 'C', 'D'];
   const fmt = n => n.toLocaleString('vi-VN');
 
@@ -376,10 +376,21 @@ header .mid small{color:var(--muted);font-size:12.5px}
       const drop = new Set(BANK.filter(q => q.tier === tier).map(q => q.key));
       save.seen = save.seen.filter(k => !drop.has(k)); fresh = pool;
     }
+    // Chọn đều theo chủ đề (không theo số câu) để chủ đề đông câu như Địa lý không lấn át; tránh lặp chủ đề của 2 câu liền trước.
+    const recent = G.recentCats || (G.recentCats = []);
+    const avoid = c => recent.length && recent.slice(-2).every(x => x === c);
+    const pickHand = () => {
+      const cats = [...new Set(fresh.map(x => x.cat))];
+      const ok = cats.filter(c => !avoid(c));
+      const c = pick(ok.length ? ok : cats);
+      return pick(fresh.filter(x => x.cat === c));
+    };
     let q = null;
-    if (fresh.length && (rnd() < HAND_RATIO[tier] || !GEN)) q = pick(fresh);
-    if (!q && GEN) for (let k = 0; k < 30 && !q; k++) { const g = GEN.make(tier); if (g && !G.usedKeys.has(g.key)) q = g; }
+    if (fresh.length && (rnd() < HAND_RATIO[tier] || !GEN)) q = pickHand();
+    if (!q && GEN) for (let k = 0; k < 30 && !q; k++) { const g = GEN.make(tier); if (g && !G.usedKeys.has(g.key) && (k > 20 || !avoid(g.cat) && (g.cat !== 'Địa lý' || rnd() < .5))) q = g; }
+    if (!q && fresh.length) q = pickHand();
     if (!q) q = pick(fresh.length ? fresh : pool);
+    recent.push(q.cat);
     G.usedKeys.add(q.key);
     if (q.key[0] === 'b') { save.seen.push(q.key); if (save.seen.length > 4000) save.seen = save.seen.slice(-4000); }
     return { q: q.q, cat: q.cat, tier, opts: shuffle(q.a.map((t, k) => ({ t, ok: k === 0 }))) };
