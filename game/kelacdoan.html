@@ -89,7 +89,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   <div class="panel">
     <h2 id="helpH">Cách chơi</h2>
     <ul class="rules">
-      <li>Đoàn rước đèn đi ngang qua phố. Trong đoàn có đúng <b>một bạn lạc đoàn</b>: khác màu áo, đội mũ khác, cầm đồ khác, hay <b>bước lệch nhịp</b>...</li>
+      <li>Đoàn rước đèn đi ngang qua phố. Trong đoàn có đúng <b>một bạn lạc đoàn</b>: khác màu áo, đội mũ khác, cầm đồ khác, khác màu da, hay <b>bước lệch nhịp</b>...</li>
       <li><b>Chạm vào bạn đó</b> trước khi cả đoàn đi hết khỏi khung hình.</li>
       <li>Chạm nhầm mất 1 tim, để đoàn đi hết cũng mất 1 tim. Có 3 tim, cứ bắt được 10 đoàn thì hồi 1 tim.</li>
       <li>Càng về sau đoàn càng đông, đi nhanh hơn, xếp nhiều hàng, và chỗ khác càng nhỏ.</li>
@@ -139,26 +139,30 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   // ================= ĐỘ KHÓ TĂNG DẦN =================
   const HATS = ['non', 'mu', 'khan', 'mien'];
   const ITEMS = ['sao', 'long', 'co', 'trong'];
-  const SKINS = ['#f6cfa6', '#efbf92', '#e2ab7c', '#f8d9b8'];
+  // màu da theo độ sáng L (38 = nâu sẫm, 86 = trắng hồng): sẫm thì ngả đỏ nâu, sáng thì ngả hồng đào
+  const SKIN_LO = 38, SKIN_HI = 86;
+  const skinCol = L => { const t = (L - SKIN_LO) / (SKIN_HI - SKIN_LO); return hsl(22 + t * 8, 44 + t * 34, L); };
   const PANTS = ['#2c3156', '#3a2a4f', '#24405a', '#4a2f2a'];
   const WHY = {
     ao: 'Mặc áo khác màu', mu: 'Đội mũ khác', muMau: 'Mũ khác màu', do: 'Cầm đồ khác', doMau: 'Đồ cầm khác màu',
-    nhip: 'Bước lệch nhịp', nguoc: 'Đi giật lùi', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
+    nhip: 'Bước lệch nhịp', nguoc: 'Đi giật lùi', da: 'Khác màu da', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
   };
   // mốc: bắt được n đoàn thì có thử thách mới
   const STEPS = [
     [2, 'Để ý cả đồ cầm trên tay'],
+    [3, 'Để ý cả màu da'],
     [4, 'Để ý nhịp bước chân'],
     [6, 'Có bạn đi giật lùi'],
     [8, 'Đoàn đi hai hàng'],
     [10, 'Để ý tay cầm và hướng mặt'],
     [13, 'Khác biệt nhỏ dần: màu mũ, màu đồ, mắt nhắm'],
-    [16, 'Cao thấp, màu da khác nhau không tính'],
+    [16, 'Cao thấp khác nhau không tính'],
     [20, 'Đoàn đi ba hàng'],
   ];
   function cfgAt(n) {
     let kinds = ['ao', 'mu'];
     if (n >= 2) kinds.push('do');
+    if (n >= 3) kinds.push('da');
     if (n >= 4) kinds.push('nhip', 'nhip');
     if (n >= 6) kinds.push('nguoc');
     if (n >= 10) kinds.push('tay', 'ngoanh');
@@ -169,6 +173,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       rows: n < 8 ? 1 : n < 20 ? 2 : 3,
       T: Math.max(6.5, 14 - n * .3),
       hueD: Math.max(26, 140 - n * 7),
+      skinD: Math.max(16, 34 - n),
       nhip: n < 14 ? 1.75 : n < 24 ? 1.5 : 1.35,
       vary: n >= 16,
     };
@@ -181,12 +186,13 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   function makeParade(n) {
     const c = cfgAt(n);
     const base = {
-      shirt: rint(0, 359), shL: 54, pants: pick(PANTS), skin: pick(SKINS),
+      shirt: rint(0, 359), shL: 54, pants: pick(PANTS), skinL: rint(SKIN_LO, SKIN_HI),
       hat: { t: pick(HATS), h: rint(0, 359) }, item: { t: pick(ITEMS), h: rint(0, 359) },
       hand: 1, dir: 1, face: 1, eyes: 1, off: 0, hs: 1, tempo: 1, amp: 1,
     };
     let kind = pick(c.kinds);
     if (kind === 'tay' && base.item.t === 'trong') kind = 'nhip';
+    if (kind === 'da' && base.skinL + c.skinD > SKIN_HI && base.skinL - c.skinD < SKIN_LO) base.skinL = rint(SKIN_LO, SKIN_HI - c.skinD);
     const odd = JSON.parse(JSON.stringify(base));
     const dh = c.hueD * (Math.random() < .5 ? -1 : 1);
     const dl = c.hueD < 70 ? (Math.random() < .5 ? -7 : 7) : 0;
@@ -197,9 +203,17 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     else if (kind === 'doMau') { odd.item.h += dh; odd.item.dl = dl; }
     else if (kind === 'nhip') { odd.tempo = Math.random() < .5 ? c.nhip : 1 / c.nhip; odd.off = .5; odd.amp = 1.35; }
     else if (kind === 'nguoc') odd.dir = -1;
+    else if (kind === 'da') {
+      // lệch skinD độ sáng; chọn chiều còn chỗ trong dải, cả hai chiều đều được thì bốc ngẫu nhiên
+      const up = base.skinL + c.skinD <= SKIN_HI, dn = base.skinL - c.skinD >= SKIN_LO;
+      const sg = up && dn ? (Math.random() < .5 ? 1 : -1) : up ? 1 : -1;
+      odd.skinL = base.skinL + sg * c.skinD;
+    }
     else if (kind === 'tay') odd.hand = -1;
     else if (kind === 'ngoanh') odd.face = -1;
     else if (kind === 'mat') odd.eyes = 0;
+    base.skin = skinCol(base.skinL); odd.skin = skinCol(odd.skinL);
+    base.skinB = odd.skinB = null;
     const R = c.rows, N = c.size, cols = Math.ceil(N / R), sp = 160;
     const oddCol = rint(Math.min(cols - 1, Math.floor(cols * .3)), cols - 1);
     const oddRow = rint(0, Math.min(R, N - oddCol * R) - 1);
@@ -208,7 +222,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const col = Math.floor(i / R), row = i % R;
       const isOdd = col === oddCol && row === oddRow;
       const lk = JSON.parse(JSON.stringify(isOdd ? odd : base));
-      if (c.vary) { lk.hs = rnd(.88, 1.1); lk.skin = pick(SKINS); }
+      if (c.vary) lk.hs = rnd(.88, 1.1);
       kids.push({ col, row, dx: -(col * sp + row * sp / R + rnd(-6, 6)), look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
     }
     const L = cols * sp + sp;
@@ -416,7 +430,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const hipY = -50 + bob * .4, bend = Math.max(0, -ang) * 1.1 + .08;
       const kx = hx + Math.sin(ang) * 22, ky = hipY + Math.cos(ang) * 22;
       const fx = kx + Math.sin(ang - bend) * 21, fy = ky + Math.cos(ang - bend) * 21;
-      const sk = near ? lk.skin : hsl(25, 40, 58);
+      const sk = near ? lk.skin : (lk.skinB || (lk.skinB = skinCol(lk.skinL - 12)));
       seg(c, kx, ky, fx, fy, 10, sk);
       seg(c, fx + (kx - fx) * .3, fy + (ky - fy) * .3, fx, fy, 11, near ? '#f4f1ea' : '#c9c3bb');
       seg(c, hx, hipY, hx + (kx - hx) * .7, hipY + (ky - hipY) * .7, 16, pants);
