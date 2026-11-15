@@ -48,6 +48,82 @@
   }
   window.WebLoop = WebLoop;
 
+  /* WebAudioEl: thay thế new Audio(src) / <audio> bằng Web Audio, dùng cùng cách gọi:
+     play() (trả Promise), pause(), load(), cloneNode(), currentTime, volume, loop, muted, paused, addEventListener.
+     Dùng chung một AudioContext và bộ nhớ đệm giải mã cho cả trang. */
+  var sharedAc = null, buffers = {}, pending = {}, instances = [];
+  function sAc() {
+    if (sharedAc) return sharedAc;
+    try { sharedAc = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { sharedAc = null; }
+    return sharedAc;
+  }
+  function decode(url, cb, fail) {
+    if (buffers[url]) { cb(buffers[url]); return; }
+    if (!pending[url]) {
+      pending[url] = [];
+      fetch(url).then(function (r) { if (!r.ok) throw new Error('http ' + r.status); return r.arrayBuffer(); }).then(function (b) {
+        return new Promise(function (ok, no) { var q = sharedAc.decodeAudioData(b, ok, no); if (q && q.then) q.then(ok, no); });
+      }).then(function (buf) { buffers[url] = buf; var l = pending[url]; delete pending[url]; l.forEach(function (f) { f[0](buf); }); })
+        .catch(function (e) { var l = pending[url]; delete pending[url]; l.forEach(function (f) { f[1](e); }); });
+    }
+    pending[url].push([cb, fail || function () {}]);
+  }
+  function WebAudioEl(url) {
+    if (!(this instanceof WebAudioEl)) return new WebAudioEl(url);
+    var self = this, node = null, gain = null, startedAt = 0, offset = 0, playing = false, ls = {};
+    self.src = url; self.loop = false; self.preload = 'auto'; self._vol = 1; self.muted = false; self.autoplay = false;
+    Object.defineProperty(self, 'volume', { get: function () { return self._vol; }, set: function (v) { self._vol = Math.max(0, Math.min(1, +v || 0)); apply(); } });
+    Object.defineProperty(self, 'paused', { get: function () { return !playing; } });
+    Object.defineProperty(self, 'currentTime', {
+      get: function () { return pos(); },
+      set: function (t) { offset = Math.max(0, +t || 0); if (playing) { stopNode(); startNode(); } }
+    });
+    function emit(n, ev) { (ls[n] || []).slice().forEach(function (f) { try { f.call(self, ev || { type: n }); } catch (e) {} }); if (typeof self['on' + n] === 'function') { try { self['on' + n]({ type: n }); } catch (e) {} } }
+    self.addEventListener = function (n, f) { (ls[n] = ls[n] || []).push(f); };
+    self.removeEventListener = function (n, f) { ls[n] = (ls[n] || []).filter(function (x) { return x !== f; }); };
+    function apply() { if (gain) gain.gain.value = self.muted ? 0 : self._vol; }
+    function pos() {
+      var b = buffers[url]; if (!playing || !b || !sharedAc) return offset;
+      var t = offset + (sharedAc.currentTime - startedAt);
+      return self.loop ? t % b.duration : Math.min(t, b.duration);
+    }
+    function stopNode() { if (node) { node.onended = null; try { node.stop(); } catch (e) {} try { node.disconnect(); } catch (e) {} node = null; } }
+    function startNode() {
+      var b = buffers[url]; if (!b || !sharedAc) return;
+      gain = gain || sharedAc.createGain(); gain.connect(sharedAc.destination); apply();
+      node = sharedAc.createBufferSource(); node.buffer = b; node.loop = !!self.loop; node.connect(gain);
+      var off = offset >= b.duration ? 0 : offset; offset = off;
+      startedAt = sharedAc.currentTime; node.start(0, off);
+      var me_ = node;
+      node.onended = function () { if (node === me_ && !self.loop) { node = null; playing = false; offset = 0; emit('ended'); } };
+    }
+    self.load = function () { if (sAc()) decode(url, function () { emit('canplaythrough'); }, function (e) { emit('error', e); }); };
+    self.play = function () {
+      var c = sAc();
+      if (!c) return Promise.reject(new Error('Web Audio không khả dụng'));
+      if (playing) return Promise.resolve();
+      playing = true; self._want = true;
+      if (instances.indexOf(self) < 0) instances.push(self);
+      if (c.state === 'suspended') { try { c.resume(); } catch (e) {} }
+      return new Promise(function (ok, no) {
+        decode(url, function () { if (playing && !node) { startNode(); } emit('canplaythrough'); ok(); }, function (e) { playing = false; emit('error', e); no(e); });
+      });
+    };
+    self.pause = function () { if (playing) { offset = pos(); } playing = false; self._want = false; stopNode(); };
+    self.cloneNode = function () { var c = new WebAudioEl(url); c.loop = self.loop; c._vol = self._vol; c.muted = self.muted; return c; };
+    self._resume = function () { if (playing && !node) { var b = buffers[url]; if (b) startNode(); } };
+  }
+  window.WebAudioEl = WebAudioEl;
+  /* trình duyệt chỉ cho phát sau thao tác của người chơi: mở khoá ở lần chạm kế tiếp */
+  ['pointerup', 'touchend', 'click', 'keydown'].forEach(function (ev) {
+    window.addEventListener(ev, function () { if (sharedAc && sharedAc.state === 'suspended' && !document.hidden) { try { sharedAc.resume(); } catch (e) {} } }, { capture: true, passive: true });
+  });
+  document.addEventListener('visibilitychange', function () {
+    if (!sharedAc) return;
+    if (document.hidden) { try { sharedAc.suspend(); } catch (e) {} } else { try { sharedAc.resume(); } catch (e) {} }
+  });
+  window.addEventListener('pagehide', function () { if (sharedAc) { try { sharedAc.suspend(); } catch (e) {} } });
+
   if (!me || !me.getAttribute('data-src')) return;
   var vol = parseFloat(me.getAttribute('data-volume'));
   var bgm = WebLoop(me.getAttribute('data-src'), isNaN(vol) ? 0.35 : Math.max(0, Math.min(1, vol)));
