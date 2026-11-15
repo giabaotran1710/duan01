@@ -445,7 +445,7 @@ var MD = (function(){
           var S=cloneRun(F);
           for(var k=0;k<SUB;k++){ step(L,S,DT,a===1&&k===0); if(S.dead||S.won) break; }
           if(S.dead) continue;
-          if(opt.trace) S._tr={x:S.x,y:S.y,gr:S.gr,t:S.t,p:F._tr};
+          if(opt.trace) S._tr={x:S.x,y:S.y,gr:S.gr,t:S.t,a:a,p:F._tr};
           if(S.won){ if(!res.first) res.first=S.t; if(S.gm===all && !res.all){ res.all=S.t; if(opt.trace){ var pth=[]; for(var tr=S._tr;tr;tr=tr.p) pth.push(tr); res.path=pth.reverse(); } } if(res.all!==null) return res; continue; }
           var gone=0; for(var cc in S.cr) if(S.t-S.cr[cc]>=P.crumbleDelay) gone++;
           var key=Math.round(S.x/q)+','+Math.round(S.y/q)+','+Math.round(S.vy/(q*20))+','+S.dir+(S.gr?'g':'')+(S.wall?'w':'')+(S.buf>0?'b':'')+S.aj+','+S.gm+(S.key?'k':'')+';'+gone+trapKey(S);
@@ -516,7 +516,7 @@ var MD = (function(){
     var sig = th.sig==='key' ? null : th.sig;
     if(sig==='chaserV' && lay!=='shaft') sig='vspike';
     if(sig) out.push(sig);
-    var want = p===0 ? 1 : p===4 ? 2 : p<4 ? 2+(R()<0.5?1:0) : 3+(R()<0.5?1:0);
+    var want = p===0 ? 1 : p===4 ? 2 : p<4 ? 3 : 4;
     if(p===0) out.push('spike');
     var tries=0;
     while(out.length<want && tries<40){ tries++; var k=pick(R,pool); if(k==='chaserV' && lay!=='shaft') continue; if(out.indexOf(k)<0) out.push(k); }
@@ -721,6 +721,18 @@ var MD = (function(){
     }
     return {g:g, room:{x0:x0,x1:x1,ft:ft,cb:cb,start:{c:x0+1,r:ft[x0]-1},chest:best}};
   }
+  // Độ khắt khe: phát lại đường đi của máy giải với mỗi lần chạm lệch ngẫu nhiên ±0,05 giây, trả về tỉ lệ ngã
+  function jitter(L,path,trials,seed){
+    var taps=path.map(function(p){ return p.a?1:0; }), dead=0, sd=seed>>>0||1;
+    var rnd=function(){ sd=(Math.imul(sd,1103515245)+12345)>>>0; return sd/4294967296; };
+    for(var t=0;t<trials;t++){
+      var jt=[]; for(var i=0;i<taps.length;i++) jt.push(0);
+      for(var i2=0;i2<taps.length;i2++) if(taps[i2]){ var r=rnd(), j=Math.max(0,Math.min(taps.length-1,i2+(r<0.25?-1:r<0.75?0:1))); jt[j]=1; }
+      var S=newRun(L), stop=false;
+      for(var j2=0;j2<jt.length+30 && !stop;j2++) for(var k=0;k<6;k++){ step(L,S,1/120,jt[j2]&&k===0); if(S.dead){ dead++; stop=true; break; } if(S.won){ stop=true; break; } }
+    }
+    return dead/trials;
+  }
   // Đặt bẫy theo đường đi thật: lấy đường máy giải tìm được, đặt từng bẫy chắn đúng chỗ mèo phải qua, giải lại sau mỗi bẫy
   function trapRoom(R,g,info,kinds,d,want){
     var map=function(){ return g.map(function(row){ return row.join(''); }); };
@@ -728,7 +740,9 @@ var MD = (function(){
     if(s.all===null || !s.path || s.first<2.8) return null;
     var placed=0, tries=0, path=s.path, t0=Date.now();
     var near=function(c,r,o){ return Math.abs(c-o.c)<=2 && Math.abs(r-o.r)<=2; };
-    while(placed<want && tries<want*5 && Date.now()-t0<12000){
+    var target=0.45+0.35*d, jd=0, L3=null;
+    // đặt đủ số bẫy, rồi đặt thêm (tối đa 9) nếu đường đi vẫn còn dễ thở
+    while((placed<want || (jd<target && placed<9)) && tries<want*6 && Date.now()-t0<15000){
       tries++;
       var pts=path.filter(function(p){ return p.t>1.2; }); if(pts.length<6) break;
       var P=pts[Math.floor(R()*(pts.length-4))], kind=pick(R,kinds), cx=Math.floor((P.x+9)/T), cy=Math.floor((P.y+13)/T), cells=[];
@@ -753,9 +767,9 @@ var MD = (function(){
       cells.forEach(function(q){ g[q[0]][q[1]]=q[2]; });
       var L2=parse(map()), s2=solve(L2,{maxT:26,cap:700,q:5,trace:true});
       if(s2.all===null || !s2.path){ cells.forEach(function(q,i){ g[q[0]][q[1]]=old[i]; }); continue; }
-      placed++; path=s2.path;
+      placed++; path=s2.path; if(placed>=want-1) jd=jitter(L2,path,24,placed*7919+tries);
     }
-    return placed;
+    return jd;
   }
   function decorate(R,g,lanes,d,o){
     var kinds=o.kinds||['spike'], gems=0, maxGems=3, aimed=0, side=0;
@@ -849,7 +863,7 @@ var MD = (function(){
     if(lay==='hall') return genHall(R,d,opt);
     if(lay==='roofs') return genRoofs(R,d,opt);
     if(lay==='shaft') return genShaft(R,d,opt);
-    if(lay==='room'){ var rm=genRoom(R,d,opt); var want=Math.max(3,Math.min(6,2+Math.round(d*3)+(((n-11)%10)===9?1:0)-(((n-11)%10)===4?1:0))); if(trapRoom(R,rm.g,rm.room,kinds.filter(function(k){ return k!=='key'; }),d,want)===null) return null; return rm.g; }
+    if(lay==='room'){ var rm=genRoom(R,d,opt); var want=Math.max(4,Math.min(7,3+Math.round(d*3)+(((n-11)%10)===9?1:0)-(((n-11)%10)===4?1:0))); var jd=trapRoom(R,rm.g,rm.room,kinds.filter(function(k){ return k!=='key'; }),d,want); if(jd===null || jd<0.25+0.35*d) return null; return rm.g; }
     return genTiers(R,d,opt);
   }
   function gen(n){
@@ -897,7 +911,7 @@ var cv=$('cv'), ctx=cv.getContext('2d'), box=$('box');
 var reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- Lưu trữ ---------- */
-var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=3;
+var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=4;
 // stars/best: theo số hầm (bắt đầu từ 1); maxN: hầm xa nhất đã qua; gen: hầm đã dựng sẵn
 var save={stars:{},best:{},maxN:0,mute:false,gen:{},gv:GEN_VER};
 try{ var raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
