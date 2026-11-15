@@ -310,6 +310,8 @@ header .mid small{color:var(--muted);font-size:12.5px}
 <script src="thongthai-bank5.js?v=2"></script>
 <script src="thongthai-bank6.js?v=1"></script>
 <script src="thongthai-bank7.js?v=1"></script>
+<script src="thongthai-bank8.js?v=1"></script>
+<script>window.TT_TPL = true;</script>
 <script src="thongthai-wiki.js?v=2"></script>
 <script src="thongthai-wiki2.js?v=1"></script>
 <script src="thongthai-gen.js?v=2"></script>
@@ -324,7 +326,7 @@ header .mid small{color:var(--muted);font-size:12.5px}
   const TIER_OF = i => Math.min(5, Math.floor(i / 3) + 1);
   const TIER_NAME = ['', 'Dễ', 'Vừa', 'Khó', 'Rất khó', 'Siêu khó'];
   const TIME = [0, 30, 30, 45, 45, 60];              // giây cho mỗi câu theo mức
-  const HAND_RATIO = [0, 1, .75, .62, .58, .55];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
+  const HAND_RATIO = [0, 1, .85, .8, .76, .72];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
   const KEYS = ['A', 'B', 'C', 'D'];
   const fmt = n => n.toLocaleString('vi-VN');
 
@@ -381,11 +383,14 @@ header .mid small{color:var(--muted);font-size:12.5px}
     const recent = G.recentCats || (G.recentCats = []);
     const avoid = c => recent.length && recent.slice(-2).every(x => x === c);
     const pickHand = () => {
-      const cnt = {}; fresh.forEach(x => { cnt[x.cat] = (cnt[x.cat] || 0) + 1; });
+      // câu soạn tay tự nhiên (đời thường, kiểu "Đâu là...") được ưu tiên hơn câu khuôn mẫu suy ra từ dữ liệu
+      const nat = fresh.filter(x => !x.tpl), tplQ = fresh.filter(x => x.tpl);
+      const src = nat.length && (!tplQ.length || rnd() < .7) ? nat : fresh;
+      const cnt = {}; src.forEach(x => { cnt[x.cat] = (cnt[x.cat] || 0) + 1; });
       let cats = Object.keys(cnt); const ok = cats.filter(c => !avoid(c)); if (ok.length) cats = ok;
       let r = rnd() * cats.reduce((a, c) => a + Math.sqrt(cnt[c]), 0), c = cats[0];   // trọng số căn bậc hai: chủ đề ít câu không bị lặp quá nhiều
       for (const k of cats) { r -= Math.sqrt(cnt[k]); if (r <= 0) { c = k; break; } }
-      return pick(fresh.filter(x => x.cat === c));
+      return pick(src.filter(x => x.cat === c));
     };
     let q = null;
     if (fresh.length && (rnd() < HAND_RATIO[tier] || !GEN)) q = pickHand();
@@ -404,7 +409,7 @@ header .mid small{color:var(--muted);font-size:12.5px}
   function closeL(id) { $(id).classList.remove('on'); }
   function renderHome() {
     $('stBest').textContent = fmt(save.best); $('stWins').textContent = fmt(save.wins); $('stRight').textContent = fmt(save.right);
-    $('bankInfo').innerHTML = `Ngân hàng: <b>${fmt(BANK.length)}</b> câu viết tay đã kiểm và hơn <b>${fmt(Math.floor((GEN ? GEN.size() : 0) / 100000) * 100000)}</b> câu sinh tự động có đáp án do máy tính ra.`;
+    $('bankInfo').innerHTML = `Ngân hàng: <b>${fmt(BANK.length)}</b> câu viết tay đã kiểm và hơn <b>${fmt(Math.floor((GEN ? GEN.size() : 0) / 1000) * 1000)}</b> câu sinh tự động có đáp án do máy tính ra.`;
   }
   function renderLadder() {
     const ol = $('ladder'); ol.innerHTML = '';
