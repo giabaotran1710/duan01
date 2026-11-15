@@ -17564,8 +17564,13 @@ function cancelNewGameIntro(){
     // The board is generated only when this initialization runs. There is no
     // 15-board future cache and no hidden pre-generation pipeline.
     let plan=null, boardSpec;
+    // Vào game lần đầu (hoặc mở lại): luôn mở màn khởi động nhanh. Màn Nghiên cứu / độ khó cao có thể mất vài chục giây
+    // để dựng, người chơi tưởng game treo. Các ván sau (bấm Ván mới) mới dựng theo chế độ đã chọn.
+    const quickStart=isInitialLoad && !options.override && (selectedTier==='research' || selectedTier!=='random');
     if(options.override){
       boardSpec={n:options.override.d.n,easy:false};
+    }else if(quickStart){
+      boardSpec={n:4,easy:false};
     }else if(selectedTier==='research' && researchCfg){
       boardSpec={n:researchCfg.n,easy:false,colors:researchCfg.colors||3,custom:researchCfg.rules.concat(researchCfg.tough?['tough']:[])};
     }else if(selectedTier!=='random'){
@@ -17582,7 +17587,7 @@ function cancelNewGameIntro(){
     let usedPlan=forcedPlan, chosenSpec=boardSpec;
     // Method B: when a difficulty is chosen, regenerate (time-boxed) until
     // the board's hidden score really falls in that tier; else keep closest.
-    if(!options.override && TIER_ORDER.includes(selectedTier)){
+    if(!options.override && !quickStart && TIER_ORDER.includes(selectedTier)){
       const target=TIER_ORDER.indexOf(selectedTier);
       const tierIdx=(g,p)=>{prepareGenerated(g);return TIER_ORDER.indexOf(tierFromScore(effectiveScore(g,!!(p?.noMark && (g.d.palette||3)<4))));};
       let t0i=tierIdx(generated,usedPlan);
@@ -17750,7 +17755,7 @@ function cancelNewGameIntro(){
     game.animatePrefilled=true;
     // QUY TẮC CẤM ĐÁNH DẤU: 20% of boards disable the X (mark) tool.
     game.noMark=game.tutorial ? false
-      : (selectedTier==='research' && researchCfg && !options.override) ? !!researchCfg.noMark
+      : (selectedTier==='research' && researchCfg && !options.override && !quickStart) ? !!researchCfg.noMark
       : usedPlan ? (usedPlan.noMark && (game.d.palette||3)<4)
       : ((game.d.palette||3)<4 && Math.random()<0.2);
     game.scoreTier=game.tutorial ? 'DỄ' : tierFromScore(effectiveScore(generatedOverride,game.noMark));
@@ -17759,7 +17764,7 @@ function cancelNewGameIntro(){
     // 15% of ordinary boards). It makes a board harder to read, so it counts
     // like a difficulty rule for the label.
     game.chaos=!game.tutorial && !options.override &&
-      ((selectedTier==='research'&&researchCfg) ? !!researchCfg.chaos : usedPlan?.legend ? true : Math.random()<0.15);
+      ((selectedTier==='research'&&researchCfg&&!quickStart) ? !!researchCfg.chaos : usedPlan?.legend ? true : Math.random()<0.15);
     if(game.chaos)game.scoreTier=tierFromScore(effectiveScore(generatedOverride,game.noMark)*1.15);
     markMode.classList.toggle('no-mark',game.noMark);
     document.getElementById('bulkPaintBtn')?.classList.toggle('no-mark',!!game.noMark);
