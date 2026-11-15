@@ -396,4 +396,26 @@
   }
   ready.then(apply);
   listeners.push(apply);
+
+  // ---- Cổng đặt tên: vào game mà chưa có tên thì hiện hộp đặt tên (quy tắc đặt tên có sẵn trong scores.js), không cho bỏ qua ----
+  if (gameId) (function () {
+    function hasName() { try { return !!(localStorage.getItem('player_name') || '').trim(); } catch (e) { return true; } }
+    if (hasName()) return;
+    function ask() {
+      if (hasName() || !window.Scores || !Scores.askName) return;
+      if (Scores.isBanned && Scores.isBanned()) return;
+      Scores.askName({ required: true });
+    }
+    function go() {
+      if (window.Scores) return ask();
+      var s = document.createElement('script');
+      s.src = new URL('scores.js', src).href + (src.indexOf('?') > 0 ? src.slice(src.indexOf('?')) : '');
+      s.onload = ask;
+      (document.head || document.documentElement).appendChild(s);   // game chưa nạp scores.js thì nạp thêm
+    }
+    // game đang bảo trì thì chưa cần hỏi tên (chưa chơi được)
+    function start() { ready.then(function () { if (!blocked) nSetTimeout(go, 300); }); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+  })();
 })();
