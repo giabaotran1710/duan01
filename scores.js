@@ -242,6 +242,8 @@
     const entry = { game, name: name ? setName(name) : getName(), score: s, at: new Date().toISOString() };
     localAdd(game, { name: entry.name, score: entry.score, at: entry.at });
     maybeAskName();
+    // chưa đặt tên thì chỉ lưu trên máy, không gửi lên bảng xếp hạng chung (tránh dòng vô danh / điểm do bot)
+    if (!hasName() && !name) return { ok: true, online: false, local: true };
     // chỉ gửi khi cao hơn điểm đã gửi thành công của game này (server giữ điểm cao nhất mỗi người)
     const sent = readJson(SENT_KEY, {})[game];
     if (sent !== undefined && s <= sent) return { ok: true, online: true, skipped: true };
@@ -250,18 +252,21 @@
     return res;
   }
 
+  // Dòng không có tên thật (trống hoặc "Người chơi") là điểm gửi từ máy chưa đặt tên, thường do bot kiểm thử: không hiện lên bảng
+  const isAnon = n => { const c = cleanName(n); return !c || c.toLowerCase() === 'người chơi'; };
   async function top(game, limit) {
     limit = limit || 10;
+    const fetchN = Math.min(300, limit + 100);   // lấy dư để sau khi bỏ dòng vô danh vẫn đủ số dòng
     try {
       if (apiBase()) {
-        const res = await http(apiBase() + '/api/scores/' + encodeURIComponent(game) + '?limit=' + limit);
-        return { online: true, scores: res.scores };
+        const res = await http(apiBase() + '/api/scores/' + encodeURIComponent(game) + '?limit=' + fetchN);
+        return { online: true, scores: (res.scores || []).filter(x => !isAnon(x.name)).slice(0, limit) };
       }
-      const data = await http(FIREBASE_URL + '/leaderboards/' + encodeURIComponent(game) + '.json?orderBy=%22score%22&limitToLast=' + limit);
+      const data = await http(FIREBASE_URL + '/leaderboards/' + encodeURIComponent(game) + '.json?orderBy=%22score%22&limitToLast=' + fetchN);
       const me = getUid();
-      const scores = Object.keys(data || {}).map(uid => {
+      const scores = Object.keys(data || {}).filter(uid => !isAnon((data[uid] || {}).name)).map(uid => {
         const d = data[uid] || {};
-        return { name: cleanName(d.name) || 'Người chơi', score: Number(d.score) || 0, at: d.at ? new Date(d.at).toISOString() : '', me: uid === me, _t: d.at || 0 };
+        return { name: cleanName(d.name), score: Number(d.score) || 0, at: d.at ? new Date(d.at).toISOString() : '', me: uid === me, _t: d.at || 0 };
       }).sort((a, b) => b.score - a.score || a._t - b._t).slice(0, limit);
       scores.forEach(s => delete s._t);
       return { online: true, scores };
