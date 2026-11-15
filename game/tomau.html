@@ -2349,8 +2349,15 @@ body.solution-detail-active .target-controls-top{
   box-sizing:border-box;border-radius:9px;background:#fff;color:#172033;font:800 10.5px/17px Inter,system-ui,sans-serif;
   text-align:center;box-shadow:0 0 0 1.5px #172033,0 2px 4px rgba(0,0,0,.25);pointer-events:none;
   animation:sdPop .3s ease-out both}
-.sd-legend{margin-top:6px;font-size:11px;color:#5f6878;display:flex;flex-wrap:wrap;align-items:center;gap:3px 6px;line-height:1.5}
-.sd-legend i{font-style:normal;opacity:.5}
+.sd-legend{margin-top:7px;padding-top:6px;border-top:1px solid #e6e9f0;font-size:10.5px;color:#6a7385;display:flex;flex-wrap:wrap;align-items:center;gap:4px 12px;line-height:1.4}
+.sd-legend .sd-li{display:inline-flex;align-items:center;gap:4px;white-space:nowrap}
+.sd-legend .sd-li .sd-lg{margin-right:0}
+.sd-legend em{font-style:italic}
+.solution-detail-panel .clue-explain-text{font-size:12px;line-height:1.45}
+.sd-line{display:block}
+.sd-line+.sd-line{margin-top:2px}
+.sd-concl{color:#172033;font-weight:700}
+.solution-detail-panel .clue-explain-hint:empty{display:none}
 .sd-lg{display:inline-flex;align-items:center;justify-content:center;vertical-align:-2px;margin-right:2px;box-sizing:border-box}
 .sd-lg-brackets{width:13px;height:13px;background:
   linear-gradient(#172033,#172033) left top/5px 2px no-repeat,linear-gradient(#172033,#172033) left top/2px 5px no-repeat,
@@ -15371,6 +15378,27 @@ function buildDetailedSolutionSteps(){
     };
   }
 
+// Giải chi tiết: one idea per line. A reason sentence is cut at "; ",
+// " → " and before "Vậy …" (text only, never inside a tag); the last line
+// is the conclusion and is drawn a little stronger.
+function sdFormat(html){
+  if(!html)return '';
+  const lines=[];let buf='';
+  for(const seg of String(html).split(/(<[^>]*>)/)){
+    if(seg.startsWith('<')){buf+=seg;continue;}
+    for(const bit of seg.split(/(; | → |\. (?=Vậy ))/)){
+      if(bit==='; '){lines.push(buf);buf='';}
+      else if(bit===' → '){lines.push(buf);buf='→ ';}
+      else if(bit==='. '){lines.push(buf+'.');buf='';}
+      else buf+=bit;
+    }
+  }
+  lines.push(buf);
+  const cap=l=>l.replace(/^(\p{Ll})/u,ch=>ch.toUpperCase());
+  const out=lines.map(l=>cap(l.trim())).filter(l=>l&&l!=='→');
+  return out.map((l,k)=>`<span class="sd-line${out.length>1&&k===out.length-1?' sd-concl':''}">${l}</span>`).join('');
+}
+
 function showDetailedStep(step,pointer,phase='reason'){
     if(!step||!game)return;
     if(phase==='reason')game._sdStepKey=`${solutionDetailRun}:${pointer}`;
@@ -15384,15 +15412,12 @@ function showDetailedStep(step,pointer,phase='reason'){
     clueExplain?.classList.add('show','solution-detail-panel');
 
     if(clueExplainTitle)clueExplainTitle.innerHTML=step.reasonTitle;
-    if(clueExplainText)clueExplainText.innerHTML=step.reasonText;
+    if(clueExplainText)clueExplainText.innerHTML=sdFormat(step.reasonText);
 
+    // The board already shows what to look at; the hint line is only used
+    // for the X progress while marks are being placed.
     const hint=solutionDetailHintElement();
-    if(hint){
-      hint.textContent=
-        step.kind==='mark'
-          ? 'Quan sát phép loại trừ…'
-          : 'Quan sát cách xác định màu…';
-    }
+    if(hint)hint.textContent='';
 
     // Rebuild the visible state from the opening position. IMPORTANT:
     // the current mark-step's X actions are NOT applied here. They are added
@@ -15447,7 +15472,7 @@ function showDetailedStep(step,pointer,phase='reason'){
         }
         step.reasonText=live.text;
         step.liveInferred=!!live.usedInferred;
-        if(clueExplainText)clueExplainText.innerHTML=live.text;
+        if(clueExplainText)clueExplainText.innerHTML=sdFormat(live.text);
       }
 
       game.solutionDetailContext={
@@ -15468,23 +15493,23 @@ function showDetailedStep(step,pointer,phase='reason'){
       {
         const v=game.solutionDetailContext.viz;
         const items=[];
-        if(v.sources.size)items.push('<span class="sd-lg sd-lg-brackets"></span> clue đang dùng');
-        if(v.line)items.push('<span class="sd-lg sd-lg-line"></span> dữ kiện bên lề đang dùng');
-        if(v.hypo)items.push('<b style="color:'+getGameColor(v.hypo.color).hex+'">?</b> màu đang giả định');
-        if(v.forced?.size)items.push('<span class="sd-lg sd-lg-forced"></span> ô bị buộc theo giả định');
-        if(game.deceitMode)items.push('<i>số nghiêng</i>: số đã bị nhân đôi — lời giải dùng giá trị thật');
-        if(v.counted.size)items.push('<span class="sd-lg sd-lg-count">1</span> ô đã đếm');
-        if(v.inferred?.size)items.push('<span class="sd-lg sd-lg-count inferred">1</span> ô đã suy ra, chưa tô');
-        if(v.twins.size)items.push('<span class="sd-lg sd-lg-count twin">⟷</span> ô đối xứng');
-        if(v.open.size)items.push('<span class="sd-lg sd-lg-open"></span> ô còn có thể mang màu này');
-        if(step.kind==='paint')items.push('<span class="sd-lg sd-lg-target">?</span> ô đang xét');
+        if(v.sources.size)items.push('<span class="sd-lg sd-lg-brackets"></span>clue dùng');
+        if(v.line)items.push('<span class="sd-lg sd-lg-line"></span>dữ kiện bên lề');
+        if(v.hypo)items.push('<b style="color:'+getGameColor(v.hypo.color).hex+'">?</b>giả định');
+        if(v.forced?.size)items.push('<span class="sd-lg sd-lg-forced"></span>bị kéo theo');
+        if(game.deceitMode)items.push('<em>số nghiêng</em>&nbsp;= đã nhân đôi');
+        if(v.counted.size)items.push('<span class="sd-lg sd-lg-count">1</span>đã đếm');
+        if(v.inferred?.size)items.push('<span class="sd-lg sd-lg-count inferred">1</span>đã suy ra');
+        if(v.twins.size)items.push('<span class="sd-lg sd-lg-count twin">⟷</span>đối xứng');
+        if(v.open.size)items.push('<span class="sd-lg sd-lg-open"></span>còn khả năng');
+        if(step.kind==='paint')items.push('<span class="sd-lg sd-lg-target">?</span>ô đang xét');
         // Keep the words consistent with the drawing: if no other cell is
         // dashed, the only remaining candidate is the cell under study.
         if(!v.open.size && step.reasonText?.includes('(viền nét đứt)')){
           step.reasonText=step.reasonText.split('(viền nét đứt)').join('(chính là ô đang xét)');
-          if(clueExplainText)clueExplainText.innerHTML=step.reasonText;
+          if(clueExplainText)clueExplainText.innerHTML=sdFormat(step.reasonText);
         }
-        step.legendHtml=items.length ? `<div class="sd-legend">${items.join('<i>·</i>')}</div>` : '';
+        step.legendHtml=items.length ? `<div class="sd-legend">${items.map(x=>`<span class="sd-li">${x}</span>`).join('')}</div>` : '';
         if(step.legendHtml && clueExplainText){
           clueExplainText.insertAdjacentHTML('beforeend',step.legendHtml);
         }
@@ -16185,15 +16210,10 @@ function showDetailedStep(step,pointer,phase='reason'){
             );
             focusSolutionDetailClue(step);
 
-            if(clueExplainText){
-              clueExplainText.innerHTML=
-                `<b>${step.reasonTitle}</b><br>${step.reasonText}<br><small>${action.reason}</small>${step.legendHtml||''}`;
-            }
-
             const hint=solutionDetailHintElement();
             if(hint){
               hint.textContent=
-                `Đang đánh dấu X · ${markPointer}/${actions.length}`;
+                `Đánh dấu X ${markPointer}/${actions.length} · ${solutionDetailCoordinate(action.cell)}`;
             }
 
             // Keep the newly inserted X in its animated state for the full
