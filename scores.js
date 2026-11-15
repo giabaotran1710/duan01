@@ -291,7 +291,7 @@
       host.innerHTML = '<div style="width:100%;max-width:360px;margin:auto;background:linear-gradient(170deg,#1a2147,#0d1226);border:1px solid #34406e;border-radius:20px;padding:22px 20px 18px;color:#eef1ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">' +
         '<div style="font-size:34px;text-align:center">🏆</div>' +
         '<div style="font-weight:800;font-size:19px;text-align:center;margin:6px 0 4px">Chọn tên người chơi</div>' +
-        '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
+        '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">' + (opts.required ? 'Bạn cần đặt tên trước khi chơi. ' : '') + 'Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
         '<input id="lbNameIn" maxlength="' + NAME_MAX + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="vd: gamer2026" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #34406e;background:#0a0f22;color:#fff;font-size:18px;font-weight:700;letter-spacing:.06em;outline:none;margin-bottom:12px">' +
         '<div id="lbNameRules" style="font-size:12.5px;line-height:1.75;color:#8f9bd0;margin-bottom:14px"></div>' +
         '<div style="display:flex;gap:8px">' + (opts.required ? '' : '<button id="lbNameSkip" type="button" style="flex:1;padding:12px;border-radius:12px;border:1px solid #34406e;background:transparent;color:#9aa6d8;font-size:15px;cursor:pointer">Bỏ qua</button>') +
