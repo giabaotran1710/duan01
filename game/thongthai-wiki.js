@@ -1,34 +1,34 @@
 /* Thông thái trắc nghiệm - câu hỏi suy ra từ dữ liệu Wikipedia/Wikidata (tool/thongthai-wiki/build.py).
  * Mỗi câu có nguồn ở tool/thongthai-wiki/audit.tsv (mã thực thể Wikidata). */
 window.TT_ADD(`
-1|dia|Thành phố Amsterdam thuộc quốc gia nào?|Hà Lan|Brasil|Thụy Sĩ|Pakistan
+2|dia|Thành phố Amsterdam thuộc quốc gia nào?|Hà Lan|Brasil|Thụy Sĩ|Pakistan
 1|dia|Thành phố Bắc Kinh thuộc quốc gia nào?|Trung Quốc|Hà Lan|Armenia|Bờ Biển Ngà
-1|dia|Thành phố Chicago thuộc quốc gia nào?|Hoa Kỳ|Algérie|Hungary|Hàn Quốc
+2|dia|Thành phố Chicago thuộc quốc gia nào?|Hoa Kỳ|Algérie|Hungary|Hàn Quốc
 1|dia|Thành phố Hồng Kông thuộc quốc gia nào?|Trung Quốc|Tanzania|Tây Ban Nha|Cộng hòa Dân chủ Congo
-1|dia|Thành phố Istanbul thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Uzbekistan|Ba Lan|Venezuela
+2|dia|Thành phố Istanbul thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Uzbekistan|Ba Lan|Venezuela
 1|dia|Thành phố Luân Đôn thuộc quốc gia nào?|Vương quốc Anh|Úc|Azerbaijan|Colombia
 1|dia|Thành phố Moskva thuộc quốc gia nào?|Nga|Malta|Áo|Indonesia
 1|dia|Thành phố New York thuộc quốc gia nào?|Hoa Kỳ|Algérie|România|Campuchia
-1|dia|Thành phố Praha thuộc quốc gia nào?|Séc|Israel|Ai-xơ-len|Perú
-1|dia|Thành phố Rio de Janeiro thuộc quốc gia nào?|Brasil|Nga|Sénégal|Thái Lan
-1|dia|Thành phố Stockholm thuộc quốc gia nào?|Thụy Điển|Argentina|Singapore|Sri Lanka
+2|dia|Thành phố Praha thuộc quốc gia nào?|Séc|Israel|Ai-xơ-len|Perú
+2|dia|Thành phố Rio de Janeiro thuộc quốc gia nào?|Brasil|Nga|Sénégal|Thái Lan
+2|dia|Thành phố Stockholm thuộc quốc gia nào?|Thụy Điển|Argentina|Singapore|Sri Lanka
 1|dia|Thành phố Tokyo thuộc quốc gia nào?|Nhật Bản|Na Uy|Síp|Lào
-1|dia|Thành phố Viên thuộc quốc gia nào?|Áo|Bulgaria|Đan Mạch|Hà Lan
-1|dia|Thành phố Washington, D.C. thuộc quốc gia nào?|Hoa Kỳ|Somalia|Đức|Ai-xơ-len
-1|the|Câu lạc bộ A.C. Milan thuộc quốc gia nào?|Ý|Vương quốc Anh|Luxembourg|Síp
-1|the|Câu lạc bộ Chelsea F.C. thuộc quốc gia nào?|Vương quốc Anh|Bỉ|Montenegro|Croatia
-1|the|Câu lạc bộ F.C. Barcelona thuộc quốc gia nào?|Tây Ban Nha|Trung Quốc|Chile|Brasil
-1|the|Câu lạc bộ FC Bayern München thuộc quốc gia nào?|Đức|Hoa Kỳ|Brasil|Liechtenstein
-1|the|Câu lạc bộ Football Club Internazionale Milano thuộc quốc gia nào?|Ý|Hy Lạp|Ba Lan|Brasil
-1|the|Câu lạc bộ Manchester United F.C. thuộc quốc gia nào?|Vương quốc Anh|Nhật Bản|Moldova|Nam Phi
-1|the|Câu lạc bộ Real Madrid thuộc quốc gia nào?|Tây Ban Nha|Chile|Bắc Macedonia|Nam Phi
-1|the|Câu lạc bộ bóng đá Arsenal thuộc quốc gia nào?|Vương quốc Anh|Đan Mạch|Iran|Brasil
-1|dl|Audi là doanh nghiệp của quốc gia nào?|Đức|Ấn Độ|Đài Loan|Hà Lan
-1|dl|Công ty Walt Disney là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Trung Quốc|Séc|Thụy Sĩ
-1|dl|Ford là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Pháp|Hy Lạp|Thái Lan
-1|dl|Juventus F.C. là doanh nghiệp của quốc gia nào?|Ý|Vương quốc Anh|Nhật Bản|Pháp
-1|dl|McDonald's là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Nhật Bản|Ý|Nga
-1|dl|Mercedes-Benz là doanh nghiệp của quốc gia nào?|Đức|Thụy Điển|Đài Loan|Hy Lạp
+2|dia|Thành phố Viên thuộc quốc gia nào?|Áo|Bulgaria|Đan Mạch|Hà Lan
+2|dia|Thành phố Washington, D.C. thuộc quốc gia nào?|Hoa Kỳ|Somalia|Đức|Ai-xơ-len
+2|the|Câu lạc bộ A.C. Milan thuộc quốc gia nào?|Ý|Vương quốc Anh|Luxembourg|Síp
+2|the|Câu lạc bộ Chelsea F.C. thuộc quốc gia nào?|Vương quốc Anh|Bỉ|Montenegro|Croatia
+2|the|Câu lạc bộ F.C. Barcelona thuộc quốc gia nào?|Tây Ban Nha|Trung Quốc|Chile|Brasil
+2|the|Câu lạc bộ FC Bayern München thuộc quốc gia nào?|Đức|Hoa Kỳ|Brasil|Liechtenstein
+2|the|Câu lạc bộ Football Club Internazionale Milano thuộc quốc gia nào?|Ý|Hy Lạp|Ba Lan|Brasil
+2|the|Câu lạc bộ Manchester United F.C. thuộc quốc gia nào?|Vương quốc Anh|Nhật Bản|Moldova|Nam Phi
+2|the|Câu lạc bộ Real Madrid thuộc quốc gia nào?|Tây Ban Nha|Chile|Bắc Macedonia|Nam Phi
+2|the|Câu lạc bộ bóng đá Arsenal thuộc quốc gia nào?|Vương quốc Anh|Đan Mạch|Iran|Brasil
+2|dl|Audi là doanh nghiệp của quốc gia nào?|Đức|Ấn Độ|Đài Loan|Hà Lan
+2|dl|Công ty Walt Disney là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Trung Quốc|Séc|Thụy Sĩ
+2|dl|Ford là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Pháp|Hy Lạp|Thái Lan
+3|dl|Juventus F.C. là doanh nghiệp của quốc gia nào?|Ý|Vương quốc Anh|Nhật Bản|Pháp
+2|dl|McDonald's là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Nhật Bản|Ý|Nga
+2|dl|Mercedes-Benz là doanh nghiệp của quốc gia nào?|Đức|Thụy Điển|Đài Loan|Hy Lạp
 1|dia|Thủ đô của Hoa Kỳ là thành phố nào?|Washington, D.C.|Vilnius|Kyiv|Tallinn
 1|dia|Thủ đô của Nga là thành phố nào?|Moskva|Amsterdam|Buenos Aires|Luân Đôn
 1|dia|Thủ đô của Trung Quốc là thành phố nào?|Bắc Kinh|Stockholm|Kabul|Kyiv
@@ -36,644 +36,644 @@ window.TT_ADD(`
 1|dia|Thủ đô của Đức là thành phố nào?|Berlin|Manila|Caracas|Tehran
 1|dia|Ai Cập thuộc châu lục nào?|Châu Phi|Châu Á|Bắc Mỹ|Nam Mỹ
 1|dia|Argentina thuộc châu lục nào?|Nam Mỹ|Châu Á|Châu Âu|Châu Phi
-1|dia|Ba Lan thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Châu Phi
+2|dia|Ba Lan thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Châu Phi
 1|dia|Brasil thuộc châu lục nào?|Nam Mỹ|Bắc Mỹ|Châu Âu|Châu Phi
-1|dia|Bỉ thuộc châu lục nào?|Châu Âu|Nam Mỹ|Bắc Mỹ|Châu Phi
-1|dia|Bồ Đào Nha thuộc châu lục nào?|Châu Âu|Châu Phi|Bắc Mỹ|Châu Á
+2|dia|Bỉ thuộc châu lục nào?|Châu Âu|Nam Mỹ|Bắc Mỹ|Châu Phi
+2|dia|Bồ Đào Nha thuộc châu lục nào?|Châu Âu|Châu Phi|Bắc Mỹ|Châu Á
 1|dia|Canada thuộc châu lục nào?|Bắc Mỹ|Châu Phi|Châu Âu|Châu Á
-1|dia|Chile thuộc châu lục nào?|Nam Mỹ|Bắc Mỹ|Châu Âu|Châu Á
+2|dia|Chile thuộc châu lục nào?|Nam Mỹ|Bắc Mỹ|Châu Âu|Châu Á
 1|dia|Hoa Kỳ thuộc châu lục nào?|Bắc Mỹ|Châu Âu|Nam Mỹ|Châu Phi
-1|dia|Hy Lạp thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Nam Mỹ
-1|dia|Na Uy thuộc châu lục nào?|Châu Âu|Châu Phi|Châu Á|Bắc Mỹ
+2|dia|Hy Lạp thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Nam Mỹ
+2|dia|Na Uy thuộc châu lục nào?|Châu Âu|Châu Phi|Châu Á|Bắc Mỹ
 1|dia|Nhật Bản thuộc châu lục nào?|Châu Á|Nam Mỹ|Châu Âu|Châu Phi
 1|dia|Pháp thuộc châu lục nào?|Châu Âu|Nam Mỹ|Châu Á|Bắc Mỹ
-1|dia|Phần Lan thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Nam Mỹ
-1|dia|Thụy Sĩ thuộc châu lục nào?|Châu Âu|Châu Á|Bắc Mỹ|Nam Mỹ
-1|dia|Thụy Điển thuộc châu lục nào?|Châu Âu|Châu Phi|Bắc Mỹ|Nam Mỹ
+2|dia|Phần Lan thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Nam Mỹ
+2|dia|Thụy Sĩ thuộc châu lục nào?|Châu Âu|Châu Á|Bắc Mỹ|Nam Mỹ
+2|dia|Thụy Điển thuộc châu lục nào?|Châu Âu|Châu Phi|Bắc Mỹ|Nam Mỹ
 1|dia|Trung Quốc thuộc châu lục nào?|Châu Á|Bắc Mỹ|Nam Mỹ|Châu Phi
 1|dia|Tây Ban Nha thuộc châu lục nào?|Châu Âu|Châu Phi|Nam Mỹ|Châu Á
-1|dia|Ukraina thuộc châu lục nào?|Châu Âu|Nam Mỹ|Bắc Mỹ|Châu Á
+2|dia|Ukraina thuộc châu lục nào?|Châu Âu|Nam Mỹ|Bắc Mỹ|Châu Á
 1|dia|Vương quốc Anh thuộc châu lục nào?|Châu Âu|Châu Phi|Châu Á|Nam Mỹ
-1|dia|Áo thuộc châu lục nào?|Châu Âu|Châu Phi|Nam Mỹ|Bắc Mỹ
+2|dia|Áo thuộc châu lục nào?|Châu Âu|Châu Phi|Nam Mỹ|Bắc Mỹ
 1|dia|Úc thuộc châu lục nào?|Châu Đại Dương|Bắc Mỹ|Châu Á|Châu Âu
 1|dia|Ý thuộc châu lục nào?|Châu Âu|Châu Phi|Bắc Mỹ|Nam Mỹ
 1|dia|Đức thuộc châu lục nào?|Châu Âu|Châu Phi|Châu Á|Bắc Mỹ
-1|the|Andre Agassi nổi tiếng ở môn thể thao nào?|Quần vợt|Taekwondo|Bóng rổ|Bơi lội
-1|the|Andrés Iniesta nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Kung fu|Trượt băng nghệ thuật
-1|the|Antoine Griezmann nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Leo núi|Võ thuật
-1|the|Ayrton Senna nổi tiếng ở môn thể thao nào?|Đua ô tô|Bóng đá|Trượt băng nghệ thuật|Cầu lông
+3|the|Andre Agassi nổi tiếng ở môn thể thao nào?|Quần vợt|Taekwondo|Bóng rổ|Bơi lội
+3|the|Andrés Iniesta nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Kung fu|Trượt băng nghệ thuật
+3|the|Antoine Griezmann nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Leo núi|Võ thuật
+3|the|Ayrton Senna nổi tiếng ở môn thể thao nào?|Đua ô tô|Bóng đá|Trượt băng nghệ thuật|Cầu lông
 1|the|Diego Maradona nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Nhảy cầu|Cầu lông
-1|the|Fernando Alonso nổi tiếng ở môn thể thao nào?|Đua ô tô|Đấu vật chuyên nghiệp|Cờ vua|Cầu lông
-1|the|Francesco Totti nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Bóng bầu dục Mỹ|Bơi lội
-1|the|Frank Lampard nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Cờ vua|Aikido
-1|the|Franz Beckenbauer nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Karate|Cờ vua
-1|the|Gianluigi Buffon nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Billiards snooker|Leo núi
-1|the|Iker Casillas nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Trượt tuyết đổ dốc|Khúc côn cầu trên băng
-1|the|Johan Cruijff nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Bóng gậy|Bóng rổ
-1|the|Karim Benzema nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt tuyết đổ dốc|Bóng chày
-1|the|Kylian Mbappé nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Aikido|Nhảy cầu
-1|the|Luis Alberto Suárez nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Nhảy cầu|Karate
-1|the|Magnus Carlsen nổi tiếng ở môn thể thao nào?|Cờ vua|Quyền anh|Vịnh Xuân quyền|Đua ô tô
-1|the|Mesut Özil nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Đua ô tô|Bóng bầu dục Mỹ
-1|the|Michel Platini nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Aikido|Đua ô tô
+3|the|Fernando Alonso nổi tiếng ở môn thể thao nào?|Đua ô tô|Đấu vật chuyên nghiệp|Cờ vua|Cầu lông
+3|the|Francesco Totti nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Bóng bầu dục Mỹ|Bơi lội
+3|the|Frank Lampard nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Cờ vua|Aikido
+3|the|Franz Beckenbauer nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Karate|Cờ vua
+3|the|Gianluigi Buffon nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Billiards snooker|Leo núi
+3|the|Iker Casillas nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Trượt tuyết đổ dốc|Khúc côn cầu trên băng
+3|the|Johan Cruijff nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Bóng gậy|Bóng rổ
+2|the|Karim Benzema nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt tuyết đổ dốc|Bóng chày
+2|the|Kylian Mbappé nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Aikido|Nhảy cầu
+3|the|Luis Alberto Suárez nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Nhảy cầu|Karate
+3|the|Magnus Carlsen nổi tiếng ở môn thể thao nào?|Cờ vua|Quyền anh|Vịnh Xuân quyền|Đua ô tô
+3|the|Mesut Özil nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Đua ô tô|Bóng bầu dục Mỹ
+3|the|Michel Platini nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Aikido|Đua ô tô
 1|the|Mike Tyson nổi tiếng ở môn thể thao nào?|Quyền anh|Bóng gậy|Leo núi|Bóng đá
-1|the|Miroslav Klose nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Đấu vật chuyên nghiệp|Aikido
-1|the|Mohamed Salah nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Quần vợt|Bóng gậy
+3|the|Miroslav Klose nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Đấu vật chuyên nghiệp|Aikido
+2|the|Mohamed Salah nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Quần vợt|Bóng gậy
 1|the|Neymar nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Trượt băng nghệ thuật|Taekwondo
 1|the|Rafael Nadal nổi tiếng ở môn thể thao nào?|Quần vợt|Võ thuật|Quyền anh|Đua ô tô
 1|the|Ronaldo nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đua ô tô|Nhảy cầu
-1|the|Thierry Henry nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Leo núi|Trượt tuyết đổ dốc
-1|the|Thành Long nổi tiếng ở môn thể thao nào?|Kung fu|Cờ vua|Võ thuật|Bơi lội
+3|the|Thierry Henry nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Leo núi|Trượt tuyết đổ dốc
+3|the|Thành Long nổi tiếng ở môn thể thao nào?|Kung fu|Cờ vua|Võ thuật|Bơi lội
 1|the|Usain Bolt nổi tiếng ở môn thể thao nào?|Điền kinh|Khúc côn cầu trên băng|Bơi lội|Trượt băng nghệ thuật
-1|the|Wayne Rooney nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Taekwondo|Trượt băng nghệ thuật
-1|the|Zinédine Zidane nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Billiards snooker|Bơi lội
-1|the|Zlatan Ibrahimović nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Cờ vua|Vịnh Xuân quyền
-2|nt|Ban nhạc/nhóm nhạc "AC/DC" đến từ quốc gia nào?|Úc|Nhật Bản|Anh|Ba Lan
-2|nt|Ban nhạc/nhóm nhạc "Aerosmith" đến từ quốc gia nào?|Hoa Kỳ|Mông Cổ|Bosna và Hercegovina|Pháp
-2|nt|Ban nhạc/nhóm nhạc "BTS" đến từ quốc gia nào?|Hàn Quốc|Ai-xơ-len|Nga|Hà Lan
-2|nt|Ban nhạc/nhóm nhạc "Bon Jovi" đến từ quốc gia nào?|Hoa Kỳ|Trung Quốc|Ireland|Pháp
-2|nt|Ban nhạc/nhóm nhạc "Coldplay" đến từ quốc gia nào?|Vương quốc Anh|Phần Lan|Úc|Scotland
-2|nt|Ban nhạc/nhóm nhạc "Dire Straits" đến từ quốc gia nào?|Vương quốc Anh|Anh|Đài Loan|Tây Ban Nha
-2|nt|Ban nhạc/nhóm nhạc "Duran Duran" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Đan Mạch|Hà Lan
-2|nt|Ban nhạc/nhóm nhạc "Eagles" đến từ quốc gia nào?|Hoa Kỳ|Bỉ|Phần Lan|Anh
-2|nt|Ban nhạc/nhóm nhạc "Guns N' Roses" đến từ quốc gia nào?|Hoa Kỳ|Liên Xô|Thụy Sĩ|Ý
-2|nt|Ban nhạc/nhóm nhạc "Led Zeppelin" đến từ quốc gia nào?|Anh|Úc|Phần Lan|Liên Xô
-2|nt|Ban nhạc/nhóm nhạc "Linkin Park" đến từ quốc gia nào?|Hoa Kỳ|Ai-xơ-len|Trung Quốc|Đức
-2|nt|Ban nhạc/nhóm nhạc "Lordi" đến từ quốc gia nào?|Phần Lan|Anh|Đan Mạch|Hàn Quốc
-2|nt|Ban nhạc/nhóm nhạc "Metallica" đến từ quốc gia nào?|Hoa Kỳ|Đan Mạch|Anh|Úc
-2|nt|Ban nhạc/nhóm nhạc "Nightwish" đến từ quốc gia nào?|Phần Lan|Trung Quốc|Đài Loan|Canada
-2|nt|Ban nhạc/nhóm nhạc "Nirvana" đến từ quốc gia nào?|Hoa Kỳ|Phần Lan|Pháp|Ai-xơ-len
-2|nt|Ban nhạc/nhóm nhạc "One Direction" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Hoa Kỳ|Bỉ
-2|nt|Ban nhạc/nhóm nhạc "Paramore" đến từ quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Úc|Hà Lan
-2|nt|Ban nhạc/nhóm nhạc "Queen" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Đức|Ba Lan
-2|nt|Ban nhạc/nhóm nhạc "Rammstein" đến từ quốc gia nào?|Đức|Vương quốc Anh|Na Uy|Phần Lan
-2|nt|Ban nhạc/nhóm nhạc "Red Hot Chili Peppers" đến từ quốc gia nào?|Hoa Kỳ|Pháp|Châu Âu|Phần Lan
-2|nt|Ban nhạc/nhóm nhạc "Scorpions" đến từ quốc gia nào?|Đức|Tây Ban Nha|Canada|Ý
-2|nt|Ban nhạc/nhóm nhạc "Sex Pistols" đến từ quốc gia nào?|Vương quốc Anh|Canada|México|Nga
-2|nt|Ban nhạc/nhóm nhạc "The Carpenters" đến từ quốc gia nào?|Hoa Kỳ|Anh|Brasil|Đài Loan
-2|nt|Ban nhạc/nhóm nhạc "The Doors" đến từ quốc gia nào?|Hoa Kỳ|Thụy Điển|Phần Lan|Hà Lan
-2|nt|Ban nhạc/nhóm nhạc "Thirty Seconds to Mars" đến từ quốc gia nào?|Hoa Kỳ|Ý|Đan Mạch|Pháp
-2|nt|Ban nhạc/nhóm nhạc "U2" đến từ quốc gia nào?|Ireland|Na Uy|Hàn Quốc|Trung Quốc
-2|van|Tác phẩm "Aeneis" là của tác giả nào?|Virgil|Marcel Proust|Carl Sagan|Anton Pavlovich Chekhov
-2|van|Tác phẩm "Anna Karenina" là của tác giả nào?|Lev Nikolayevich Tolstoy|Marcus Aurelius|Augustus|Miguel de Cervantes
-2|van|Tác phẩm "Cuộc phiêu lưu của Alice vào Xứ sở thần tiên" là của tác giả nào?|Lewis Carroll|Svetlana Alexandrovna Alexievich|F. Scott Fitzgerald|Robert Louis Stevenson
-2|van|Tác phẩm "Cộng hòa" là của tác giả nào?|Plato|William Shakespeare|Anton Pavlovich Chekhov|Ivan Sergeyevich Turgenev
-2|van|Tác phẩm "Iliad" là của tác giả nào?|Hómēros|Lý Bạch|Friedrich Engels|Ernest Hemingway
-2|van|Tác phẩm "Mahabharata" là của tác giả nào?|Vyasa|Edmondo De Amicis|Khaled Hosseini|Stieg Larsson
-2|van|Tác phẩm "Mein Kampf" là của tác giả nào?|Hitler|Tôn Tẫn|Suzuki Kōji|Lưu Hướng
-2|van|Tác phẩm "Một chín tám tư" là của tác giả nào?|George Orwell|Mô-sê|John Milton|Giáo hoàng Phanxicô
-2|van|Tác phẩm "Nàng tiên cá" là của tác giả nào?|Hans Christian Andersen|Augustinô thành Hippo|Miguel de Cervantes|Plato
-2|van|Tác phẩm "Odyssey" là của tác giả nào?|Hómēros|Charles Dickens|Jane Austen|John Ronald Reuel Tolkien
-2|van|Tác phẩm "Ramayana" là của tác giả nào?|Valmiki|Chyngyz Torekulovich Aitmatov|Edmondo De Amicis|Pyotr Kropotkin
-2|van|Tác phẩm "Sách Châm Ngôn" là của tác giả nào?|Solomon|Pearl S. Buck|Hermann Hesse|Chu Hi
-2|van|Tác phẩm "Sách Khải Huyền" là của tác giả nào?|Gioan đảo Patmos|Veronica Roth|A-đề-sa|Hứa Quân
-2|van|Tác phẩm "Thư gửi tín hữu Philípphê" là của tác giả nào?|Sứ đồ Phaolô|Augustus|Thomas Mann|John Keats
-2|van|Tác phẩm "Thư thứ nhất gửi tín hữu Côrintô" là của tác giả nào?|Sứ đồ Phaolô|Vladimir Ilyich Lenin|Geoffrey Chaucer|Anne Frank
-2|van|Tác phẩm "Thư thứ nhất gửi tín hữu Thêxalônica" là của tác giả nào?|Sứ đồ Phaolô|Robert Louis Stevenson|Friedrich Engels|Hermann Hesse
-2|van|Tác phẩm "Truyện kể Genji" là của tác giả nào?|Murasaki Shikibu|Gustave Flaubert|Isaac Asimov|Virginia Woolf
-2|van|Tác phẩm "Đôn Kihôtê" là của tác giả nào?|Miguel de Cervantes|Augustinô thành Hippo|H. G. Wells|Oscar Wilde
-2|dl|Hãng Sukhoi đến từ quốc gia nào?|Nga|Trung Quốc|Israel|Brasil
-2|dia|Thành phố Aachen thuộc quốc gia nào?|Đức|Armenia|Paraguay|Algérie
-2|dia|Thành phố Aarhus thuộc quốc gia nào?|Đan Mạch|Vương quốc Anh|Yemen|Nepal
-2|dia|Thành phố Abidjan thuộc quốc gia nào?|Bờ Biển Ngà|Togo|Mauritius|Libya
-2|dia|Thành phố Abu Dhabi thuộc quốc gia nào?|Các Tiểu vương quốc Ả Rập Thống nhất|Síp|Cộng hòa Congo|Honduras
-2|dia|Thành phố Accra thuộc quốc gia nào?|Ghana|Sudan|Madagascar|Zimbabwe
-2|dia|Thành phố Adana thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Luxembourg|Trung Quốc|Slovakia
-2|dia|Thành phố Addis Ababa thuộc quốc gia nào?|Ethiopia|Namibia|El Salvador|Tchad
-2|dia|Thành phố Adelaide thuộc quốc gia nào?|Úc|Hoa Kỳ|Cuba|Afghanistan
-2|dia|Thành phố Agra thuộc quốc gia nào?|Ấn Độ|Bolivia|Slovakia|Ả Rập Xê Út
-2|dia|Thành phố Ahmedabad thuộc quốc gia nào?|Ấn Độ|Nigeria|Azerbaijan|Slovenia
-2|dia|Thành phố Ajaccio thuộc quốc gia nào?|Pháp|Afghanistan|Somalia|Úc
-2|dia|Thành phố Albuquerque thuộc quốc gia nào?|Hoa Kỳ|Chile|Brasil|Bỉ
-2|dia|Thành phố Aleppo thuộc quốc gia nào?|Syria|Brasil|Indonesia|Uruguay
-2|dia|Thành phố Algiers thuộc quốc gia nào?|Algérie|Ai Cập|Tajikistan|Ả Rập Xê Út
-2|dia|Thành phố Almaty thuộc quốc gia nào?|Kazakhstan|Cộng hòa Dân chủ Nhân dân Triều Tiên|Croatia|Libya
-2|dia|Thành phố Amman thuộc quốc gia nào?|Jordan|Pakistan|Armenia|Việt Nam
-2|dia|Thành phố Anchorage thuộc quốc gia nào?|Hoa Kỳ|Malta|Slovenia|Vương quốc Anh
-2|dia|Thành phố Angers thuộc quốc gia nào?|Pháp|Phần Lan|Bénin|Trung Quốc
-2|dia|Thành phố Ankara thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Đan Mạch|Namibia|Argentina
-2|dia|Thành phố Annapolis thuộc quốc gia nào?|Hoa Kỳ|Áo|Hà Lan|Việt Nam
-2|dia|Thành phố Antalya thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Nigeria|Maroc|Phần Lan
-2|dia|Thành phố Antananarivo thuộc quốc gia nào?|Madagascar|Zimbabwe|Costa Rica|Malawi
-2|dia|Thành phố Apia thuộc quốc gia nào?|Samoa|Oman|Niger|Iraq
-2|dia|Thành phố Ashgabat thuộc quốc gia nào?|Turkmenistan|Kiribati|Bénin|Venezuela
-2|dia|Thành phố Asmara thuộc quốc gia nào?|Eritrea|Tonga|Syria|Luxembourg
-2|dia|Thành phố Astana thuộc quốc gia nào?|Kazakhstan|Uruguay|Myanma|Croatia
-2|dia|Thành phố Astrakhan thuộc quốc gia nào?|Nga|Ai Cập|Iraq|Bắc Macedonia
-2|dia|Thành phố Asunción thuộc quốc gia nào?|Paraguay|Panama|Samoa|Djibouti
-2|dia|Thành phố Auckland thuộc quốc gia nào?|New Zealand|Nigeria|Campuchia|Iraq
-2|dia|Thành phố Augsburg thuộc quốc gia nào?|Đức|Burundi|Ukraina|Tây Ban Nha
-2|dia|Thành phố Bagdad thuộc quốc gia nào?|Iraq|Afghanistan|Angola|Cuba
-2|dia|Thành phố Baku thuộc quốc gia nào?|Azerbaijan|San Marino|Thụy Điển|Thái Lan
-2|dia|Thành phố Bamako thuộc quốc gia nào?|Mali|Bắc Macedonia|Bangladesh|Botswana
-2|dia|Thành phố Bandar Seri Begawan thuộc quốc gia nào?|Brunei|Cộng hòa Dân chủ Congo|Comoros|Mauritius
-2|dia|Thành phố Bangui thuộc quốc gia nào?|Cộng hòa Trung Phi|Bồ Đào Nha|Cuba|Eswatini
-2|dia|Thành phố Banjul thuộc quốc gia nào?|Gambia|Liban|Oman|Zambia
+2|the|Wayne Rooney nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Taekwondo|Trượt băng nghệ thuật
+2|the|Zinédine Zidane nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Billiards snooker|Bơi lội
+2|the|Zlatan Ibrahimović nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Cờ vua|Vịnh Xuân quyền
+3|nt|Ban nhạc/nhóm nhạc "AC/DC" đến từ quốc gia nào?|Úc|Nhật Bản|Anh|Ba Lan
+3|nt|Ban nhạc/nhóm nhạc "Aerosmith" đến từ quốc gia nào?|Hoa Kỳ|Mông Cổ|Bosna và Hercegovina|Pháp
+3|nt|Ban nhạc/nhóm nhạc "BTS" đến từ quốc gia nào?|Hàn Quốc|Ai-xơ-len|Nga|Hà Lan
+3|nt|Ban nhạc/nhóm nhạc "Bon Jovi" đến từ quốc gia nào?|Hoa Kỳ|Trung Quốc|Ireland|Pháp
+3|nt|Ban nhạc/nhóm nhạc "Coldplay" đến từ quốc gia nào?|Vương quốc Anh|Phần Lan|Úc|Scotland
+3|nt|Ban nhạc/nhóm nhạc "Dire Straits" đến từ quốc gia nào?|Vương quốc Anh|Anh|Đài Loan|Tây Ban Nha
+3|nt|Ban nhạc/nhóm nhạc "Duran Duran" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Đan Mạch|Hà Lan
+3|nt|Ban nhạc/nhóm nhạc "Eagles" đến từ quốc gia nào?|Hoa Kỳ|Bỉ|Phần Lan|Anh
+3|nt|Ban nhạc/nhóm nhạc "Guns N' Roses" đến từ quốc gia nào?|Hoa Kỳ|Liên Xô|Thụy Sĩ|Ý
+3|nt|Ban nhạc/nhóm nhạc "Led Zeppelin" đến từ quốc gia nào?|Anh|Úc|Phần Lan|Liên Xô
+3|nt|Ban nhạc/nhóm nhạc "Linkin Park" đến từ quốc gia nào?|Hoa Kỳ|Ai-xơ-len|Trung Quốc|Đức
+3|nt|Ban nhạc/nhóm nhạc "Lordi" đến từ quốc gia nào?|Phần Lan|Anh|Đan Mạch|Hàn Quốc
+3|nt|Ban nhạc/nhóm nhạc "Metallica" đến từ quốc gia nào?|Hoa Kỳ|Đan Mạch|Anh|Úc
+3|nt|Ban nhạc/nhóm nhạc "Nightwish" đến từ quốc gia nào?|Phần Lan|Trung Quốc|Đài Loan|Canada
+3|nt|Ban nhạc/nhóm nhạc "Nirvana" đến từ quốc gia nào?|Hoa Kỳ|Phần Lan|Pháp|Ai-xơ-len
+3|nt|Ban nhạc/nhóm nhạc "One Direction" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Hoa Kỳ|Bỉ
+3|nt|Ban nhạc/nhóm nhạc "Paramore" đến từ quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Úc|Hà Lan
+3|nt|Ban nhạc/nhóm nhạc "Queen" đến từ quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Đức|Ba Lan
+3|nt|Ban nhạc/nhóm nhạc "Rammstein" đến từ quốc gia nào?|Đức|Vương quốc Anh|Na Uy|Phần Lan
+3|nt|Ban nhạc/nhóm nhạc "Red Hot Chili Peppers" đến từ quốc gia nào?|Hoa Kỳ|Pháp|Châu Âu|Phần Lan
+3|nt|Ban nhạc/nhóm nhạc "Scorpions" đến từ quốc gia nào?|Đức|Tây Ban Nha|Canada|Ý
+3|nt|Ban nhạc/nhóm nhạc "Sex Pistols" đến từ quốc gia nào?|Vương quốc Anh|Canada|México|Nga
+3|nt|Ban nhạc/nhóm nhạc "The Carpenters" đến từ quốc gia nào?|Hoa Kỳ|Anh|Brasil|Đài Loan
+3|nt|Ban nhạc/nhóm nhạc "The Doors" đến từ quốc gia nào?|Hoa Kỳ|Thụy Điển|Phần Lan|Hà Lan
+3|nt|Ban nhạc/nhóm nhạc "Thirty Seconds to Mars" đến từ quốc gia nào?|Hoa Kỳ|Ý|Đan Mạch|Pháp
+3|nt|Ban nhạc/nhóm nhạc "U2" đến từ quốc gia nào?|Ireland|Na Uy|Hàn Quốc|Trung Quốc
+3|van|Tác phẩm "Aeneis" là của tác giả nào?|Virgil|Marcel Proust|Carl Sagan|Anton Pavlovich Chekhov
+3|van|Tác phẩm "Anna Karenina" là của tác giả nào?|Lev Nikolayevich Tolstoy|Marcus Aurelius|Augustus|Miguel de Cervantes
+3|van|Tác phẩm "Cuộc phiêu lưu của Alice vào Xứ sở thần tiên" là của tác giả nào?|Lewis Carroll|Svetlana Alexandrovna Alexievich|F. Scott Fitzgerald|Robert Louis Stevenson
+3|van|Tác phẩm "Cộng hòa" là của tác giả nào?|Plato|William Shakespeare|Anton Pavlovich Chekhov|Ivan Sergeyevich Turgenev
+3|van|Tác phẩm "Iliad" là của tác giả nào?|Hómēros|Lý Bạch|Friedrich Engels|Ernest Hemingway
+3|van|Tác phẩm "Mahabharata" là của tác giả nào?|Vyasa|Edmondo De Amicis|Khaled Hosseini|Stieg Larsson
+3|van|Tác phẩm "Mein Kampf" là của tác giả nào?|Hitler|Tôn Tẫn|Suzuki Kōji|Lưu Hướng
+3|van|Tác phẩm "Một chín tám tư" là của tác giả nào?|George Orwell|Mô-sê|John Milton|Giáo hoàng Phanxicô
+3|van|Tác phẩm "Nàng tiên cá" là của tác giả nào?|Hans Christian Andersen|Augustinô thành Hippo|Miguel de Cervantes|Plato
+3|van|Tác phẩm "Odyssey" là của tác giả nào?|Hómēros|Charles Dickens|Jane Austen|John Ronald Reuel Tolkien
+3|van|Tác phẩm "Ramayana" là của tác giả nào?|Valmiki|Chyngyz Torekulovich Aitmatov|Edmondo De Amicis|Pyotr Kropotkin
+3|van|Tác phẩm "Sách Châm Ngôn" là của tác giả nào?|Solomon|Pearl S. Buck|Hermann Hesse|Chu Hi
+3|van|Tác phẩm "Sách Khải Huyền" là của tác giả nào?|Gioan đảo Patmos|Veronica Roth|A-đề-sa|Hứa Quân
+3|van|Tác phẩm "Thư gửi tín hữu Philípphê" là của tác giả nào?|Sứ đồ Phaolô|Augustus|Thomas Mann|John Keats
+3|van|Tác phẩm "Thư thứ nhất gửi tín hữu Côrintô" là của tác giả nào?|Sứ đồ Phaolô|Vladimir Ilyich Lenin|Geoffrey Chaucer|Anne Frank
+3|van|Tác phẩm "Thư thứ nhất gửi tín hữu Thêxalônica" là của tác giả nào?|Sứ đồ Phaolô|Robert Louis Stevenson|Friedrich Engels|Hermann Hesse
+3|van|Tác phẩm "Truyện kể Genji" là của tác giả nào?|Murasaki Shikibu|Gustave Flaubert|Isaac Asimov|Virginia Woolf
+3|van|Tác phẩm "Đôn Kihôtê" là của tác giả nào?|Miguel de Cervantes|Augustinô thành Hippo|H. G. Wells|Oscar Wilde
+3|dl|Hãng Sukhoi đến từ quốc gia nào?|Nga|Trung Quốc|Israel|Brasil
+4|dia|Thành phố Aachen thuộc quốc gia nào?|Đức|Armenia|Paraguay|Algérie
+4|dia|Thành phố Aarhus thuộc quốc gia nào?|Đan Mạch|Vương quốc Anh|Yemen|Nepal
+4|dia|Thành phố Abidjan thuộc quốc gia nào?|Bờ Biển Ngà|Togo|Mauritius|Libya
+4|dia|Thành phố Abu Dhabi thuộc quốc gia nào?|Các Tiểu vương quốc Ả Rập Thống nhất|Síp|Cộng hòa Congo|Honduras
+4|dia|Thành phố Accra thuộc quốc gia nào?|Ghana|Sudan|Madagascar|Zimbabwe
+4|dia|Thành phố Adana thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Luxembourg|Trung Quốc|Slovakia
+4|dia|Thành phố Addis Ababa thuộc quốc gia nào?|Ethiopia|Namibia|El Salvador|Tchad
+4|dia|Thành phố Adelaide thuộc quốc gia nào?|Úc|Hoa Kỳ|Cuba|Afghanistan
+4|dia|Thành phố Agra thuộc quốc gia nào?|Ấn Độ|Bolivia|Slovakia|Ả Rập Xê Út
+4|dia|Thành phố Ahmedabad thuộc quốc gia nào?|Ấn Độ|Nigeria|Azerbaijan|Slovenia
+4|dia|Thành phố Ajaccio thuộc quốc gia nào?|Pháp|Afghanistan|Somalia|Úc
+4|dia|Thành phố Albuquerque thuộc quốc gia nào?|Hoa Kỳ|Chile|Brasil|Bỉ
+4|dia|Thành phố Aleppo thuộc quốc gia nào?|Syria|Brasil|Indonesia|Uruguay
+4|dia|Thành phố Algiers thuộc quốc gia nào?|Algérie|Ai Cập|Tajikistan|Ả Rập Xê Út
+3|dia|Thành phố Almaty thuộc quốc gia nào?|Kazakhstan|Cộng hòa Dân chủ Nhân dân Triều Tiên|Croatia|Libya
+4|dia|Thành phố Amman thuộc quốc gia nào?|Jordan|Pakistan|Armenia|Việt Nam
+4|dia|Thành phố Anchorage thuộc quốc gia nào?|Hoa Kỳ|Malta|Slovenia|Vương quốc Anh
+4|dia|Thành phố Angers thuộc quốc gia nào?|Pháp|Phần Lan|Bénin|Trung Quốc
+3|dia|Thành phố Ankara thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Đan Mạch|Namibia|Argentina
+4|dia|Thành phố Annapolis thuộc quốc gia nào?|Hoa Kỳ|Áo|Hà Lan|Việt Nam
+4|dia|Thành phố Antalya thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Nigeria|Maroc|Phần Lan
+4|dia|Thành phố Antananarivo thuộc quốc gia nào?|Madagascar|Zimbabwe|Costa Rica|Malawi
+4|dia|Thành phố Apia thuộc quốc gia nào?|Samoa|Oman|Niger|Iraq
+4|dia|Thành phố Ashgabat thuộc quốc gia nào?|Turkmenistan|Kiribati|Bénin|Venezuela
+4|dia|Thành phố Asmara thuộc quốc gia nào?|Eritrea|Tonga|Syria|Luxembourg
+4|dia|Thành phố Astana thuộc quốc gia nào?|Kazakhstan|Uruguay|Myanma|Croatia
+4|dia|Thành phố Astrakhan thuộc quốc gia nào?|Nga|Ai Cập|Iraq|Bắc Macedonia
+4|dia|Thành phố Asunción thuộc quốc gia nào?|Paraguay|Panama|Samoa|Djibouti
+4|dia|Thành phố Auckland thuộc quốc gia nào?|New Zealand|Nigeria|Campuchia|Iraq
+4|dia|Thành phố Augsburg thuộc quốc gia nào?|Đức|Burundi|Ukraina|Tây Ban Nha
+4|dia|Thành phố Bagdad thuộc quốc gia nào?|Iraq|Afghanistan|Angola|Cuba
+4|dia|Thành phố Baku thuộc quốc gia nào?|Azerbaijan|San Marino|Thụy Điển|Thái Lan
+4|dia|Thành phố Bamako thuộc quốc gia nào?|Mali|Bắc Macedonia|Bangladesh|Botswana
+4|dia|Thành phố Bandar Seri Begawan thuộc quốc gia nào?|Brunei|Cộng hòa Dân chủ Congo|Comoros|Mauritius
+4|dia|Thành phố Bangui thuộc quốc gia nào?|Cộng hòa Trung Phi|Bồ Đào Nha|Cuba|Eswatini
+4|dia|Thành phố Banjul thuộc quốc gia nào?|Gambia|Liban|Oman|Zambia
 2|dia|Thành phố Barcelona thuộc quốc gia nào?|Tây Ban Nha|Azerbaijan|Somalia|Canada
-2|dia|Thành phố Basel thuộc quốc gia nào?|Thụy Sĩ|Úc|România|Ba Lan
-2|dia|Thành phố Basseterre thuộc quốc gia nào?|Saint Kitts và Nevis|Yemen|Samoa|Eritrea
-2|dia|Thành phố Baton Rouge thuộc quốc gia nào?|Hoa Kỳ|Bờ Biển Ngà|Ireland|Úc
-2|dia|Thành phố Beirut thuộc quốc gia nào?|Liban|Campuchia|Libya|Moldova
-2|dia|Thành phố Belmopan thuộc quốc gia nào?|Belize|Cộng hòa Trung Phi|Malta|Papua New Guinea
-2|dia|Thành phố Belo Horizonte thuộc quốc gia nào?|Brasil|Ba Lan|Ai Cập|Áo
-2|dia|Thành phố Bengaluru thuộc quốc gia nào?|Ấn Độ|Israel|Hy Lạp|Úc
-2|dia|Thành phố Beograd thuộc quốc gia nào?|Serbia|Kenya|Bồ Đào Nha|Tunisia
-2|dia|Thành phố Bergamo thuộc quốc gia nào?|Ý|Oman|Nga|Tây Ban Nha
-2|dia|Thành phố Bergen thuộc quốc gia nào?|Na Uy|Tchad|Pháp|Vương quốc Anh
-2|dia|Thành phố Bern thuộc quốc gia nào?|Thụy Sĩ|Bangladesh|Úc|Na Uy
-2|dia|Thành phố Besançon thuộc quốc gia nào?|Pháp|Estonia|Afghanistan|New Zealand
-2|dia|Thành phố Bishkek thuộc quốc gia nào?|Kyrgyzstan|Brunei|Libya|Serbia
-2|dia|Thành phố Bismarck thuộc quốc gia nào?|Hoa Kỳ|Algérie|Perú|Cameroon
-2|dia|Thành phố Bissau thuộc quốc gia nào?|Guiné-Bissau|Sierra Leone|Qatar|Ireland
-2|dia|Thành phố Bloemfontein thuộc quốc gia nào?|Nam Phi|Azerbaijan|Malta|Ireland
-2|dia|Thành phố Bogotá thuộc quốc gia nào?|Colombia|Pakistan|Andorra|Zambia
-2|dia|Thành phố Boise thuộc quốc gia nào?|Hoa Kỳ|Tchad|Brasil|Singapore
-2|dia|Thành phố Bonn thuộc quốc gia nào?|Đức|Brasil|Nepal|Zambia
-2|dia|Thành phố Bordeaux thuộc quốc gia nào?|Pháp|Hungary|Gruzia|Vương quốc Anh
-2|dia|Thành phố Boston thuộc quốc gia nào?|Hoa Kỳ|Sri Lanka|Kyrgyzstan|Bahrain
-2|dia|Thành phố Bratislava thuộc quốc gia nào?|Slovakia|Hàn Quốc|Litva|Somalia
-2|dia|Thành phố Brazzaville thuộc quốc gia nào?|Cộng hòa Congo|Guiné-Bissau|Burkina Faso|Cuba
-2|dia|Thành phố Bremen thuộc quốc gia nào?|Đức|Moldova|Nepal|Slovenia
-2|dia|Thành phố Bridgetown thuộc quốc gia nào?|Barbados|Eswatini|Cabo Verde|Guinée
-2|dia|Thành phố Brisbane thuộc quốc gia nào?|Úc|Jordan|Thổ Nhĩ Kỳ|Gruzia
-2|dia|Thành phố Brno thuộc quốc gia nào?|Séc|México|Guiné-Bissau|Đài Loan
-2|dia|Thành phố Bruxelles thuộc quốc gia nào?|Bỉ|Ấn Độ|New Zealand|Iran
-2|dia|Thành phố Bucharest thuộc quốc gia nào?|România|Cộng hòa Dân chủ Nhân dân Triều Tiên|Belarus|Vương quốc Anh
-2|dia|Thành phố Bujumbura thuộc quốc gia nào?|Burundi|Maroc|Cộng hòa Trung Phi|Bahrain
-2|dia|Thành phố Bukhara thuộc quốc gia nào?|Uzbekistan|Croatia|Uruguay|Zimbabwe
-2|dia|Thành phố Bursa thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Algérie|Slovenia|Na Uy
-2|dia|Thành phố Busan thuộc quốc gia nào?|Hàn Quốc|Israel|Latvia|Andorra
-2|dia|Thành phố Bình Nhưỡng thuộc quốc gia nào?|Cộng hòa Dân chủ Nhân dân Triều Tiên|Đông Timor|Philippines|Ghana
-2|dia|Thành phố Calgary thuộc quốc gia nào?|Canada|Ai-xơ-len|Serbia|Đức
-2|dia|Thành phố Canberra thuộc quốc gia nào?|Úc|Nam Phi|Moldova|Pakistan
-2|dia|Thành phố Cannes thuộc quốc gia nào?|Pháp|Ukraina|Đài Loan|Vương quốc Anh
-2|dia|Thành phố Cape Town thuộc quốc gia nào?|Nam Phi|Hungary|Djibouti|Indonesia
-2|dia|Thành phố Caracas thuộc quốc gia nào?|Venezuela|Iran|Niger|Rwanda
-2|dia|Thành phố Casablanca thuộc quốc gia nào?|Maroc|Đài Loan|Tajikistan|Cuba
-2|dia|Thành phố Castries thuộc quốc gia nào?|Saint Lucia|Liberia|Saint Kitts và Nevis|Somaliland
-2|dia|Thành phố Catania thuộc quốc gia nào?|Ý|Đan Mạch|Mali|Tây Ban Nha
-2|dia|Thành phố Cayenne thuộc quốc gia nào?|Pháp|Ghana|Estonia|Nga
-2|dia|Thành phố Cheyenne thuộc quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Malta|Kazakhstan
-2|dia|Thành phố Chittagong thuộc quốc gia nào?|Bangladesh|Bồ Đào Nha|Campuchia|Pakistan
-2|dia|Thành phố Chișinău thuộc quốc gia nào?|Moldova|Angola|Slovakia|Niger
-2|dia|Thành phố Christchurch thuộc quốc gia nào?|New Zealand|România|Estonia|Trung Quốc
-2|dia|Thành phố Clermont-Ferrand thuộc quốc gia nào?|Pháp|Kazakhstan|Hoa Kỳ|Algérie
-2|dia|Thành phố Colombo thuộc quốc gia nào?|Sri Lanka|Liberia|Đông Timor|Các Tiểu vương quốc Ả Rập Thống nhất
-2|dia|Thành phố Conakry thuộc quốc gia nào?|Guinée|Maroc|Papua New Guinea|Paraguay
-2|dia|Thành phố Concepción thuộc quốc gia nào?|Chile|Ireland|Cộng hòa Dân chủ Congo|Sudan
-2|dia|Thành phố Constantinopolis thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Việt Nam|Ý|Brasil
+4|dia|Thành phố Basel thuộc quốc gia nào?|Thụy Sĩ|Úc|România|Ba Lan
+4|dia|Thành phố Basseterre thuộc quốc gia nào?|Saint Kitts và Nevis|Yemen|Samoa|Eritrea
+4|dia|Thành phố Baton Rouge thuộc quốc gia nào?|Hoa Kỳ|Bờ Biển Ngà|Ireland|Úc
+4|dia|Thành phố Beirut thuộc quốc gia nào?|Liban|Campuchia|Libya|Moldova
+4|dia|Thành phố Belmopan thuộc quốc gia nào?|Belize|Cộng hòa Trung Phi|Malta|Papua New Guinea
+4|dia|Thành phố Belo Horizonte thuộc quốc gia nào?|Brasil|Ba Lan|Ai Cập|Áo
+4|dia|Thành phố Bengaluru thuộc quốc gia nào?|Ấn Độ|Israel|Hy Lạp|Úc
+4|dia|Thành phố Beograd thuộc quốc gia nào?|Serbia|Kenya|Bồ Đào Nha|Tunisia
+4|dia|Thành phố Bergamo thuộc quốc gia nào?|Ý|Oman|Nga|Tây Ban Nha
+4|dia|Thành phố Bergen thuộc quốc gia nào?|Na Uy|Tchad|Pháp|Vương quốc Anh
+4|dia|Thành phố Bern thuộc quốc gia nào?|Thụy Sĩ|Bangladesh|Úc|Na Uy
+4|dia|Thành phố Besançon thuộc quốc gia nào?|Pháp|Estonia|Afghanistan|New Zealand
+4|dia|Thành phố Bishkek thuộc quốc gia nào?|Kyrgyzstan|Brunei|Libya|Serbia
+4|dia|Thành phố Bismarck thuộc quốc gia nào?|Hoa Kỳ|Algérie|Perú|Cameroon
+4|dia|Thành phố Bissau thuộc quốc gia nào?|Guiné-Bissau|Sierra Leone|Qatar|Ireland
+4|dia|Thành phố Bloemfontein thuộc quốc gia nào?|Nam Phi|Azerbaijan|Malta|Ireland
+3|dia|Thành phố Bogotá thuộc quốc gia nào?|Colombia|Pakistan|Andorra|Zambia
+4|dia|Thành phố Boise thuộc quốc gia nào?|Hoa Kỳ|Tchad|Brasil|Singapore
+4|dia|Thành phố Bonn thuộc quốc gia nào?|Đức|Brasil|Nepal|Zambia
+4|dia|Thành phố Bordeaux thuộc quốc gia nào?|Pháp|Hungary|Gruzia|Vương quốc Anh
+3|dia|Thành phố Boston thuộc quốc gia nào?|Hoa Kỳ|Sri Lanka|Kyrgyzstan|Bahrain
+4|dia|Thành phố Bratislava thuộc quốc gia nào?|Slovakia|Hàn Quốc|Litva|Somalia
+4|dia|Thành phố Brazzaville thuộc quốc gia nào?|Cộng hòa Congo|Guiné-Bissau|Burkina Faso|Cuba
+4|dia|Thành phố Bremen thuộc quốc gia nào?|Đức|Moldova|Nepal|Slovenia
+4|dia|Thành phố Bridgetown thuộc quốc gia nào?|Barbados|Eswatini|Cabo Verde|Guinée
+4|dia|Thành phố Brisbane thuộc quốc gia nào?|Úc|Jordan|Thổ Nhĩ Kỳ|Gruzia
+4|dia|Thành phố Brno thuộc quốc gia nào?|Séc|México|Guiné-Bissau|Đài Loan
+3|dia|Thành phố Bruxelles thuộc quốc gia nào?|Bỉ|Ấn Độ|New Zealand|Iran
+4|dia|Thành phố Bucharest thuộc quốc gia nào?|România|Cộng hòa Dân chủ Nhân dân Triều Tiên|Belarus|Vương quốc Anh
+4|dia|Thành phố Bujumbura thuộc quốc gia nào?|Burundi|Maroc|Cộng hòa Trung Phi|Bahrain
+4|dia|Thành phố Bukhara thuộc quốc gia nào?|Uzbekistan|Croatia|Uruguay|Zimbabwe
+4|dia|Thành phố Bursa thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Algérie|Slovenia|Na Uy
+3|dia|Thành phố Busan thuộc quốc gia nào?|Hàn Quốc|Israel|Latvia|Andorra
+4|dia|Thành phố Bình Nhưỡng thuộc quốc gia nào?|Cộng hòa Dân chủ Nhân dân Triều Tiên|Đông Timor|Philippines|Ghana
+4|dia|Thành phố Calgary thuộc quốc gia nào?|Canada|Ai-xơ-len|Serbia|Đức
+4|dia|Thành phố Canberra thuộc quốc gia nào?|Úc|Nam Phi|Moldova|Pakistan
+4|dia|Thành phố Cannes thuộc quốc gia nào?|Pháp|Ukraina|Đài Loan|Vương quốc Anh
+3|dia|Thành phố Cape Town thuộc quốc gia nào?|Nam Phi|Hungary|Djibouti|Indonesia
+3|dia|Thành phố Caracas thuộc quốc gia nào?|Venezuela|Iran|Niger|Rwanda
+3|dia|Thành phố Casablanca thuộc quốc gia nào?|Maroc|Đài Loan|Tajikistan|Cuba
+4|dia|Thành phố Castries thuộc quốc gia nào?|Saint Lucia|Liberia|Saint Kitts và Nevis|Somaliland
+4|dia|Thành phố Catania thuộc quốc gia nào?|Ý|Đan Mạch|Mali|Tây Ban Nha
+4|dia|Thành phố Cayenne thuộc quốc gia nào?|Pháp|Ghana|Estonia|Nga
+4|dia|Thành phố Cheyenne thuộc quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Malta|Kazakhstan
+4|dia|Thành phố Chittagong thuộc quốc gia nào?|Bangladesh|Bồ Đào Nha|Campuchia|Pakistan
+4|dia|Thành phố Chișinău thuộc quốc gia nào?|Moldova|Angola|Slovakia|Niger
+4|dia|Thành phố Christchurch thuộc quốc gia nào?|New Zealand|România|Estonia|Trung Quốc
+4|dia|Thành phố Clermont-Ferrand thuộc quốc gia nào?|Pháp|Kazakhstan|Hoa Kỳ|Algérie
+4|dia|Thành phố Colombo thuộc quốc gia nào?|Sri Lanka|Liberia|Đông Timor|Các Tiểu vương quốc Ả Rập Thống nhất
+4|dia|Thành phố Conakry thuộc quốc gia nào?|Guinée|Maroc|Papua New Guinea|Paraguay
+4|dia|Thành phố Concepción thuộc quốc gia nào?|Chile|Ireland|Cộng hòa Dân chủ Congo|Sudan
+4|dia|Thành phố Constantinopolis thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Việt Nam|Ý|Brasil
 2|dia|Thành phố Copenhagen thuộc quốc gia nào?|Đan Mạch|Ghana|Serbia|Croatia
-2|dia|Thành phố Curitiba thuộc quốc gia nào?|Brasil|Albania|Nam Phi|Montenegro
-2|dia|Thành phố Cáp Nhĩ Tân thuộc quốc gia nào?|Trung Quốc|Vương quốc Anh|Estonia|Azerbaijan
-2|dia|Thành phố Dakar thuộc quốc gia nào?|Sénégal|Philippines|Djibouti|Brunei
-2|dia|Thành phố Dallas thuộc quốc gia nào?|Hoa Kỳ|Ai Cập|Ukraina|Paraguay
-2|dia|Thành phố Damas thuộc quốc gia nào?|Syria|Somalia|Tchad|Jamaica
-2|dia|Thành phố Dar es Salaam thuộc quốc gia nào?|Tanzania|Bhutan|Ghana|Syria
-2|dia|Thành phố Den Haag thuộc quốc gia nào?|Hà Lan|Liban|Luxembourg|Ecuador
-2|dia|Thành phố Detroit thuộc quốc gia nào?|Hoa Kỳ|Syria|Uruguay|Somalia
-2|dia|Thành phố Dhaka thuộc quốc gia nào?|Bangladesh|Cộng hòa Congo|Colombia|Jordan
-2|dia|Thành phố Dijon thuộc quốc gia nào?|Pháp|Hà Lan|Azerbaijan|Latvia
-2|dia|Thành phố Dili thuộc quốc gia nào?|Đông Timor|Guiné-Bissau|Guinea Xích Đạo|Burundi
-2|dia|Thành phố Dnipro thuộc quốc gia nào?|Ukraina|Bỉ|Algérie|Argentina
-2|dia|Thành phố Dodoma thuộc quốc gia nào?|Tanzania|Các Tiểu vương quốc Ả Rập Thống nhất|Eritrea|Bosna và Hercegovina
-2|dia|Thành phố Donetsk thuộc quốc gia nào?|Ukraina|Séc|Ấn Độ|Bosna và Hercegovina
-2|dia|Thành phố Dortmund thuộc quốc gia nào?|Đức|Hàn Quốc|Andorra|Sierra Leone
-2|dia|Thành phố Dresden thuộc quốc gia nào?|Đức|Gruzia|Angola|Cộng hòa Dân chủ Congo
+4|dia|Thành phố Curitiba thuộc quốc gia nào?|Brasil|Albania|Nam Phi|Montenegro
+4|dia|Thành phố Cáp Nhĩ Tân thuộc quốc gia nào?|Trung Quốc|Vương quốc Anh|Estonia|Azerbaijan
+4|dia|Thành phố Dakar thuộc quốc gia nào?|Sénégal|Philippines|Djibouti|Brunei
+3|dia|Thành phố Dallas thuộc quốc gia nào?|Hoa Kỳ|Ai Cập|Ukraina|Paraguay
+4|dia|Thành phố Damas thuộc quốc gia nào?|Syria|Somalia|Tchad|Jamaica
+4|dia|Thành phố Dar es Salaam thuộc quốc gia nào?|Tanzania|Bhutan|Ghana|Syria
+4|dia|Thành phố Den Haag thuộc quốc gia nào?|Hà Lan|Liban|Luxembourg|Ecuador
+3|dia|Thành phố Detroit thuộc quốc gia nào?|Hoa Kỳ|Syria|Uruguay|Somalia
+4|dia|Thành phố Dhaka thuộc quốc gia nào?|Bangladesh|Cộng hòa Congo|Colombia|Jordan
+4|dia|Thành phố Dijon thuộc quốc gia nào?|Pháp|Hà Lan|Azerbaijan|Latvia
+4|dia|Thành phố Dili thuộc quốc gia nào?|Đông Timor|Guiné-Bissau|Guinea Xích Đạo|Burundi
+4|dia|Thành phố Dnipro thuộc quốc gia nào?|Ukraina|Bỉ|Algérie|Argentina
+4|dia|Thành phố Dodoma thuộc quốc gia nào?|Tanzania|Các Tiểu vương quốc Ả Rập Thống nhất|Eritrea|Bosna và Hercegovina
+4|dia|Thành phố Donetsk thuộc quốc gia nào?|Ukraina|Séc|Ấn Độ|Bosna và Hercegovina
+4|dia|Thành phố Dortmund thuộc quốc gia nào?|Đức|Hàn Quốc|Andorra|Sierra Leone
+4|dia|Thành phố Dresden thuộc quốc gia nào?|Đức|Gruzia|Angola|Cộng hòa Dân chủ Congo
 2|dia|Thành phố Dubai thuộc quốc gia nào?|Các Tiểu vương quốc Ả Rập Thống nhất|Bangladesh|San Marino|Suriname
-2|dia|Thành phố Duisburg thuộc quốc gia nào?|Đức|Montenegro|Bosna và Hercegovina|Ấn Độ
-2|dia|Thành phố Durban thuộc quốc gia nào?|Nam Phi|Nepal|Ghana|Vương quốc Anh
-2|dia|Thành phố Durrës thuộc quốc gia nào?|Albania|Nhật Bản|Malaysia|Việt Nam
-2|dia|Thành phố Dushanbe thuộc quốc gia nào?|Tajikistan|Uganda|Somalia|Botswana
-2|dia|Thành phố Düsseldorf thuộc quốc gia nào?|Đức|Latvia|Slovenia|San Marino
-2|dia|Thành phố Edirne thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Thụy Sĩ|Hà Lan|Ghana
-2|dia|Thành phố Edmonton thuộc quốc gia nào?|Canada|Việt Nam|Hàn Quốc|Israel
-2|dia|Thành phố Erfurt thuộc quốc gia nào?|Đức|Brasil|Thái Lan|Eritrea
-2|dia|Thành phố Essen thuộc quốc gia nào?|Đức|México|Ấn Độ|Nam Phi
-2|dia|Thành phố Fes thuộc quốc gia nào?|Maroc|Madagascar|Somalia|Các Tiểu vương quốc Ả Rập Thống nhất
-2|dia|Thành phố Firenze thuộc quốc gia nào?|Ý|Pakistan|Burundi|Ukraina
-2|dia|Thành phố Fort Worth thuộc quốc gia nào?|Hoa Kỳ|Azerbaijan|Mali|Chile
-2|dia|Thành phố Frankfort thuộc quốc gia nào?|Hoa Kỳ|Síp|Tanzania|Séc
-2|dia|Thành phố Frankfurt am Main thuộc quốc gia nào?|Đức|Ả Rập Xê Út|Albania|Argentina
-2|dia|Thành phố Freetown thuộc quốc gia nào?|Sierra Leone|Brunei|Bénin|Honduras
-2|dia|Thành phố Freiburg im Breisgau thuộc quốc gia nào?|Đức|Việt Nam|Gruzia|Tây Ban Nha
-2|dia|Thành phố Fukuoka thuộc quốc gia nào?|Nhật Bản|Israel|Belarus|Bỉ
-2|dia|Thành phố Funafuti thuộc quốc gia nào?|Tuvalu|Quần đảo Solomon|Eritrea|Mozambique
-2|dia|Thành phố Gaborone thuộc quốc gia nào?|Botswana|Síp|Madagascar|Malta
-2|dia|Thành phố Gaza thuộc quốc gia nào?|Nhà nước Palestine|Samoa|Uzbekistan|Greenland
-2|dia|Thành phố Gdańsk thuộc quốc gia nào?|Ba Lan|Algérie|Ấn Độ|Sri Lanka
-2|dia|Thành phố Genova thuộc quốc gia nào?|Ý|Ethiopia|Bulgaria|Canada
-2|dia|Thành phố Gent thuộc quốc gia nào?|Bỉ|Thụy Điển|México|Liban
-2|dia|Thành phố Genève thuộc quốc gia nào?|Thụy Sĩ|Andorra|Armenia|Tây Ban Nha
-2|dia|Thành phố Gibraltar thuộc quốc gia nào?|Vương quốc Anh|Ukraina|Algérie|Israel
-2|dia|Thành phố Glasgow thuộc quốc gia nào?|Vương quốc Anh|México|Ethiopia|Kenya
-2|dia|Thành phố Graz thuộc quốc gia nào?|Áo|Chile|Brasil|Thổ Nhĩ Kỳ
-2|dia|Thành phố Grenoble thuộc quốc gia nào?|Pháp|Nga|Ghana|Kazakhstan
-2|dia|Thành phố Grozny thuộc quốc gia nào?|Nga|Ấn Độ|México|Zimbabwe
-2|dia|Thành phố Guadalajara thuộc quốc gia nào?|México|Malaysia|Namibia|Estonia
-2|dia|Thành phố Göteborg thuộc quốc gia nào?|Thụy Điển|Thụy Sĩ|Paraguay|Ấn Độ
-2|dia|Thành phố Göttingen thuộc quốc gia nào?|Đức|Việt Nam|Algérie|Andorra
-2|dia|Thành phố Haifa thuộc quốc gia nào?|Israel|Ireland|Serbia|Bénin
-2|dia|Thành phố Hannover thuộc quốc gia nào?|Đức|Phần Lan|Somalia|Slovenia
-2|dia|Thành phố Harare thuộc quốc gia nào?|Zimbabwe|Tchad|Các Tiểu vương quốc Ả Rập Thống nhất|Paraguay
+4|dia|Thành phố Duisburg thuộc quốc gia nào?|Đức|Montenegro|Bosna và Hercegovina|Ấn Độ
+4|dia|Thành phố Durban thuộc quốc gia nào?|Nam Phi|Nepal|Ghana|Vương quốc Anh
+4|dia|Thành phố Durrës thuộc quốc gia nào?|Albania|Nhật Bản|Malaysia|Việt Nam
+4|dia|Thành phố Dushanbe thuộc quốc gia nào?|Tajikistan|Uganda|Somalia|Botswana
+4|dia|Thành phố Düsseldorf thuộc quốc gia nào?|Đức|Latvia|Slovenia|San Marino
+4|dia|Thành phố Edirne thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Thụy Sĩ|Hà Lan|Ghana
+4|dia|Thành phố Edmonton thuộc quốc gia nào?|Canada|Việt Nam|Hàn Quốc|Israel
+4|dia|Thành phố Erfurt thuộc quốc gia nào?|Đức|Brasil|Thái Lan|Eritrea
+4|dia|Thành phố Essen thuộc quốc gia nào?|Đức|México|Ấn Độ|Nam Phi
+4|dia|Thành phố Fes thuộc quốc gia nào?|Maroc|Madagascar|Somalia|Các Tiểu vương quốc Ả Rập Thống nhất
+3|dia|Thành phố Firenze thuộc quốc gia nào?|Ý|Pakistan|Burundi|Ukraina
+4|dia|Thành phố Fort Worth thuộc quốc gia nào?|Hoa Kỳ|Azerbaijan|Mali|Chile
+4|dia|Thành phố Frankfort thuộc quốc gia nào?|Hoa Kỳ|Síp|Tanzania|Séc
+3|dia|Thành phố Frankfurt am Main thuộc quốc gia nào?|Đức|Ả Rập Xê Út|Albania|Argentina
+4|dia|Thành phố Freetown thuộc quốc gia nào?|Sierra Leone|Brunei|Bénin|Honduras
+4|dia|Thành phố Freiburg im Breisgau thuộc quốc gia nào?|Đức|Việt Nam|Gruzia|Tây Ban Nha
+4|dia|Thành phố Fukuoka thuộc quốc gia nào?|Nhật Bản|Israel|Belarus|Bỉ
+4|dia|Thành phố Funafuti thuộc quốc gia nào?|Tuvalu|Quần đảo Solomon|Eritrea|Mozambique
+4|dia|Thành phố Gaborone thuộc quốc gia nào?|Botswana|Síp|Madagascar|Malta
+4|dia|Thành phố Gaza thuộc quốc gia nào?|Nhà nước Palestine|Samoa|Uzbekistan|Greenland
+4|dia|Thành phố Gdańsk thuộc quốc gia nào?|Ba Lan|Algérie|Ấn Độ|Sri Lanka
+4|dia|Thành phố Genova thuộc quốc gia nào?|Ý|Ethiopia|Bulgaria|Canada
+4|dia|Thành phố Gent thuộc quốc gia nào?|Bỉ|Thụy Điển|México|Liban
+3|dia|Thành phố Genève thuộc quốc gia nào?|Thụy Sĩ|Andorra|Armenia|Tây Ban Nha
+4|dia|Thành phố Gibraltar thuộc quốc gia nào?|Vương quốc Anh|Ukraina|Algérie|Israel
+4|dia|Thành phố Glasgow thuộc quốc gia nào?|Vương quốc Anh|México|Ethiopia|Kenya
+4|dia|Thành phố Graz thuộc quốc gia nào?|Áo|Chile|Brasil|Thổ Nhĩ Kỳ
+4|dia|Thành phố Grenoble thuộc quốc gia nào?|Pháp|Nga|Ghana|Kazakhstan
+4|dia|Thành phố Grozny thuộc quốc gia nào?|Nga|Ấn Độ|México|Zimbabwe
+4|dia|Thành phố Guadalajara thuộc quốc gia nào?|México|Malaysia|Namibia|Estonia
+4|dia|Thành phố Göteborg thuộc quốc gia nào?|Thụy Điển|Thụy Sĩ|Paraguay|Ấn Độ
+4|dia|Thành phố Göttingen thuộc quốc gia nào?|Đức|Việt Nam|Algérie|Andorra
+4|dia|Thành phố Haifa thuộc quốc gia nào?|Israel|Ireland|Serbia|Bénin
+4|dia|Thành phố Hannover thuộc quốc gia nào?|Đức|Phần Lan|Somalia|Slovenia
+4|dia|Thành phố Harare thuộc quốc gia nào?|Zimbabwe|Tchad|Các Tiểu vương quốc Ả Rập Thống nhất|Paraguay
 2|dia|Thành phố Helsinki thuộc quốc gia nào?|Phần Lan|Somalia|Cộng hòa Dân chủ Congo|Bolivia
-2|dia|Thành phố Hiroshima thuộc quốc gia nào?|Nhật Bản|Somalia|Jordan|Thụy Điển
-2|dia|Thành phố Hobart thuộc quốc gia nào?|Úc|Montenegro|Litva|Thụy Điển
-2|dia|Thành phố Honiara thuộc quốc gia nào?|Quần đảo Solomon|Guiné-Bissau|Tanzania|Maldives
+4|dia|Thành phố Hiroshima thuộc quốc gia nào?|Nhật Bản|Somalia|Jordan|Thụy Điển
+4|dia|Thành phố Hobart thuộc quốc gia nào?|Úc|Montenegro|Litva|Thụy Điển
+4|dia|Thành phố Honiara thuộc quốc gia nào?|Quần đảo Solomon|Guiné-Bissau|Tanzania|Maldives
 2|dia|Thành phố Honolulu thuộc quốc gia nào?|Hoa Kỳ|Séc|Mali|Sudan
-2|dia|Thành phố Hà Nội thuộc quốc gia nào?|Việt Nam|Séc|Jordan|Phần Lan
-2|dia|Thành phố Hàng Châu thuộc quốc gia nào?|Trung Quốc|Libya|México|Algérie
-2|dia|Thành phố Hồ Chí Minh thuộc quốc gia nào?|Việt Nam|Cộng hòa Dân chủ Nhân dân Triều Tiên|Iran|Ai Cập
-2|dia|Thành phố Indianapolis thuộc quốc gia nào?|Hoa Kỳ|Paraguay|Ai-xơ-len|Brasil
-2|dia|Thành phố Innsbruck thuộc quốc gia nào?|Áo|Ukraina|Kenya|Maroc
-2|dia|Thành phố Irkutsk thuộc quốc gia nào?|Nga|Liban|Iraq|Bulgaria
-2|dia|Thành phố Isfahan thuộc quốc gia nào?|Iran|Serbia|Hy Lạp|Bỉ
-2|dia|Thành phố Islamabad thuộc quốc gia nào?|Pakistan|Albania|Iraq|Litva
-2|dia|Thành phố Jaipur thuộc quốc gia nào?|Ấn Độ|Bolivia|Estonia|Armenia
+1|dia|Thành phố Hà Nội thuộc quốc gia nào?|Việt Nam|Séc|Jordan|Phần Lan
+4|dia|Thành phố Hàng Châu thuộc quốc gia nào?|Trung Quốc|Libya|México|Algérie
+4|dia|Thành phố Hồ Chí Minh thuộc quốc gia nào?|Việt Nam|Cộng hòa Dân chủ Nhân dân Triều Tiên|Iran|Ai Cập
+4|dia|Thành phố Indianapolis thuộc quốc gia nào?|Hoa Kỳ|Paraguay|Ai-xơ-len|Brasil
+4|dia|Thành phố Innsbruck thuộc quốc gia nào?|Áo|Ukraina|Kenya|Maroc
+4|dia|Thành phố Irkutsk thuộc quốc gia nào?|Nga|Liban|Iraq|Bulgaria
+4|dia|Thành phố Isfahan thuộc quốc gia nào?|Iran|Serbia|Hy Lạp|Bỉ
+4|dia|Thành phố Islamabad thuộc quốc gia nào?|Pakistan|Albania|Iraq|Litva
+4|dia|Thành phố Jaipur thuộc quốc gia nào?|Ấn Độ|Bolivia|Estonia|Armenia
 2|dia|Thành phố Jakarta thuộc quốc gia nào?|Indonesia|Croatia|Thụy Điển|Brasil
-2|dia|Thành phố Jeddah thuộc quốc gia nào?|Ả Rập Xê Út|Madagascar|Croatia|Philippines
-2|dia|Thành phố Jefferson thuộc quốc gia nào?|Hoa Kỳ|Litva|Tchad|Tây Ban Nha
-2|dia|Thành phố Johannesburg thuộc quốc gia nào?|Nam Phi|Bhutan|Moldova|Latvia
-2|dia|Thành phố Kabul thuộc quốc gia nào?|Afghanistan|Đan Mạch|Hy Lạp|Croatia
-2|dia|Thành phố Kaliningrad thuộc quốc gia nào?|Nga|Iran|Albania|Pháp
-2|dia|Thành phố Kampala thuộc quốc gia nào?|Uganda|Libya|Brunei|Sénégal
-2|dia|Thành phố Karachi thuộc quốc gia nào?|Pakistan|Các Tiểu vương quốc Ả Rập Thống nhất|Tunisia|Armenia
-2|dia|Thành phố Karlsruhe thuộc quốc gia nào?|Đức|Ireland|Afghanistan|Ukraina
-2|dia|Thành phố Kathmandu thuộc quốc gia nào?|Nepal|Síp|Paraguay|Fiji
-2|dia|Thành phố Katowice thuộc quốc gia nào?|Ba Lan|New Zealand|Syria|Ấn Độ
-2|dia|Thành phố Kaunas thuộc quốc gia nào?|Litva|Suriname|Ghana|Nigeria
-2|dia|Thành phố Kazan thuộc quốc gia nào?|Nga|Hàn Quốc|Campuchia|Afghanistan
-2|dia|Thành phố Khartoum thuộc quốc gia nào?|Sudan|Haiti|Zimbabwe|Indonesia
-2|dia|Thành phố Kiel thuộc quốc gia nào?|Đức|Trung Quốc|Iraq|Tchad
-2|dia|Thành phố Kigali thuộc quốc gia nào?|Rwanda|Burkina Faso|Andorra|Bahrain
-2|dia|Thành phố Klaipėda thuộc quốc gia nào?|Litva|Ethiopia|Bắc Macedonia|Đức
-2|dia|Thành phố Kobe thuộc quốc gia nào?|Nhật Bản|Ý|Serbia|Tchad
-2|dia|Thành phố Kolkata thuộc quốc gia nào?|Ấn Độ|Việt Nam|Bồ Đào Nha|Nigeria
-2|dia|Thành phố Kraków thuộc quốc gia nào?|Ba Lan|Brasil|Eritrea|Kenya
-2|dia|Thành phố Krasnodar thuộc quốc gia nào?|Nga|Ả Rập Xê Út|Séc|Sudan
+4|dia|Thành phố Jeddah thuộc quốc gia nào?|Ả Rập Xê Út|Madagascar|Croatia|Philippines
+4|dia|Thành phố Jefferson thuộc quốc gia nào?|Hoa Kỳ|Litva|Tchad|Tây Ban Nha
+3|dia|Thành phố Johannesburg thuộc quốc gia nào?|Nam Phi|Bhutan|Moldova|Latvia
+4|dia|Thành phố Kabul thuộc quốc gia nào?|Afghanistan|Đan Mạch|Hy Lạp|Croatia
+4|dia|Thành phố Kaliningrad thuộc quốc gia nào?|Nga|Iran|Albania|Pháp
+4|dia|Thành phố Kampala thuộc quốc gia nào?|Uganda|Libya|Brunei|Sénégal
+4|dia|Thành phố Karachi thuộc quốc gia nào?|Pakistan|Các Tiểu vương quốc Ả Rập Thống nhất|Tunisia|Armenia
+4|dia|Thành phố Karlsruhe thuộc quốc gia nào?|Đức|Ireland|Afghanistan|Ukraina
+4|dia|Thành phố Kathmandu thuộc quốc gia nào?|Nepal|Síp|Paraguay|Fiji
+4|dia|Thành phố Katowice thuộc quốc gia nào?|Ba Lan|New Zealand|Syria|Ấn Độ
+4|dia|Thành phố Kaunas thuộc quốc gia nào?|Litva|Suriname|Ghana|Nigeria
+4|dia|Thành phố Kazan thuộc quốc gia nào?|Nga|Hàn Quốc|Campuchia|Afghanistan
+4|dia|Thành phố Khartoum thuộc quốc gia nào?|Sudan|Haiti|Zimbabwe|Indonesia
+4|dia|Thành phố Kiel thuộc quốc gia nào?|Đức|Trung Quốc|Iraq|Tchad
+4|dia|Thành phố Kigali thuộc quốc gia nào?|Rwanda|Burkina Faso|Andorra|Bahrain
+4|dia|Thành phố Klaipėda thuộc quốc gia nào?|Litva|Ethiopia|Bắc Macedonia|Đức
+4|dia|Thành phố Kobe thuộc quốc gia nào?|Nhật Bản|Ý|Serbia|Tchad
+3|dia|Thành phố Kolkata thuộc quốc gia nào?|Ấn Độ|Việt Nam|Bồ Đào Nha|Nigeria
+3|dia|Thành phố Kraków thuộc quốc gia nào?|Ba Lan|Brasil|Eritrea|Kenya
+4|dia|Thành phố Krasnodar thuộc quốc gia nào?|Nga|Ả Rập Xê Út|Séc|Sudan
 2|dia|Thành phố Kuala Lumpur thuộc quốc gia nào?|Malaysia|Serbia|Tunisia|Tanzania
-2|dia|Thành phố Kuopio thuộc quốc gia nào?|Phần Lan|Colombia|Angola|Ukraina
-2|dia|Thành phố Kyōto thuộc quốc gia nào?|Nhật Bản|Myanma|Algérie|Đan Mạch
-2|dia|Thành phố Köln thuộc quốc gia nào?|Đức|Chile|Thụy Điển|Síp
-2|dia|Thành phố La Habana thuộc quốc gia nào?|Cuba|Sudan|Kosovo|Oman
-2|dia|Thành phố La Paz thuộc quốc gia nào?|Bolivia|Iraq|Cộng hòa Dân chủ Nhân dân Triều Tiên|Malawi
-2|dia|Thành phố Lagos thuộc quốc gia nào?|Nigeria|Somalia|Uzbekistan|Angola
-2|dia|Thành phố Lahore thuộc quốc gia nào?|Pakistan|Ethiopia|Cuba|Bắc Macedonia
-2|dia|Thành phố Lausanne thuộc quốc gia nào?|Thụy Sĩ|Namibia|Malta|Nam Phi
-2|dia|Thành phố Le Havre thuộc quốc gia nào?|Pháp|Philippines|Colombia|Ghana
-2|dia|Thành phố Leipzig thuộc quốc gia nào?|Đức|Gruzia|Serbia|Đan Mạch
-2|dia|Thành phố Lhasa thuộc quốc gia nào?|Trung Quốc|Ukraina|Indonesia|Zimbabwe
-2|dia|Thành phố Libreville thuộc quốc gia nào?|Gabon|Paraguay|Litva|Brunei
-2|dia|Thành phố Lille thuộc quốc gia nào?|Pháp|Vương quốc Anh|Bangladesh|Trung Quốc
-2|dia|Thành phố Lilongwe thuộc quốc gia nào?|Malawi|San Marino|El Salvador|Đông Timor
-2|dia|Thành phố Lima thuộc quốc gia nào?|Perú|Nigeria|Kosovo|Djibouti
-2|dia|Thành phố Linz thuộc quốc gia nào?|Áo|Uruguay|Các Tiểu vương quốc Ả Rập Thống nhất|Perú
-2|dia|Thành phố Liverpool thuộc quốc gia nào?|Vương quốc Anh|Pakistan|Ai Cập|Brasil
-2|dia|Thành phố Liège thuộc quốc gia nào?|Bỉ|Venezuela|Campuchia|Liban
-2|dia|Thành phố Ljubljana thuộc quốc gia nào?|Slovenia|Cộng hòa Congo|Cabo Verde|Luxembourg
-2|dia|Thành phố Lomé thuộc quốc gia nào?|Togo|Nepal|Maldives|Guinea Xích Đạo
-2|dia|Thành phố Luanda thuộc quốc gia nào?|Angola|Sierra Leone|Moldova|Libya
-2|dia|Thành phố Lublin thuộc quốc gia nào?|Ba Lan|Nigeria|Trung Quốc|Angola
-2|dia|Thành phố Lucknow thuộc quốc gia nào?|Ấn Độ|Phần Lan|México|Namibia
-2|dia|Thành phố Lusaka thuộc quốc gia nào?|Zambia|Panama|Bosna và Hercegovina|Madagascar
-2|dia|Thành phố Lyon thuộc quốc gia nào?|Pháp|Thổ Nhĩ Kỳ|Pakistan|Nga
-2|dia|Thành phố Lübeck thuộc quốc gia nào?|Đức|Nam Phi|Perú|Estonia
+4|dia|Thành phố Kuopio thuộc quốc gia nào?|Phần Lan|Colombia|Angola|Ukraina
+3|dia|Thành phố Kyōto thuộc quốc gia nào?|Nhật Bản|Myanma|Algérie|Đan Mạch
+4|dia|Thành phố Köln thuộc quốc gia nào?|Đức|Chile|Thụy Điển|Síp
+3|dia|Thành phố La Habana thuộc quốc gia nào?|Cuba|Sudan|Kosovo|Oman
+4|dia|Thành phố La Paz thuộc quốc gia nào?|Bolivia|Iraq|Cộng hòa Dân chủ Nhân dân Triều Tiên|Malawi
+3|dia|Thành phố Lagos thuộc quốc gia nào?|Nigeria|Somalia|Uzbekistan|Angola
+4|dia|Thành phố Lahore thuộc quốc gia nào?|Pakistan|Ethiopia|Cuba|Bắc Macedonia
+4|dia|Thành phố Lausanne thuộc quốc gia nào?|Thụy Sĩ|Namibia|Malta|Nam Phi
+4|dia|Thành phố Le Havre thuộc quốc gia nào?|Pháp|Philippines|Colombia|Ghana
+4|dia|Thành phố Leipzig thuộc quốc gia nào?|Đức|Gruzia|Serbia|Đan Mạch
+4|dia|Thành phố Lhasa thuộc quốc gia nào?|Trung Quốc|Ukraina|Indonesia|Zimbabwe
+4|dia|Thành phố Libreville thuộc quốc gia nào?|Gabon|Paraguay|Litva|Brunei
+4|dia|Thành phố Lille thuộc quốc gia nào?|Pháp|Vương quốc Anh|Bangladesh|Trung Quốc
+4|dia|Thành phố Lilongwe thuộc quốc gia nào?|Malawi|San Marino|El Salvador|Đông Timor
+3|dia|Thành phố Lima thuộc quốc gia nào?|Perú|Nigeria|Kosovo|Djibouti
+4|dia|Thành phố Linz thuộc quốc gia nào?|Áo|Uruguay|Các Tiểu vương quốc Ả Rập Thống nhất|Perú
+3|dia|Thành phố Liverpool thuộc quốc gia nào?|Vương quốc Anh|Pakistan|Ai Cập|Brasil
+4|dia|Thành phố Liège thuộc quốc gia nào?|Bỉ|Venezuela|Campuchia|Liban
+4|dia|Thành phố Ljubljana thuộc quốc gia nào?|Slovenia|Cộng hòa Congo|Cabo Verde|Luxembourg
+4|dia|Thành phố Lomé thuộc quốc gia nào?|Togo|Nepal|Maldives|Guinea Xích Đạo
+4|dia|Thành phố Luanda thuộc quốc gia nào?|Angola|Sierra Leone|Moldova|Libya
+4|dia|Thành phố Lublin thuộc quốc gia nào?|Ba Lan|Nigeria|Trung Quốc|Angola
+4|dia|Thành phố Lucknow thuộc quốc gia nào?|Ấn Độ|Phần Lan|México|Namibia
+4|dia|Thành phố Lusaka thuộc quốc gia nào?|Zambia|Panama|Bosna và Hercegovina|Madagascar
+3|dia|Thành phố Lyon thuộc quốc gia nào?|Pháp|Thổ Nhĩ Kỳ|Pakistan|Nga
+4|dia|Thành phố Lübeck thuộc quốc gia nào?|Đức|Nam Phi|Perú|Estonia
 2|dia|Thành phố Ma Cao thuộc quốc gia nào?|Trung Quốc|Cuba|New Zealand|Estonia
-2|dia|Thành phố Maastricht thuộc quốc gia nào?|Hà Lan|Ai-xơ-len|Argentina|Campuchia
-2|dia|Thành phố Madinah thuộc quốc gia nào?|Ả Rập Xê Út|Cameroon|Ukraina|Zimbabwe
-2|dia|Thành phố Magdeburg thuộc quốc gia nào?|Đức|Afghanistan|Bulgaria|Ai Cập
-2|dia|Thành phố Mainz thuộc quốc gia nào?|Đức|Tanzania|Nam Phi|Ghana
-2|dia|Thành phố Majuro thuộc quốc gia nào?|Quần đảo Marshall|Togo|Aruba|Vanuatu
-2|dia|Thành phố Malabo thuộc quốc gia nào?|Guinea Xích Đạo|Mali|Guatemala|Montenegro
-2|dia|Thành phố Malmö thuộc quốc gia nào?|Thụy Điển|Iraq|Pháp|Oman
-2|dia|Thành phố Manama thuộc quốc gia nào?|Bahrain|Panama|Lào|Guinea Xích Đạo
-2|dia|Thành phố Manaus thuộc quốc gia nào?|Brasil|Hà Lan|Philippines|Slovenia
-2|dia|Thành phố Mannheim thuộc quốc gia nào?|Đức|Kazakhstan|Mali|Burkina Faso
-2|dia|Thành phố Maputo thuộc quốc gia nào?|Mozambique|Cameroon|Moldova|Oman
-2|dia|Thành phố Marrakech thuộc quốc gia nào?|Maroc|Burkina Faso|Iran|Estonia
-2|dia|Thành phố Maseru thuộc quốc gia nào?|Lesotho|Luxembourg|Bắc Macedonia|Trinidad và Tobago
-2|dia|Thành phố Mbabane thuộc quốc gia nào?|Eswatini|Uruguay|Cộng hòa Dân chủ Nhân dân Triều Tiên|Brunei
-2|dia|Thành phố Medellín thuộc quốc gia nào?|Colombia|Cameroon|Slovakia|Ireland
-2|dia|Thành phố Messina thuộc quốc gia nào?|Ý|Vương quốc Anh|Afghanistan|Gambia
+4|dia|Thành phố Maastricht thuộc quốc gia nào?|Hà Lan|Ai-xơ-len|Argentina|Campuchia
+4|dia|Thành phố Madinah thuộc quốc gia nào?|Ả Rập Xê Út|Cameroon|Ukraina|Zimbabwe
+4|dia|Thành phố Magdeburg thuộc quốc gia nào?|Đức|Afghanistan|Bulgaria|Ai Cập
+4|dia|Thành phố Mainz thuộc quốc gia nào?|Đức|Tanzania|Nam Phi|Ghana
+4|dia|Thành phố Majuro thuộc quốc gia nào?|Quần đảo Marshall|Togo|Aruba|Vanuatu
+4|dia|Thành phố Malabo thuộc quốc gia nào?|Guinea Xích Đạo|Mali|Guatemala|Montenegro
+4|dia|Thành phố Malmö thuộc quốc gia nào?|Thụy Điển|Iraq|Pháp|Oman
+4|dia|Thành phố Manama thuộc quốc gia nào?|Bahrain|Panama|Lào|Guinea Xích Đạo
+4|dia|Thành phố Manaus thuộc quốc gia nào?|Brasil|Hà Lan|Philippines|Slovenia
+4|dia|Thành phố Mannheim thuộc quốc gia nào?|Đức|Kazakhstan|Mali|Burkina Faso
+4|dia|Thành phố Maputo thuộc quốc gia nào?|Mozambique|Cameroon|Moldova|Oman
+3|dia|Thành phố Marrakech thuộc quốc gia nào?|Maroc|Burkina Faso|Iran|Estonia
+4|dia|Thành phố Maseru thuộc quốc gia nào?|Lesotho|Luxembourg|Bắc Macedonia|Trinidad và Tobago
+4|dia|Thành phố Mbabane thuộc quốc gia nào?|Eswatini|Uruguay|Cộng hòa Dân chủ Nhân dân Triều Tiên|Brunei
+4|dia|Thành phố Medellín thuộc quốc gia nào?|Colombia|Cameroon|Slovakia|Ireland
+4|dia|Thành phố Messina thuộc quốc gia nào?|Ý|Vương quốc Anh|Afghanistan|Gambia
 2|dia|Thành phố Milano thuộc quốc gia nào?|Ý|Hà Lan|Séc|Ba Lan
-2|dia|Thành phố Milwaukee thuộc quốc gia nào?|Hoa Kỳ|Ý|Gambia|Thái Lan
-2|dia|Thành phố Minsk thuộc quốc gia nào?|Belarus|Albania|Bahrain|Botswana
-2|dia|Thành phố Mogadishu thuộc quốc gia nào?|Somalia|Mali|Guatemala|Eritrea
-2|dia|Thành phố Monrovia thuộc quốc gia nào?|Liberia|Nam Sudan|Mauritius|Ecuador
-2|dia|Thành phố Montpelier thuộc quốc gia nào?|Hoa Kỳ|Hàn Quốc|Các Tiểu vương quốc Ả Rập Thống nhất|Philippines
-2|dia|Thành phố Montpellier thuộc quốc gia nào?|Pháp|Bắc Macedonia|Bồ Đào Nha|Belarus
-2|dia|Thành phố Montréal thuộc quốc gia nào?|Canada|Trung Quốc|México|Malta
+4|dia|Thành phố Milwaukee thuộc quốc gia nào?|Hoa Kỳ|Ý|Gambia|Thái Lan
+4|dia|Thành phố Minsk thuộc quốc gia nào?|Belarus|Albania|Bahrain|Botswana
+4|dia|Thành phố Mogadishu thuộc quốc gia nào?|Somalia|Mali|Guatemala|Eritrea
+4|dia|Thành phố Monrovia thuộc quốc gia nào?|Liberia|Nam Sudan|Mauritius|Ecuador
+4|dia|Thành phố Montpelier thuộc quốc gia nào?|Hoa Kỳ|Hàn Quốc|Các Tiểu vương quốc Ả Rập Thống nhất|Philippines
+4|dia|Thành phố Montpellier thuộc quốc gia nào?|Pháp|Bắc Macedonia|Bồ Đào Nha|Belarus
+3|dia|Thành phố Montréal thuộc quốc gia nào?|Canada|Trung Quốc|México|Malta
 2|dia|Thành phố Mumbai thuộc quốc gia nào?|Ấn Độ|Nga|Iraq|Venezuela
-2|dia|Thành phố Muscat thuộc quốc gia nào?|Oman|Jordan|São Tomé và Príncipe|Uganda
-2|dia|Thành phố Málaga thuộc quốc gia nào?|Tây Ban Nha|Malaysia|Israel|Ethiopia
-2|dia|Thành phố München thuộc quốc gia nào?|Đức|México|Bosna và Hercegovina|Lào
-2|dia|Thành phố Münster thuộc quốc gia nào?|Đức|Phần Lan|Brunei|México
-2|dia|Thành phố N'Djamena thuộc quốc gia nào?|Tchad|Comoros|Moldova|Slovenia
-2|dia|Thành phố Nairobi thuộc quốc gia nào?|Kenya|Madagascar|Turkmenistan|Séc
-2|dia|Thành phố Nam Kinh thuộc quốc gia nào?|Trung Quốc|Moldova|Bỉ|Thổ Nhĩ Kỳ
-2|dia|Thành phố Napoli thuộc quốc gia nào?|Ý|Cộng hòa Dân chủ Congo|Thổ Nhĩ Kỳ|Ethiopia
-2|dia|Thành phố Nassau thuộc quốc gia nào?|Bahamas|Campuchia|Eswatini|Mauritius
-2|dia|Thành phố Naypyidaw thuộc quốc gia nào?|Myanma|Luxembourg|Latvia|Niger
-2|dia|Thành phố Nazareth thuộc quốc gia nào?|Israel|Eritrea|Uruguay|Tanzania
-2|dia|Thành phố New Orleans thuộc quốc gia nào?|Hoa Kỳ|Armenia|Litva|Israel
-2|dia|Thành phố Nha Trang thuộc quốc gia nào?|Việt Nam|Hungary|Kyrgyzstan|Đài Loan
-2|dia|Thành phố Niamey thuộc quốc gia nào?|Niger|Eritrea|Síp|Mozambique
-2|dia|Thành phố Nice thuộc quốc gia nào?|Pháp|Litva|Slovakia|Hoa Kỳ
-2|dia|Thành phố Nicosia thuộc quốc gia nào?|Síp|Sri Lanka|Ireland|Haiti
-2|dia|Thành phố Nizhny Novgorod thuộc quốc gia nào?|Nga|Iraq|Bulgaria|Đan Mạch
-2|dia|Thành phố Nouakchott thuộc quốc gia nào?|Mauritanie|Angola|Moldova|Síp
-2|dia|Thành phố Novosibirsk thuộc quốc gia nào?|Nga|Colombia|Hà Lan|Bồ Đào Nha
-2|dia|Thành phố Nukuʻalofa thuộc quốc gia nào?|Tonga|Jamaica|Vanuatu|Malta
-2|dia|Thành phố Nuuk thuộc quốc gia nào?|Greenland|Bahrain|Eswatini|Haiti
-2|dia|Thành phố Nürnberg thuộc quốc gia nào?|Đức|Liban|Đài Loan|Ai Cập
-2|dia|Thành phố Oklahoma thuộc quốc gia nào?|Hoa Kỳ|Thái Lan|Áo|Việt Nam
-2|dia|Thành phố Olympia thuộc quốc gia nào?|Hoa Kỳ|Đan Mạch|Perú|Vương quốc Anh
-2|dia|Thành phố Omaha thuộc quốc gia nào?|Hoa Kỳ|Ả Rập Xê Út|Madagascar|Ireland
-2|dia|Thành phố Omsk thuộc quốc gia nào?|Nga|Guiné-Bissau|Hy Lạp|Ethiopia
-2|dia|Thành phố Orlando thuộc quốc gia nào?|Hoa Kỳ|Indonesia|Luxembourg|Hy Lạp
-2|dia|Thành phố Ouagadougou thuộc quốc gia nào?|Burkina Faso|Tchad|Bắc Macedonia|Pakistan
-2|dia|Thành phố Padova thuộc quốc gia nào?|Ý|Ethiopia|Israel|Sudan
-2|dia|Thành phố Palermo thuộc quốc gia nào?|Ý|Hàn Quốc|Iran|Litva
-2|dia|Thành phố Paramaribo thuộc quốc gia nào?|Suriname|Mozambique|Bờ Biển Ngà|Eswatini
-2|dia|Thành phố Perm thuộc quốc gia nào?|Nga|Slovenia|Úc|Ấn Độ
-2|dia|Thành phố Perth thuộc quốc gia nào?|Úc|Đức|Các Tiểu vương quốc Ả Rập Thống nhất|Venezuela
-2|dia|Thành phố Perugia thuộc quốc gia nào?|Ý|Cuba|Nigeria|Tây Ban Nha
+4|dia|Thành phố Muscat thuộc quốc gia nào?|Oman|Jordan|São Tomé và Príncipe|Uganda
+4|dia|Thành phố Málaga thuộc quốc gia nào?|Tây Ban Nha|Malaysia|Israel|Ethiopia
+3|dia|Thành phố München thuộc quốc gia nào?|Đức|México|Bosna và Hercegovina|Lào
+4|dia|Thành phố Münster thuộc quốc gia nào?|Đức|Phần Lan|Brunei|México
+4|dia|Thành phố N'Djamena thuộc quốc gia nào?|Tchad|Comoros|Moldova|Slovenia
+3|dia|Thành phố Nairobi thuộc quốc gia nào?|Kenya|Madagascar|Turkmenistan|Séc
+4|dia|Thành phố Nam Kinh thuộc quốc gia nào?|Trung Quốc|Moldova|Bỉ|Thổ Nhĩ Kỳ
+3|dia|Thành phố Napoli thuộc quốc gia nào?|Ý|Cộng hòa Dân chủ Congo|Thổ Nhĩ Kỳ|Ethiopia
+4|dia|Thành phố Nassau thuộc quốc gia nào?|Bahamas|Campuchia|Eswatini|Mauritius
+4|dia|Thành phố Naypyidaw thuộc quốc gia nào?|Myanma|Luxembourg|Latvia|Niger
+4|dia|Thành phố Nazareth thuộc quốc gia nào?|Israel|Eritrea|Uruguay|Tanzania
+4|dia|Thành phố New Orleans thuộc quốc gia nào?|Hoa Kỳ|Armenia|Litva|Israel
+4|dia|Thành phố Nha Trang thuộc quốc gia nào?|Việt Nam|Hungary|Kyrgyzstan|Đài Loan
+4|dia|Thành phố Niamey thuộc quốc gia nào?|Niger|Eritrea|Síp|Mozambique
+3|dia|Thành phố Nice thuộc quốc gia nào?|Pháp|Litva|Slovakia|Hoa Kỳ
+4|dia|Thành phố Nicosia thuộc quốc gia nào?|Síp|Sri Lanka|Ireland|Haiti
+4|dia|Thành phố Nizhny Novgorod thuộc quốc gia nào?|Nga|Iraq|Bulgaria|Đan Mạch
+4|dia|Thành phố Nouakchott thuộc quốc gia nào?|Mauritanie|Angola|Moldova|Síp
+4|dia|Thành phố Novosibirsk thuộc quốc gia nào?|Nga|Colombia|Hà Lan|Bồ Đào Nha
+4|dia|Thành phố Nukuʻalofa thuộc quốc gia nào?|Tonga|Jamaica|Vanuatu|Malta
+4|dia|Thành phố Nuuk thuộc quốc gia nào?|Greenland|Bahrain|Eswatini|Haiti
+4|dia|Thành phố Nürnberg thuộc quốc gia nào?|Đức|Liban|Đài Loan|Ai Cập
+4|dia|Thành phố Oklahoma thuộc quốc gia nào?|Hoa Kỳ|Thái Lan|Áo|Việt Nam
+4|dia|Thành phố Olympia thuộc quốc gia nào?|Hoa Kỳ|Đan Mạch|Perú|Vương quốc Anh
+4|dia|Thành phố Omaha thuộc quốc gia nào?|Hoa Kỳ|Ả Rập Xê Út|Madagascar|Ireland
+4|dia|Thành phố Omsk thuộc quốc gia nào?|Nga|Guiné-Bissau|Hy Lạp|Ethiopia
+3|dia|Thành phố Orlando thuộc quốc gia nào?|Hoa Kỳ|Indonesia|Luxembourg|Hy Lạp
+4|dia|Thành phố Ouagadougou thuộc quốc gia nào?|Burkina Faso|Tchad|Bắc Macedonia|Pakistan
+4|dia|Thành phố Padova thuộc quốc gia nào?|Ý|Ethiopia|Israel|Sudan
+4|dia|Thành phố Palermo thuộc quốc gia nào?|Ý|Hàn Quốc|Iran|Litva
+4|dia|Thành phố Paramaribo thuộc quốc gia nào?|Suriname|Mozambique|Bờ Biển Ngà|Eswatini
+4|dia|Thành phố Perm thuộc quốc gia nào?|Nga|Slovenia|Úc|Ấn Độ
+4|dia|Thành phố Perth thuộc quốc gia nào?|Úc|Đức|Các Tiểu vương quốc Ả Rập Thống nhất|Venezuela
+4|dia|Thành phố Perugia thuộc quốc gia nào?|Ý|Cuba|Nigeria|Tây Ban Nha
 2|dia|Thành phố Phnôm Pênh thuộc quốc gia nào?|Campuchia|Serbia|Maroc|Pakistan
-2|dia|Thành phố Phoenix thuộc quốc gia nào?|Hoa Kỳ|Paraguay|Eritrea|Thụy Sĩ
-2|dia|Thành phố Pierre thuộc quốc gia nào?|Hoa Kỳ|Nam Phi|Đức|Bosna và Hercegovina
-2|dia|Thành phố Pisa thuộc quốc gia nào?|Ý|Vương quốc Anh|Paraguay|Tanzania
-2|dia|Thành phố Pittsburgh thuộc quốc gia nào?|Hoa Kỳ|Azerbaijan|Thái Lan|Gruzia
-2|dia|Thành phố Podgorica thuộc quốc gia nào?|Montenegro|Cabo Verde|Namibia|Việt Nam
-2|dia|Thành phố Port Louis thuộc quốc gia nào?|Mauritius|Quần đảo Marshall|Cộng hòa Congo|Bahrain
-2|dia|Thành phố Port Moresby thuộc quốc gia nào?|Papua New Guinea|Hàn Quốc|Armenia|Kuwait
-2|dia|Thành phố Port Vila thuộc quốc gia nào?|Vanuatu|Bahamas|Tajikistan|Cộng hòa Dominica
-2|dia|Thành phố Port of Spain thuộc quốc gia nào?|Trinidad và Tobago|Suriname|Đông Timor|Fiji
-2|dia|Thành phố Port-au-Prince thuộc quốc gia nào?|Haiti|Barbados|Guinea Xích Đạo|Syria
-2|dia|Thành phố Porto Alegre thuộc quốc gia nào?|Brasil|Lào|Latvia|Phần Lan
-2|dia|Thành phố Porto thuộc quốc gia nào?|Bồ Đào Nha|Thổ Nhĩ Kỳ|Philippines|Azerbaijan
-2|dia|Thành phố Porto-Novo thuộc quốc gia nào?|Bénin|Barbados|Belize|Syria
-2|dia|Thành phố Potsdam thuộc quốc gia nào?|Đức|Thái Lan|Bénin|Malaysia
-2|dia|Thành phố Praia thuộc quốc gia nào?|Cabo Verde|Mauritanie|Bénin|Malta
-2|dia|Thành phố Pretoria thuộc quốc gia nào?|Nam Phi|Úc|Thụy Điển|Croatia
-2|dia|Thành phố Priština thuộc quốc gia nào?|Kosovo|Namibia|Nam Sudan|Tanzania
-2|dia|Thành phố Providence thuộc quốc gia nào?|Hoa Kỳ|Hà Lan|Nam Phi|Na Uy
-2|dia|Thành phố Pune thuộc quốc gia nào?|Ấn Độ|Bahrain|Chile|Andorra
-2|dia|Thành phố Quito thuộc quốc gia nào?|Ecuador|Yemen|Các Tiểu vương quốc Ả Rập Thống nhất|Mozambique
-2|dia|Thành phố Québec thuộc quốc gia nào?|Canada|Ethiopia|México|Croatia
-2|dia|Thành phố Quảng Châu thuộc quốc gia nào?|Trung Quốc|Albania|Bosna và Hercegovina|Séc
-2|dia|Thành phố Rabat thuộc quốc gia nào?|Maroc|Namibia|Hungary|Slovenia
-2|dia|Thành phố Raleigh thuộc quốc gia nào?|Hoa Kỳ|Pháp|Serbia|Armenia
-2|dia|Thành phố Ramallah thuộc quốc gia nào?|Nhà nước Palestine|Comoros|Tuvalu|Cuba
-2|dia|Thành phố Recife thuộc quốc gia nào?|Brasil|Ai-xơ-len|Slovakia|Philippines
-2|dia|Thành phố Reims thuộc quốc gia nào?|Pháp|Thụy Điển|Ấn Độ|Nga
-2|dia|Thành phố Riga thuộc quốc gia nào?|Latvia|Malta|Maldives|Đông Timor
-2|dia|Thành phố Rostov trên sông Đông thuộc quốc gia nào?|Nga|România|Bỉ|Các Tiểu vương quốc Ả Rập Thống nhất
-2|dia|Thành phố Rotterdam thuộc quốc gia nào?|Hà Lan|Áo|Afghanistan|România
-2|dia|Thành phố Roubaix thuộc quốc gia nào?|Pháp|Hàn Quốc|Hungary|Kyrgyzstan
-2|dia|Thành phố Rouen thuộc quốc gia nào?|Pháp|New Zealand|Thổ Nhĩ Kỳ|Maroc
-2|dia|Thành phố Saarbrücken thuộc quốc gia nào?|Đức|Úc|Thái Lan|Ukraina
-2|dia|Thành phố Sacramento thuộc quốc gia nào?|Hoa Kỳ|Bỉ|Hy Lạp|Vương quốc Anh
-2|dia|Thành phố Salt Lake thuộc quốc gia nào?|Hoa Kỳ|Phần Lan|Philippines|Ukraina
-2|dia|Thành phố Samara thuộc quốc gia nào?|Nga|Bỉ|Uzbekistan|Hàn Quốc
-2|dia|Thành phố Samarkand thuộc quốc gia nào?|Uzbekistan|Vanuatu|Namibia|Bắc Macedonia
+4|dia|Thành phố Phoenix thuộc quốc gia nào?|Hoa Kỳ|Paraguay|Eritrea|Thụy Sĩ
+4|dia|Thành phố Pierre thuộc quốc gia nào?|Hoa Kỳ|Nam Phi|Đức|Bosna và Hercegovina
+3|dia|Thành phố Pisa thuộc quốc gia nào?|Ý|Vương quốc Anh|Paraguay|Tanzania
+4|dia|Thành phố Pittsburgh thuộc quốc gia nào?|Hoa Kỳ|Azerbaijan|Thái Lan|Gruzia
+4|dia|Thành phố Podgorica thuộc quốc gia nào?|Montenegro|Cabo Verde|Namibia|Việt Nam
+4|dia|Thành phố Port Louis thuộc quốc gia nào?|Mauritius|Quần đảo Marshall|Cộng hòa Congo|Bahrain
+4|dia|Thành phố Port Moresby thuộc quốc gia nào?|Papua New Guinea|Hàn Quốc|Armenia|Kuwait
+4|dia|Thành phố Port Vila thuộc quốc gia nào?|Vanuatu|Bahamas|Tajikistan|Cộng hòa Dominica
+4|dia|Thành phố Port of Spain thuộc quốc gia nào?|Trinidad và Tobago|Suriname|Đông Timor|Fiji
+4|dia|Thành phố Port-au-Prince thuộc quốc gia nào?|Haiti|Barbados|Guinea Xích Đạo|Syria
+4|dia|Thành phố Porto Alegre thuộc quốc gia nào?|Brasil|Lào|Latvia|Phần Lan
+3|dia|Thành phố Porto thuộc quốc gia nào?|Bồ Đào Nha|Thổ Nhĩ Kỳ|Philippines|Azerbaijan
+4|dia|Thành phố Porto-Novo thuộc quốc gia nào?|Bénin|Barbados|Belize|Syria
+4|dia|Thành phố Potsdam thuộc quốc gia nào?|Đức|Thái Lan|Bénin|Malaysia
+4|dia|Thành phố Praia thuộc quốc gia nào?|Cabo Verde|Mauritanie|Bénin|Malta
+3|dia|Thành phố Pretoria thuộc quốc gia nào?|Nam Phi|Úc|Thụy Điển|Croatia
+4|dia|Thành phố Priština thuộc quốc gia nào?|Kosovo|Namibia|Nam Sudan|Tanzania
+4|dia|Thành phố Providence thuộc quốc gia nào?|Hoa Kỳ|Hà Lan|Nam Phi|Na Uy
+4|dia|Thành phố Pune thuộc quốc gia nào?|Ấn Độ|Bahrain|Chile|Andorra
+4|dia|Thành phố Quito thuộc quốc gia nào?|Ecuador|Yemen|Các Tiểu vương quốc Ả Rập Thống nhất|Mozambique
+4|dia|Thành phố Québec thuộc quốc gia nào?|Canada|Ethiopia|México|Croatia
+3|dia|Thành phố Quảng Châu thuộc quốc gia nào?|Trung Quốc|Albania|Bosna và Hercegovina|Séc
+4|dia|Thành phố Rabat thuộc quốc gia nào?|Maroc|Namibia|Hungary|Slovenia
+4|dia|Thành phố Raleigh thuộc quốc gia nào?|Hoa Kỳ|Pháp|Serbia|Armenia
+4|dia|Thành phố Ramallah thuộc quốc gia nào?|Nhà nước Palestine|Comoros|Tuvalu|Cuba
+4|dia|Thành phố Recife thuộc quốc gia nào?|Brasil|Ai-xơ-len|Slovakia|Philippines
+4|dia|Thành phố Reims thuộc quốc gia nào?|Pháp|Thụy Điển|Ấn Độ|Nga
+4|dia|Thành phố Riga thuộc quốc gia nào?|Latvia|Malta|Maldives|Đông Timor
+4|dia|Thành phố Rostov trên sông Đông thuộc quốc gia nào?|Nga|România|Bỉ|Các Tiểu vương quốc Ả Rập Thống nhất
+4|dia|Thành phố Rotterdam thuộc quốc gia nào?|Hà Lan|Áo|Afghanistan|România
+4|dia|Thành phố Roubaix thuộc quốc gia nào?|Pháp|Hàn Quốc|Hungary|Kyrgyzstan
+4|dia|Thành phố Rouen thuộc quốc gia nào?|Pháp|New Zealand|Thổ Nhĩ Kỳ|Maroc
+4|dia|Thành phố Saarbrücken thuộc quốc gia nào?|Đức|Úc|Thái Lan|Ukraina
+4|dia|Thành phố Sacramento thuộc quốc gia nào?|Hoa Kỳ|Bỉ|Hy Lạp|Vương quốc Anh
+4|dia|Thành phố Salt Lake thuộc quốc gia nào?|Hoa Kỳ|Phần Lan|Philippines|Ukraina
+4|dia|Thành phố Samara thuộc quốc gia nào?|Nga|Bỉ|Uzbekistan|Hàn Quốc
+4|dia|Thành phố Samarkand thuộc quốc gia nào?|Uzbekistan|Vanuatu|Namibia|Bắc Macedonia
 2|dia|Thành phố San Francisco thuộc quốc gia nào?|Hoa Kỳ|Slovakia|Đông Timor|Thái Lan
-2|dia|Thành phố San Jose thuộc quốc gia nào?|Hoa Kỳ|Bosna và Hercegovina|Tây Ban Nha|Perú
-2|dia|Thành phố San José thuộc quốc gia nào?|Costa Rica|Ghana|Liban|Kuwait
-2|dia|Thành phố San Salvador thuộc quốc gia nào?|El Salvador|Turkmenistan|Papua New Guinea|Tunisia
-2|dia|Thành phố Sana'a thuộc quốc gia nào?|Yemen|Bangladesh|Kenya|Brunei
-2|dia|Thành phố Sankt-Peterburg thuộc quốc gia nào?|Nga|Nam Phi|Tajikistan|Pakistan
-2|dia|Thành phố Santiago thuộc quốc gia nào?|Chile|Sénégal|Liban|New Zealand
-2|dia|Thành phố Santo Domingo thuộc quốc gia nào?|Cộng hòa Dominica|Bahamas|Trinidad và Tobago|Turkmenistan
-2|dia|Thành phố Sapporo thuộc quốc gia nào?|Nhật Bản|Afghanistan|Bénin|Israel
-2|dia|Thành phố Sarajevo thuộc quốc gia nào?|Bosna và Hercegovina|Panama|Ai-xơ-len|Ecuador
-2|dia|Thành phố Saratov thuộc quốc gia nào?|Nga|Bắc Macedonia|Hy Lạp|Djibouti
-2|dia|Thành phố Seattle thuộc quốc gia nào?|Hoa Kỳ|Algérie|Sri Lanka|Lào
-2|dia|Thành phố Seoul thuộc quốc gia nào?|Hàn Quốc|Latvia|Syria|Bosna và Hercegovina
-2|dia|Thành phố Sevastopol thuộc quốc gia nào?|Ukraina|Ethiopia|Uruguay|Chile
-2|dia|Thành phố Siena thuộc quốc gia nào?|Ý|Pakistan|México|Afghanistan
-2|dia|Thành phố Simferopol thuộc quốc gia nào?|Ukraina|Ai Cập|Thái Lan|Chile
-2|dia|Thành phố Skopje thuộc quốc gia nào?|Bắc Macedonia|Zimbabwe|Mali|Singapore
-2|dia|Thành phố Smolensk thuộc quốc gia nào?|Nga|Bahrain|Argentina|Algérie
-2|dia|Thành phố Sofia thuộc quốc gia nào?|Bulgaria|Indonesia|Colombia|Angola
-2|dia|Thành phố St. George's thuộc quốc gia nào?|Grenada|Saint Lucia|Mozambique|Liban
-2|dia|Thành phố St. Louis thuộc quốc gia nào?|Hoa Kỳ|Tunisia|Ý|Ấn Độ
-2|dia|Thành phố Strasbourg thuộc quốc gia nào?|Pháp|Ai-xơ-len|Sénégal|Hà Lan
-2|dia|Thành phố Sucre thuộc quốc gia nào?|Bolivia|Lesotho|Đông Timor|Mali
-2|dia|Thành phố Suva thuộc quốc gia nào?|Fiji|Togo|Tchad|Brunei
-2|dia|Thành phố Szczecin thuộc quốc gia nào?|Ba Lan|Armenia|Síp|Nam Phi
-2|dia|Thành phố São Paulo thuộc quốc gia nào?|Brasil|Botswana|Cộng hòa Dân chủ Congo|Bồ Đào Nha
-2|dia|Thành phố São Tomé thuộc quốc gia nào?|São Tomé và Príncipe|Costa Rica|Guatemala|Bénin
-2|dia|Thành phố Tallahassee thuộc quốc gia nào?|Hoa Kỳ|Armenia|Algérie|Israel
-2|dia|Thành phố Tallinn thuộc quốc gia nào?|Estonia|Kenya|Mozambique|Sénégal
-2|dia|Thành phố Tampa thuộc quốc gia nào?|Hoa Kỳ|Slovakia|Thụy Sĩ|Hà Lan
-2|dia|Thành phố Tampere thuộc quốc gia nào?|Phần Lan|Cameroon|Áo|Bắc Macedonia
-2|dia|Thành phố Tangier thuộc quốc gia nào?|Maroc|Litva|Ghana|Tunisia
-2|dia|Thành phố Taranto thuộc quốc gia nào?|Ý|Liban|Tajikistan|Nga
-2|dia|Thành phố Tashkent thuộc quốc gia nào?|Uzbekistan|Sudan|Ả Rập Xê Út|Eritrea
-2|dia|Thành phố Tbilisi thuộc quốc gia nào?|Gruzia|Honduras|Sri Lanka|Ai-xơ-len
-2|dia|Thành phố Tegucigalpa thuộc quốc gia nào?|Honduras|Greenland|Rwanda|Bulgaria
-2|dia|Thành phố Tel Aviv thuộc quốc gia nào?|Israel|Libya|Honduras|Chile
-2|dia|Thành phố Thessaloniki thuộc quốc gia nào?|Hy Lạp|Pháp|Afghanistan|Việt Nam
-2|dia|Thành phố Thiên Tân thuộc quốc gia nào?|Trung Quốc|Latvia|Moldova|Azerbaijan
-2|dia|Thành phố Thành Đô thuộc quốc gia nào?|Trung Quốc|Bỉ|Đan Mạch|Ethiopia
-2|dia|Thành phố Thâm Quyến thuộc quốc gia nào?|Trung Quốc|Paraguay|Sudan|Madagascar
+4|dia|Thành phố San Jose thuộc quốc gia nào?|Hoa Kỳ|Bosna và Hercegovina|Tây Ban Nha|Perú
+4|dia|Thành phố San José thuộc quốc gia nào?|Costa Rica|Ghana|Liban|Kuwait
+4|dia|Thành phố San Salvador thuộc quốc gia nào?|El Salvador|Turkmenistan|Papua New Guinea|Tunisia
+4|dia|Thành phố Sana'a thuộc quốc gia nào?|Yemen|Bangladesh|Kenya|Brunei
+4|dia|Thành phố Sankt-Peterburg thuộc quốc gia nào?|Nga|Nam Phi|Tajikistan|Pakistan
+3|dia|Thành phố Santiago thuộc quốc gia nào?|Chile|Sénégal|Liban|New Zealand
+4|dia|Thành phố Santo Domingo thuộc quốc gia nào?|Cộng hòa Dominica|Bahamas|Trinidad và Tobago|Turkmenistan
+4|dia|Thành phố Sapporo thuộc quốc gia nào?|Nhật Bản|Afghanistan|Bénin|Israel
+4|dia|Thành phố Sarajevo thuộc quốc gia nào?|Bosna và Hercegovina|Panama|Ai-xơ-len|Ecuador
+4|dia|Thành phố Saratov thuộc quốc gia nào?|Nga|Bắc Macedonia|Hy Lạp|Djibouti
+3|dia|Thành phố Seattle thuộc quốc gia nào?|Hoa Kỳ|Algérie|Sri Lanka|Lào
+1|dia|Thành phố Seoul thuộc quốc gia nào?|Hàn Quốc|Latvia|Syria|Bosna và Hercegovina
+4|dia|Thành phố Sevastopol thuộc quốc gia nào?|Ukraina|Ethiopia|Uruguay|Chile
+4|dia|Thành phố Siena thuộc quốc gia nào?|Ý|Pakistan|México|Afghanistan
+4|dia|Thành phố Simferopol thuộc quốc gia nào?|Ukraina|Ai Cập|Thái Lan|Chile
+4|dia|Thành phố Skopje thuộc quốc gia nào?|Bắc Macedonia|Zimbabwe|Mali|Singapore
+4|dia|Thành phố Smolensk thuộc quốc gia nào?|Nga|Bahrain|Argentina|Algérie
+4|dia|Thành phố Sofia thuộc quốc gia nào?|Bulgaria|Indonesia|Colombia|Angola
+4|dia|Thành phố St. George's thuộc quốc gia nào?|Grenada|Saint Lucia|Mozambique|Liban
+4|dia|Thành phố St. Louis thuộc quốc gia nào?|Hoa Kỳ|Tunisia|Ý|Ấn Độ
+4|dia|Thành phố Strasbourg thuộc quốc gia nào?|Pháp|Ai-xơ-len|Sénégal|Hà Lan
+4|dia|Thành phố Sucre thuộc quốc gia nào?|Bolivia|Lesotho|Đông Timor|Mali
+4|dia|Thành phố Suva thuộc quốc gia nào?|Fiji|Togo|Tchad|Brunei
+4|dia|Thành phố Szczecin thuộc quốc gia nào?|Ba Lan|Armenia|Síp|Nam Phi
+4|dia|Thành phố São Paulo thuộc quốc gia nào?|Brasil|Botswana|Cộng hòa Dân chủ Congo|Bồ Đào Nha
+4|dia|Thành phố São Tomé thuộc quốc gia nào?|São Tomé và Príncipe|Costa Rica|Guatemala|Bénin
+4|dia|Thành phố Tallahassee thuộc quốc gia nào?|Hoa Kỳ|Armenia|Algérie|Israel
+4|dia|Thành phố Tallinn thuộc quốc gia nào?|Estonia|Kenya|Mozambique|Sénégal
+4|dia|Thành phố Tampa thuộc quốc gia nào?|Hoa Kỳ|Slovakia|Thụy Sĩ|Hà Lan
+4|dia|Thành phố Tampere thuộc quốc gia nào?|Phần Lan|Cameroon|Áo|Bắc Macedonia
+4|dia|Thành phố Tangier thuộc quốc gia nào?|Maroc|Litva|Ghana|Tunisia
+4|dia|Thành phố Taranto thuộc quốc gia nào?|Ý|Liban|Tajikistan|Nga
+3|dia|Thành phố Tashkent thuộc quốc gia nào?|Uzbekistan|Sudan|Ả Rập Xê Út|Eritrea
+4|dia|Thành phố Tbilisi thuộc quốc gia nào?|Gruzia|Honduras|Sri Lanka|Ai-xơ-len
+4|dia|Thành phố Tegucigalpa thuộc quốc gia nào?|Honduras|Greenland|Rwanda|Bulgaria
+3|dia|Thành phố Tel Aviv thuộc quốc gia nào?|Israel|Libya|Honduras|Chile
+3|dia|Thành phố Thessaloniki thuộc quốc gia nào?|Hy Lạp|Pháp|Afghanistan|Việt Nam
+4|dia|Thành phố Thiên Tân thuộc quốc gia nào?|Trung Quốc|Latvia|Moldova|Azerbaijan
+4|dia|Thành phố Thành Đô thuộc quốc gia nào?|Trung Quốc|Bỉ|Đan Mạch|Ethiopia
+3|dia|Thành phố Thâm Quyến thuộc quốc gia nào?|Trung Quốc|Paraguay|Sudan|Madagascar
 2|dia|Thành phố Thượng Hải thuộc quốc gia nào?|Trung Quốc|Nam Phi|Costa Rica|Bỉ
-2|dia|Thành phố Timbuktu thuộc quốc gia nào?|Mali|Iran|Cuba|Burundi
-2|dia|Thành phố Tirana thuộc quốc gia nào?|Albania|Ghana|Mozambique|Ấn Độ
-2|dia|Thành phố Topeka thuộc quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Belarus|Thổ Nhĩ Kỳ
-2|dia|Thành phố Torino thuộc quốc gia nào?|Ý|Séc|Eritrea|Ireland
-2|dia|Thành phố Toulouse thuộc quốc gia nào?|Pháp|Ukraina|Các Tiểu vương quốc Ả Rập Thống nhất|Israel
-2|dia|Thành phố Trier thuộc quốc gia nào?|Đức|Andorra|Estonia|Nam Sudan
-2|dia|Thành phố Trieste thuộc quốc gia nào?|Ý|Chile|Ethiopia|Serbia
-2|dia|Thành phố Trondheim thuộc quốc gia nào?|Na Uy|Canada|Đức|Nepal
-2|dia|Thành phố Trịnh Châu thuộc quốc gia nào?|Trung Quốc|Canada|Iran|Hungary
-2|dia|Thành phố Tucson thuộc quốc gia nào?|Hoa Kỳ|Thụy Sĩ|Hy Lạp|Đức
-2|dia|Thành phố Tunis thuộc quốc gia nào?|Tunisia|Zambia|Cabo Verde|Panama
-2|dia|Thành phố Turku thuộc quốc gia nào?|Phần Lan|Litva|Ai-xơ-len|Zimbabwe
-2|dia|Thành phố Tây An thuộc quốc gia nào?|Trung Quốc|Gruzia|New Zealand|Bangladesh
-2|dia|Thành phố Ulaanbaatar thuộc quốc gia nào?|Mông Cổ|Sri Lanka|Malta|New Zealand
-2|dia|Thành phố Ulm thuộc quốc gia nào?|Đức|Hoa Kỳ|Bangladesh|Azerbaijan
-2|dia|Thành phố Uppsala thuộc quốc gia nào?|Thụy Điển|Somalia|Colombia|Lào
-2|dia|Thành phố Valletta thuộc quốc gia nào?|Malta|Serbia|Bờ Biển Ngà|Madagascar
-2|dia|Thành phố Valparaíso thuộc quốc gia nào?|Chile|Đài Loan|Bồ Đào Nha|Luxembourg
-2|dia|Thành phố Varanasi thuộc quốc gia nào?|Ấn Độ|Algérie|Belarus|Jordan
-2|dia|Thành phố Veliky Novgorod thuộc quốc gia nào?|Nga|Thái Lan|Maroc|Canada
+4|dia|Thành phố Timbuktu thuộc quốc gia nào?|Mali|Iran|Cuba|Burundi
+4|dia|Thành phố Tirana thuộc quốc gia nào?|Albania|Ghana|Mozambique|Ấn Độ
+4|dia|Thành phố Topeka thuộc quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Belarus|Thổ Nhĩ Kỳ
+3|dia|Thành phố Torino thuộc quốc gia nào?|Ý|Séc|Eritrea|Ireland
+4|dia|Thành phố Toulouse thuộc quốc gia nào?|Pháp|Ukraina|Các Tiểu vương quốc Ả Rập Thống nhất|Israel
+4|dia|Thành phố Trier thuộc quốc gia nào?|Đức|Andorra|Estonia|Nam Sudan
+4|dia|Thành phố Trieste thuộc quốc gia nào?|Ý|Chile|Ethiopia|Serbia
+4|dia|Thành phố Trondheim thuộc quốc gia nào?|Na Uy|Canada|Đức|Nepal
+4|dia|Thành phố Trịnh Châu thuộc quốc gia nào?|Trung Quốc|Canada|Iran|Hungary
+4|dia|Thành phố Tucson thuộc quốc gia nào?|Hoa Kỳ|Thụy Sĩ|Hy Lạp|Đức
+4|dia|Thành phố Tunis thuộc quốc gia nào?|Tunisia|Zambia|Cabo Verde|Panama
+4|dia|Thành phố Turku thuộc quốc gia nào?|Phần Lan|Litva|Ai-xơ-len|Zimbabwe
+3|dia|Thành phố Tây An thuộc quốc gia nào?|Trung Quốc|Gruzia|New Zealand|Bangladesh
+4|dia|Thành phố Ulaanbaatar thuộc quốc gia nào?|Mông Cổ|Sri Lanka|Malta|New Zealand
+4|dia|Thành phố Ulm thuộc quốc gia nào?|Đức|Hoa Kỳ|Bangladesh|Azerbaijan
+4|dia|Thành phố Uppsala thuộc quốc gia nào?|Thụy Điển|Somalia|Colombia|Lào
+4|dia|Thành phố Valletta thuộc quốc gia nào?|Malta|Serbia|Bờ Biển Ngà|Madagascar
+4|dia|Thành phố Valparaíso thuộc quốc gia nào?|Chile|Đài Loan|Bồ Đào Nha|Luxembourg
+4|dia|Thành phố Varanasi thuộc quốc gia nào?|Ấn Độ|Algérie|Belarus|Jordan
+4|dia|Thành phố Veliky Novgorod thuộc quốc gia nào?|Nga|Thái Lan|Maroc|Canada
 2|dia|Thành phố Venezia thuộc quốc gia nào?|Ý|Estonia|Các Tiểu vương quốc Ả Rập Thống nhất|Ba Lan
-2|dia|Thành phố Vilnius thuộc quốc gia nào?|Litva|Montenegro|Trung Quốc|Moldova
+4|dia|Thành phố Vilnius thuộc quốc gia nào?|Litva|Montenegro|Trung Quốc|Moldova
 2|dia|Thành phố Viêng Chăn thuộc quốc gia nào?|Lào|Đông Timor|Bolivia|Burkina Faso
-2|dia|Thành phố Vladivostok thuộc quốc gia nào?|Nga|Uruguay|Bangladesh|Oman
-2|dia|Thành phố Vlorë thuộc quốc gia nào?|Albania|Áo|Syria|Venezuela
-2|dia|Thành phố Volgograd thuộc quốc gia nào?|Nga|San Marino|Colombia|Bosna và Hercegovina
-2|dia|Thành phố Vũ Hán thuộc quốc gia nào?|Trung Quốc|Ả Rập Xê Út|Zimbabwe|Colombia
-2|dia|Thành phố Vũng Tàu thuộc quốc gia nào?|Việt Nam|Libya|Na Uy|Bỉ
-2|dia|Thành phố Warszawa thuộc quốc gia nào?|Ba Lan|Iraq|Kyrgyzstan|Úc
-2|dia|Thành phố Windhoek thuộc quốc gia nào?|Namibia|Libya|Croatia|Mozambique
-2|dia|Thành phố Winnipeg thuộc quốc gia nào?|Canada|Bulgaria|Phần Lan|Kyrgyzstan
-2|dia|Thành phố Yamoussoukro thuộc quốc gia nào?|Bờ Biển Ngà|Oman|Đài Loan|Gambia
-2|dia|Thành phố Yaoundé thuộc quốc gia nào?|Cameroon|Libya|Bénin|Gruzia
-2|dia|Thành phố Yekaterinburg thuộc quốc gia nào?|Nga|Brasil|Uganda|Hàn Quốc
-2|dia|Thành phố Yerevan thuộc quốc gia nào?|Armenia|Ireland|Venezuela|Iraq
-2|dia|Thành phố Zagreb thuộc quốc gia nào?|Croatia|Andorra|Tunisia|Pakistan
-2|dia|Thành phố Zaporizhia thuộc quốc gia nào?|Ukraina|Kenya|Cộng hòa Trung Phi|Pakistan
-2|dia|Thành phố Đà Nẵng thuộc quốc gia nào?|Việt Nam|Các Tiểu vương quốc Ả Rập Thống nhất|Singapore|Cộng hòa Dân chủ Nhân dân Triều Tiên
+4|dia|Thành phố Vladivostok thuộc quốc gia nào?|Nga|Uruguay|Bangladesh|Oman
+4|dia|Thành phố Vlorë thuộc quốc gia nào?|Albania|Áo|Syria|Venezuela
+4|dia|Thành phố Volgograd thuộc quốc gia nào?|Nga|San Marino|Colombia|Bosna và Hercegovina
+4|dia|Thành phố Vũ Hán thuộc quốc gia nào?|Trung Quốc|Ả Rập Xê Út|Zimbabwe|Colombia
+4|dia|Thành phố Vũng Tàu thuộc quốc gia nào?|Việt Nam|Libya|Na Uy|Bỉ
+3|dia|Thành phố Warszawa thuộc quốc gia nào?|Ba Lan|Iraq|Kyrgyzstan|Úc
+4|dia|Thành phố Windhoek thuộc quốc gia nào?|Namibia|Libya|Croatia|Mozambique
+4|dia|Thành phố Winnipeg thuộc quốc gia nào?|Canada|Bulgaria|Phần Lan|Kyrgyzstan
+4|dia|Thành phố Yamoussoukro thuộc quốc gia nào?|Bờ Biển Ngà|Oman|Đài Loan|Gambia
+4|dia|Thành phố Yaoundé thuộc quốc gia nào?|Cameroon|Libya|Bénin|Gruzia
+4|dia|Thành phố Yekaterinburg thuộc quốc gia nào?|Nga|Brasil|Uganda|Hàn Quốc
+4|dia|Thành phố Yerevan thuộc quốc gia nào?|Armenia|Ireland|Venezuela|Iraq
+4|dia|Thành phố Zagreb thuộc quốc gia nào?|Croatia|Andorra|Tunisia|Pakistan
+4|dia|Thành phố Zaporizhia thuộc quốc gia nào?|Ukraina|Kenya|Cộng hòa Trung Phi|Pakistan
+4|dia|Thành phố Đà Nẵng thuộc quốc gia nào?|Việt Nam|Các Tiểu vương quốc Ả Rập Thống nhất|Singapore|Cộng hòa Dân chủ Nhân dân Triều Tiên
 2|dia|Thành phố Đài Bắc thuộc quốc gia nào?|Đài Loan|Cộng hòa Congo|Slovenia|Montenegro
-2|dia|Thành phố Đồng Hới thuộc quốc gia nào?|Việt Nam|Philippines|Yemen|România
-2|dia|Thành phố Łódź thuộc quốc gia nào?|Ba Lan|Luxembourg|Thụy Sĩ|Ấn Độ
-2|dia|Thành phố Ōsaka thuộc quốc gia nào?|Nhật Bản|Ai Cập|Bồ Đào Nha|Thổ Nhĩ Kỳ
-2|the|Câu lạc bộ A.C. Milan có trụ sở ở thành phố nào?|Milano|Hamburg|Valletta|Helsinki
-2|the|Câu lạc bộ A.C.F. Fiorentina có trụ sở ở thành phố nào?|Firenze|Sevilla|Praha|Genève
-2|the|Câu lạc bộ Atalanta có trụ sở ở thành phố nào?|Bergamo|Eindhoven|Modena|Porto Alegre
-2|the|Câu lạc bộ Beşiktaş J.K. có trụ sở ở thành phố nào?|Istanbul|Stockholm|Athens|Cairo
-2|the|Câu lạc bộ Colo-Colo có trụ sở ở thành phố nào?|Santiago|Roma|Barcelona|Sankt-Peterburg
-2|the|Câu lạc bộ Coritiba Foot Ball Club có trụ sở ở thành phố nào?|Curitiba|Gibraltar|Sarajevo|Los Angeles
-2|the|Câu lạc bộ Crystal Palace F.C. có trụ sở ở thành phố nào?|Luân Đôn|Lisboa|Paris|Beograd
-2|the|Câu lạc bộ Eintracht Frankfurt có trụ sở ở thành phố nào?|Frankfurt am Main|Bratislava|Düsseldorf|Köln
-2|the|Câu lạc bộ Everton F.C. có trụ sở ở thành phố nào?|Liverpool|Genova|Montevideo|Bucharest
-2|the|Câu lạc bộ FC Schalke 04 có trụ sở ở thành phố nào?|Gelsenkirchen|Brescia|Angers|Cluj-Napoca
-2|the|Câu lạc bộ Fenerbahçe S.K. có trụ sở ở thành phố nào?|Kadıköy|Chorzów|Wolfsberg|Lecce
-2|the|Câu lạc bộ Flamengo có trụ sở ở thành phố nào?|Rio de Janeiro|Tehran|Astana|Helsinki
-2|the|Câu lạc bộ Fulham F.C. có trụ sở ở thành phố nào?|Luân Đôn|Istanbul|Paris|Minsk
-2|the|Câu lạc bộ Genoa C.F.C. có trụ sở ở thành phố nào?|Genova|Rotterdam|Toulouse|Barcelona
-2|the|Câu lạc bộ Juventus F.C. có trụ sở ở thành phố nào?|Torino|Bologna|Gdańsk|Nice
-2|the|Câu lạc bộ S.L. Benfica có trụ sở ở thành phố nào?|Lisboa|Sydney|Copenhagen|Praha
-2|the|Câu lạc bộ Sport Club Corinthians Paulista có trụ sở ở thành phố nào?|São Paulo|Dublin|Riyadh|Montevideo
-2|the|Câu lạc bộ U.C. Sampdoria có trụ sở ở thành phố nào?|Genova|Napoli|Düsseldorf|Bologna
-2|the|Câu lạc bộ bóng đá Arsenal có trụ sở ở thành phố nào?|Luân Đôn|Kyiv|Stockholm|Moskva
-2|the|Câu lạc bộ 1. FC Kaiserslautern thuộc quốc gia nào?|Đức|Albania|Estonia|Gruzia
-2|the|Câu lạc bộ 1. FC Köln thuộc quốc gia nào?|Đức|Nhật Bản|Đan Mạch|Hy Lạp
-2|the|Câu lạc bộ 1. FC Nurnberg thuộc quốc gia nào?|Đức|Azerbaijan|Ukraina|Hoa Kỳ
-2|the|Câu lạc bộ 1. FC Union Berlin thuộc quốc gia nào?|Đức|Ai Cập|Azerbaijan|Nam Phi
-2|the|Câu lạc bộ 1. FSV Mainz 05 thuộc quốc gia nào?|Đức|Iran|Phần Lan|New Zealand
-2|the|Câu lạc bộ A.C.F. Fiorentina thuộc quốc gia nào?|Ý|Hà Lan|Thổ Nhĩ Kỳ|Kazakhstan
-2|the|Câu lạc bộ A.S. Roma thuộc quốc gia nào?|Ý|Nam Phi|Albania|Latvia
-2|the|Câu lạc bộ APOEL FC thuộc quốc gia nào?|Síp|Belarus|Bosna và Hercegovina|Slovakia
-2|the|Câu lạc bộ AS Saint-Étienne thuộc quốc gia nào?|Pháp|New Zealand|Nga|Ba Lan
-2|the|Câu lạc bộ AZ Alkmaar thuộc quốc gia nào?|Hà Lan|Iran|Hàn Quốc|Chile
-2|the|Câu lạc bộ Al Ahly SC thuộc quốc gia nào?|Ai Cập|Montenegro|Thụy Sĩ|Séc
-2|the|Câu lạc bộ Al Hilal SFC thuộc quốc gia nào?|Ả Rập Xê Út|Slovakia|Latvia|Andorra
-2|the|Câu lạc bộ Atalanta thuộc quốc gia nào?|Ý|Nhật Bản|Chile|Thụy Điển
-2|the|Câu lạc bộ Athletic Bilbao thuộc quốc gia nào?|Tây Ban Nha|New Zealand|Ukraina|Hungary
+4|dia|Thành phố Đồng Hới thuộc quốc gia nào?|Việt Nam|Philippines|Yemen|România
+4|dia|Thành phố Łódź thuộc quốc gia nào?|Ba Lan|Luxembourg|Thụy Sĩ|Ấn Độ
+3|dia|Thành phố Ōsaka thuộc quốc gia nào?|Nhật Bản|Ai Cập|Bồ Đào Nha|Thổ Nhĩ Kỳ
+3|the|Câu lạc bộ A.C. Milan có trụ sở ở thành phố nào?|Milano|Hamburg|Valletta|Helsinki
+4|the|Câu lạc bộ A.C.F. Fiorentina có trụ sở ở thành phố nào?|Firenze|Sevilla|Praha|Genève
+4|the|Câu lạc bộ Atalanta có trụ sở ở thành phố nào?|Bergamo|Eindhoven|Modena|Porto Alegre
+4|the|Câu lạc bộ Beşiktaş J.K. có trụ sở ở thành phố nào?|Istanbul|Stockholm|Athens|Cairo
+4|the|Câu lạc bộ Colo-Colo có trụ sở ở thành phố nào?|Santiago|Roma|Barcelona|Sankt-Peterburg
+4|the|Câu lạc bộ Coritiba Foot Ball Club có trụ sở ở thành phố nào?|Curitiba|Gibraltar|Sarajevo|Los Angeles
+4|the|Câu lạc bộ Crystal Palace F.C. có trụ sở ở thành phố nào?|Luân Đôn|Lisboa|Paris|Beograd
+4|the|Câu lạc bộ Eintracht Frankfurt có trụ sở ở thành phố nào?|Frankfurt am Main|Bratislava|Düsseldorf|Köln
+4|the|Câu lạc bộ Everton F.C. có trụ sở ở thành phố nào?|Liverpool|Genova|Montevideo|Bucharest
+4|the|Câu lạc bộ FC Schalke 04 có trụ sở ở thành phố nào?|Gelsenkirchen|Brescia|Angers|Cluj-Napoca
+4|the|Câu lạc bộ Fenerbahçe S.K. có trụ sở ở thành phố nào?|Kadıköy|Chorzów|Wolfsberg|Lecce
+4|the|Câu lạc bộ Flamengo có trụ sở ở thành phố nào?|Rio de Janeiro|Tehran|Astana|Helsinki
+4|the|Câu lạc bộ Fulham F.C. có trụ sở ở thành phố nào?|Luân Đôn|Istanbul|Paris|Minsk
+4|the|Câu lạc bộ Genoa C.F.C. có trụ sở ở thành phố nào?|Genova|Rotterdam|Toulouse|Barcelona
+3|the|Câu lạc bộ Juventus F.C. có trụ sở ở thành phố nào?|Torino|Bologna|Gdańsk|Nice
+4|the|Câu lạc bộ S.L. Benfica có trụ sở ở thành phố nào?|Lisboa|Sydney|Copenhagen|Praha
+4|the|Câu lạc bộ Sport Club Corinthians Paulista có trụ sở ở thành phố nào?|São Paulo|Dublin|Riyadh|Montevideo
+4|the|Câu lạc bộ U.C. Sampdoria có trụ sở ở thành phố nào?|Genova|Napoli|Düsseldorf|Bologna
+3|the|Câu lạc bộ bóng đá Arsenal có trụ sở ở thành phố nào?|Luân Đôn|Kyiv|Stockholm|Moskva
+4|the|Câu lạc bộ 1. FC Kaiserslautern thuộc quốc gia nào?|Đức|Albania|Estonia|Gruzia
+4|the|Câu lạc bộ 1. FC Köln thuộc quốc gia nào?|Đức|Nhật Bản|Đan Mạch|Hy Lạp
+4|the|Câu lạc bộ 1. FC Nurnberg thuộc quốc gia nào?|Đức|Azerbaijan|Ukraina|Hoa Kỳ
+4|the|Câu lạc bộ 1. FC Union Berlin thuộc quốc gia nào?|Đức|Ai Cập|Azerbaijan|Nam Phi
+4|the|Câu lạc bộ 1. FSV Mainz 05 thuộc quốc gia nào?|Đức|Iran|Phần Lan|New Zealand
+4|the|Câu lạc bộ A.C.F. Fiorentina thuộc quốc gia nào?|Ý|Hà Lan|Thổ Nhĩ Kỳ|Kazakhstan
+4|the|Câu lạc bộ A.S. Roma thuộc quốc gia nào?|Ý|Nam Phi|Albania|Latvia
+4|the|Câu lạc bộ APOEL FC thuộc quốc gia nào?|Síp|Belarus|Bosna và Hercegovina|Slovakia
+4|the|Câu lạc bộ AS Saint-Étienne thuộc quốc gia nào?|Pháp|New Zealand|Nga|Ba Lan
+4|the|Câu lạc bộ AZ Alkmaar thuộc quốc gia nào?|Hà Lan|Iran|Hàn Quốc|Chile
+4|the|Câu lạc bộ Al Ahly SC thuộc quốc gia nào?|Ai Cập|Montenegro|Thụy Sĩ|Séc
+4|the|Câu lạc bộ Al Hilal SFC thuộc quốc gia nào?|Ả Rập Xê Út|Slovakia|Latvia|Andorra
+4|the|Câu lạc bộ Atalanta thuộc quốc gia nào?|Ý|Nhật Bản|Chile|Thụy Điển
+4|the|Câu lạc bộ Athletic Bilbao thuộc quốc gia nào?|Tây Ban Nha|New Zealand|Ukraina|Hungary
 2|the|Câu lạc bộ Atlético Madrid thuộc quốc gia nào?|Tây Ban Nha|Vương quốc Anh|Thụy Sĩ|México
-2|the|Câu lạc bộ Bayer Leverkusen thuộc quốc gia nào?|Đức|Nam Phi|Ai Cập|Armenia
-2|the|Câu lạc bộ Beşiktaş J.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Bồ Đào Nha|România|Slovakia
-2|the|Câu lạc bộ Bologna F.C. 1909 thuộc quốc gia nào?|Ý|Na Uy|Colombia|Hàn Quốc
+4|the|Câu lạc bộ Bayer Leverkusen thuộc quốc gia nào?|Đức|Nam Phi|Ai Cập|Armenia
+4|the|Câu lạc bộ Beşiktaş J.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Bồ Đào Nha|România|Slovakia
+4|the|Câu lạc bộ Bologna F.C. 1909 thuộc quốc gia nào?|Ý|Na Uy|Colombia|Hàn Quốc
 2|the|Câu lạc bộ Borussia Dortmund thuộc quốc gia nào?|Đức|Ai Cập|Latvia|Andorra
-2|the|Câu lạc bộ Borussia Mönchengladbach thuộc quốc gia nào?|Đức|Albania|Belarus|Nhật Bản
-2|the|Câu lạc bộ Botafogo de Futebol e Regatas thuộc quốc gia nào?|Brasil|Iran|Belarus|Litva
-2|the|Câu lạc bộ Burnley F.C. thuộc quốc gia nào?|Vương quốc Anh|Hy Lạp|Belarus|Montenegro
-2|the|Câu lạc bộ CA Osasuna thuộc quốc gia nào?|Tây Ban Nha|Thổ Nhĩ Kỳ|Argentina|Azerbaijan
-2|the|Câu lạc bộ Cagliari Calcio thuộc quốc gia nào?|Ý|Liechtenstein|Thổ Nhĩ Kỳ|Hoa Kỳ
-2|the|Câu lạc bộ Club Brugge K.V. thuộc quốc gia nào?|Bỉ|Thụy Điển|Síp|Nga
-2|the|Câu lạc bộ Colo-Colo thuộc quốc gia nào?|Chile|Áo|Bồ Đào Nha|Estonia
-2|the|Câu lạc bộ Coritiba Foot Ball Club thuộc quốc gia nào?|Brasil|Hà Lan|Na Uy|Úc
-2|the|Câu lạc bộ Crystal Palace F.C. thuộc quốc gia nào?|Vương quốc Anh|Úc|Litva|Bỉ
-2|the|Câu lạc bộ Deportivo Alavés thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|Armenia|Ai-xơ-len
-2|the|Câu lạc bộ Deportivo de A Coruña thuộc quốc gia nào?|Tây Ban Nha|Đan Mạch|Ukraina|Albania
-2|the|Câu lạc bộ Eintracht Frankfurt thuộc quốc gia nào?|Đức|Nga|Bosna và Hercegovina|Hy Lạp
-2|the|Câu lạc bộ Empoli F.C. thuộc quốc gia nào?|Ý|Brasil|Séc|Belarus
-2|the|Câu lạc bộ F.C. Copenhagen thuộc quốc gia nào?|Đan Mạch|Ireland|Litva|Iran
-2|the|Câu lạc bộ F.C. Porto thuộc quốc gia nào?|Bồ Đào Nha|Nam Phi|Uruguay|Malta
-2|the|Câu lạc bộ F.C. Steaua București thuộc quốc gia nào?|România|Chile|Paraguay|Phần Lan
-2|the|Câu lạc bộ F.C. Twente thuộc quốc gia nào?|Hà Lan|Vương quốc Anh|Áo|Nhật Bản
-2|the|Câu lạc bộ F.K. Lokomotiv Moskva thuộc quốc gia nào?|Nga|Slovenia|Slovakia|Montenegro
-2|the|Câu lạc bộ F.K. Spartak Moskva thuộc quốc gia nào?|Nga|Thụy Sĩ|Ả Rập Xê Út|Bồ Đào Nha
-2|the|Câu lạc bộ F.K. Zenit Sankt Peterburg thuộc quốc gia nào?|Nga|Vương quốc Anh|România|Argentina
-2|the|Câu lạc bộ FC Augsburg thuộc quốc gia nào?|Đức|Úc|Nam Phi|Hy Lạp
-2|the|Câu lạc bộ FC Basel 1893 thuộc quốc gia nào?|Thụy Sĩ|Các Tiểu vương quốc Ả Rập Thống nhất|México|Séc
-2|the|Câu lạc bộ FC Dynamo Kyiv thuộc quốc gia nào?|Ukraina|Colombia|Na Uy|México
-2|the|Câu lạc bộ FC Dynamo Moscow thuộc quốc gia nào?|Nga|Albania|Pháp|Nam Phi
-2|the|Câu lạc bộ FC Girondins de Bordeaux thuộc quốc gia nào?|Pháp|Argentina|Chile|Hà Lan
-2|the|Câu lạc bộ FC Krasnodar thuộc quốc gia nào?|Nga|México|Luxembourg|Thổ Nhĩ Kỳ
-2|the|Câu lạc bộ FC Nantes thuộc quốc gia nào?|Pháp|Armenia|Azerbaijan|Uruguay
-2|the|Câu lạc bộ FC Red Bull Salzburg thuộc quốc gia nào?|Áo|Chile|Ai Cập|New Zealand
-2|the|Câu lạc bộ FC Rubin Kazan thuộc quốc gia nào?|Nga|Séc|Đức|Montenegro
-2|the|Câu lạc bộ FC Schalke 04 thuộc quốc gia nào?|Đức|Tây Ban Nha|Hà Lan|México
-2|the|Câu lạc bộ FC Shakhtar Donetsk thuộc quốc gia nào?|Ukraina|Bồ Đào Nha|Nhật Bản|Thổ Nhĩ Kỳ
-2|the|Câu lạc bộ FC St. Pauli thuộc quốc gia nào?|Đức|Ả Rập Xê Út|México|Uruguay
-2|the|Câu lạc bộ FK Partizan thuộc quốc gia nào?|Serbia|Thụy Điển|Andorra|Kazakhstan
-2|the|Câu lạc bộ Fenerbahçe S.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Croatia|New Zealand|Na Uy
-2|the|Câu lạc bộ Feyenoord Rotterdam thuộc quốc gia nào?|Hà Lan|Hoa Kỳ|Áo|Colombia
-2|the|Câu lạc bộ Flamengo thuộc quốc gia nào?|Brasil|Thụy Sĩ|Moldova|Albania
-2|the|Câu lạc bộ Fluminense Football Club thuộc quốc gia nào?|Brasil|Israel|Croatia|Séc
-2|the|Câu lạc bộ Fortuna Düsseldorf thuộc quốc gia nào?|Đức|Liechtenstein|Belarus|Tây Ban Nha
-2|the|Câu lạc bộ GNK Dinamo Zagreb thuộc quốc gia nào?|Croatia|Gruzia|Hàn Quốc|Thụy Điển
-2|the|Câu lạc bộ Galatasaray S.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Montenegro|Hungary|Litva
-2|the|Câu lạc bộ Genoa C.F.C. thuộc quốc gia nào?|Ý|Colombia|Luxembourg|Hy Lạp
-2|the|Câu lạc bộ Getafe CF thuộc quốc gia nào?|Tây Ban Nha|Albania|Thổ Nhĩ Kỳ|Gruzia
-2|the|Câu lạc bộ Girona FC thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|România|Paraguay
-2|the|Câu lạc bộ Granada CF thuộc quốc gia nào?|Tây Ban Nha|Nhật Bản|Estonia|Hàn Quốc
-2|the|Câu lạc bộ Górnik Zabrze thuộc quốc gia nào?|Ba Lan|Ý|Nam Phi|Slovenia
-2|the|Câu lạc bộ Hamburger SV thuộc quốc gia nào?|Đức|Croatia|Liechtenstein|Ai Cập
-2|the|Câu lạc bộ Hannover 96 thuộc quốc gia nào?|Đức|Iran|Belarus|Qatar
-2|the|Câu lạc bộ Hellas Verona F.C. thuộc quốc gia nào?|Ý|Luxembourg|Kazakhstan|Ukraina
-2|the|Câu lạc bộ Hertha BSC Berlin thuộc quốc gia nào?|Đức|Nam Phi|Nhật Bản|Thổ Nhĩ Kỳ
-2|the|Câu lạc bộ Hull City A.F.C. thuộc quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Ả Rập Xê Út|Thụy Điển
-2|the|Câu lạc bộ Inter Miami thuộc quốc gia nào?|Hoa Kỳ|Đức|Na Uy|Armenia
-2|the|Câu lạc bộ Jagiellonia Białystok thuộc quốc gia nào?|Ba Lan|Síp|Hy Lạp|Thổ Nhĩ Kỳ
-2|the|Câu lạc bộ Lech Poznań thuộc quốc gia nào?|Ba Lan|Hàn Quốc|Úc|Estonia
-2|the|Câu lạc bộ Levante UD thuộc quốc gia nào?|Tây Ban Nha|Ả Rập Xê Út|Na Uy|Argentina
-2|the|Câu lạc bộ Lille OSC thuộc quốc gia nào?|Pháp|Slovakia|Vương quốc Anh|Serbia
-2|the|Câu lạc bộ Los Angeles Galaxy thuộc quốc gia nào?|Hoa Kỳ|Colombia|Hàn Quốc|Chile
-2|the|Câu lạc bộ Malmö FF thuộc quốc gia nào?|Thụy Điển|Đan Mạch|Slovenia|Ireland
+4|the|Câu lạc bộ Borussia Mönchengladbach thuộc quốc gia nào?|Đức|Albania|Belarus|Nhật Bản
+4|the|Câu lạc bộ Botafogo de Futebol e Regatas thuộc quốc gia nào?|Brasil|Iran|Belarus|Litva
+4|the|Câu lạc bộ Burnley F.C. thuộc quốc gia nào?|Vương quốc Anh|Hy Lạp|Belarus|Montenegro
+4|the|Câu lạc bộ CA Osasuna thuộc quốc gia nào?|Tây Ban Nha|Thổ Nhĩ Kỳ|Argentina|Azerbaijan
+4|the|Câu lạc bộ Cagliari Calcio thuộc quốc gia nào?|Ý|Liechtenstein|Thổ Nhĩ Kỳ|Hoa Kỳ
+4|the|Câu lạc bộ Club Brugge K.V. thuộc quốc gia nào?|Bỉ|Thụy Điển|Síp|Nga
+4|the|Câu lạc bộ Colo-Colo thuộc quốc gia nào?|Chile|Áo|Bồ Đào Nha|Estonia
+4|the|Câu lạc bộ Coritiba Foot Ball Club thuộc quốc gia nào?|Brasil|Hà Lan|Na Uy|Úc
+4|the|Câu lạc bộ Crystal Palace F.C. thuộc quốc gia nào?|Vương quốc Anh|Úc|Litva|Bỉ
+4|the|Câu lạc bộ Deportivo Alavés thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|Armenia|Ai-xơ-len
+4|the|Câu lạc bộ Deportivo de A Coruña thuộc quốc gia nào?|Tây Ban Nha|Đan Mạch|Ukraina|Albania
+4|the|Câu lạc bộ Eintracht Frankfurt thuộc quốc gia nào?|Đức|Nga|Bosna và Hercegovina|Hy Lạp
+4|the|Câu lạc bộ Empoli F.C. thuộc quốc gia nào?|Ý|Brasil|Séc|Belarus
+4|the|Câu lạc bộ F.C. Copenhagen thuộc quốc gia nào?|Đan Mạch|Ireland|Litva|Iran
+4|the|Câu lạc bộ F.C. Porto thuộc quốc gia nào?|Bồ Đào Nha|Nam Phi|Uruguay|Malta
+4|the|Câu lạc bộ F.C. Steaua București thuộc quốc gia nào?|România|Chile|Paraguay|Phần Lan
+4|the|Câu lạc bộ F.C. Twente thuộc quốc gia nào?|Hà Lan|Vương quốc Anh|Áo|Nhật Bản
+4|the|Câu lạc bộ F.K. Lokomotiv Moskva thuộc quốc gia nào?|Nga|Slovenia|Slovakia|Montenegro
+4|the|Câu lạc bộ F.K. Spartak Moskva thuộc quốc gia nào?|Nga|Thụy Sĩ|Ả Rập Xê Út|Bồ Đào Nha
+4|the|Câu lạc bộ F.K. Zenit Sankt Peterburg thuộc quốc gia nào?|Nga|Vương quốc Anh|România|Argentina
+4|the|Câu lạc bộ FC Augsburg thuộc quốc gia nào?|Đức|Úc|Nam Phi|Hy Lạp
+4|the|Câu lạc bộ FC Basel 1893 thuộc quốc gia nào?|Thụy Sĩ|Các Tiểu vương quốc Ả Rập Thống nhất|México|Séc
+4|the|Câu lạc bộ FC Dynamo Kyiv thuộc quốc gia nào?|Ukraina|Colombia|Na Uy|México
+4|the|Câu lạc bộ FC Dynamo Moscow thuộc quốc gia nào?|Nga|Albania|Pháp|Nam Phi
+4|the|Câu lạc bộ FC Girondins de Bordeaux thuộc quốc gia nào?|Pháp|Argentina|Chile|Hà Lan
+4|the|Câu lạc bộ FC Krasnodar thuộc quốc gia nào?|Nga|México|Luxembourg|Thổ Nhĩ Kỳ
+4|the|Câu lạc bộ FC Nantes thuộc quốc gia nào?|Pháp|Armenia|Azerbaijan|Uruguay
+4|the|Câu lạc bộ FC Red Bull Salzburg thuộc quốc gia nào?|Áo|Chile|Ai Cập|New Zealand
+4|the|Câu lạc bộ FC Rubin Kazan thuộc quốc gia nào?|Nga|Séc|Đức|Montenegro
+4|the|Câu lạc bộ FC Schalke 04 thuộc quốc gia nào?|Đức|Tây Ban Nha|Hà Lan|México
+4|the|Câu lạc bộ FC Shakhtar Donetsk thuộc quốc gia nào?|Ukraina|Bồ Đào Nha|Nhật Bản|Thổ Nhĩ Kỳ
+4|the|Câu lạc bộ FC St. Pauli thuộc quốc gia nào?|Đức|Ả Rập Xê Út|México|Uruguay
+4|the|Câu lạc bộ FK Partizan thuộc quốc gia nào?|Serbia|Thụy Điển|Andorra|Kazakhstan
+4|the|Câu lạc bộ Fenerbahçe S.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Croatia|New Zealand|Na Uy
+4|the|Câu lạc bộ Feyenoord Rotterdam thuộc quốc gia nào?|Hà Lan|Hoa Kỳ|Áo|Colombia
+4|the|Câu lạc bộ Flamengo thuộc quốc gia nào?|Brasil|Thụy Sĩ|Moldova|Albania
+4|the|Câu lạc bộ Fluminense Football Club thuộc quốc gia nào?|Brasil|Israel|Croatia|Séc
+4|the|Câu lạc bộ Fortuna Düsseldorf thuộc quốc gia nào?|Đức|Liechtenstein|Belarus|Tây Ban Nha
+4|the|Câu lạc bộ GNK Dinamo Zagreb thuộc quốc gia nào?|Croatia|Gruzia|Hàn Quốc|Thụy Điển
+4|the|Câu lạc bộ Galatasaray S.K. thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Montenegro|Hungary|Litva
+4|the|Câu lạc bộ Genoa C.F.C. thuộc quốc gia nào?|Ý|Colombia|Luxembourg|Hy Lạp
+4|the|Câu lạc bộ Getafe CF thuộc quốc gia nào?|Tây Ban Nha|Albania|Thổ Nhĩ Kỳ|Gruzia
+4|the|Câu lạc bộ Girona FC thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|România|Paraguay
+4|the|Câu lạc bộ Granada CF thuộc quốc gia nào?|Tây Ban Nha|Nhật Bản|Estonia|Hàn Quốc
+4|the|Câu lạc bộ Górnik Zabrze thuộc quốc gia nào?|Ba Lan|Ý|Nam Phi|Slovenia
+4|the|Câu lạc bộ Hamburger SV thuộc quốc gia nào?|Đức|Croatia|Liechtenstein|Ai Cập
+4|the|Câu lạc bộ Hannover 96 thuộc quốc gia nào?|Đức|Iran|Belarus|Qatar
+4|the|Câu lạc bộ Hellas Verona F.C. thuộc quốc gia nào?|Ý|Luxembourg|Kazakhstan|Ukraina
+4|the|Câu lạc bộ Hertha BSC Berlin thuộc quốc gia nào?|Đức|Nam Phi|Nhật Bản|Thổ Nhĩ Kỳ
+4|the|Câu lạc bộ Hull City A.F.C. thuộc quốc gia nào?|Vương quốc Anh|Thụy Sĩ|Ả Rập Xê Út|Thụy Điển
+4|the|Câu lạc bộ Inter Miami thuộc quốc gia nào?|Hoa Kỳ|Đức|Na Uy|Armenia
+4|the|Câu lạc bộ Jagiellonia Białystok thuộc quốc gia nào?|Ba Lan|Síp|Hy Lạp|Thổ Nhĩ Kỳ
+4|the|Câu lạc bộ Lech Poznań thuộc quốc gia nào?|Ba Lan|Hàn Quốc|Úc|Estonia
+4|the|Câu lạc bộ Levante UD thuộc quốc gia nào?|Tây Ban Nha|Ả Rập Xê Út|Na Uy|Argentina
+4|the|Câu lạc bộ Lille OSC thuộc quốc gia nào?|Pháp|Slovakia|Vương quốc Anh|Serbia
+4|the|Câu lạc bộ Los Angeles Galaxy thuộc quốc gia nào?|Hoa Kỳ|Colombia|Hàn Quốc|Chile
+4|the|Câu lạc bộ Malmö FF thuộc quốc gia nào?|Thụy Điển|Đan Mạch|Slovenia|Ireland
 2|the|Câu lạc bộ Manchester City F.C. thuộc quốc gia nào?|Vương quốc Anh|Pháp|Croatia|Malta
-2|the|Câu lạc bộ Middlesbrough thuộc quốc gia nào?|Vương quốc Anh|Ukraina|Ý|Montenegro
-2|the|Câu lạc bộ Málaga CF thuộc quốc gia nào?|Tây Ban Nha|Montenegro|Monaco|Ý
-2|the|Câu lạc bộ Nea Salamis Famagusta FC thuộc quốc gia nào?|Síp|Hàn Quốc|Iran|Các Tiểu vương quốc Ả Rập Thống nhất
-2|the|Câu lạc bộ Nîmes Olympique thuộc quốc gia nào?|Pháp|Serbia|Moldova|Trung Quốc
-2|the|Câu lạc bộ OGC Nice thuộc quốc gia nào?|Pháp|Estonia|Hoa Kỳ|Latvia
-2|the|Câu lạc bộ Olympiakos F.C. thuộc quốc gia nào?|Hy Lạp|Ả Rập Xê Út|Ai-xơ-len|Brasil
-2|the|Câu lạc bộ Olympique Lyonnais thuộc quốc gia nào?|Pháp|Hàn Quốc|Litva|Ai-xơ-len
-2|the|Câu lạc bộ Olympique de Marseille thuộc quốc gia nào?|Pháp|Croatia|Chile|Colombia
-2|the|Câu lạc bộ P.F.K. CSKA Moskva thuộc quốc gia nào?|Nga|Thụy Sĩ|Hà Lan|România
-2|the|Câu lạc bộ PSV Eindhoven thuộc quốc gia nào?|Hà Lan|Hoa Kỳ|Latvia|Bỉ
-2|the|Câu lạc bộ Palermo F.C. thuộc quốc gia nào?|Ý|Moldova|Luxembourg|Ireland
-2|the|Câu lạc bộ Panathinaikos thuộc quốc gia nào?|Hy Lạp|Israel|Moldova|Nhật Bản
+4|the|Câu lạc bộ Middlesbrough thuộc quốc gia nào?|Vương quốc Anh|Ukraina|Ý|Montenegro
+4|the|Câu lạc bộ Málaga CF thuộc quốc gia nào?|Tây Ban Nha|Montenegro|Monaco|Ý
+4|the|Câu lạc bộ Nea Salamis Famagusta FC thuộc quốc gia nào?|Síp|Hàn Quốc|Iran|Các Tiểu vương quốc Ả Rập Thống nhất
+4|the|Câu lạc bộ Nîmes Olympique thuộc quốc gia nào?|Pháp|Serbia|Moldova|Trung Quốc
+4|the|Câu lạc bộ OGC Nice thuộc quốc gia nào?|Pháp|Estonia|Hoa Kỳ|Latvia
+4|the|Câu lạc bộ Olympiakos F.C. thuộc quốc gia nào?|Hy Lạp|Ả Rập Xê Út|Ai-xơ-len|Brasil
+4|the|Câu lạc bộ Olympique Lyonnais thuộc quốc gia nào?|Pháp|Hàn Quốc|Litva|Ai-xơ-len
+4|the|Câu lạc bộ Olympique de Marseille thuộc quốc gia nào?|Pháp|Croatia|Chile|Colombia
+4|the|Câu lạc bộ P.F.K. CSKA Moskva thuộc quốc gia nào?|Nga|Thụy Sĩ|Hà Lan|România
+4|the|Câu lạc bộ PSV Eindhoven thuộc quốc gia nào?|Hà Lan|Hoa Kỳ|Latvia|Bỉ
+4|the|Câu lạc bộ Palermo F.C. thuộc quốc gia nào?|Ý|Moldova|Luxembourg|Ireland
+4|the|Câu lạc bộ Panathinaikos thuộc quốc gia nào?|Hy Lạp|Israel|Moldova|Nhật Bản
 2|the|Câu lạc bộ Paris Saint-Germain thuộc quốc gia nào?|Pháp|Kazakhstan|Hungary|Serbia
-2|the|Câu lạc bộ Parma Calcio 1913 thuộc quốc gia nào?|Ý|Bỉ|Iran|Trung Quốc
-2|the|Câu lạc bộ Peñarol thuộc quốc gia nào?|Uruguay|Andorra|Malta|România
+4|the|Câu lạc bộ Parma Calcio 1913 thuộc quốc gia nào?|Ý|Bỉ|Iran|Trung Quốc
+4|the|Câu lạc bộ Peñarol thuộc quốc gia nào?|Uruguay|Andorra|Malta|România
 2|the|Câu lạc bộ R.C.D. Espanyol de Barcelona thuộc quốc gia nào?|Tây Ban Nha|Armenia|Brasil|Thụy Điển
-2|the|Câu lạc bộ R.C.D. Mallorca thuộc quốc gia nào?|Tây Ban Nha|Nam Phi|Qatar|Na Uy
-2|the|Câu lạc bộ R.S.C. Anderlecht thuộc quốc gia nào?|Bỉ|Monaco|Thụy Sĩ|Ai Cập
-2|the|Câu lạc bộ RB Leipzig thuộc quốc gia nào?|Đức|Bắc Macedonia|Hà Lan|Iran
-2|the|Câu lạc bộ RC Celta de Vigo thuộc quốc gia nào?|Tây Ban Nha|Gruzia|Uruguay|Hoa Kỳ
-2|the|Câu lạc bộ Rangers F.C. thuộc quốc gia nào?|Vương quốc Anh|Ba Lan|Hà Lan|Croatia
-2|the|Câu lạc bộ Rayo Vallecano thuộc quốc gia nào?|Tây Ban Nha|Ukraina|Hungary|Na Uy
-2|the|Câu lạc bộ Real Betis thuộc quốc gia nào?|Tây Ban Nha|Phần Lan|Bulgaria|Albania
-2|the|Câu lạc bộ Real Sociedad thuộc quốc gia nào?|Tây Ban Nha|Úc|Monaco|Phần Lan
-2|the|Câu lạc bộ Real Valladolid thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|New Zealand|Paraguay
-2|the|Câu lạc bộ Real Zaragoza thuộc quốc gia nào?|Tây Ban Nha|România|Armenia|Nam Phi
-2|the|Câu lạc bộ River Plate thuộc quốc gia nào?|Argentina|Serbia|Ý|Pháp
-2|the|Câu lạc bộ Rosenborg BK thuộc quốc gia nào?|Na Uy|România|Ireland|Bồ Đào Nha
-2|the|Câu lạc bộ S.C. Braga thuộc quốc gia nào?|Bồ Đào Nha|Hàn Quốc|Thụy Sĩ|Áo
-2|the|Câu lạc bộ S.L. Benfica thuộc quốc gia nào?|Bồ Đào Nha|Đan Mạch|Hoa Kỳ|Thụy Điển
-2|the|Câu lạc bộ S.S. Lazio thuộc quốc gia nào?|Ý|Croatia|Bỉ|México
-2|the|Câu lạc bộ S.S.C. Napoli thuộc quốc gia nào?|Ý|Vương quốc Anh|Thụy Điển|Iran
-2|the|Câu lạc bộ SC Freiburg thuộc quốc gia nào?|Đức|Serbia|Na Uy|Slovenia
-2|the|Câu lạc bộ SK Rapid Wien thuộc quốc gia nào?|Áo|Ukraina|Chile|Iran
-2|the|Câu lạc bộ SV Werder Bremen thuộc quốc gia nào?|Đức|Iran|Hàn Quốc|Slovenia
-2|the|Câu lạc bộ Santos FC thuộc quốc gia nào?|Brasil|Ireland|Hungary|Áo
-2|the|Câu lạc bộ Sao Đỏ Beograd thuộc quốc gia nào?|Serbia|Andorra|Nam Phi|Bỉ
-2|the|Câu lạc bộ Sevilla F.C. thuộc quốc gia nào?|Tây Ban Nha|Bỉ|Áo|Phần Lan
-2|the|Câu lạc bộ Sheffield United F.C. thuộc quốc gia nào?|Vương quốc Anh|Litva|Hoa Kỳ|Bắc Macedonia
-2|the|Câu lạc bộ Sociedade Esportiva Palmeiras thuộc quốc gia nào?|Brasil|Hy Lạp|Bỉ|Ai-xơ-len
-2|the|Câu lạc bộ Sport Club Corinthians Paulista thuộc quốc gia nào?|Brasil|Chile|Bỉ|Hà Lan
-2|the|Câu lạc bộ Sport Club Internacional thuộc quốc gia nào?|Brasil|Hy Lạp|Chile|Ai-xơ-len
-2|the|Câu lạc bộ Sporting Clube de Portugal thuộc quốc gia nào?|Bồ Đào Nha|Ukraina|Liechtenstein|Litva
-2|the|Câu lạc bộ Sporting de Gijón thuộc quốc gia nào?|Tây Ban Nha|Gruzia|Iran|Na Uy
-2|the|Câu lạc bộ Stade Rennais F.C. thuộc quốc gia nào?|Pháp|Litva|Na Uy|México
-2|the|Câu lạc bộ Standard Liège thuộc quốc gia nào?|Bỉ|Ukraina|Latvia|Litva
-2|the|Câu lạc bộ São Paulo Futebol Clube thuộc quốc gia nào?|Brasil|Luxembourg|Slovenia|Thụy Điển
-2|the|Câu lạc bộ TSG 1899 Hoffenheim thuộc quốc gia nào?|Đức|Ý|Croatia|Brasil
-2|the|Câu lạc bộ Torino F.C. thuộc quốc gia nào?|Ý|Ả Rập Xê Út|Hoa Kỳ|Hàn Quốc
+4|the|Câu lạc bộ R.C.D. Mallorca thuộc quốc gia nào?|Tây Ban Nha|Nam Phi|Qatar|Na Uy
+4|the|Câu lạc bộ R.S.C. Anderlecht thuộc quốc gia nào?|Bỉ|Monaco|Thụy Sĩ|Ai Cập
+4|the|Câu lạc bộ RB Leipzig thuộc quốc gia nào?|Đức|Bắc Macedonia|Hà Lan|Iran
+4|the|Câu lạc bộ RC Celta de Vigo thuộc quốc gia nào?|Tây Ban Nha|Gruzia|Uruguay|Hoa Kỳ
+4|the|Câu lạc bộ Rangers F.C. thuộc quốc gia nào?|Vương quốc Anh|Ba Lan|Hà Lan|Croatia
+4|the|Câu lạc bộ Rayo Vallecano thuộc quốc gia nào?|Tây Ban Nha|Ukraina|Hungary|Na Uy
+4|the|Câu lạc bộ Real Betis thuộc quốc gia nào?|Tây Ban Nha|Phần Lan|Bulgaria|Albania
+4|the|Câu lạc bộ Real Sociedad thuộc quốc gia nào?|Tây Ban Nha|Úc|Monaco|Phần Lan
+4|the|Câu lạc bộ Real Valladolid thuộc quốc gia nào?|Tây Ban Nha|Thụy Sĩ|New Zealand|Paraguay
+4|the|Câu lạc bộ Real Zaragoza thuộc quốc gia nào?|Tây Ban Nha|România|Armenia|Nam Phi
+4|the|Câu lạc bộ River Plate thuộc quốc gia nào?|Argentina|Serbia|Ý|Pháp
+4|the|Câu lạc bộ Rosenborg BK thuộc quốc gia nào?|Na Uy|România|Ireland|Bồ Đào Nha
+4|the|Câu lạc bộ S.C. Braga thuộc quốc gia nào?|Bồ Đào Nha|Hàn Quốc|Thụy Sĩ|Áo
+4|the|Câu lạc bộ S.L. Benfica thuộc quốc gia nào?|Bồ Đào Nha|Đan Mạch|Hoa Kỳ|Thụy Điển
+4|the|Câu lạc bộ S.S. Lazio thuộc quốc gia nào?|Ý|Croatia|Bỉ|México
+4|the|Câu lạc bộ S.S.C. Napoli thuộc quốc gia nào?|Ý|Vương quốc Anh|Thụy Điển|Iran
+4|the|Câu lạc bộ SC Freiburg thuộc quốc gia nào?|Đức|Serbia|Na Uy|Slovenia
+4|the|Câu lạc bộ SK Rapid Wien thuộc quốc gia nào?|Áo|Ukraina|Chile|Iran
+4|the|Câu lạc bộ SV Werder Bremen thuộc quốc gia nào?|Đức|Iran|Hàn Quốc|Slovenia
+4|the|Câu lạc bộ Santos FC thuộc quốc gia nào?|Brasil|Ireland|Hungary|Áo
+4|the|Câu lạc bộ Sao Đỏ Beograd thuộc quốc gia nào?|Serbia|Andorra|Nam Phi|Bỉ
+4|the|Câu lạc bộ Sevilla F.C. thuộc quốc gia nào?|Tây Ban Nha|Bỉ|Áo|Phần Lan
+4|the|Câu lạc bộ Sheffield United F.C. thuộc quốc gia nào?|Vương quốc Anh|Litva|Hoa Kỳ|Bắc Macedonia
+4|the|Câu lạc bộ Sociedade Esportiva Palmeiras thuộc quốc gia nào?|Brasil|Hy Lạp|Bỉ|Ai-xơ-len
+4|the|Câu lạc bộ Sport Club Corinthians Paulista thuộc quốc gia nào?|Brasil|Chile|Bỉ|Hà Lan
+4|the|Câu lạc bộ Sport Club Internacional thuộc quốc gia nào?|Brasil|Hy Lạp|Chile|Ai-xơ-len
+4|the|Câu lạc bộ Sporting Clube de Portugal thuộc quốc gia nào?|Bồ Đào Nha|Ukraina|Liechtenstein|Litva
+4|the|Câu lạc bộ Sporting de Gijón thuộc quốc gia nào?|Tây Ban Nha|Gruzia|Iran|Na Uy
+4|the|Câu lạc bộ Stade Rennais F.C. thuộc quốc gia nào?|Pháp|Litva|Na Uy|México
+4|the|Câu lạc bộ Standard Liège thuộc quốc gia nào?|Bỉ|Ukraina|Latvia|Litva
+4|the|Câu lạc bộ São Paulo Futebol Clube thuộc quốc gia nào?|Brasil|Luxembourg|Slovenia|Thụy Điển
+4|the|Câu lạc bộ TSG 1899 Hoffenheim thuộc quốc gia nào?|Đức|Ý|Croatia|Brasil
+4|the|Câu lạc bộ Torino F.C. thuộc quốc gia nào?|Ý|Ả Rập Xê Út|Hoa Kỳ|Hàn Quốc
 2|the|Câu lạc bộ Tottenham Hotspur thuộc quốc gia nào?|Vương quốc Anh|Ukraina|Slovenia|Ả Rập Xê Út
-2|the|Câu lạc bộ Trabzonspor thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Bosna và Hercegovina|Montenegro|Ai-xơ-len
-2|the|Câu lạc bộ U.C. Sampdoria thuộc quốc gia nào?|Ý|Chile|Na Uy|Colombia
-2|the|Câu lạc bộ U.S. Sassuolo Calcio thuộc quốc gia nào?|Ý|Bỉ|Croatia|Estonia
-2|the|Câu lạc bộ Udinese Calcio thuộc quốc gia nào?|Ý|Bosna và Hercegovina|Latvia|Ai-xơ-len
-2|the|Câu lạc bộ Valencia thuộc quốc gia nào?|Tây Ban Nha|Ý|Hà Lan|Serbia
-2|the|Câu lạc bộ VfB Stuttgart thuộc quốc gia nào?|Đức|Trung Quốc|Ireland|Síp
-2|the|Câu lạc bộ Villarreal thuộc quốc gia nào?|Tây Ban Nha|Áo|México|Thụy Sĩ
-2|the|Câu lạc bộ bóng đá Al Nassr thuộc quốc gia nào?|Ả Rập Xê Út|Nam Phi|Slovakia|Israel
-2|the|Câu lạc bộ bóng đá Gimnasia y Esgrima La Plata thuộc quốc gia nào?|Argentina|Monaco|Đan Mạch|Moldova
+4|the|Câu lạc bộ Trabzonspor thuộc quốc gia nào?|Thổ Nhĩ Kỳ|Bosna và Hercegovina|Montenegro|Ai-xơ-len
+4|the|Câu lạc bộ U.C. Sampdoria thuộc quốc gia nào?|Ý|Chile|Na Uy|Colombia
+4|the|Câu lạc bộ U.S. Sassuolo Calcio thuộc quốc gia nào?|Ý|Bỉ|Croatia|Estonia
+4|the|Câu lạc bộ Udinese Calcio thuộc quốc gia nào?|Ý|Bosna và Hercegovina|Latvia|Ai-xơ-len
+4|the|Câu lạc bộ Valencia thuộc quốc gia nào?|Tây Ban Nha|Ý|Hà Lan|Serbia
+4|the|Câu lạc bộ VfB Stuttgart thuộc quốc gia nào?|Đức|Trung Quốc|Ireland|Síp
+4|the|Câu lạc bộ Villarreal thuộc quốc gia nào?|Tây Ban Nha|Áo|México|Thụy Sĩ
+4|the|Câu lạc bộ bóng đá Al Nassr thuộc quốc gia nào?|Ả Rập Xê Út|Nam Phi|Slovakia|Israel
+4|the|Câu lạc bộ bóng đá Gimnasia y Esgrima La Plata thuộc quốc gia nào?|Argentina|Monaco|Đan Mạch|Moldova
 2|dl|AMD là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Tây Ban Nha|Ý|Hungary
 2|dl|ASUS là doanh nghiệp của quốc gia nào?|Đài Loan|Thái Lan|Canada|Thổ Nhĩ Kỳ
 2|dl|AT&T là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Hungary|Việt Nam|Đức
@@ -723,8 +723,8 @@ window.TT_ADD(`
 2|dl|Metro-Goldwyn-Mayer là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Vương quốc Anh|Phần Lan|Đài Loan
 2|dl|Mitsubishi là doanh nghiệp của quốc gia nào?|Nhật Bản|Hungary|Ba Lan|Thụy Sĩ
 2|dl|Nestlé là doanh nghiệp của quốc gia nào?|Thụy Sĩ|Pháp|Indonesia|Ả Rập Xê Út
-2|dl|Ngân hàng Anh là doanh nghiệp của quốc gia nào?|Vương quốc Anh|Ả Rập Xê Út|Áo|Thái Lan
-2|dl|Ngân hàng Phát triển châu Á là doanh nghiệp của quốc gia nào?|Philippines|Na Uy|Hungary|Malaysia
+3|dl|Ngân hàng Anh là doanh nghiệp của quốc gia nào?|Vương quốc Anh|Ả Rập Xê Út|Áo|Thái Lan
+3|dl|Ngân hàng Phát triển châu Á là doanh nghiệp của quốc gia nào?|Philippines|Na Uy|Hungary|Malaysia
 2|dl|Nike là doanh nghiệp của quốc gia nào?|Hoa Kỳ|México|Brasil|Đức
 2|dl|Nissan là doanh nghiệp của quốc gia nào?|Nhật Bản|Hungary|Đài Loan|Úc
 2|dl|Nvidia là doanh nghiệp của quốc gia nào?|Hoa Kỳ|Áo|Đan Mạch|Thái Lan
@@ -760,19 +760,19 @@ window.TT_ADD(`
 2|dl|Xiaomi là doanh nghiệp của quốc gia nào?|Trung Quốc|Đài Loan|Brasil|Canada
 2|dl|Yandex là doanh nghiệp của quốc gia nào?|Nga|Thái Lan|Úc|Thụy Điển
 2|dl|Škoda Auto là doanh nghiệp của quốc gia nào?|Séc|Đan Mạch|Đài Loan|Israel
-2|cn|Ai là người sáng lập Boeing?|William E. Boeing|Harland Sanders|Mark Shuttleworth|Ferruccio Lamborghini
-2|cn|Ai là người sáng lập Chiến tranh giữa các vì sao?|George Lucas|Rupert Murdoch|Coco Chanel|Jean-Baptiste Colbert
-2|cn|Ai là người sáng lập Ford?|Henry Ford|Amancio Ortega|Markus "Notch" Persson|George Lucas
-2|cn|Ai là người sáng lập SpaceX?|Elon Musk|Ferruccio Lamborghini|Coco Chanel|George Lucas
+3|cn|Ai là người sáng lập Boeing?|William E. Boeing|Harland Sanders|Mark Shuttleworth|Ferruccio Lamborghini
+3|cn|Ai là người sáng lập Chiến tranh giữa các vì sao?|George Lucas|Rupert Murdoch|Coco Chanel|Jean-Baptiste Colbert
+3|cn|Ai là người sáng lập Ford?|Henry Ford|Amancio Ortega|Markus "Notch" Persson|George Lucas
+3|cn|Ai là người sáng lập SpaceX?|Elon Musk|Ferruccio Lamborghini|Coco Chanel|George Lucas
 2|dia|Thủ đô của Ai Cập là thành phố nào?|Cairo|Kabul|Rabat|Thành phố México
-2|dia|Thủ đô của Algérie là thành phố nào?|Algiers|Jakarta|Amman|Kuala Lumpur
-2|dia|Thủ đô của Brasil là thành phố nào?|Brasilia|New Delhi|Sarajevo|Thành phố México
+3|dia|Thủ đô của Algérie là thành phố nào?|Algiers|Jakarta|Amman|Kuala Lumpur
+3|dia|Thủ đô của Brasil là thành phố nào?|Brasilia|New Delhi|Sarajevo|Thành phố México
 2|dia|Thủ đô của Bồ Đào Nha là thành phố nào?|Lisboa|Tokyo|Tashkent|Budapest
 2|dia|Thủ đô của Indonesia là thành phố nào?|Jakarta|Kinshasa|Madrid|Sankt-Peterburg
-2|dia|Thủ đô của Israel là thành phố nào?|Jerusalem|Berlin|Bogotá|Algiers
-2|dia|Thủ đô của México là thành phố nào?|Thành phố México|Helsinki|Cairo|Dublin
+3|dia|Thủ đô của Israel là thành phố nào?|Jerusalem|Berlin|Bogotá|Algiers
+3|dia|Thủ đô của México là thành phố nào?|Thành phố México|Helsinki|Cairo|Dublin
 2|dia|Thủ đô của Tây Ban Nha là thành phố nào?|Madrid|Praha|Bratislava|Singapore
-2|dia|Thủ đô của Ukraina là thành phố nào?|Kyiv|Santiago|Bratislava|Nairobi
+3|dia|Thủ đô của Ukraina là thành phố nào?|Kyiv|Santiago|Bratislava|Nairobi
 2|dia|Thủ đô của Vương quốc Anh là thành phố nào?|Luân Đôn|Sankt-Peterburg|Beirut|Budapest
 2|dia|Thủ đô của Ấn Độ là thành phố nào?|New Delhi|Kampala|Tripoli|Dublin
 2|dia|Afghanistan thuộc châu lục nào?|Châu Á|Châu Âu|Nam Mỹ|Châu Phi
@@ -797,7 +797,7 @@ window.TT_ADD(`
 2|dia|Croatia thuộc châu lục nào?|Châu Âu|Bắc Mỹ|Châu Á|Châu Phi
 2|dia|Cuba thuộc châu lục nào?|Bắc Mỹ|Châu Âu|Nam Mỹ|Châu Phi
 2|dia|Các Tiểu vương quốc Ả Rập Thống nhất thuộc châu lục nào?|Châu Á|Châu Âu|Bắc Mỹ|Châu Phi
-2|dia|Cộng hòa Dân chủ Congo thuộc châu lục nào?|Châu Phi|Bắc Mỹ|Nam Mỹ|Châu Âu
+3|dia|Cộng hòa Dân chủ Congo thuộc châu lục nào?|Châu Phi|Bắc Mỹ|Nam Mỹ|Châu Âu
 2|dia|Cộng hòa Dân chủ Nhân dân Triều Tiên thuộc châu lục nào?|Châu Á|Bắc Mỹ|Châu Âu|Châu Phi
 2|dia|Ecuador thuộc châu lục nào?|Nam Mỹ|Châu Âu|Bắc Mỹ|Châu Á
 2|dia|Estonia thuộc châu lục nào?|Châu Âu|Châu Á|Nam Mỹ|Châu Phi
@@ -891,30 +891,30 @@ window.TT_ADD(`
 2|tv|Ngôn ngữ chính thức của Úc là gì?|Tiếng Anh|Tiếng Séc|Tiếng Ba Tư|Tiếng Hy Lạp
 2|tv|Ngôn ngữ chính thức của Ý là gì?|Tiếng Ý|Tiếng Slovene|Tiếng Pháp|Tiếng Ba Tư
 2|tv|Ngôn ngữ chính thức của Đức là gì?|Tiếng Đức|Tiếng Ý|Tiếng Thụy Điển|Tiếng Serbia
-2|sv|Chó Bắc Kinh có nguồn gốc từ quốc gia nào?|Trung Quốc|Áo|Nhật Bản|Hoa Kỳ
-2|sv|Chó Dachshund có nguồn gốc từ quốc gia nào?|Đức|Tây Ban Nha|Afghanistan|Thụy Sĩ
-2|sv|Chó Husky Sibir có nguồn gốc từ quốc gia nào?|Siberia|Greenland|Phần Lan|Nhật Bản
-2|sv|Chó Sa Bì có nguồn gốc từ quốc gia nào?|Trung Quốc|Đức|România|México
-2|sv|Chó bò Anh có nguồn gốc từ quốc gia nào?|Vương quốc Anh|Thụy Điển|Hy Lạp|Phần Lan
-2|sv|Chó ngao Tây Tạng có nguồn gốc từ quốc gia nào?|Trung Quốc|Canada|Ai Cập|Đức
-2|sv|Chó pug có nguồn gốc từ quốc gia nào?|Trung Quốc|Đảo Man|Đài Loan|Tiệp Khắc
-2|sv|Chó săn Afghan có nguồn gốc từ quốc gia nào?|Afghanistan|Ukraina|Myanma|Đức
-2|sv|Chó sục Airedale có nguồn gốc từ quốc gia nào?|Vương quốc Anh|Argentina|Thổ Nhĩ Kỳ|Ấn Độ
-2|sv|Chó sục Bun có nguồn gốc từ quốc gia nào?|Anh|Áo|Na Uy|Vương quốc Anh
-2|sv|Chó sục Yorkshire có nguồn gốc từ quốc gia nào?|Anh|Wales|Nga|Na Uy
-2|sv|Chó đánh hơi có nguồn gốc từ quốc gia nào?|Bỉ|România|Iran|Trung Quốc
-2|sv|Chó đốm có nguồn gốc từ quốc gia nào?|Croatia|Bắc Macedonia|México|Ukraina
-2|sv|Giống chó Basenji có nguồn gốc từ quốc gia nào?|Cộng hòa Dân chủ Congo|Argentina|Cuba|Thái Lan
-2|sv|Giống chó Borzoi có nguồn gốc từ quốc gia nào?|Nga|Đức|Bắc Macedonia|Hy Lạp
-2|sv|Giống chó Chihuahua có nguồn gốc từ quốc gia nào?|México|Argentina|Séc|Trung Quốc
-2|sv|Giống chó Chow Chow có nguồn gốc từ quốc gia nào?|Trung Quốc|Nhật Bản|Ukraina|Cộng hòa Dân chủ Nhân dân Triều Tiên
-2|sv|Giống chó Dobermann có nguồn gốc từ quốc gia nào?|Đức|Nam Phi|Kenya|Đan Mạch
-2|sv|Giống chó Dogo Argentino có nguồn gốc từ quốc gia nào?|Argentina|Cộng hòa Dân chủ Congo|Bắc Macedonia|Bắc Mỹ
-2|sv|Giống chó Great Dane có nguồn gốc từ quốc gia nào?|Đức|Iran|Brasil|Thụy Điển
-2|sv|Giống chó Rottweiler có nguồn gốc từ quốc gia nào?|Đức|México|România|Scotland
-2|sv|Giống chó Shiba Inu có nguồn gốc từ quốc gia nào?|Nhật Bản|Ba Lan|Thổ Nhĩ Kỳ|Séc
-2|sv|Giống chó Shih Tzu có nguồn gốc từ quốc gia nào?|Trung Quốc|Đức|Cộng hòa Dân chủ Congo|Ba Lan
-2|sv|Giống chó Tosa Inu có nguồn gốc từ quốc gia nào?|Nhật Bản|Hoa Kỳ|Phần Lan|Indonesia
+4|sv|Chó Bắc Kinh có nguồn gốc từ quốc gia nào?|Trung Quốc|Áo|Nhật Bản|Hoa Kỳ
+4|sv|Chó Dachshund có nguồn gốc từ quốc gia nào?|Đức|Tây Ban Nha|Afghanistan|Thụy Sĩ
+4|sv|Chó Husky Sibir có nguồn gốc từ quốc gia nào?|Siberia|Greenland|Phần Lan|Nhật Bản
+4|sv|Chó Sa Bì có nguồn gốc từ quốc gia nào?|Trung Quốc|Đức|România|México
+4|sv|Chó bò Anh có nguồn gốc từ quốc gia nào?|Vương quốc Anh|Thụy Điển|Hy Lạp|Phần Lan
+4|sv|Chó ngao Tây Tạng có nguồn gốc từ quốc gia nào?|Trung Quốc|Canada|Ai Cập|Đức
+4|sv|Chó pug có nguồn gốc từ quốc gia nào?|Trung Quốc|Đảo Man|Đài Loan|Tiệp Khắc
+4|sv|Chó săn Afghan có nguồn gốc từ quốc gia nào?|Afghanistan|Ukraina|Myanma|Đức
+4|sv|Chó sục Airedale có nguồn gốc từ quốc gia nào?|Vương quốc Anh|Argentina|Thổ Nhĩ Kỳ|Ấn Độ
+4|sv|Chó sục Bun có nguồn gốc từ quốc gia nào?|Anh|Áo|Na Uy|Vương quốc Anh
+4|sv|Chó sục Yorkshire có nguồn gốc từ quốc gia nào?|Anh|Wales|Nga|Na Uy
+4|sv|Chó đánh hơi có nguồn gốc từ quốc gia nào?|Bỉ|România|Iran|Trung Quốc
+4|sv|Chó đốm có nguồn gốc từ quốc gia nào?|Croatia|Bắc Macedonia|México|Ukraina
+4|sv|Giống chó Basenji có nguồn gốc từ quốc gia nào?|Cộng hòa Dân chủ Congo|Argentina|Cuba|Thái Lan
+4|sv|Giống chó Borzoi có nguồn gốc từ quốc gia nào?|Nga|Đức|Bắc Macedonia|Hy Lạp
+4|sv|Giống chó Chihuahua có nguồn gốc từ quốc gia nào?|México|Argentina|Séc|Trung Quốc
+4|sv|Giống chó Chow Chow có nguồn gốc từ quốc gia nào?|Trung Quốc|Nhật Bản|Ukraina|Cộng hòa Dân chủ Nhân dân Triều Tiên
+4|sv|Giống chó Dobermann có nguồn gốc từ quốc gia nào?|Đức|Nam Phi|Kenya|Đan Mạch
+4|sv|Giống chó Dogo Argentino có nguồn gốc từ quốc gia nào?|Argentina|Cộng hòa Dân chủ Congo|Bắc Macedonia|Bắc Mỹ
+4|sv|Giống chó Great Dane có nguồn gốc từ quốc gia nào?|Đức|Iran|Brasil|Thụy Điển
+4|sv|Giống chó Rottweiler có nguồn gốc từ quốc gia nào?|Đức|México|România|Scotland
+4|sv|Giống chó Shiba Inu có nguồn gốc từ quốc gia nào?|Nhật Bản|Ba Lan|Thổ Nhĩ Kỳ|Séc
+4|sv|Giống chó Shih Tzu có nguồn gốc từ quốc gia nào?|Trung Quốc|Đức|Cộng hòa Dân chủ Congo|Ba Lan
+4|sv|Giống chó Tosa Inu có nguồn gốc từ quốc gia nào?|Nhật Bản|Hoa Kỳ|Phần Lan|Indonesia
 2|sv|Mèo Ba Tư có nguồn gốc từ quốc gia nào?|Iran|Áo|Thụy Sĩ|Kenya
 2|sv|Mèo Bengal có nguồn gốc từ quốc gia nào?|Hoa Kỳ|Argentina|Afghanistan|Thụy Điển
 2|sv|Mèo Birman có nguồn gốc từ quốc gia nào?|Pháp|Nhật Bản|Brasil|Perú
@@ -922,59 +922,59 @@ window.TT_ADD(`
 2|sv|Mèo Russian Blue có nguồn gốc từ quốc gia nào?|Nga|Nhật Bản|Slovakia|Châu Âu
 2|sv|Mèo Sphinx có nguồn gốc từ quốc gia nào?|Canada|Úc|Thái Lan|Hy Lạp
 2|sv|Mèo lông ngắn Anh có nguồn gốc từ quốc gia nào?|Vương quốc Anh|Trung Quốc|Nhật Bản|Hoa Kỳ
-2|kh|Nguyên tố beryli có ký hiệu hóa học là gì?|Be|Th|Nh|W
-2|kh|Nguyên tố bạc có ký hiệu hóa học là gì?|Ag|Hg|Gd|Sn
-2|kh|Nguyên tố calci có ký hiệu hóa học là gì?|Ca|Bk|Nd|Tb
-2|kh|Nguyên tố carbon có ký hiệu hóa học là gì?|C|Sr|Be|N
-2|kh|Nguyên tố chì có ký hiệu hóa học là gì?|Pb|Pu|Tl|Sm
-2|kh|Nguyên tố heli có ký hiệu hóa học là gì?|He|Ta|Sm|In
-2|kh|Nguyên tố hydro có ký hiệu hóa học là gì?|H|U|Lu|Nh
-2|kh|Nguyên tố lithi có ký hiệu hóa học là gì?|Li|Ti|Ho|Ar
-2|kh|Nguyên tố lưu huỳnh có ký hiệu hóa học là gì?|S|Ga|Sg|I
-2|kh|Nguyên tố natri có ký hiệu hóa học là gì?|Na|Sb|Ra|Mt
-2|kh|Nguyên tố nhôm có ký hiệu hóa học là gì?|Al|Ts|Rg|F
-2|kh|Nguyên tố nitơ có ký hiệu hóa học là gì?|N|Ubs|H|Tb
-2|kh|Nguyên tố oxy có ký hiệu hóa học là gì?|O|Te|Ne|Cm
-2|kh|Nguyên tố sắt có ký hiệu hóa học là gì?|Fe|Cr|N|Lr
-2|kh|Nguyên tố thiếc có ký hiệu hóa học là gì?|Sn|He|Au|K
-2|kh|Nguyên tố thủy ngân có ký hiệu hóa học là gì?|Hg|Nb|Yb|Er
-2|kh|Nguyên tố vàng có ký hiệu hóa học là gì?|Au|Es|Ta|Ds
-2|kh|Nguyên tố đồng có ký hiệu hóa học là gì?|Cu|Np|O|Uue
-2|nt|Bộ phim "300" (năm 2006) do ai đạo diễn?|Zack Snyder|Fritz Lang|M. Night Shyamalan|J. J. Abrams
-2|nt|Bộ phim "Blade Runner" (năm 1982) do ai đạo diễn?|Ridley Scott|Sam Raimi|Denis Villeneuve|Billy Wilder
-2|nt|Bộ phim "Bản danh sách của Schindler" (tựa gốc "Schindler's List") do ai đạo diễn?|Steven Spielberg|Thành Long|Andrzej Wajda|Peter Jackson
-2|nt|Bộ phim "Bố già phần II" do ai đạo diễn?|Francis Ford Coppola|François Truffaut|Andrei Tarkovsky|Michelangelo Antonioni
-2|nt|Bộ phim "Bố già" (năm 1972) do ai đạo diễn?|Francis Ford Coppola|Guillermo del Toro|Denzel Washington|Ron Howard
-2|nt|Bộ phim "Casablanca" do ai đạo diễn?|Michael Curtiz|Michael Bay|Todd Phillips|Jafar Panahi
-2|nt|Bộ phim "Chiến tranh giữa các vì sao 4: Niềm hi vọng mới" do ai đạo diễn?|George Lucas|Pier Paolo Pasolini|George Clooney|Martin Scorsese
-2|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập I – Hiểm họa bóng ma" (tựa gốc "Star Wars: Episode I – The Phantom Menace") do ai đạo diễn?|George Lucas|Stanley Kubrick|Mel Gibson|Bradley Cooper
-2|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập II – Sự xâm lăng của người Vô tính" (tựa gốc "Star Wars: Episode II – Attack of the Clones", năm 2002) do ai đạo diễn?|George Lucas|Steven Soderbergh|Alfonso Cuarón|Orson Welles
-2|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập III – Sự báo thù của người Sith" (tựa gốc "Star Wars: Episode III – Revenge of the Sith") do ai đạo diễn?|George Lucas|Ridley Scott|Kathryn Bigelow|Steven Spielberg
-2|nt|Bộ phim "Chuyện tình sau núi" (tựa gốc "Brokeback Mountain") do ai đạo diễn?|Lý An|Danny Boyle|Kim Ki Duk|Kitano Takeshi
-2|nt|Bộ phim "Chúa tể những chiếc nhẫn: Hai tòa tháp" do ai đạo diễn?|Peter Jackson|Maggie Gyllenhaal|Chloé Zhao|Garry Marshall
-2|nt|Bộ phim "Chúa tể những chiếc nhẫn: Sự trở lại của nhà vua" do ai đạo diễn?|Peter Jackson|David Lynch|Sidney Lumet|Pier Paolo Pasolini
-2|nt|Bộ phim "Cuộc sống tươi đẹp" (tựa gốc "Life Is Beautiful") do ai đạo diễn?|Roberto Benigni|Jafar Panahi|Pier Paolo Pasolini|Ben Stiller
-2|nt|Bộ phim "Câu chuyện đồ chơi" do ai đạo diễn?|John Lasseter|Richard Donner|Robert Wise|Aleksandr Nikolayevich Sokurov
-2|nt|Bộ phim "Công dân Kane" do ai đạo diễn?|Orson Welles|Andrei Tarkovsky|John Ford|Lý Tiểu Long
-2|nt|Bộ phim "Công viên kỷ Jura" do ai đạo diễn?|Steven Spielberg|Lý Tiểu Long|George Lucas|Danny Boyle
-2|nt|Bộ phim "Cướp biển vùng Caribbe 2: Chiếc rương tử thần" (năm 2006) do ai đạo diễn?|Gore Verbinski|Jordan Peele|Ivan Reitman|Roland Emmerich
-2|nt|Bộ phim "Cướp biển vùng Caribbean 3: Nơi tận cùng thế giới" (năm 2007) do ai đạo diễn?|Gore Verbinski|Ryan Coogler|Mervyn LeRoy|Andrew Niccol
-2|nt|Bộ phim "Cướp biển vùng Caribbean: Lời nguyền của tàu Ngọc Trai Đen" (năm 2003) do ai đạo diễn?|Gore Verbinski|Robert Wise|Châu Tinh Trì|Paweł Pawlikowski
-2|nt|Bộ phim "Gia đình siêu nhân" (năm 2004) do ai đạo diễn?|Brad Bird|Ava DuVernay|Susanne Bier|Todd Phillips
-2|nt|Bộ phim "Giải cứu binh nhì Ryan" (tựa gốc "Saving Private Ryan", năm 1998) do ai đạo diễn?|Steven Spielberg|Kurosawa Akira|Charlie Chaplin|Ingmar Bergman
-2|nt|Bộ phim "Harry Potter và Hòn đá Phù thủy" (năm 2001) do ai đạo diễn?|Chris Columbus|Wes Craven|David Lean|Kitano Takeshi
-2|nt|Bộ phim "Harry Potter và Phòng chứa Bí mật" do ai đạo diễn?|Chris Columbus|Ngô Vũ Sâm|Park Chan-wook|Jafar Panahi
-2|nt|Bộ phim "Harry Potter và tên tù nhân ngục Azkaban" do ai đạo diễn?|Alfonso Cuarón|David Lean|Mike Nichols|Richard Attenborough
-2|nt|Bộ phim "Indiana Jones và chiếc rương thánh tích" (tựa gốc "Raiders of the Lost Ark", năm 1981) do ai đạo diễn?|Steven Spielberg|Federico Fellini|Kurosawa Akira|Francis Ford Coppola
-2|nt|Bộ phim "Ký sinh trùng" (tựa gốc "Parasite", năm 2019) do ai đạo diễn?|Bong Joon-ho|Denis Villeneuve|Trương Nghệ Mưu|Terrence Malick
-2|nt|Bộ phim "Người Nhện" (tựa gốc "Spider-Man", năm 2002) do ai đạo diễn?|Sam Raimi|David Lean|Leonid Iovich Gaidai|Greta Gerwig
-2|nt|Bộ phim "Sự im lặng của bầy cừu" (tựa gốc "The Silence of the Lambs", năm 1991) do ai đạo diễn?|Jonathan Demme|Jesse Eisenberg|M. Night Shyamalan|Kim Ki Duk
-2|nt|Bộ phim "The Great Dictator" do ai đạo diễn?|Charlie Chaplin|Tim Burton|Bernardo Bertolucci|Thành Long
-2|nt|Bộ phim "Thiện ác tà" (tựa gốc "The Good, the Bad and the Ugly") do ai đạo diễn?|Sergio Leone|Tim Burton|Guy Ritchie|Steven Soderbergh
-2|nt|Bộ phim "Trái tim dũng cảm" (năm 1995) do ai đạo diễn?|Mel Gibson|Wim Wenders|Roberto Benigni|François Truffaut
-2|nt|Bộ phim "Trở lại tương lai" (năm 1985) do ai đạo diễn?|Robert Zemeckis|Wes Craven|Ridley Scott|Jonathan Demme
-2|nt|Bộ phim "Điệp vụ Boston" (năm 2006) do ai đạo diễn?|Martin Scorsese|Tim Burton|Sidney Lumet|Clint Eastwood
-2|nt|Bộ phim "Ở nhà một mình" do ai đạo diễn?|Chris Columbus|M. Night Shyamalan|Alfonso Cuarón|Jafar Panahi
+3|kh|Nguyên tố beryli có ký hiệu hóa học là gì?|Be|Th|Nh|W
+3|kh|Nguyên tố bạc có ký hiệu hóa học là gì?|Ag|Hg|Gd|Sn
+3|kh|Nguyên tố calci có ký hiệu hóa học là gì?|Ca|Bk|Nd|Tb
+3|kh|Nguyên tố carbon có ký hiệu hóa học là gì?|C|Sr|Be|N
+3|kh|Nguyên tố chì có ký hiệu hóa học là gì?|Pb|Pu|Tl|Sm
+3|kh|Nguyên tố heli có ký hiệu hóa học là gì?|He|Ta|Sm|In
+3|kh|Nguyên tố hydro có ký hiệu hóa học là gì?|H|U|Lu|Nh
+3|kh|Nguyên tố lithi có ký hiệu hóa học là gì?|Li|Ti|Ho|Ar
+3|kh|Nguyên tố lưu huỳnh có ký hiệu hóa học là gì?|S|Ga|Sg|I
+3|kh|Nguyên tố natri có ký hiệu hóa học là gì?|Na|Sb|Ra|Mt
+3|kh|Nguyên tố nhôm có ký hiệu hóa học là gì?|Al|Ts|Rg|F
+3|kh|Nguyên tố nitơ có ký hiệu hóa học là gì?|N|Ubs|H|Tb
+3|kh|Nguyên tố oxy có ký hiệu hóa học là gì?|O|Te|Ne|Cm
+3|kh|Nguyên tố sắt có ký hiệu hóa học là gì?|Fe|Cr|N|Lr
+3|kh|Nguyên tố thiếc có ký hiệu hóa học là gì?|Sn|He|Au|K
+3|kh|Nguyên tố thủy ngân có ký hiệu hóa học là gì?|Hg|Nb|Yb|Er
+3|kh|Nguyên tố vàng có ký hiệu hóa học là gì?|Au|Es|Ta|Ds
+3|kh|Nguyên tố đồng có ký hiệu hóa học là gì?|Cu|Np|O|Uue
+3|nt|Bộ phim "300" (năm 2006) do ai đạo diễn?|Zack Snyder|Fritz Lang|M. Night Shyamalan|J. J. Abrams
+3|nt|Bộ phim "Blade Runner" (năm 1982) do ai đạo diễn?|Ridley Scott|Sam Raimi|Denis Villeneuve|Billy Wilder
+3|nt|Bộ phim "Bản danh sách của Schindler" (tựa gốc "Schindler's List") do ai đạo diễn?|Steven Spielberg|Thành Long|Andrzej Wajda|Peter Jackson
+3|nt|Bộ phim "Bố già phần II" do ai đạo diễn?|Francis Ford Coppola|François Truffaut|Andrei Tarkovsky|Michelangelo Antonioni
+3|nt|Bộ phim "Bố già" (năm 1972) do ai đạo diễn?|Francis Ford Coppola|Guillermo del Toro|Denzel Washington|Ron Howard
+3|nt|Bộ phim "Casablanca" do ai đạo diễn?|Michael Curtiz|Michael Bay|Todd Phillips|Jafar Panahi
+3|nt|Bộ phim "Chiến tranh giữa các vì sao 4: Niềm hi vọng mới" do ai đạo diễn?|George Lucas|Pier Paolo Pasolini|George Clooney|Martin Scorsese
+3|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập I – Hiểm họa bóng ma" (tựa gốc "Star Wars: Episode I – The Phantom Menace") do ai đạo diễn?|George Lucas|Stanley Kubrick|Mel Gibson|Bradley Cooper
+3|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập II – Sự xâm lăng của người Vô tính" (tựa gốc "Star Wars: Episode II – Attack of the Clones", năm 2002) do ai đạo diễn?|George Lucas|Steven Soderbergh|Alfonso Cuarón|Orson Welles
+3|nt|Bộ phim "Chiến tranh giữa các vì sao: Tập III – Sự báo thù của người Sith" (tựa gốc "Star Wars: Episode III – Revenge of the Sith") do ai đạo diễn?|George Lucas|Ridley Scott|Kathryn Bigelow|Steven Spielberg
+3|nt|Bộ phim "Chuyện tình sau núi" (tựa gốc "Brokeback Mountain") do ai đạo diễn?|Lý An|Danny Boyle|Kim Ki Duk|Kitano Takeshi
+3|nt|Bộ phim "Chúa tể những chiếc nhẫn: Hai tòa tháp" do ai đạo diễn?|Peter Jackson|Maggie Gyllenhaal|Chloé Zhao|Garry Marshall
+3|nt|Bộ phim "Chúa tể những chiếc nhẫn: Sự trở lại của nhà vua" do ai đạo diễn?|Peter Jackson|David Lynch|Sidney Lumet|Pier Paolo Pasolini
+3|nt|Bộ phim "Cuộc sống tươi đẹp" (tựa gốc "Life Is Beautiful") do ai đạo diễn?|Roberto Benigni|Jafar Panahi|Pier Paolo Pasolini|Ben Stiller
+3|nt|Bộ phim "Câu chuyện đồ chơi" do ai đạo diễn?|John Lasseter|Richard Donner|Robert Wise|Aleksandr Nikolayevich Sokurov
+3|nt|Bộ phim "Công dân Kane" do ai đạo diễn?|Orson Welles|Andrei Tarkovsky|John Ford|Lý Tiểu Long
+3|nt|Bộ phim "Công viên kỷ Jura" do ai đạo diễn?|Steven Spielberg|Lý Tiểu Long|George Lucas|Danny Boyle
+3|nt|Bộ phim "Cướp biển vùng Caribbe 2: Chiếc rương tử thần" (năm 2006) do ai đạo diễn?|Gore Verbinski|Jordan Peele|Ivan Reitman|Roland Emmerich
+3|nt|Bộ phim "Cướp biển vùng Caribbean 3: Nơi tận cùng thế giới" (năm 2007) do ai đạo diễn?|Gore Verbinski|Ryan Coogler|Mervyn LeRoy|Andrew Niccol
+3|nt|Bộ phim "Cướp biển vùng Caribbean: Lời nguyền của tàu Ngọc Trai Đen" (năm 2003) do ai đạo diễn?|Gore Verbinski|Robert Wise|Châu Tinh Trì|Paweł Pawlikowski
+3|nt|Bộ phim "Gia đình siêu nhân" (năm 2004) do ai đạo diễn?|Brad Bird|Ava DuVernay|Susanne Bier|Todd Phillips
+3|nt|Bộ phim "Giải cứu binh nhì Ryan" (tựa gốc "Saving Private Ryan", năm 1998) do ai đạo diễn?|Steven Spielberg|Kurosawa Akira|Charlie Chaplin|Ingmar Bergman
+3|nt|Bộ phim "Harry Potter và Hòn đá Phù thủy" (năm 2001) do ai đạo diễn?|Chris Columbus|Wes Craven|David Lean|Kitano Takeshi
+3|nt|Bộ phim "Harry Potter và Phòng chứa Bí mật" do ai đạo diễn?|Chris Columbus|Ngô Vũ Sâm|Park Chan-wook|Jafar Panahi
+3|nt|Bộ phim "Harry Potter và tên tù nhân ngục Azkaban" do ai đạo diễn?|Alfonso Cuarón|David Lean|Mike Nichols|Richard Attenborough
+3|nt|Bộ phim "Indiana Jones và chiếc rương thánh tích" (tựa gốc "Raiders of the Lost Ark", năm 1981) do ai đạo diễn?|Steven Spielberg|Federico Fellini|Kurosawa Akira|Francis Ford Coppola
+3|nt|Bộ phim "Ký sinh trùng" (tựa gốc "Parasite", năm 2019) do ai đạo diễn?|Bong Joon-ho|Denis Villeneuve|Trương Nghệ Mưu|Terrence Malick
+3|nt|Bộ phim "Người Nhện" (tựa gốc "Spider-Man", năm 2002) do ai đạo diễn?|Sam Raimi|David Lean|Leonid Iovich Gaidai|Greta Gerwig
+3|nt|Bộ phim "Sự im lặng của bầy cừu" (tựa gốc "The Silence of the Lambs", năm 1991) do ai đạo diễn?|Jonathan Demme|Jesse Eisenberg|M. Night Shyamalan|Kim Ki Duk
+3|nt|Bộ phim "The Great Dictator" do ai đạo diễn?|Charlie Chaplin|Tim Burton|Bernardo Bertolucci|Thành Long
+3|nt|Bộ phim "Thiện ác tà" (tựa gốc "The Good, the Bad and the Ugly") do ai đạo diễn?|Sergio Leone|Tim Burton|Guy Ritchie|Steven Soderbergh
+3|nt|Bộ phim "Trái tim dũng cảm" (năm 1995) do ai đạo diễn?|Mel Gibson|Wim Wenders|Roberto Benigni|François Truffaut
+3|nt|Bộ phim "Trở lại tương lai" (năm 1985) do ai đạo diễn?|Robert Zemeckis|Wes Craven|Ridley Scott|Jonathan Demme
+3|nt|Bộ phim "Điệp vụ Boston" (năm 2006) do ai đạo diễn?|Martin Scorsese|Tim Burton|Sidney Lumet|Clint Eastwood
+3|nt|Bộ phim "Ở nhà một mình" do ai đạo diễn?|Chris Columbus|M. Night Shyamalan|Alfonso Cuarón|Jafar Panahi
 2|dl|Món "Baklava" có nguồn gốc từ quốc gia nào?|Đế quốc Ottoman|Áo|Nigeria|Hy Lạp cổ đại
 2|dl|Món "Bigos" có nguồn gốc từ quốc gia nào?|Ba Lan|Ấn Độ|Đức|Hy Lạp
 2|dl|Món "Burrito" có nguồn gốc từ quốc gia nào?|México|Nigeria|Đức|Hà Lan
@@ -1017,47 +1017,47 @@ window.TT_ADD(`
 2|dl|Món "tempe" có nguồn gốc từ quốc gia nào?|Indonesia|México|Malaysia|Afghanistan
 2|dl|Món "thịt nướng xâu" có nguồn gốc từ quốc gia nào?|Indonesia|Kenya|Thái Lan|Anh
 2|dl|Món "tteokbokki" có nguồn gốc từ quốc gia nào?|Triều Tiên|Pháp|Thái Lan|Louisiana
-2|dia|Di sản thế giới "Bath" nằm ở quốc gia nào?|Vương quốc Anh|Malaysia|Chile|Bồ Đào Nha
-2|dia|Di sản thế giới "Cung điện Versailles" nằm ở quốc gia nào?|Pháp|Séc|Mông Cổ|Síp
-2|dia|Di sản thế giới "Khu di tích Chichén Itzá" nằm ở quốc gia nào?|México|Hà Lan|Iraq|Ý
-2|dia|Di sản thế giới "Kyōto" nằm ở quốc gia nào?|Nhật Bản|Thái Lan|Thụy Sĩ|Colombia
-2|dia|Di sản thế giới "Mohenjo-daro" nằm ở quốc gia nào?|Pakistan|Séc|Serbia|Mauritanie
-2|dia|Di sản thế giới "Palmyra" nằm ở quốc gia nào?|Syria|Burkina Faso|Pakistan|New Zealand
-2|dia|Di sản thế giới "Persepolis" nằm ở quốc gia nào?|Iran|Ghana|Malaysia|Việt Nam
-2|dia|Di sản thế giới "Sagrada Família" nằm ở quốc gia nào?|Tây Ban Nha|Ethiopia|Bulgaria|Iran
-2|dia|Di sản thế giới "Salvador" nằm ở quốc gia nào?|Brasil|Albania|Liban|Nhật Bản
-2|dia|Di sản thế giới "Troia" nằm ở quốc gia nào?|Thổ Nhĩ Kỳ|Mali|Ai Cập|Thái Lan
-2|dia|Di sản thế giới "Trại tập trung Auschwitz" nằm ở quốc gia nào?|Ba Lan|Azerbaijan|Hy Lạp|Vương quốc Anh
-2|dia|Di sản thế giới "Tượng Nữ thần Tự do" nằm ở quốc gia nào?|Hoa Kỳ|Mauritanie|Bosna và Hercegovina|Phần Lan
-2|dia|Di sản thế giới "Verona" nằm ở quốc gia nào?|Ý|Costa Rica|Malaysia|Venezuela
-2|dia|Di sản thế giới "Vườn quốc gia Phong Nha – Kẻ Bàng" nằm ở quốc gia nào?|Việt Nam|Slovenia|Hà Lan|Iraq
-2|dia|Di sản thế giới "Vườn quốc gia Yellowstone" nằm ở quốc gia nào?|Hoa Kỳ|Uruguay|Bangladesh|Algérie
-2|nt|Tác phẩm âm nhạc "1812" do ai sáng tác?|Pyotr Ilyich Tchaikovsky|Katy Perry|Antonín Dvořák|Georges Bizet
-2|nt|Tác phẩm âm nhạc "Amar Sonar Bangla" do ai sáng tác?|Rabindranath Tagore|Franz Liszt|Hector Berlioz|Antonín Dvořák
-2|nt|Tác phẩm âm nhạc "Bohemian Rhapsody" do ai sáng tác?|Freddie Mercury|George Frideric Handel|Franz Schubert|Joseph Haydn
-2|nt|Tác phẩm âm nhạc "Boléro" do ai sáng tác?|Maurice Ravel|David Bowie|Sergei Vasilievich Rachmaninoff|Aleksandr Porfiryevich Borodin
-2|nt|Tác phẩm âm nhạc "Bésame Mucho" do ai sáng tác?|Consuelo Velázquez|Uematsu Nobuo|Will.i.am|Justin Hurwitz
-2|nt|Tác phẩm âm nhạc "Carmina Burana" do ai sáng tác?|Carl Orff|Gustav Holst|R. Kelly|Roger Taylor
-2|nt|Tác phẩm âm nhạc "Hồ thiên nga" do ai sáng tác?|Pyotr Ilyich Tchaikovsky|George Frideric Handel|Franz Schubert|Giacomo Puccini
-2|nt|Tác phẩm âm nhạc "I Wanna Go" do ai sáng tác?|Max Martin|Ryan Tedder|Gary Barlow|Consuelo Velázquez
-2|nt|Tác phẩm âm nhạc "Imagine" do ai sáng tác?|John Lennon|Madonna|Franz Schubert|Freddie Mercury
-2|nt|Tác phẩm âm nhạc "Katyusha" do ai sáng tác?|Matvei Isaakovich Blanter|Barry Gibb|José Feliciano|Paul Desmond
-2|nt|Tác phẩm âm nhạc "La Marseillaise" do ai sáng tác?|Claude Joseph Rouget de Lisle|John Deacon|Pete Seeger|Thom Yorke
-2|nt|Tác phẩm âm nhạc "Last Christmas" do ai sáng tác?|George Michael|Sergei Vasilievich Rachmaninoff|Bedřich Smetana|Richard Strauss
-2|nt|Tác phẩm âm nhạc "Messiah" do ai sáng tác?|George Frideric Handel|Madonna|Antonio Vivaldi|Katy Perry
-2|nt|Tác phẩm âm nhạc "Nabucco" do ai sáng tác?|Giuseppe Verdi|Claude Debussy|Igor Stravinsky|Antonín Dvořák
-2|nt|Tác phẩm âm nhạc "Nghi lễ mùa xuân" do ai sáng tác?|Igor Stravinsky|George Frideric Handel|Jimi Hendrix|George Michael
-2|nt|Tác phẩm âm nhạc "Nghĩa dũng quân tiến hành khúc" do ai sáng tác?|Niếp Nhĩ|Ottorino Respighi|Étienne Méhul|Ernesto de Curtis
-2|nt|Tác phẩm âm nhạc "Quốc tế ca" do ai sáng tác?|Pierre Degeyter|Tony Iommi|Aleksandra Nikolayevna Pakhmutova|Gary Barlow
-2|nt|Tác phẩm âm nhạc "The Blue Danube" do ai sáng tác?|Johann Strauss II|Neil Young|Brian Wilson|George Michael
-2|nt|Tác phẩm âm nhạc "Turandot" do ai sáng tác?|Giacomo Puccini|Ray Charles|Frédéric Chopin|Franz Liszt
-2|nt|Tác phẩm âm nhạc "We Are the Champions" do ai sáng tác?|Freddie Mercury|U2|Paul McCartney|Johannes Brahms
-2|nt|Tác phẩm âm nhạc "We Will Rock You" do ai sáng tác?|Brian May|Irving Berlin|Sergei Vasilievich Rachmaninoff|Elton John
-2|nt|Bức tranh "Cội nguồn nhân gian" là tác phẩm của họa sĩ nào?|Gustave Courbet|Eugène Delacroix|Francis Bacon|Frederic Leighton
-2|nt|Bức tranh "Las Meninas" là tác phẩm của họa sĩ nào?|Diego Velázquez|Jan Matejko|Hieronymus Bosch|Eugène Delacroix
-2|nt|Bức tranh "Những người ăn khoai" là tác phẩm của họa sĩ nào?|Vincent van Gogh|Édouard Manet|Francis Bacon|Salvador Dalí
-2|nt|Bức tranh "Nữ thần Tự do dẫn dắt nhân dân" là tác phẩm của họa sĩ nào?|Eugène Delacroix|Rogier van der Weyden|Johannes Vermeer|Caspar David Friedrich
-2|nt|Bức tranh "Đức Mẹ sầu bi" là tác phẩm của họa sĩ nào?|Michelangelo|Ilya Yefimovich Repin|Tần Thủy Hoàng|Gustav Klimt
+4|dia|Di sản thế giới "Bath" nằm ở quốc gia nào?|Vương quốc Anh|Malaysia|Chile|Bồ Đào Nha
+4|dia|Di sản thế giới "Cung điện Versailles" nằm ở quốc gia nào?|Pháp|Séc|Mông Cổ|Síp
+4|dia|Di sản thế giới "Khu di tích Chichén Itzá" nằm ở quốc gia nào?|México|Hà Lan|Iraq|Ý
+4|dia|Di sản thế giới "Kyōto" nằm ở quốc gia nào?|Nhật Bản|Thái Lan|Thụy Sĩ|Colombia
+4|dia|Di sản thế giới "Mohenjo-daro" nằm ở quốc gia nào?|Pakistan|Séc|Serbia|Mauritanie
+4|dia|Di sản thế giới "Palmyra" nằm ở quốc gia nào?|Syria|Burkina Faso|Pakistan|New Zealand
+4|dia|Di sản thế giới "Persepolis" nằm ở quốc gia nào?|Iran|Ghana|Malaysia|Việt Nam
+4|dia|Di sản thế giới "Sagrada Família" nằm ở quốc gia nào?|Tây Ban Nha|Ethiopia|Bulgaria|Iran
+4|dia|Di sản thế giới "Salvador" nằm ở quốc gia nào?|Brasil|Albania|Liban|Nhật Bản
+4|dia|Di sản thế giới "Troia" nằm ở quốc gia nào?|Thổ Nhĩ Kỳ|Mali|Ai Cập|Thái Lan
+4|dia|Di sản thế giới "Trại tập trung Auschwitz" nằm ở quốc gia nào?|Ba Lan|Azerbaijan|Hy Lạp|Vương quốc Anh
+4|dia|Di sản thế giới "Tượng Nữ thần Tự do" nằm ở quốc gia nào?|Hoa Kỳ|Mauritanie|Bosna và Hercegovina|Phần Lan
+4|dia|Di sản thế giới "Verona" nằm ở quốc gia nào?|Ý|Costa Rica|Malaysia|Venezuela
+4|dia|Di sản thế giới "Vườn quốc gia Phong Nha – Kẻ Bàng" nằm ở quốc gia nào?|Việt Nam|Slovenia|Hà Lan|Iraq
+4|dia|Di sản thế giới "Vườn quốc gia Yellowstone" nằm ở quốc gia nào?|Hoa Kỳ|Uruguay|Bangladesh|Algérie
+3|nt|Tác phẩm âm nhạc "1812" do ai sáng tác?|Pyotr Ilyich Tchaikovsky|Katy Perry|Antonín Dvořák|Georges Bizet
+3|nt|Tác phẩm âm nhạc "Amar Sonar Bangla" do ai sáng tác?|Rabindranath Tagore|Franz Liszt|Hector Berlioz|Antonín Dvořák
+3|nt|Tác phẩm âm nhạc "Bohemian Rhapsody" do ai sáng tác?|Freddie Mercury|George Frideric Handel|Franz Schubert|Joseph Haydn
+3|nt|Tác phẩm âm nhạc "Boléro" do ai sáng tác?|Maurice Ravel|David Bowie|Sergei Vasilievich Rachmaninoff|Aleksandr Porfiryevich Borodin
+3|nt|Tác phẩm âm nhạc "Bésame Mucho" do ai sáng tác?|Consuelo Velázquez|Uematsu Nobuo|Will.i.am|Justin Hurwitz
+3|nt|Tác phẩm âm nhạc "Carmina Burana" do ai sáng tác?|Carl Orff|Gustav Holst|R. Kelly|Roger Taylor
+3|nt|Tác phẩm âm nhạc "Hồ thiên nga" do ai sáng tác?|Pyotr Ilyich Tchaikovsky|George Frideric Handel|Franz Schubert|Giacomo Puccini
+3|nt|Tác phẩm âm nhạc "I Wanna Go" do ai sáng tác?|Max Martin|Ryan Tedder|Gary Barlow|Consuelo Velázquez
+3|nt|Tác phẩm âm nhạc "Imagine" do ai sáng tác?|John Lennon|Madonna|Franz Schubert|Freddie Mercury
+3|nt|Tác phẩm âm nhạc "Katyusha" do ai sáng tác?|Matvei Isaakovich Blanter|Barry Gibb|José Feliciano|Paul Desmond
+3|nt|Tác phẩm âm nhạc "La Marseillaise" do ai sáng tác?|Claude Joseph Rouget de Lisle|John Deacon|Pete Seeger|Thom Yorke
+3|nt|Tác phẩm âm nhạc "Last Christmas" do ai sáng tác?|George Michael|Sergei Vasilievich Rachmaninoff|Bedřich Smetana|Richard Strauss
+3|nt|Tác phẩm âm nhạc "Messiah" do ai sáng tác?|George Frideric Handel|Madonna|Antonio Vivaldi|Katy Perry
+3|nt|Tác phẩm âm nhạc "Nabucco" do ai sáng tác?|Giuseppe Verdi|Claude Debussy|Igor Stravinsky|Antonín Dvořák
+3|nt|Tác phẩm âm nhạc "Nghi lễ mùa xuân" do ai sáng tác?|Igor Stravinsky|George Frideric Handel|Jimi Hendrix|George Michael
+3|nt|Tác phẩm âm nhạc "Nghĩa dũng quân tiến hành khúc" do ai sáng tác?|Niếp Nhĩ|Ottorino Respighi|Étienne Méhul|Ernesto de Curtis
+3|nt|Tác phẩm âm nhạc "Quốc tế ca" do ai sáng tác?|Pierre Degeyter|Tony Iommi|Aleksandra Nikolayevna Pakhmutova|Gary Barlow
+3|nt|Tác phẩm âm nhạc "The Blue Danube" do ai sáng tác?|Johann Strauss II|Neil Young|Brian Wilson|George Michael
+3|nt|Tác phẩm âm nhạc "Turandot" do ai sáng tác?|Giacomo Puccini|Ray Charles|Frédéric Chopin|Franz Liszt
+3|nt|Tác phẩm âm nhạc "We Are the Champions" do ai sáng tác?|Freddie Mercury|U2|Paul McCartney|Johannes Brahms
+3|nt|Tác phẩm âm nhạc "We Will Rock You" do ai sáng tác?|Brian May|Irving Berlin|Sergei Vasilievich Rachmaninoff|Elton John
+4|nt|Bức tranh "Cội nguồn nhân gian" là tác phẩm của họa sĩ nào?|Gustave Courbet|Eugène Delacroix|Francis Bacon|Frederic Leighton
+4|nt|Bức tranh "Las Meninas" là tác phẩm của họa sĩ nào?|Diego Velázquez|Jan Matejko|Hieronymus Bosch|Eugène Delacroix
+4|nt|Bức tranh "Những người ăn khoai" là tác phẩm của họa sĩ nào?|Vincent van Gogh|Édouard Manet|Francis Bacon|Salvador Dalí
+4|nt|Bức tranh "Nữ thần Tự do dẫn dắt nhân dân" là tác phẩm của họa sĩ nào?|Eugène Delacroix|Rogier van der Weyden|Johannes Vermeer|Caspar David Friedrich
+4|nt|Bức tranh "Đức Mẹ sầu bi" là tác phẩm của họa sĩ nào?|Michelangelo|Ilya Yefimovich Repin|Tần Thủy Hoàng|Gustav Klimt
 2|dl|A-dục vương sinh ra ở đâu?|Patna|Nancy|Pescara|Newark
 2|dl|Albert Camus sinh ra ở đâu?|Drean|Barlinek|San Juan|Csorna
 2|dl|Alexandre Dumas sinh ra ở đâu?|Villers-Cotterêts|Reading|Montbard|Funabashi
@@ -1163,371 +1163,371 @@ window.TT_ADD(`
 2|dl|Vôn-te sinh ra ở đâu?|Paris|Athens|Moskva|Singapore
 2|dl|Walt Disney sinh ra ở đâu?|Chicago|Philadelphia|Buenos Aires|Dublin
 2|dl|Woodrow Wilson sinh ra ở đâu?|Staunton|Albisola Superiore|Kadıköy|Elmshorn
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Antonio Vivaldi?|Vĩ cầm|Trumpet|Máy tính|Kèn cor
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Antonín Dvořák?|Dương cầm|Đại vĩ cầm|Hạc cầm|Đàn Lia
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Aretha Franklin?|Dương cầm|Trumpet|Măng cầm|Nhạc cụ gõ
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Arthur Schopenhauer?|Sáo|Ô-boa|Ukulele|Máy tính
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Bill Clinton?|Saxophone|Tuba|Nhạc cụ gõ|Măng cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Boris Leonidovich Pasternak?|Dương cầm|Băng cầm|Đại vĩ cầm|Saxophone
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Béla Bartók?|Dương cầm|Hạc cầm|Guitar bass|Trumpet
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Condoleezza Rice?|Dương cầm|Synthesizer|Drum kit|Guitar điện
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Dmitry Dmitrievich Shostakovich?|Dương cầm|Hạc cầm|Nhạc cụ gõ|Phong cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Edvard Grieg?|Dương cầm|Máy tính|Trumpet|Hạc cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Enya?|Dương cầm|Guitar bass|Viola|Kẻng tam giác
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Felix Mendelssohn?|Dương cầm|Drum kit|Clarinet|Máy tính
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Franz Liszt?|Dương cầm|Máy tính|Drum kit|Beatbox
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Frédéric Chopin?|Dương cầm|Hạc cầm|Ghi-ta|Kèn cor
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giacomo Casanova?|Vĩ cầm|Phong cầm|Synthesizer|Trống
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Gioachino Rossini?|Cello|Dương cầm|Saxophone|Mộc cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giuseppe Verdi?|Dương cầm|Trumpet|Guitar bass|Hạc cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giáo hoàng Biển Đức XVI?|Dương cầm|Kèn cor|Viola|Băng cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Igor Stravinsky?|Dương cầm|Theremin|Cello|Saxophone
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Jacques Offenbach?|Cello|Hạc cầm|Đại vĩ cầm|Ukulele
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Janet Jackson?|Đàn phím|Clarinet|Nhị hồ|Synthesizer
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Jim Morrison?|Harmonica|Ukulele|Tuba|Viola
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Johann Sebastian Bach?|Vĩ cầm|Harmonica|Trumpet|Máy tính
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Johannes Brahms?|Dương cầm|Drum kit|Măng cầm|Trống
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Joseph Haydn?|Dương cầm|Hạc cầm|Mộc cầm|Kẻng tam giác
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Louis Armstrong?|Trumpet|Clarinet|Trombone|Cello
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ludwig van Beethoven?|Dương cầm|Đại vĩ cầm|Guitar điện|Ukulele
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Madonna?|Ghi-ta|Piccolo flute|Viola|Máy tính
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Marilyn Monroe?|Ukulele|Ô-boa|Clarinet|Đàn phím
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Maurice Ravel?|Dương cầm|Harpsichord|Phong cầm|Vĩ cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Max Planck?|Dương cầm|Trombone|Guitar bass|Harmonica
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Miles Davis?|Trumpet|Viola|Hạc cầm|Máy tính
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ono Yōko?|Dương cầm|Tuba|Đàn phím|Kèn túi
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Pyotr Ilyich Tchaikovsky?|Dương cầm|Băng cầm|Piccolo flute|Guitar điện
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ray Charles?|Dương cầm|Trống|Clarinet|Đại phong cầm
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Robert Schumann?|Dương cầm|Harmonica|Tuba|Trumpet
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Selena Gomez?|Trống|Trumpet|Cello|Ukulele
-2|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Thomas Jefferson?|Vĩ cầm|Clarinet|Hạc cầm|Saxophone
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Abraham Lincoln?|Diễn văn Gettysburg|Người kiến|Luận ngữ|Victorious
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Alan Turing?|Máy Turing|Avengers: Cuộc chiến vô cực|Quaternion|Tài liệu Panama
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Albert Camus?|Người xa lạ|The Office|Đại gia Gatsby|Lực tĩnh điện
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Aleksandr Sergeyevich Pushkin?|Yevgeny Onegin|Oldboy|Phép biến đổi Laplace|Những người còn sót lại
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Alfred Nobel?|Giải Nobel|Game of Thrones|Naypyidaw|Phúc âm John
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Anton Pavlovich Chekhov?|Ba chị em|Kẻ lãng du trên biển sương mù|Nghi lễ mùa xuân|Dụ ngôn của Chúa Giêsu
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Aristoteles?|Nicomachean Ethics|Tiếng gọi nơi hoang dã|Superman|Mộ đom đóm
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Augustinô thành Hippo?|Thành phố Tâm linh|Phi vụ thế kỷ|A Good Year|Young Sheldon
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Blaise Pascal?|Định luật Pascal|Hồ thiên nga|Phương pháp Haber|Câu chuyện dòng sông
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Carl von Linné?|Systema Naturae|Gia đình Buddenbrock|The Philadelphia Story|Những người phụ nữ bé nhỏ
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Charles Dickens?|Oliver Twist|Con mèo của Schrödinger|Carmen|Người Nhện: Trở về nhà
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Edgar Allan Poe?|Sự sụp đổ của dòng họ Usher|Urusei Yatsura|Home and Away|Quái vật sông Hàn
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ernest Hemingway?|Ông già và biển cả|Áp kế|Bleach - Sứ mạng thần chết|Kẻ hủy diệt 2: Ngày phán xét
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Euclid?|Cơ sở|Gestapo|Các nguyên lý toán học của triết học tự nhiên|Kỳ án Zootopia
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Franz Kafka?|Hóa thân|Oliver Twist|Cảm ứng điện|Đi tìm Nemo
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Friedrich Engels?|Tuyên ngôn của Đảng Cộng sản|Định luật Ohm|Shahnameh|Binh pháp Tôn Tử
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Frédéric Chopin?|Nocturnes|Billy Lynn và cuộc chiến nửa đời người|Goodbye Yellow Brick Road|Tháng Sáu cháy bỏng
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Fyodor Mikhailovich Dostoevsky?|Tội ác và trừng phạt|Shahnameh|HTTP|Breaking Bad
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của George Orwell?|Một chín tám tư|Sách Mặc Môn|Azərbaycan marşı|Đền Parthenon
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Giê-su?|Dụ ngôn của Chúa Giêsu|Nanh Trắng|The Suite Life of Zack and Cody|Kronecker delta
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Hans Christian Andersen?|Nàng tiên cá|Hóa thân|Rối loạn sắc giác|Quốc ca Nga
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Herodotos?|Lịch sử|Tiếng gọi nơi hoang dã|Số nguyên tố Mersenne|Laputa: Lâu đài trên không
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Hillary Clinton?|Tổ chức Những người ủng hộ Trẻ em và Gia đình bang Arkansas|Mười đêm mộng|Phân bố Gibbs|Security Analysis
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Isaac Newton?|Các nguyên lý toán học của triết học tự nhiên|Công chúa và chàng Ếch|Nhà thờ Thánh Paul|Bắt trẻ đồng xanh
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của James Joyce?|Ulysses|Cướp biển vùng Caribbe 2: Chiếc rương tử thần|The Social Network|Câu chuyện đồ chơi 3
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Jane Austen?|Kiêu hãnh và định kiến|Cảm ứng điện|Vũ trụ Điện ảnh Marvel|Đi tìm Nemo
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Jimmy Wales?|Wikipedia|Jeanne d'Arc|Giả tưởng|Truyện kể Genji
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của John Ronald Reuel Tolkien?|Chúa tể của những chiếc nhẫn|Đôn Kihôtê|Manitoba|Shahnameh
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Khổng Tử?|Luận ngữ|Năm môn phối hợp hiện đại|Hàm gamma|Encyclopédie
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Leonhard Euler?|Hàm gamma|Biệt đội cảm tử|Giả thuyết Goldbach|Một mình trên hoang đảo
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lev Nikolayevich Tolstoy?|Anna Karenina|Bộ luật Hammurabi|Chuyện tình sau núi|Trại súc vật
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Louis Pasteur?|Viện Pasteur|Sonata Ánh trăng|My name is Khan|Ký hiệu O lớn
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ludwig van Beethoven?|Giao hưởng số 9|Hàng xóm của tôi là Totoro|Stari Most|Những linh hồn chết
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lão Tử?|Đạo đức kinh|The Office|Bản danh sách của Schindler|Othello
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lý Bạch?|Tĩnh dạ tứ|Huyền thoại Iljimae|Quá trình Penrose|Tiêu chuẩn Eisenstein
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Madonna?|Like a Virgin|Anne tóc đỏ làng Avolea|Vincent|Câu chuyện cảnh sát
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Mao Trạch Đông?|Tư tưởng Mao Trạch Đông|Thằng gù nhà thờ Đức Bà|Điệp vụ Boston|Sân bay quốc tế Kansai
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Marcel Proust?|Đi tìm thời gian đã mất|Of Mice and Men|Bác sĩ Zhivago|Luật De Morgan
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Marilyn Monroe?|Gentlemen Prefer Blondes|Nhím Sonic 3|Phương trình Navier-Stokes|Cuộc đời của Pi
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Martin Luther?|95 luận đề|Victorious|Dracula|Giết con chim nhại
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Michelangelo?|Vương cung thánh đường Thánh Phêrô|Chúa tể của những chiếc nhẫn|Tia X|Kẻ trộm giấc mơ
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Nicolaus Copernicus?|De revolutionibus orbium coelestium|Lucia di Lammermoor|NCIS: Los Angeles|Thư tình nơi chiến trận
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Oscar Wilde?|Bức chân dung của Dorian Gray|Vũ khí hóa học|Mất tích|Thằng gù nhà thờ Đức Bà
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ovid?|Metamorphoses|Người Nhện|Giao diện người dùng đồ họa|Thiên đường đã mất
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Plato?|Cộng hòa|Bộ luật Hammurabi|Encanto: Vùng đất thần kỳ|Bảo tàng Ermitazh
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Pyotr Ilyich Tchaikovsky?|Hồ thiên nga|The Legend of Zelda|Hòa ước Brest-Litovsk|Bohemian Rhapsody
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Pythagoras?|Định lý Pythagoras|Ramayana|Lập phương Rubik|Aeneis
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Rabindranath Tagore?|Gitanjali|Mảnh ghép tình yêu|Concerto thành Brandenburg|Tấn trò đời
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Raffaello?|Trường Athena|The Elephant Man|Ngài cáo tuyệt vời|Avengers
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Richard Wagner?|Der Ring des Nibelungen|Năng lượng tự do Gibbs|Vật lý chất rắn|When Harry Met Sally...
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Sophocles?|Antigone|Dracula|Se7en|Ralph đập phá
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Stephen Hawking?|Lược sử thời gian|Of Mice and Men|House of Cards|Đức Mẹ sầu bi
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Tôma Aquinô?|Summa Theologica|Kraven: Thợ săn thủ lĩnh|Coppélia|Ma siêu quậy
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Vincent van Gogh?|Đêm đầy sao|Thiên đường đã mất|Mười ngày|Waiting for Godot
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Volodymyr Zelensky?|Đầy tớ của Nhân dân|Định luật Charles|Dãy Cauchy|It
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Walt Disney?|Chuột Mickey|Titanic|Động cơ đốt trong|Cuộc phiêu lưu của Alice vào Xứ sở thần tiên
-2|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của William Shakespeare?|Hamlet|Dynamit|Azərbaycan marşı|Naypyidaw
-2|the|Aaron Ramsey nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt băng nghệ thuật|Thể dục nghệ thuật
-2|the|Achraf Hakimi nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Thể dục nghệ thuật|Aikido
-2|the|Alain Prost nổi tiếng ở môn thể thao nào?|Đua ô tô|Aikido|Taekwondo|Bơi lội
-2|the|Alan Shearer nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Cờ vua|Bơi lội
-2|the|Alan Yelizbarovich Dzagoev nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Võ thuật|Cầu lông
-2|the|Alessandro Del Piero nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Vịnh Xuân quyền|Karate
-2|the|Alexis Sánchez nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng rổ|Quần vợt
-2|the|Alfredo Di Stéfano nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Đua ô tô|Cầu lông
-2|the|Alisson Becker nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Trượt tuyết đổ dốc|Trượt băng nghệ thuật
-2|the|Amélie Mauresmo nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng đá|Kung fu|Điền kinh
-2|the|Ana Ivanović nổi tiếng ở môn thể thao nào?|Quần vợt|Taekwondo|Bơi lội|Bóng gậy
-2|the|Andrea Pirlo nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Kung fu|Quần vợt
-2|the|Andrey Sergeyevich Arshavin nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Cờ vua|Đấu vật chuyên nghiệp
-2|the|Andriy Mykolayovych Shevchenko nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng
-2|the|André Schürrle nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Điền kinh|Quyền anh
-2|the|Andy Murray nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Nhảy cầu|Bóng chày
-2|the|Andy Roddick nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng rổ|Taekwondo|Karate
-2|the|Angelique Kerber nổi tiếng ở môn thể thao nào?|Quần vợt|Đua ô tô|Kung fu|Aikido
-2|the|Anna Sergeyevna Kurnikova nổi tiếng ở môn thể thao nào?|Quần vợt|Võ thuật|Billiards snooker|Quyền anh
-2|the|Ansu Fati nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Vịnh Xuân quyền|Nhảy cầu
-2|the|Antonio Rüdiger nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Taekwondo|Quyền anh
-2|the|Arjen Robben nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Bóng chày|Taekwondo
-2|the|Arsène Wenger nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Bóng chày|Taekwondo
-2|the|Arturo Vidal nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Bóng bầu dục Mỹ|Thể dục nghệ thuật
-2|the|Ashley Cole nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng gậy|Bóng chày
-2|the|Ashley Young nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Karate|Võ thuật
-2|the|Babe Ruth nổi tiếng ở môn thể thao nào?|Bóng chày|Bóng đá|Bóng bầu dục Mỹ|Billiards snooker
-2|the|Bastian Schweinsteiger nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Đấu vật chuyên nghiệp|Aikido
-2|the|Bill Shankly nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Quần vợt|Kung fu
-2|the|Bjorn Borg nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng chày|Võ thuật
-2|the|Bobby Charlton nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Khúc côn cầu trên băng|Nhảy cầu
-2|the|Boris Becker nổi tiếng ở môn thể thao nào?|Quần vợt|Nhảy cầu|Bóng chày|Kung fu
-2|the|Boris Spassky nổi tiếng ở môn thể thao nào?|Cờ vua|Khúc côn cầu trên băng|Aikido|Điền kinh
-2|the|Bruno Fernandes nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Leo núi|Billiards snooker
-2|the|Bukayo Saka nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Đấu vật chuyên nghiệp|Kung fu
-2|the|Carles Puyol nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Khúc côn cầu trên băng|Bóng gậy
-2|the|Carlo Ancelotti nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Leo núi|Võ thuật
-2|the|Carlos Tévez nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Thể dục nghệ thuật|Aikido
-2|the|Caroline Wozniacki nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng chày|Nhảy cầu
-2|the|Casemiro nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Điền kinh
-2|the|Cesc Fàbregas nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng bầu dục Mỹ|Quần vợt
-2|the|Chris Evert nổi tiếng ở môn thể thao nào?|Quần vợt|Cờ vua|Trượt băng nghệ thuật|Kung fu
-2|the|Christian Eriksen nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Võ thuật|Vịnh Xuân quyền
-2|the|Clarence Seedorf nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Trượt băng nghệ thuật|Cầu lông
-2|the|César Azpilicueta nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Võ thuật|Bóng chày
-2|the|Daniel Alves nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bóng chày|Thể dục nghệ thuật
-2|the|Daniel Carvajal nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Karate|Cờ vua
-2|the|David Alaba nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Đua ô tô|Billiards snooker
-2|the|David Luiz nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Khúc côn cầu trên băng|Aikido
-2|the|David Silva nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Trượt tuyết đổ dốc|Quần vợt
-2|the|David Trezeguet nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Khúc côn cầu trên băng|Bóng chày
-2|the|David Villa nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Võ thuật|Quyền anh
-2|the|David de Gea nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Kung fu|Điền kinh
-2|the|Davor Šuker nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Thể dục nghệ thuật|Billiards snooker
-2|the|Deco nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Nhảy cầu|Bóng bầu dục Mỹ
-2|the|Dejan Lovren nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Vịnh Xuân quyền|Trượt tuyết đổ dốc
-2|the|Dennis Bergkamp nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Thể dục nghệ thuật|Aikido
-2|the|Didier Deschamps nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Đua ô tô|Đấu vật chuyên nghiệp
-2|the|Didier Drogba nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bóng rổ|Bóng chày
-2|the|Diego Costa nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Aikido|Đua ô tô
-2|the|Diego Godín nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Đua ô tô|Quyền anh
-2|the|Dino Zoff nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Thể dục nghệ thuật|Đấu vật chuyên nghiệp
-2|the|Diogo Jota nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Quần vợt|Kung fu
-2|the|Dirk Kuijt nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Cầu lông|Võ thuật
-2|the|Dunga nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng bầu dục Mỹ|Quyền anh
-2|the|Eden Hazard nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Đấu vật chuyên nghiệp|Leo núi
-2|the|Edin Džeko nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Trượt tuyết đổ dốc|Nhảy cầu
-2|the|Edinson Cavani nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Kung fu|Bơi lội
-2|the|Edwin van der Sar nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Khúc côn cầu trên băng|Cầu lông
-2|the|Emanuel Lasker nổi tiếng ở môn thể thao nào?|Cờ vua|Billiards snooker|Đua ô tô|Karate
-2|the|Emmanuel Adebayor nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Kung fu|Bóng gậy
-2|the|Endo Wataru nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Kung fu|Bóng bầu dục Mỹ
-2|the|Eric Cantona nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Aikido|Trượt băng nghệ thuật
-2|the|Erling Haaland nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Quần vợt|Võ thuật
-2|the|Eusébio nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Đua ô tô|Trượt băng nghệ thuật
-2|the|Fabio Cannavaro nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Khúc côn cầu trên băng|Đua ô tô
-2|the|Federico Valverde nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Khúc côn cầu trên băng|Thể dục nghệ thuật
-2|the|Fernando Torres nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Võ thuật|Bóng gậy
-2|the|Ferran Torres nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Quần vợt|Taekwondo
-2|the|Filippo Inzaghi nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Leo núi|Aikido
-2|the|Floyd Mayweather nổi tiếng ở môn thể thao nào?|Quyền anh|Quần vợt|Karate|Nhảy cầu
-2|the|Franck Ribéry nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Nhảy cầu|Khúc côn cầu trên băng
-2|the|Frank Rijkaard nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Leo núi|Thể dục nghệ thuật
-2|the|Gabriel Batistuta nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Leo núi|Quần vợt
-2|the|Gareth Bale nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Bóng gậy|Cầu lông
-2|the|Garrincha nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Bóng gậy|Trượt tuyết đổ dốc
-2|the|Gary Lineker nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Kung fu|Aikido
-2|the|Gavi nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Đua ô tô|Thể dục nghệ thuật
-2|the|George Best nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Võ thuật|Bóng chày
-2|the|George Foreman nổi tiếng ở môn thể thao nào?|Quyền anh|Billiards snooker|Trượt băng nghệ thuật|Bơi lội
-2|the|Gerd Müller nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Bóng chày|Vịnh Xuân quyền
-2|the|Gheorghe Hagi nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Bóng gậy|Kung fu
-2|the|Gianluigi Donnarumma nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Cầu lông|Võ thuật
-2|the|Gianni Infantino nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng gậy|Nhảy cầu
-2|the|Giorgio Chiellini nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Cầu lông|Taekwondo
-2|the|Giuseppe Meazza nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Thể dục nghệ thuật|Billiards snooker
-2|the|Gonzalo Higuaín nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Đua ô tô|Bóng rổ
-2|the|Gukesh Dommaraju nổi tiếng ở môn thể thao nào?|Cờ vua|Bơi lội|Quyền anh|Vịnh Xuân quyền
-2|the|Guus Hiddink nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Quyền anh|Khúc côn cầu trên băng
-2|the|Harry Kane nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Kung fu|Đấu vật chuyên nghiệp
-2|the|Hasebe Makoto nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Kung fu|Trượt băng nghệ thuật
-2|the|Henrikh Mkhitaryan nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng chày|Võ thuật
-2|the|Hernán Crespo nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Quyền anh|Đấu vật chuyên nghiệp
-2|the|Honda Keisuke nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Quyền anh|Thể dục nghệ thuật
-2|the|Hristo Stoichkov nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Trượt băng nghệ thuật|Taekwondo
-2|the|Hugo Lloris nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Billiards snooker|Cờ vua
-2|the|Hulk Hogan nổi tiếng ở môn thể thao nào?|Đấu vật chuyên nghiệp|Quần vợt|Taekwondo|Bóng chày
-2|the|Hulk nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Aikido|Võ thuật
-2|the|Igor Akinfeev nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Cờ vua|Võ thuật
-2|the|Inui Takashi nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Vịnh Xuân quyền|Khúc côn cầu trên băng
-2|the|Ivan Perišić nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Taekwondo|Bóng bầu dục Mỹ
-2|the|Ivan Rakitić nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Quần vợt|Khúc côn cầu trên băng
-2|the|James Rodríguez nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Aikido|Đua ô tô
-2|the|Jamie Vardy nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Thể dục nghệ thuật|Aikido
-2|the|Jannik Sinner nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng rổ|Nhảy cầu|Võ thuật
-2|the|Jason Statham nổi tiếng ở môn thể thao nào?|Nhảy cầu|Võ thuật|Đua ô tô|Điền kinh
-2|the|Javier Hernández Balcázar nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Billiards snooker|Võ thuật
-2|the|Javier Mascherano nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Aikido
-2|the|Javier Zanetti nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Điền kinh|Cờ vua
-2|the|Jean-Claude Van Damme nổi tiếng ở môn thể thao nào?|Karate|Trượt băng nghệ thuật|Kung fu|Đấu vật chuyên nghiệp
-2|the|Jens Lehmann nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Leo núi|Vịnh Xuân quyền
-2|the|Jesse Owens nổi tiếng ở môn thể thao nào?|Điền kinh|Taekwondo|Khúc côn cầu trên băng|Trượt tuyết đổ dốc
-2|the|Joachim Löw nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Quyền anh|Võ thuật
-2|the|Joe Frazier nổi tiếng ở môn thể thao nào?|Quyền anh|Điền kinh|Leo núi|Cờ vua
-2|the|John McEnroe nổi tiếng ở môn thể thao nào?|Quần vợt|Khúc côn cầu trên băng|Bơi lội|Kung fu
-2|the|John Obi Mikel nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Quần vợt|Võ thuật
-2|the|John Terry nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng rổ|Billiards snooker
-2|the|Jordan Henderson nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Bóng gậy|Bóng rổ
-2|the|Jordan Pickford nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Karate|Bơi lội
-2|the|Jordi Alba nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng
-2|the|Josep Guardiola nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Leo núi|Cờ vua
-2|the|Joshua Kimmich nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng|Trượt tuyết đổ dốc
-2|the|Juan Mata nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng gậy|Cờ vua
-2|the|Jude Bellingham nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Kung fu|Bóng bầu dục Mỹ
-2|the|Judit Polgár nổi tiếng ở môn thể thao nào?|Cờ vua|Bóng chày|Quần vợt|Đua ô tô
-2|the|Julian Draxler nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Bóng chày|Trượt tuyết đổ dốc
-2|the|Julio Iglesias nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Billiards snooker
-2|the|Justine Henin nổi tiếng ở môn thể thao nào?|Quần vợt|Cầu lông|Bóng bầu dục Mỹ|Leo núi
-2|the|Jérôme Boateng nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Nhảy cầu|Bơi lội
-2|the|Jürgen Klinsmann nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Nhảy cầu|Quyền anh
-2|the|Jürgen Klopp nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bóng chày|Võ thuật
-2|the|Kagawa Shinji nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Aikido|Karate
-2|the|Kai Havertz nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Trượt băng nghệ thuật|Bóng chày
-2|the|Kevin De Bruyne nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Cầu lông|Taekwondo
-2|the|Keylor Navas nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Bóng bầu dục Mỹ|Vịnh Xuân quyền
-2|the|Khvicha Kvaratskhelia nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Võ thuật|Leo núi
-2|the|Kim Clijsters nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Điền kinh|Bóng gậy
-2|the|Klaas-Jan Huntelaar nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Bơi lội|Bóng rổ
-2|the|Kurt Russell nổi tiếng ở môn thể thao nào?|Bóng chày|Nhảy cầu|Kung fu|Cầu lông
-2|the|Lautaro Martínez nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Đấu vật chuyên nghiệp|Leo núi
-2|the|Leonardo Bonucci nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Võ thuật|Karate
-2|the|Lilian Thuram nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Billiards snooker|Quyền anh
-2|the|Lothar Matthäus nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Kung fu|Aikido
-2|the|Luis Enrique nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Quyền anh|Bóng rổ
-2|the|Luis van gall nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Cờ vua|Trượt băng nghệ thuật
-2|the|Lukas Podolski nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Vịnh Xuân quyền|Bóng rổ
-2|the|Luke Shaw nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Nhảy cầu|Bơi lội
-2|the|Luís Figo nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Trượt băng nghệ thuật|Bóng gậy
-2|the|Lý Na nổi tiếng ở môn thể thao nào?|Quần vợt|Aikido|Trượt tuyết đổ dốc|Đấu vật chuyên nghiệp
-2|the|Manuel Neuer nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Leo núi|Aikido
-2|the|Marc-André ter Stegen nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Leo núi|Bóng bầu dục Mỹ
-2|the|Marcelo Vieira nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Cầu lông|Bơi lội
-2|the|Marco Reus nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Quyền anh|Cầu lông
-2|the|Marcus Rashford nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bóng gậy|Nhảy cầu
-2|the|Mario Balotelli nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Võ thuật|Trượt tuyết đổ dốc
-2|the|Mario Gómez nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Karate|Bóng rổ
-2|the|Mario Kempes nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Đua ô tô|Trượt băng nghệ thuật
-2|the|Mario Mandžukić nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Taekwondo|Bóng bầu dục Mỹ
-2|the|Mark Spitz nổi tiếng ở môn thể thao nào?|Bơi lội|Thể dục nghệ thuật|Cờ vua|Bóng bầu dục Mỹ
-2|the|Martina Hingis nổi tiếng ở môn thể thao nào?|Quần vợt|Kung fu|Thể dục nghệ thuật|Trượt băng nghệ thuật
-2|the|Mats Hummels nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Trượt tuyết đổ dốc|Điền kinh
-2|the|Megan Rapinoe nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Điền kinh|Bóng bầu dục Mỹ
-2|the|Memphis Depay nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng gậy|Karate
-2|the|Michael Ballack nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Aikido|Quần vợt
-2|the|Michael Carrick nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Vịnh Xuân quyền|Cờ vua
-2|the|Michael Essien nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Trượt tuyết đổ dốc|Khúc côn cầu trên băng
-2|the|Michael Laudrup nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Đấu vật chuyên nghiệp|Karate
-2|the|Michael Owen nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Trượt băng nghệ thuật
-2|the|Mika Häkkinen nổi tiếng ở môn thể thao nào?|Đua ô tô|Quần vợt|Billiards snooker|Võ thuật
-2|the|Mikel Arteta nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Nhảy cầu|Đấu vật chuyên nghiệp
-2|the|Minamino Takumi nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Bóng rổ|Bóng bầu dục Mỹ
-2|the|Monica Seles nổi tiếng ở môn thể thao nào?|Quần vợt|Trượt tuyết đổ dốc|Cầu lông|Leo núi
-2|the|N'Golo Kanté nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Cầu lông|Cờ vua
-2|the|Nakata Hidetoshi nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Trượt băng nghệ thuật|Leo núi
-2|the|Nani nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Bóng rổ|Đấu vật chuyên nghiệp
-2|the|Naomi Osaka nổi tiếng ở môn thể thao nào?|Quần vợt|Thể dục nghệ thuật|Cờ vua|Võ thuật
-2|the|Nemanja Vidić nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Bóng bầu dục Mỹ|Quyền anh
-2|the|Nicolas Anelka nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Trượt tuyết đổ dốc|Bóng bầu dục Mỹ
-2|the|Niki Lauda nổi tiếng ở môn thể thao nào?|Đua ô tô|Đấu vật chuyên nghiệp|Bóng bầu dục Mỹ|Nhảy cầu
-2|the|Okazaki Shinji nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Bóng gậy|Thể dục nghệ thuật
-2|the|Ole Gunnar Solskjær nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Cầu lông|Billiards snooker
-2|the|Oliver Kahn nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Bóng rổ|Bơi lội
-2|the|Olivier Giroud nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng|Quần vợt
-2|the|Oscar Pistorius nổi tiếng ở môn thể thao nào?|Điền kinh|Kung fu|Võ thuật|Karate
-2|the|Ousmane Dembélé nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Bóng chày|Bơi lội
-2|the|Park Ji-sung nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Karate|Kung fu
-2|the|Patrice Evra nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Leo núi|Bóng gậy
-2|the|Patrick Vieira nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Thể dục nghệ thuật|Khúc côn cầu trên băng
-2|the|Paul Pogba nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Bóng gậy|Kung fu
-2|the|Paul Scholes nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt băng nghệ thuật|Cầu lông
-2|the|Pedri nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Bóng chày
-2|the|Pepe Reina nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Taekwondo|Đấu vật chuyên nghiệp
-2|the|Pepe nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Leo núi|Đua ô tô
-2|the|Per Mertesacker nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Khúc côn cầu trên băng|Bóng chày
-2|the|Pete Sampras nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng gậy|Billiards snooker
-2|the|Philipp Lahm nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đua ô tô|Trượt tuyết đổ dốc
-2|the|Philippe Coutinho nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Quyền anh
-2|the|Pierre-Emerick Aubameyang nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Bóng bầu dục Mỹ|Karate
-2|the|Puskás Ferenc nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Cờ vua|Nhảy cầu
-2|the|Radamel Falcao García nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Trượt tuyết đổ dốc|Bóng chày
-2|the|Rafael van der Vaart nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bơi lội|Bóng rổ
-2|the|Raheem Sterling nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Aikido|Đấu vật chuyên nghiệp
-2|the|Raphaël Varane nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Karate|Quần vợt
-2|the|Raúl Albiol nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bơi lội|Quyền anh
-2|the|Raúl González nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Võ thuật|Khúc côn cầu trên băng
-2|the|Rio Ferdinand nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Quyền anh|Thể dục nghệ thuật
-2|the|Rivaldo nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Bóng rổ|Bơi lội
-2|the|Riyad Mahrez nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Bóng rổ|Bơi lội
-2|the|Roberto Baggio nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Điền kinh|Thể dục nghệ thuật
-2|the|Roberto Carlos nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Trượt băng nghệ thuật|Leo núi
-2|the|Roberto Firmino nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Bóng bầu dục Mỹ|Aikido
-2|the|Robin van Persie nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Quyền anh|Nhảy cầu
-2|the|Robinho nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Cờ vua|Vịnh Xuân quyền
-2|the|Romelu Lukaku nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Đấu vật chuyên nghiệp|Võ thuật
-2|the|Ronald Koeman nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Vịnh Xuân quyền|Điền kinh
-2|the|Ruud Gullit nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Quần vợt|Taekwondo
-2|the|Ruud van Nistelrooy nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Karate|Đua ô tô
-2|the|Ryan Giggs nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Cầu lông|Đấu vật chuyên nghiệp
-2|the|Sadio Mané nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Trượt băng nghệ thuật|Aikido
-2|the|Salvatore Schillaci nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Leo núi|Trượt tuyết đổ dốc
-2|the|Sami Khedira nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Bóng rổ|Thể dục nghệ thuật
-2|the|Samuel Eto'o nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng rổ|Bóng bầu dục Mỹ
-2|the|Samuel Umtiti nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Đấu vật chuyên nghiệp|Kung fu
-2|the|Sania Mirza nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng chày|Bóng gậy|Leo núi
-2|the|Sergio Busquets nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Cờ vua|Thể dục nghệ thuật
-2|the|Sergio Ramos nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Bóng chày|Karate
-2|the|Shaquille O'Neal nổi tiếng ở môn thể thao nào?|Bóng rổ|Bóng bầu dục Mỹ|Bóng gậy|Điền kinh
-2|the|Simona Halep nổi tiếng ở môn thể thao nào?|Quần vợt|Đua ô tô|Khúc côn cầu trên băng|Bóng gậy
-2|the|Son Heung-min nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Đấu vật chuyên nghiệp|Vịnh Xuân quyền
-2|the|Stanislas Wawrinka nổi tiếng ở môn thể thao nào?|Quần vợt|Trượt băng nghệ thuật|Billiards snooker|Leo núi
-2|the|Steffi Graf nổi tiếng ở môn thể thao nào?|Quần vợt|Võ thuật|Kung fu|Bóng rổ
-2|the|Steven Gerrard nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Thể dục nghệ thuật|Võ thuật
-2|the|Tenzing Norgay nổi tiếng ở môn thể thao nào?|Leo núi|Thể dục nghệ thuật|Kung fu|Bóng gậy
-2|the|Thiago Silva nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đấu vật chuyên nghiệp|Bơi lội
-2|the|Thibaut Courtois nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Vịnh Xuân quyền
-2|the|Thomas Müller nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Điền kinh|Đấu vật chuyên nghiệp
-2|the|Toni Kroos nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Điền kinh|Vịnh Xuân quyền
-2|the|Ueshiba Morihei nổi tiếng ở môn thể thao nào?|Aikido|Karate|Đấu vật chuyên nghiệp|Võ thuật
-2|the|Victoria Azarenka nổi tiếng ở môn thể thao nào?|Quần vợt|Thể dục nghệ thuật|Bóng gậy|Billiards snooker
-2|the|Vincent Kompany nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Đua ô tô|Cờ vua
-2|the|Vinícius Júnior nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Bơi lội|Taekwondo
-2|the|Virgil van Dijk nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Khúc côn cầu trên băng|Nhảy cầu
-2|the|Víctor Valdés nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Cờ vua|Trượt băng nghệ thuật
-2|the|Wayne Gretzky nổi tiếng ở môn thể thao nào?|Khúc côn cầu trên băng|Đấu vật chuyên nghiệp|Nhảy cầu|Bơi lội
-2|the|Wesley Sneijder nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Quyền anh|Trượt băng nghệ thuật
-2|the|Wesley Snipes nổi tiếng ở môn thể thao nào?|Karate|Khúc côn cầu trên băng|Thể dục nghệ thuật|Cầu lông
-2|the|Wilhelm Steinitz nổi tiếng ở môn thể thao nào?|Cờ vua|Đấu vật chuyên nghiệp|Trượt tuyết đổ dốc|Cầu lông
-2|the|Wojciech Tomasz Szczęsny nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Đua ô tô|Khúc côn cầu trên băng
-2|the|Xabi Alonso nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Quần vợt|Đua ô tô
-2|the|Xavi nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Đua ô tô|Nhảy cầu
-2|the|Xherdan Shaqiri nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Thể dục nghệ thuật|Bơi lội
-2|the|Yaya Touré nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Kung fu|Cầu lông
-2|the|Yelena Isinbayeva nổi tiếng ở môn thể thao nào?|Điền kinh|Bóng chày|Đấu vật chuyên nghiệp|Kung fu
-2|the|Yulia Lipnitskaya nổi tiếng ở môn thể thao nào?|Trượt băng nghệ thuật|Bóng gậy|Bóng bầu dục Mỹ|Quyền anh
-2|the|Yuto Nagatomo nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Nhảy cầu
-2|the|Álvaro Arbeloa nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Đấu vật chuyên nghiệp|Taekwondo
-2|the|Álvaro Morata nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Trượt băng nghệ thuật|Bóng gậy
-2|the|Ángel Di María nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Bóng gậy|Quyền anh
-2|the|Éric Abidal nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Billiards snooker
-2|the|İlkay Gündoğan nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Trượt tuyết đổ dốc|Bơi lội
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Antonio Vivaldi?|Vĩ cầm|Trumpet|Máy tính|Kèn cor
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Antonín Dvořák?|Dương cầm|Đại vĩ cầm|Hạc cầm|Đàn Lia
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Aretha Franklin?|Dương cầm|Trumpet|Măng cầm|Nhạc cụ gõ
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Arthur Schopenhauer?|Sáo|Ô-boa|Ukulele|Máy tính
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Bill Clinton?|Saxophone|Tuba|Nhạc cụ gõ|Măng cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Boris Leonidovich Pasternak?|Dương cầm|Băng cầm|Đại vĩ cầm|Saxophone
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Béla Bartók?|Dương cầm|Hạc cầm|Guitar bass|Trumpet
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Condoleezza Rice?|Dương cầm|Synthesizer|Drum kit|Guitar điện
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Dmitry Dmitrievich Shostakovich?|Dương cầm|Hạc cầm|Nhạc cụ gõ|Phong cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Edvard Grieg?|Dương cầm|Máy tính|Trumpet|Hạc cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Enya?|Dương cầm|Guitar bass|Viola|Kẻng tam giác
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Felix Mendelssohn?|Dương cầm|Drum kit|Clarinet|Máy tính
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Franz Liszt?|Dương cầm|Máy tính|Drum kit|Beatbox
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Frédéric Chopin?|Dương cầm|Hạc cầm|Ghi-ta|Kèn cor
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giacomo Casanova?|Vĩ cầm|Phong cầm|Synthesizer|Trống
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Gioachino Rossini?|Cello|Dương cầm|Saxophone|Mộc cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giuseppe Verdi?|Dương cầm|Trumpet|Guitar bass|Hạc cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Giáo hoàng Biển Đức XVI?|Dương cầm|Kèn cor|Viola|Băng cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Igor Stravinsky?|Dương cầm|Theremin|Cello|Saxophone
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Jacques Offenbach?|Cello|Hạc cầm|Đại vĩ cầm|Ukulele
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Janet Jackson?|Đàn phím|Clarinet|Nhị hồ|Synthesizer
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Jim Morrison?|Harmonica|Ukulele|Tuba|Viola
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Johann Sebastian Bach?|Vĩ cầm|Harmonica|Trumpet|Máy tính
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Johannes Brahms?|Dương cầm|Drum kit|Măng cầm|Trống
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Joseph Haydn?|Dương cầm|Hạc cầm|Mộc cầm|Kẻng tam giác
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Louis Armstrong?|Trumpet|Clarinet|Trombone|Cello
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ludwig van Beethoven?|Dương cầm|Đại vĩ cầm|Guitar điện|Ukulele
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Madonna?|Ghi-ta|Piccolo flute|Viola|Máy tính
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Marilyn Monroe?|Ukulele|Ô-boa|Clarinet|Đàn phím
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Maurice Ravel?|Dương cầm|Harpsichord|Phong cầm|Vĩ cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Max Planck?|Dương cầm|Trombone|Guitar bass|Harmonica
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Miles Davis?|Trumpet|Viola|Hạc cầm|Máy tính
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ono Yōko?|Dương cầm|Tuba|Đàn phím|Kèn túi
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Pyotr Ilyich Tchaikovsky?|Dương cầm|Băng cầm|Piccolo flute|Guitar điện
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Ray Charles?|Dương cầm|Trống|Clarinet|Đại phong cầm
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Robert Schumann?|Dương cầm|Harmonica|Tuba|Trumpet
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Selena Gomez?|Trống|Trumpet|Cello|Ukulele
+3|nt|Nhạc cụ nào sau đây gắn với sự nghiệp của Thomas Jefferson?|Vĩ cầm|Clarinet|Hạc cầm|Saxophone
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Abraham Lincoln?|Diễn văn Gettysburg|Người kiến|Luận ngữ|Victorious
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Alan Turing?|Máy Turing|Avengers: Cuộc chiến vô cực|Quaternion|Tài liệu Panama
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Albert Camus?|Người xa lạ|The Office|Đại gia Gatsby|Lực tĩnh điện
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Aleksandr Sergeyevich Pushkin?|Yevgeny Onegin|Oldboy|Phép biến đổi Laplace|Những người còn sót lại
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Alfred Nobel?|Giải Nobel|Game of Thrones|Naypyidaw|Phúc âm John
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Anton Pavlovich Chekhov?|Ba chị em|Kẻ lãng du trên biển sương mù|Nghi lễ mùa xuân|Dụ ngôn của Chúa Giêsu
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Aristoteles?|Nicomachean Ethics|Tiếng gọi nơi hoang dã|Superman|Mộ đom đóm
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Augustinô thành Hippo?|Thành phố Tâm linh|Phi vụ thế kỷ|A Good Year|Young Sheldon
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Blaise Pascal?|Định luật Pascal|Hồ thiên nga|Phương pháp Haber|Câu chuyện dòng sông
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Carl von Linné?|Systema Naturae|Gia đình Buddenbrock|The Philadelphia Story|Những người phụ nữ bé nhỏ
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Charles Dickens?|Oliver Twist|Con mèo của Schrödinger|Carmen|Người Nhện: Trở về nhà
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Edgar Allan Poe?|Sự sụp đổ của dòng họ Usher|Urusei Yatsura|Home and Away|Quái vật sông Hàn
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ernest Hemingway?|Ông già và biển cả|Áp kế|Bleach - Sứ mạng thần chết|Kẻ hủy diệt 2: Ngày phán xét
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Euclid?|Cơ sở|Gestapo|Các nguyên lý toán học của triết học tự nhiên|Kỳ án Zootopia
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Franz Kafka?|Hóa thân|Oliver Twist|Cảm ứng điện|Đi tìm Nemo
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Friedrich Engels?|Tuyên ngôn của Đảng Cộng sản|Định luật Ohm|Shahnameh|Binh pháp Tôn Tử
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Frédéric Chopin?|Nocturnes|Billy Lynn và cuộc chiến nửa đời người|Goodbye Yellow Brick Road|Tháng Sáu cháy bỏng
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Fyodor Mikhailovich Dostoevsky?|Tội ác và trừng phạt|Shahnameh|HTTP|Breaking Bad
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của George Orwell?|Một chín tám tư|Sách Mặc Môn|Azərbaycan marşı|Đền Parthenon
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Giê-su?|Dụ ngôn của Chúa Giêsu|Nanh Trắng|The Suite Life of Zack and Cody|Kronecker delta
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Hans Christian Andersen?|Nàng tiên cá|Hóa thân|Rối loạn sắc giác|Quốc ca Nga
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Herodotos?|Lịch sử|Tiếng gọi nơi hoang dã|Số nguyên tố Mersenne|Laputa: Lâu đài trên không
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Hillary Clinton?|Tổ chức Những người ủng hộ Trẻ em và Gia đình bang Arkansas|Mười đêm mộng|Phân bố Gibbs|Security Analysis
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Isaac Newton?|Các nguyên lý toán học của triết học tự nhiên|Công chúa và chàng Ếch|Nhà thờ Thánh Paul|Bắt trẻ đồng xanh
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của James Joyce?|Ulysses|Cướp biển vùng Caribbe 2: Chiếc rương tử thần|The Social Network|Câu chuyện đồ chơi 3
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Jane Austen?|Kiêu hãnh và định kiến|Cảm ứng điện|Vũ trụ Điện ảnh Marvel|Đi tìm Nemo
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Jimmy Wales?|Wikipedia|Jeanne d'Arc|Giả tưởng|Truyện kể Genji
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của John Ronald Reuel Tolkien?|Chúa tể của những chiếc nhẫn|Đôn Kihôtê|Manitoba|Shahnameh
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Khổng Tử?|Luận ngữ|Năm môn phối hợp hiện đại|Hàm gamma|Encyclopédie
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Leonhard Euler?|Hàm gamma|Biệt đội cảm tử|Giả thuyết Goldbach|Một mình trên hoang đảo
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lev Nikolayevich Tolstoy?|Anna Karenina|Bộ luật Hammurabi|Chuyện tình sau núi|Trại súc vật
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Louis Pasteur?|Viện Pasteur|Sonata Ánh trăng|My name is Khan|Ký hiệu O lớn
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ludwig van Beethoven?|Giao hưởng số 9|Hàng xóm của tôi là Totoro|Stari Most|Những linh hồn chết
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lão Tử?|Đạo đức kinh|The Office|Bản danh sách của Schindler|Othello
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Lý Bạch?|Tĩnh dạ tứ|Huyền thoại Iljimae|Quá trình Penrose|Tiêu chuẩn Eisenstein
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Madonna?|Like a Virgin|Anne tóc đỏ làng Avolea|Vincent|Câu chuyện cảnh sát
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Mao Trạch Đông?|Tư tưởng Mao Trạch Đông|Thằng gù nhà thờ Đức Bà|Điệp vụ Boston|Sân bay quốc tế Kansai
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Marcel Proust?|Đi tìm thời gian đã mất|Of Mice and Men|Bác sĩ Zhivago|Luật De Morgan
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Marilyn Monroe?|Gentlemen Prefer Blondes|Nhím Sonic 3|Phương trình Navier-Stokes|Cuộc đời của Pi
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Martin Luther?|95 luận đề|Victorious|Dracula|Giết con chim nhại
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Michelangelo?|Vương cung thánh đường Thánh Phêrô|Chúa tể của những chiếc nhẫn|Tia X|Kẻ trộm giấc mơ
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Nicolaus Copernicus?|De revolutionibus orbium coelestium|Lucia di Lammermoor|NCIS: Los Angeles|Thư tình nơi chiến trận
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Oscar Wilde?|Bức chân dung của Dorian Gray|Vũ khí hóa học|Mất tích|Thằng gù nhà thờ Đức Bà
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Ovid?|Metamorphoses|Người Nhện|Giao diện người dùng đồ họa|Thiên đường đã mất
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Plato?|Cộng hòa|Bộ luật Hammurabi|Encanto: Vùng đất thần kỳ|Bảo tàng Ermitazh
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Pyotr Ilyich Tchaikovsky?|Hồ thiên nga|The Legend of Zelda|Hòa ước Brest-Litovsk|Bohemian Rhapsody
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Pythagoras?|Định lý Pythagoras|Ramayana|Lập phương Rubik|Aeneis
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Rabindranath Tagore?|Gitanjali|Mảnh ghép tình yêu|Concerto thành Brandenburg|Tấn trò đời
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Raffaello?|Trường Athena|The Elephant Man|Ngài cáo tuyệt vời|Avengers
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Richard Wagner?|Der Ring des Nibelungen|Năng lượng tự do Gibbs|Vật lý chất rắn|When Harry Met Sally...
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Sophocles?|Antigone|Dracula|Se7en|Ralph đập phá
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Stephen Hawking?|Lược sử thời gian|Of Mice and Men|House of Cards|Đức Mẹ sầu bi
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Tôma Aquinô?|Summa Theologica|Kraven: Thợ săn thủ lĩnh|Coppélia|Ma siêu quậy
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Vincent van Gogh?|Đêm đầy sao|Thiên đường đã mất|Mười ngày|Waiting for Godot
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Volodymyr Zelensky?|Đầy tớ của Nhân dân|Định luật Charles|Dãy Cauchy|It
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của Walt Disney?|Chuột Mickey|Titanic|Động cơ đốt trong|Cuộc phiêu lưu của Alice vào Xứ sở thần tiên
+3|van|Tác phẩm/công trình nào sau đây gắn với tên tuổi của William Shakespeare?|Hamlet|Dynamit|Azərbaycan marşı|Naypyidaw
+3|the|Aaron Ramsey nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt băng nghệ thuật|Thể dục nghệ thuật
+3|the|Achraf Hakimi nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Thể dục nghệ thuật|Aikido
+3|the|Alain Prost nổi tiếng ở môn thể thao nào?|Đua ô tô|Aikido|Taekwondo|Bơi lội
+3|the|Alan Shearer nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Cờ vua|Bơi lội
+3|the|Alan Yelizbarovich Dzagoev nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Võ thuật|Cầu lông
+3|the|Alessandro Del Piero nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Vịnh Xuân quyền|Karate
+3|the|Alexis Sánchez nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng rổ|Quần vợt
+3|the|Alfredo Di Stéfano nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Đua ô tô|Cầu lông
+3|the|Alisson Becker nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Trượt tuyết đổ dốc|Trượt băng nghệ thuật
+3|the|Amélie Mauresmo nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng đá|Kung fu|Điền kinh
+3|the|Ana Ivanović nổi tiếng ở môn thể thao nào?|Quần vợt|Taekwondo|Bơi lội|Bóng gậy
+3|the|Andrea Pirlo nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Kung fu|Quần vợt
+3|the|Andrey Sergeyevich Arshavin nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Cờ vua|Đấu vật chuyên nghiệp
+3|the|Andriy Mykolayovych Shevchenko nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng
+3|the|André Schürrle nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Điền kinh|Quyền anh
+3|the|Andy Murray nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Nhảy cầu|Bóng chày
+3|the|Andy Roddick nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng rổ|Taekwondo|Karate
+3|the|Angelique Kerber nổi tiếng ở môn thể thao nào?|Quần vợt|Đua ô tô|Kung fu|Aikido
+3|the|Anna Sergeyevna Kurnikova nổi tiếng ở môn thể thao nào?|Quần vợt|Võ thuật|Billiards snooker|Quyền anh
+3|the|Ansu Fati nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Vịnh Xuân quyền|Nhảy cầu
+3|the|Antonio Rüdiger nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Taekwondo|Quyền anh
+3|the|Arjen Robben nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Bóng chày|Taekwondo
+3|the|Arsène Wenger nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Bóng chày|Taekwondo
+3|the|Arturo Vidal nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Bóng bầu dục Mỹ|Thể dục nghệ thuật
+3|the|Ashley Cole nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng gậy|Bóng chày
+3|the|Ashley Young nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Karate|Võ thuật
+3|the|Babe Ruth nổi tiếng ở môn thể thao nào?|Bóng chày|Bóng đá|Bóng bầu dục Mỹ|Billiards snooker
+3|the|Bastian Schweinsteiger nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Đấu vật chuyên nghiệp|Aikido
+3|the|Bill Shankly nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Quần vợt|Kung fu
+3|the|Bjorn Borg nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng chày|Võ thuật
+3|the|Bobby Charlton nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Khúc côn cầu trên băng|Nhảy cầu
+3|the|Boris Becker nổi tiếng ở môn thể thao nào?|Quần vợt|Nhảy cầu|Bóng chày|Kung fu
+3|the|Boris Spassky nổi tiếng ở môn thể thao nào?|Cờ vua|Khúc côn cầu trên băng|Aikido|Điền kinh
+3|the|Bruno Fernandes nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Leo núi|Billiards snooker
+3|the|Bukayo Saka nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Đấu vật chuyên nghiệp|Kung fu
+3|the|Carles Puyol nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Khúc côn cầu trên băng|Bóng gậy
+3|the|Carlo Ancelotti nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Leo núi|Võ thuật
+3|the|Carlos Tévez nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Thể dục nghệ thuật|Aikido
+3|the|Caroline Wozniacki nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng chày|Nhảy cầu
+3|the|Casemiro nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Điền kinh
+3|the|Cesc Fàbregas nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng bầu dục Mỹ|Quần vợt
+3|the|Chris Evert nổi tiếng ở môn thể thao nào?|Quần vợt|Cờ vua|Trượt băng nghệ thuật|Kung fu
+3|the|Christian Eriksen nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Võ thuật|Vịnh Xuân quyền
+3|the|Clarence Seedorf nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Trượt băng nghệ thuật|Cầu lông
+3|the|César Azpilicueta nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Võ thuật|Bóng chày
+3|the|Daniel Alves nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bóng chày|Thể dục nghệ thuật
+3|the|Daniel Carvajal nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Karate|Cờ vua
+3|the|David Alaba nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Đua ô tô|Billiards snooker
+3|the|David Luiz nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Khúc côn cầu trên băng|Aikido
+3|the|David Silva nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Trượt tuyết đổ dốc|Quần vợt
+3|the|David Trezeguet nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Khúc côn cầu trên băng|Bóng chày
+3|the|David Villa nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Võ thuật|Quyền anh
+3|the|David de Gea nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Kung fu|Điền kinh
+3|the|Davor Šuker nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Thể dục nghệ thuật|Billiards snooker
+3|the|Deco nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Nhảy cầu|Bóng bầu dục Mỹ
+3|the|Dejan Lovren nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Vịnh Xuân quyền|Trượt tuyết đổ dốc
+3|the|Dennis Bergkamp nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Thể dục nghệ thuật|Aikido
+3|the|Didier Deschamps nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Đua ô tô|Đấu vật chuyên nghiệp
+3|the|Didier Drogba nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bóng rổ|Bóng chày
+3|the|Diego Costa nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Aikido|Đua ô tô
+3|the|Diego Godín nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Đua ô tô|Quyền anh
+3|the|Dino Zoff nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Thể dục nghệ thuật|Đấu vật chuyên nghiệp
+3|the|Diogo Jota nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Quần vợt|Kung fu
+3|the|Dirk Kuijt nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Cầu lông|Võ thuật
+3|the|Dunga nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng bầu dục Mỹ|Quyền anh
+3|the|Eden Hazard nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Đấu vật chuyên nghiệp|Leo núi
+3|the|Edin Džeko nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Trượt tuyết đổ dốc|Nhảy cầu
+3|the|Edinson Cavani nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Kung fu|Bơi lội
+3|the|Edwin van der Sar nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Khúc côn cầu trên băng|Cầu lông
+3|the|Emanuel Lasker nổi tiếng ở môn thể thao nào?|Cờ vua|Billiards snooker|Đua ô tô|Karate
+3|the|Emmanuel Adebayor nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Kung fu|Bóng gậy
+3|the|Endo Wataru nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Kung fu|Bóng bầu dục Mỹ
+3|the|Eric Cantona nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Aikido|Trượt băng nghệ thuật
+3|the|Erling Haaland nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Quần vợt|Võ thuật
+3|the|Eusébio nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Đua ô tô|Trượt băng nghệ thuật
+3|the|Fabio Cannavaro nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Khúc côn cầu trên băng|Đua ô tô
+3|the|Federico Valverde nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Khúc côn cầu trên băng|Thể dục nghệ thuật
+3|the|Fernando Torres nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Võ thuật|Bóng gậy
+3|the|Ferran Torres nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Quần vợt|Taekwondo
+3|the|Filippo Inzaghi nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Leo núi|Aikido
+3|the|Floyd Mayweather nổi tiếng ở môn thể thao nào?|Quyền anh|Quần vợt|Karate|Nhảy cầu
+3|the|Franck Ribéry nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Nhảy cầu|Khúc côn cầu trên băng
+3|the|Frank Rijkaard nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Leo núi|Thể dục nghệ thuật
+3|the|Gabriel Batistuta nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Leo núi|Quần vợt
+3|the|Gareth Bale nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Bóng gậy|Cầu lông
+3|the|Garrincha nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Bóng gậy|Trượt tuyết đổ dốc
+3|the|Gary Lineker nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Kung fu|Aikido
+3|the|Gavi nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Đua ô tô|Thể dục nghệ thuật
+3|the|George Best nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Võ thuật|Bóng chày
+3|the|George Foreman nổi tiếng ở môn thể thao nào?|Quyền anh|Billiards snooker|Trượt băng nghệ thuật|Bơi lội
+3|the|Gerd Müller nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Bóng chày|Vịnh Xuân quyền
+3|the|Gheorghe Hagi nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Bóng gậy|Kung fu
+3|the|Gianluigi Donnarumma nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Cầu lông|Võ thuật
+3|the|Gianni Infantino nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng gậy|Nhảy cầu
+3|the|Giorgio Chiellini nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Cầu lông|Taekwondo
+3|the|Giuseppe Meazza nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Thể dục nghệ thuật|Billiards snooker
+3|the|Gonzalo Higuaín nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Đua ô tô|Bóng rổ
+3|the|Gukesh Dommaraju nổi tiếng ở môn thể thao nào?|Cờ vua|Bơi lội|Quyền anh|Vịnh Xuân quyền
+3|the|Guus Hiddink nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Quyền anh|Khúc côn cầu trên băng
+3|the|Harry Kane nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Kung fu|Đấu vật chuyên nghiệp
+3|the|Hasebe Makoto nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Kung fu|Trượt băng nghệ thuật
+3|the|Henrikh Mkhitaryan nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng chày|Võ thuật
+3|the|Hernán Crespo nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Quyền anh|Đấu vật chuyên nghiệp
+3|the|Honda Keisuke nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Quyền anh|Thể dục nghệ thuật
+3|the|Hristo Stoichkov nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Trượt băng nghệ thuật|Taekwondo
+3|the|Hugo Lloris nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Billiards snooker|Cờ vua
+3|the|Hulk Hogan nổi tiếng ở môn thể thao nào?|Đấu vật chuyên nghiệp|Quần vợt|Taekwondo|Bóng chày
+3|the|Hulk nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Aikido|Võ thuật
+3|the|Igor Akinfeev nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Cờ vua|Võ thuật
+3|the|Inui Takashi nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Vịnh Xuân quyền|Khúc côn cầu trên băng
+3|the|Ivan Perišić nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Taekwondo|Bóng bầu dục Mỹ
+3|the|Ivan Rakitić nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Quần vợt|Khúc côn cầu trên băng
+3|the|James Rodríguez nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Aikido|Đua ô tô
+3|the|Jamie Vardy nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Thể dục nghệ thuật|Aikido
+3|the|Jannik Sinner nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng rổ|Nhảy cầu|Võ thuật
+3|the|Jason Statham nổi tiếng ở môn thể thao nào?|Nhảy cầu|Võ thuật|Đua ô tô|Điền kinh
+3|the|Javier Hernández Balcázar nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Billiards snooker|Võ thuật
+3|the|Javier Mascherano nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Aikido
+3|the|Javier Zanetti nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Điền kinh|Cờ vua
+3|the|Jean-Claude Van Damme nổi tiếng ở môn thể thao nào?|Karate|Trượt băng nghệ thuật|Kung fu|Đấu vật chuyên nghiệp
+3|the|Jens Lehmann nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Leo núi|Vịnh Xuân quyền
+3|the|Jesse Owens nổi tiếng ở môn thể thao nào?|Điền kinh|Taekwondo|Khúc côn cầu trên băng|Trượt tuyết đổ dốc
+3|the|Joachim Löw nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Quyền anh|Võ thuật
+3|the|Joe Frazier nổi tiếng ở môn thể thao nào?|Quyền anh|Điền kinh|Leo núi|Cờ vua
+3|the|John McEnroe nổi tiếng ở môn thể thao nào?|Quần vợt|Khúc côn cầu trên băng|Bơi lội|Kung fu
+3|the|John Obi Mikel nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Quần vợt|Võ thuật
+3|the|John Terry nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Bóng rổ|Billiards snooker
+3|the|Jordan Henderson nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Bóng gậy|Bóng rổ
+3|the|Jordan Pickford nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Karate|Bơi lội
+3|the|Jordi Alba nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng
+3|the|Josep Guardiola nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Leo núi|Cờ vua
+3|the|Joshua Kimmich nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng|Trượt tuyết đổ dốc
+3|the|Juan Mata nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng gậy|Cờ vua
+3|the|Jude Bellingham nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Kung fu|Bóng bầu dục Mỹ
+3|the|Judit Polgár nổi tiếng ở môn thể thao nào?|Cờ vua|Bóng chày|Quần vợt|Đua ô tô
+3|the|Julian Draxler nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Bóng chày|Trượt tuyết đổ dốc
+3|the|Julio Iglesias nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Billiards snooker
+3|the|Justine Henin nổi tiếng ở môn thể thao nào?|Quần vợt|Cầu lông|Bóng bầu dục Mỹ|Leo núi
+3|the|Jérôme Boateng nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Nhảy cầu|Bơi lội
+3|the|Jürgen Klinsmann nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Nhảy cầu|Quyền anh
+3|the|Jürgen Klopp nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bóng chày|Võ thuật
+3|the|Kagawa Shinji nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Aikido|Karate
+3|the|Kai Havertz nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Trượt băng nghệ thuật|Bóng chày
+3|the|Kevin De Bruyne nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Cầu lông|Taekwondo
+3|the|Keylor Navas nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Bóng bầu dục Mỹ|Vịnh Xuân quyền
+3|the|Khvicha Kvaratskhelia nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Võ thuật|Leo núi
+3|the|Kim Clijsters nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Điền kinh|Bóng gậy
+3|the|Klaas-Jan Huntelaar nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Bơi lội|Bóng rổ
+3|the|Kurt Russell nổi tiếng ở môn thể thao nào?|Bóng chày|Nhảy cầu|Kung fu|Cầu lông
+3|the|Lautaro Martínez nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Đấu vật chuyên nghiệp|Leo núi
+3|the|Leonardo Bonucci nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Võ thuật|Karate
+3|the|Lilian Thuram nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Billiards snooker|Quyền anh
+3|the|Lothar Matthäus nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Kung fu|Aikido
+3|the|Luis Enrique nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Quyền anh|Bóng rổ
+3|the|Luis van gall nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Cờ vua|Trượt băng nghệ thuật
+3|the|Lukas Podolski nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Vịnh Xuân quyền|Bóng rổ
+3|the|Luke Shaw nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Nhảy cầu|Bơi lội
+3|the|Luís Figo nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Trượt băng nghệ thuật|Bóng gậy
+3|the|Lý Na nổi tiếng ở môn thể thao nào?|Quần vợt|Aikido|Trượt tuyết đổ dốc|Đấu vật chuyên nghiệp
+3|the|Manuel Neuer nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Leo núi|Aikido
+3|the|Marc-André ter Stegen nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Leo núi|Bóng bầu dục Mỹ
+3|the|Marcelo Vieira nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Cầu lông|Bơi lội
+3|the|Marco Reus nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Quyền anh|Cầu lông
+3|the|Marcus Rashford nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bóng gậy|Nhảy cầu
+3|the|Mario Balotelli nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Võ thuật|Trượt tuyết đổ dốc
+3|the|Mario Gómez nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Karate|Bóng rổ
+3|the|Mario Kempes nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Đua ô tô|Trượt băng nghệ thuật
+3|the|Mario Mandžukić nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Taekwondo|Bóng bầu dục Mỹ
+3|the|Mark Spitz nổi tiếng ở môn thể thao nào?|Bơi lội|Thể dục nghệ thuật|Cờ vua|Bóng bầu dục Mỹ
+3|the|Martina Hingis nổi tiếng ở môn thể thao nào?|Quần vợt|Kung fu|Thể dục nghệ thuật|Trượt băng nghệ thuật
+3|the|Mats Hummels nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Trượt tuyết đổ dốc|Điền kinh
+3|the|Megan Rapinoe nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Điền kinh|Bóng bầu dục Mỹ
+3|the|Memphis Depay nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Bóng gậy|Karate
+3|the|Michael Ballack nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Aikido|Quần vợt
+3|the|Michael Carrick nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Vịnh Xuân quyền|Cờ vua
+3|the|Michael Essien nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Trượt tuyết đổ dốc|Khúc côn cầu trên băng
+3|the|Michael Laudrup nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Đấu vật chuyên nghiệp|Karate
+3|the|Michael Owen nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Trượt băng nghệ thuật
+3|the|Mika Häkkinen nổi tiếng ở môn thể thao nào?|Đua ô tô|Quần vợt|Billiards snooker|Võ thuật
+3|the|Mikel Arteta nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Nhảy cầu|Đấu vật chuyên nghiệp
+3|the|Minamino Takumi nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Bóng rổ|Bóng bầu dục Mỹ
+3|the|Monica Seles nổi tiếng ở môn thể thao nào?|Quần vợt|Trượt tuyết đổ dốc|Cầu lông|Leo núi
+3|the|N'Golo Kanté nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Cầu lông|Cờ vua
+3|the|Nakata Hidetoshi nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Trượt băng nghệ thuật|Leo núi
+3|the|Nani nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Bóng rổ|Đấu vật chuyên nghiệp
+3|the|Naomi Osaka nổi tiếng ở môn thể thao nào?|Quần vợt|Thể dục nghệ thuật|Cờ vua|Võ thuật
+3|the|Nemanja Vidić nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Bóng bầu dục Mỹ|Quyền anh
+3|the|Nicolas Anelka nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Trượt tuyết đổ dốc|Bóng bầu dục Mỹ
+3|the|Niki Lauda nổi tiếng ở môn thể thao nào?|Đua ô tô|Đấu vật chuyên nghiệp|Bóng bầu dục Mỹ|Nhảy cầu
+3|the|Okazaki Shinji nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Bóng gậy|Thể dục nghệ thuật
+3|the|Ole Gunnar Solskjær nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Cầu lông|Billiards snooker
+3|the|Oliver Kahn nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Bóng rổ|Bơi lội
+3|the|Olivier Giroud nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Khúc côn cầu trên băng|Quần vợt
+3|the|Oscar Pistorius nổi tiếng ở môn thể thao nào?|Điền kinh|Kung fu|Võ thuật|Karate
+3|the|Ousmane Dembélé nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Bóng chày|Bơi lội
+3|the|Park Ji-sung nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Karate|Kung fu
+3|the|Patrice Evra nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Leo núi|Bóng gậy
+3|the|Patrick Vieira nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Thể dục nghệ thuật|Khúc côn cầu trên băng
+3|the|Paul Pogba nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Bóng gậy|Kung fu
+3|the|Paul Scholes nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Trượt băng nghệ thuật|Cầu lông
+3|the|Pedri nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Bóng chày
+3|the|Pepe Reina nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Taekwondo|Đấu vật chuyên nghiệp
+3|the|Pepe nổi tiếng ở môn thể thao nào?|Bóng đá|Quần vợt|Leo núi|Đua ô tô
+3|the|Per Mertesacker nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Khúc côn cầu trên băng|Bóng chày
+3|the|Pete Sampras nổi tiếng ở môn thể thao nào?|Quần vợt|Đấu vật chuyên nghiệp|Bóng gậy|Billiards snooker
+3|the|Philipp Lahm nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đua ô tô|Trượt tuyết đổ dốc
+3|the|Philippe Coutinho nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Quyền anh
+3|the|Pierre-Emerick Aubameyang nổi tiếng ở môn thể thao nào?|Bóng đá|Đấu vật chuyên nghiệp|Bóng bầu dục Mỹ|Karate
+3|the|Puskás Ferenc nổi tiếng ở môn thể thao nào?|Bóng đá|Taekwondo|Cờ vua|Nhảy cầu
+3|the|Radamel Falcao García nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Trượt tuyết đổ dốc|Bóng chày
+3|the|Rafael van der Vaart nổi tiếng ở môn thể thao nào?|Bóng đá|Đua ô tô|Bơi lội|Bóng rổ
+3|the|Raheem Sterling nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng rổ|Aikido|Đấu vật chuyên nghiệp
+3|the|Raphaël Varane nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Karate|Quần vợt
+3|the|Raúl Albiol nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Bơi lội|Quyền anh
+3|the|Raúl González nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Võ thuật|Khúc côn cầu trên băng
+3|the|Rio Ferdinand nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Quyền anh|Thể dục nghệ thuật
+3|the|Rivaldo nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Bóng rổ|Bơi lội
+3|the|Riyad Mahrez nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Bóng rổ|Bơi lội
+3|the|Roberto Baggio nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Điền kinh|Thể dục nghệ thuật
+3|the|Roberto Carlos nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Trượt băng nghệ thuật|Leo núi
+3|the|Roberto Firmino nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Bóng bầu dục Mỹ|Aikido
+3|the|Robin van Persie nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Quyền anh|Nhảy cầu
+3|the|Robinho nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt tuyết đổ dốc|Cờ vua|Vịnh Xuân quyền
+3|the|Romelu Lukaku nổi tiếng ở môn thể thao nào?|Bóng đá|Cờ vua|Đấu vật chuyên nghiệp|Võ thuật
+3|the|Ronald Koeman nổi tiếng ở môn thể thao nào?|Bóng đá|Kung fu|Vịnh Xuân quyền|Điền kinh
+3|the|Ruud Gullit nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Quần vợt|Taekwondo
+3|the|Ruud van Nistelrooy nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Karate|Đua ô tô
+3|the|Ryan Giggs nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng chày|Cầu lông|Đấu vật chuyên nghiệp
+3|the|Sadio Mané nổi tiếng ở môn thể thao nào?|Bóng đá|Bơi lội|Trượt băng nghệ thuật|Aikido
+3|the|Salvatore Schillaci nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Leo núi|Trượt tuyết đổ dốc
+3|the|Sami Khedira nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Bóng rổ|Thể dục nghệ thuật
+3|the|Samuel Eto'o nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Bóng rổ|Bóng bầu dục Mỹ
+3|the|Samuel Umtiti nổi tiếng ở môn thể thao nào?|Bóng đá|Võ thuật|Đấu vật chuyên nghiệp|Kung fu
+3|the|Sania Mirza nổi tiếng ở môn thể thao nào?|Quần vợt|Bóng chày|Bóng gậy|Leo núi
+3|the|Sergio Busquets nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Cờ vua|Thể dục nghệ thuật
+3|the|Sergio Ramos nổi tiếng ở môn thể thao nào?|Bóng đá|Cầu lông|Bóng chày|Karate
+3|the|Shaquille O'Neal nổi tiếng ở môn thể thao nào?|Bóng rổ|Bóng bầu dục Mỹ|Bóng gậy|Điền kinh
+3|the|Simona Halep nổi tiếng ở môn thể thao nào?|Quần vợt|Đua ô tô|Khúc côn cầu trên băng|Bóng gậy
+3|the|Son Heung-min nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Đấu vật chuyên nghiệp|Vịnh Xuân quyền
+3|the|Stanislas Wawrinka nổi tiếng ở môn thể thao nào?|Quần vợt|Trượt băng nghệ thuật|Billiards snooker|Leo núi
+3|the|Steffi Graf nổi tiếng ở môn thể thao nào?|Quần vợt|Võ thuật|Kung fu|Bóng rổ
+3|the|Steven Gerrard nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Thể dục nghệ thuật|Võ thuật
+3|the|Tenzing Norgay nổi tiếng ở môn thể thao nào?|Leo núi|Thể dục nghệ thuật|Kung fu|Bóng gậy
+3|the|Thiago Silva nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Đấu vật chuyên nghiệp|Bơi lội
+3|the|Thibaut Courtois nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng gậy|Trượt tuyết đổ dốc|Vịnh Xuân quyền
+3|the|Thomas Müller nổi tiếng ở môn thể thao nào?|Bóng đá|Trượt băng nghệ thuật|Điền kinh|Đấu vật chuyên nghiệp
+3|the|Toni Kroos nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Điền kinh|Vịnh Xuân quyền
+3|the|Ueshiba Morihei nổi tiếng ở môn thể thao nào?|Aikido|Karate|Đấu vật chuyên nghiệp|Võ thuật
+3|the|Victoria Azarenka nổi tiếng ở môn thể thao nào?|Quần vợt|Thể dục nghệ thuật|Bóng gậy|Billiards snooker
+3|the|Vincent Kompany nổi tiếng ở môn thể thao nào?|Bóng đá|Leo núi|Đua ô tô|Cờ vua
+3|the|Vinícius Júnior nổi tiếng ở môn thể thao nào?|Bóng đá|Điền kinh|Bơi lội|Taekwondo
+3|the|Virgil van Dijk nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Khúc côn cầu trên băng|Nhảy cầu
+3|the|Víctor Valdés nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Cờ vua|Trượt băng nghệ thuật
+3|the|Wayne Gretzky nổi tiếng ở môn thể thao nào?|Khúc côn cầu trên băng|Đấu vật chuyên nghiệp|Nhảy cầu|Bơi lội
+3|the|Wesley Sneijder nổi tiếng ở môn thể thao nào?|Bóng đá|Billiards snooker|Quyền anh|Trượt băng nghệ thuật
+3|the|Wesley Snipes nổi tiếng ở môn thể thao nào?|Karate|Khúc côn cầu trên băng|Thể dục nghệ thuật|Cầu lông
+3|the|Wilhelm Steinitz nổi tiếng ở môn thể thao nào?|Cờ vua|Đấu vật chuyên nghiệp|Trượt tuyết đổ dốc|Cầu lông
+3|the|Wojciech Tomasz Szczęsny nổi tiếng ở môn thể thao nào?|Bóng đá|Karate|Đua ô tô|Khúc côn cầu trên băng
+3|the|Xabi Alonso nổi tiếng ở môn thể thao nào?|Bóng đá|Khúc côn cầu trên băng|Quần vợt|Đua ô tô
+3|the|Xavi nổi tiếng ở môn thể thao nào?|Bóng đá|Aikido|Đua ô tô|Nhảy cầu
+3|the|Xherdan Shaqiri nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Thể dục nghệ thuật|Bơi lội
+3|the|Yaya Touré nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Kung fu|Cầu lông
+3|the|Yelena Isinbayeva nổi tiếng ở môn thể thao nào?|Điền kinh|Bóng chày|Đấu vật chuyên nghiệp|Kung fu
+3|the|Yulia Lipnitskaya nổi tiếng ở môn thể thao nào?|Trượt băng nghệ thuật|Bóng gậy|Bóng bầu dục Mỹ|Quyền anh
+3|the|Yuto Nagatomo nổi tiếng ở môn thể thao nào?|Bóng đá|Vịnh Xuân quyền|Võ thuật|Nhảy cầu
+3|the|Álvaro Arbeloa nổi tiếng ở môn thể thao nào?|Bóng đá|Thể dục nghệ thuật|Đấu vật chuyên nghiệp|Taekwondo
+3|the|Álvaro Morata nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Trượt băng nghệ thuật|Bóng gậy
+3|the|Ángel Di María nổi tiếng ở môn thể thao nào?|Bóng đá|Bóng bầu dục Mỹ|Bóng gậy|Quyền anh
+3|the|Éric Abidal nổi tiếng ở môn thể thao nào?|Bóng đá|Quyền anh|Vịnh Xuân quyền|Billiards snooker
+3|the|İlkay Gündoğan nổi tiếng ở môn thể thao nào?|Bóng đá|Nhảy cầu|Trượt tuyết đổ dốc|Bơi lội
 2|cn|"AutoCAD" do công ty/tổ chức nào phát triển?|Autodesk|Liên minh thiết bị cầm tay mở|Square Enix|LG Electronics
 2|cn|"Clash of Clans" do công ty/tổ chức nào phát triển?|Supercell|Đại học California tại Berkeley|Autodesk|Maxis
 2|cn|"Kotlin" do công ty/tổ chức nào phát triển?|JetBrains|The Creative Assembly|Taito|Naughty Dog
@@ -1542,16 +1542,16 @@ window.TT_ADD(`
 2|cn|"Warcraft III: Reign of Chaos" do công ty/tổ chức nào phát triển?|Blizzard Entertainment|Game Freak|Hoa Vi|LG Electronics
 2|the|Môn thể thao bóng chuyền có nguồn gốc từ quốc gia nào?|Hoa Kỳ|Thụy Điển|Nhật Bản|Vương quốc Lưu Cầu
 2|the|Môn thể thao bóng chày có nguồn gốc từ quốc gia nào?|Hoa Kỳ|Canada|Trung Quốc|Pháp
-2|the|Môn thể thao bóng gậy có nguồn gốc từ quốc gia nào?|Anh|Cao Ly|Brasil|Thái Lan
+3|the|Môn thể thao bóng gậy có nguồn gốc từ quốc gia nào?|Anh|Cao Ly|Brasil|Thái Lan
 2|the|Môn thể thao bóng rổ có nguồn gốc từ quốc gia nào?|Hoa Kỳ|Uruguay|Pháp|Liên Xô
 2|the|Môn thể thao golf có nguồn gốc từ quốc gia nào?|Scotland|Cao Ly|Trung Quốc|Anh
 2|the|Môn thể thao quần vợt có nguồn gốc từ quốc gia nào?|Anh|Vương quốc Lưu Cầu|Việt Nam|Tề
-2|nt|Phim truyền hình "Breaking Bad" được sản xuất ở quốc gia nào?|Hoa Kỳ|Chile|Brasil|Thổ Nhĩ Kỳ
-2|nt|Phim truyền hình "Game of Thrones" được sản xuất ở quốc gia nào?|Hoa Kỳ|Ukraina|Vương quốc Anh|Đức
-2|nt|Phim truyền hình "Liv and Maddie" được sản xuất ở quốc gia nào?|Hoa Kỳ|Chile|Colombia|Brasil
-2|nt|Phim truyền hình "Những người bạn" được sản xuất ở quốc gia nào?|Hoa Kỳ|Đức|Vương quốc Anh|Brasil
-2|nt|Phim truyền hình "Teletubbies" được sản xuất ở quốc gia nào?|Vương quốc Anh|Chile|Na Uy|Brasil
-2|nt|Phim truyền hình "Trò chơi con mực" được sản xuất ở quốc gia nào?|Hàn Quốc|Colombia|Brasil|Thổ Nhĩ Kỳ
+3|nt|Phim truyền hình "Breaking Bad" được sản xuất ở quốc gia nào?|Hoa Kỳ|Chile|Brasil|Thổ Nhĩ Kỳ
+3|nt|Phim truyền hình "Game of Thrones" được sản xuất ở quốc gia nào?|Hoa Kỳ|Ukraina|Vương quốc Anh|Đức
+3|nt|Phim truyền hình "Liv and Maddie" được sản xuất ở quốc gia nào?|Hoa Kỳ|Chile|Colombia|Brasil
+3|nt|Phim truyền hình "Những người bạn" được sản xuất ở quốc gia nào?|Hoa Kỳ|Đức|Vương quốc Anh|Brasil
+3|nt|Phim truyền hình "Teletubbies" được sản xuất ở quốc gia nào?|Vương quốc Anh|Chile|Na Uy|Brasil
+3|nt|Phim truyền hình "Trò chơi con mực" được sản xuất ở quốc gia nào?|Hàn Quốc|Colombia|Brasil|Thổ Nhĩ Kỳ
 2|dl|Học viện Công nghệ Massachusetts nằm ở quốc gia nào?|Hoa Kỳ|Áo|Vương quốc Anh|Serbia
 2|dl|Đại học Harvard nằm ở quốc gia nào?|Hoa Kỳ|Ireland|Syria|Pháp
 2|dl|Đại học Stanford nằm ở quốc gia nào?|Hoa Kỳ|Syria|Hàn Quốc|Ukraina

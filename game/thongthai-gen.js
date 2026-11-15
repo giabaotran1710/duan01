@@ -37,31 +37,6 @@
   const G = []; // { tiers:[...], w: trọng số, size: số câu ước tính, make(r, tier) }
   function add(tiers, size, make, w) { G.push({ tiers, size, make, w: w || 1 }); }
 
-  // Dãy số
-  add([1, 2, 3, 4, 5], 50000, (r, t) => {
-    let s = [], ans, c = [];
-    if (t === 1) { const a = int(r, 1, 30), d = int(r, 2, 9); for (let i = 0; i < 5; i++) s.push(a + i * d); ans = a + 5 * d; c = [ans + 1, ans - 1, ans + d, ans - d]; }
-    else if (t === 2) { const a = int(r, 1, 5), q = int(r, 2, 3); for (let i = 0; i < 5; i++) s.push(a * q ** i); ans = a * q ** 5; c = [ans + s[4], ans / q * (q - 1), ans + q, ans - s[3]]; }
-    else if (t === 3) { const a = int(r, 1, 20), d = int(r, 1, 5), e = int(r, 1, 3); let x = a, k = d; for (let i = 0; i < 5; i++) { s.push(x); x += k; k += e; } ans = x; c = [ans + e, ans - e, ans + 1, ans + k]; }
-    else if (t === 4) { let x = int(r, 1, 6), y = int(r, x, x + 6); s = [x, y]; for (let i = 0; i < 4; i++) s.push(s[s.length - 1] + s[s.length - 2]); ans = s[s.length - 1] + s[s.length - 2]; c = [ans + 1, ans - 1, s[s.length - 1] * 2, ans + s[s.length - 3]]; }
-    else { const m = int(r, 2, 3), p = int(r, 1, 5); let x = int(r, 1, 6); for (let i = 0; i < 6; i++) { s.push(x); x = i % 2 === 0 ? x * m : x + p; } ans = x; c = [ans + p, ans * m, ans - p, s[s.length - 1] * m + p]; }
-    return numQ(r, `Số tiếp theo của dãy: ${s.map(fmt).join(', ')}, ... là?`, ans, c, 'Tư duy');
-  }, 1.2);
-
-  // ---------- Hình học ----------
-  add([1, 2, 3, 4, 5], 3000, (r, t) => {
-    if (t === 1) { if (r() < .5) { const a = int(r, 2, 15); return numQ(r, `Hình vuông có cạnh ${a} cm thì chu vi là bao nhiêu?`, 4 * a, [a * a, 2 * a, 4 * a + 4, 3 * a], 'Hình học', ' cm', 1); }
-      const a = int(r, 3, 20), b = int(r, 2, a - 1); return numQ(r, `Hình chữ nhật dài ${a} cm, rộng ${b} cm có chu vi bao nhiêu?`, 2 * (a + b), [a + b, a * b, 2 * a + b, 2 * (a + b) + 2], 'Hình học', ' cm', 1); }
-    if (t === 2) { const a = int(r, 3, 25), b = int(r, 2, a); return numQ(r, `Hình chữ nhật dài ${a} m, rộng ${b} m có diện tích bao nhiêu?`, a * b, [2 * (a + b), a * b + a, a * b - b, a + b], 'Hình học', ' m²', 1); }
-    if (t === 3) { if (r() < .5) { const a = int(r, 3, 30), h = int(r, 1, 15) * 2; return numQ(r, `Tam giác có đáy ${a} cm, chiều cao ${h} cm thì diện tích là?`, a * h / 2, [a * h, a + h, a * h / 2 + a, a * h / 4].filter(Number.isInteger), 'Hình học', ' cm²', 1); }
-      const n = int(r, 5, 12); return numQ(r, `Tổng số đo các góc trong của một đa giác lồi ${n} cạnh là?`, (n - 2) * 180, [n * 180, (n - 1) * 180, (n - 3) * 180, 360 * n / 2], 'Hình học', '°', 1); }
-    if (t === 4) { if (r() < .5) { const tr = pick(r, [[3, 4, 5], [5, 12, 13], [8, 15, 17], [7, 24, 25], [20, 21, 29]]), k = int(r, 1, tr[0] === 3 ? 6 : 2);
-        const [a, b, c] = tr.map(x => x * k); return numQ(r, `Tam giác vuông có hai cạnh góc vuông ${a} cm và ${b} cm. Cạnh huyền dài bao nhiêu?`, c, [a + b, c + 1, c - 1, c + k, b + 1], 'Hình học', ' cm', 1); }
-      const rr = int(r, 1, 10), ans = Math.round(rr * rr * 314) / 100; return numQ(r, `Hình tròn bán kính ${rr} cm có diện tích bao nhiêu? (lấy π = 3,14)`, ans, [Math.round(2 * rr * 314) / 100, Math.round(rr * 314) / 100, Math.round(rr * rr * 4 * 314) / 100, ans + 1].filter(x => x !== ans), 'Hình học', ' cm²', 0); }
-    if (r() < .5) { const n = int(r, 6, 20); return numQ(r, `Một đa giác lồi ${n} cạnh có bao nhiêu đường chéo?`, n * (n - 3) / 2, [n * (n - 1) / 2, n * (n - 3), n * (n - 2) / 2, n * (n - 3) / 2 + n], 'Hình học', '', 1); }
-    const a = int(r, 2, 12), b = int(r, 2, 12), c = int(r, 2, 12); return numQ(r, `Hình hộp chữ nhật có kích thước ${a} × ${b} × ${c} (cm) có diện tích toàn phần là?`, 2 * (a * b + b * c + a * c), [a * b * c, a * b + b * c + a * c, 2 * (a * b + b * c + a * c) + 2 * a, 4 * (a + b + c)], 'Hình học', ' cm²', 1);
-  }, 1.2);
-
   // Góc giữa kim giờ và kim phút
   add([4, 5], 288, (r, t) => {
     const h = int(r, 1, 12), m = t === 4 ? pick(r, [0, 30]) : int(r, 1, 11) * 5;

@@ -304,13 +304,15 @@ header .mid small{color:var(--muted);font-size:12.5px}
 <footer class="tbFooter">Version: D20261114040000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261103ban"></script>
 <script src="thongthai-bank.js?v=2"></script>
-<script src="thongthai-bank2.js?v=2"></script>
+<script src="thongthai-bank2.js?v=3"></script>
 <script src="thongthai-bank3.js?v=3"></script>
-<script src="thongthai-bank4.js?v=1"></script>
-<script src="thongthai-bank5.js?v=1"></script>
-<script src="thongthai-wiki.js?v=1"></script>
+<script src="thongthai-bank4.js?v=2"></script>
+<script src="thongthai-bank5.js?v=2"></script>
+<script src="thongthai-bank6.js?v=1"></script>
+<script src="thongthai-bank7.js?v=1"></script>
+<script src="thongthai-wiki.js?v=2"></script>
 <script src="thongthai-wiki2.js?v=1"></script>
-<script src="thongthai-gen.js?v=1"></script>
+<script src="thongthai-gen.js?v=2"></script>
 <script>
 (function () {
   'use strict';
@@ -322,7 +324,7 @@ header .mid small{color:var(--muted);font-size:12.5px}
   const TIER_OF = i => Math.min(5, Math.floor(i / 3) + 1);
   const TIER_NAME = ['', 'Dễ', 'Vừa', 'Khó', 'Rất khó', 'Siêu khó'];
   const TIME = [0, 30, 30, 45, 45, 60];              // giây cho mỗi câu theo mức
-  const HAND_RATIO = [0, .55, .6, .62, .58, .55];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
+  const HAND_RATIO = [0, 1, .75, .62, .58, .55];     // tỉ lệ lấy câu viết tay (còn lại là câu sinh tự động)
   const KEYS = ['A', 'B', 'C', 'D'];
   const fmt = n => n.toLocaleString('vi-VN');
 
@@ -375,10 +377,22 @@ header .mid small{color:var(--muted);font-size:12.5px}
       const drop = new Set(BANK.filter(q => q.tier === tier).map(q => q.key));
       save.seen = save.seen.filter(k => !drop.has(k)); fresh = pool;
     }
+    // Chọn đều theo chủ đề (không theo số câu) để chủ đề đông câu như Địa lý không lấn át; tránh lặp chủ đề của 2 câu liền trước.
+    const recent = G.recentCats || (G.recentCats = []);
+    const avoid = c => recent.length && recent.slice(-2).every(x => x === c);
+    const pickHand = () => {
+      const cnt = {}; fresh.forEach(x => { cnt[x.cat] = (cnt[x.cat] || 0) + 1; });
+      let cats = Object.keys(cnt); const ok = cats.filter(c => !avoid(c)); if (ok.length) cats = ok;
+      let r = rnd() * cats.reduce((a, c) => a + Math.sqrt(cnt[c]), 0), c = cats[0];   // trọng số căn bậc hai: chủ đề ít câu không bị lặp quá nhiều
+      for (const k of cats) { r -= Math.sqrt(cnt[k]); if (r <= 0) { c = k; break; } }
+      return pick(fresh.filter(x => x.cat === c));
+    };
     let q = null;
-    if (fresh.length && (rnd() < HAND_RATIO[tier] || !GEN)) q = pick(fresh);
-    if (!q && GEN) for (let k = 0; k < 30 && !q; k++) { const g = GEN.make(tier); if (g && !G.usedKeys.has(g.key)) q = g; }
+    if (fresh.length && (rnd() < HAND_RATIO[tier] || !GEN)) q = pickHand();
+    if (!q && GEN) for (let k = 0; k < 30 && !q; k++) { const g = GEN.make(tier); if (g && !G.usedKeys.has(g.key) && (k > 20 || !avoid(g.cat) && (g.cat !== 'Địa lý' || rnd() < .3))) q = g; }
+    if (!q && fresh.length) q = pickHand();
     if (!q) q = pick(fresh.length ? fresh : pool);
+    recent.push(q.cat);
     G.usedKeys.add(q.key);
     if (q.key[0] === 'b') { save.seen.push(q.key); if (save.seen.length > 4000) save.seen = save.seen.slice(-4000); }
     return { q: q.q, cat: q.cat, tier, opts: shuffle(q.a.map((t, k) => ({ t, ok: k === 0 }))) };

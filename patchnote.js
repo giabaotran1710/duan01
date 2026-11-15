@@ -1,5 +1,5 @@
 // Patch Note trên trang chủ: đọc patchnote.txt (sửa trực tiếp trên GitHub), hiển thị thành bảng thông báo.
-// - Tự bật sau intro khi nội dung mới (mỗi bản 1 lần, theo @hienthi trong file); nút góc trên phải để xem lại.
+// - Có bản mới: sau intro hiện dải báo nhỏ ở đáy (mỗi bản 1 lần, theo @hienthi trong file); bấm Xem hoặc nút góc trên phải để đọc đầy đủ.
 // - Chỉ hỗ trợ một tập Markdown nhỏ; mọi HTML trong file đều bị escape.
 (function () {
   'use strict';
@@ -159,6 +159,15 @@
     '#pn-btn:focus-visible,#pn-x:focus-visible,#pn-ok:focus-visible{outline:2px solid #8cc0ff;outline-offset:2px}' +
     '@media (max-width:480px){#pn-body{font-size:14px;padding:2px 16px 8px}#pn-body h2{font-size:19px}#pn-head{padding-left:16px}}' +
     '@media (max-height:500px){#pn-head{padding:8px 10px 8px 16px}#pn-x{width:32px;height:32px}#pn-foot{padding:8px 14px}#pn-ok{padding:8px 20px}#pn-body h2{font-size:18px;margin-top:8px}}' +
+    '#pn-toast{position:fixed;left:50%;bottom:calc(18px + env(safe-area-inset-bottom,0px));z-index:8000;display:flex;align-items:center;gap:10px;' +
+      'max-width:calc(100% - 24px);width:max-content;padding:10px 10px 10px 16px;border-radius:14px;color:#e8ecf6;' +
+      'background:linear-gradient(160deg,rgba(30,36,60,.97),rgba(13,17,30,.97));border:1px solid rgba(255,255,255,.16);box-shadow:0 14px 40px rgba(0,0,0,.5);' +
+      'font:14px/1.35 "Quicksand","Segoe UI",system-ui,sans-serif;transform:translate(-50%,140%);opacity:0;transition:transform .3s ease,opacity .3s ease}' +
+    '#pn-toast.pn-show{transform:translate(-50%,0);opacity:1}' +
+    '#pn-toast b{color:#ffd166;font-weight:700}#pn-toast .pn-t-txt{min-width:0}' +
+    '#pn-toast .pn-t-go{flex:none;font:700 13px "Exo 2","Segoe UI",sans-serif;padding:8px 14px;border:0;border-radius:10px;color:#fff;cursor:pointer;background:linear-gradient(135deg,#4f8cff,#7a5cff)}' +
+    '#pn-toast .pn-t-x{flex:none;width:30px;height:30px;border:0;border-radius:8px;background:rgba(255,255,255,.07);color:#cfd6e6;font-size:18px;line-height:1;cursor:pointer}' +
+    '@media (prefers-reduced-motion:reduce){#pn-toast{transition:none}}' +
     '@media (prefers-reduced-motion:reduce){#pn-overlay,#pn-card{transition:none}#pn-btn .pn-dot{animation:none}}';
 
   var note = null, btn = null, overlay = null, lastFocus = null;
@@ -247,6 +256,52 @@
     if (lastFocus && lastFocus.focus && document.contains(lastFocus)) lastFocus.focus({ preventScroll: true });
   }
 
+  // Dải báo nhỏ ở đáy màn hình thay cho việc tự bật cả bảng Patch note đè lên danh sách game.
+  // Bấm "Xem" mới mở bảng đầy đủ; bấm × coi như đã xem; tự ẩn sau 12 giây (chấm đỏ trên nút vẫn còn).
+  function summary(n) {
+    var d = document.createElement('div');
+    d.innerHTML = n.html;
+    var h2 = d.querySelector('h2');
+    var title = h2 ? h2.textContent.trim() : 'Có bản cập nhật mới';
+    // Chỉ đếm game trong mục "RA MẮT" của bản cập nhật mới nhất (dừng ở tiêu đề bản cập nhật thứ hai)
+    var games = 0, inLaunch = false, versions = 0, hs = d.querySelectorAll('h2, h3, h4');
+    for (var i = 0; i < hs.length; i++) {
+      var h = hs[i];
+      if (h.tagName === 'H2') { if (++versions > 1) break; continue; }
+      if (h.tagName === 'H4') { inLaunch = /RA MẮT/i.test(h.textContent); continue; }
+      if (inLaunch) games++;
+    }
+    return { title: title, games: games };
+  }
+
+  var toast = null;
+  function showToast() {
+    if (toast || !note || note.empty) return;
+    var sm = summary(note);
+    toast = document.createElement('div');
+    toast.id = 'pn-toast';
+    toast.setAttribute('role', 'status');
+    toast.innerHTML = '<span aria-hidden="true">📋</span><span class="pn-t-txt"><b></b><span class="pn-t-sub"></span></span>' +
+      '<button type="button" class="pn-t-go">Xem</button><button type="button" class="pn-t-x" aria-label="Đóng">×</button>';
+    toast.querySelector('b').textContent = sm.title;
+    toast.querySelector('.pn-t-sub').textContent = sm.games ? ' · ' + sm.games + ' trò chơi mới' : '';
+    toast.addEventListener('click', function (e) {
+      e.stopPropagation();
+      if (e.target.closest('.pn-t-go')) { hideToast(); open(); }
+      else if (e.target.closest('.pn-t-x')) { hideToast(); markSeen(); }
+    });
+    document.body.appendChild(toast);
+    requestAnimationFrame(function () { requestAnimationFrame(function () { if (toast) toast.classList.add('pn-show'); }); });
+    toast._t = setTimeout(hideToast, 12000);
+  }
+  function hideToast() {
+    if (!toast) return;
+    var el = toast; toast = null;
+    clearTimeout(el._t);
+    el.classList.remove('pn-show');
+    setTimeout(function () { el.remove(); }, 320);
+  }
+
   // Đợi intro kết thúc (overlay intro bị gỡ khỏi trang) rồi mới tự bật
   function afterIntro(cb) {
     if (!document.getElementById('intro-overlay')) { cb(); return; }
@@ -269,7 +324,7 @@
       ensureButton();
       if (n.empty || n.mode === 'tat') return;
       if (n.mode !== 'moilan' && store(SEEN_KEY) === n.id) return;
-      afterIntro(function () { setTimeout(open, 600); });
+      afterIntro(function () { setTimeout(showToast, 900); });
     }).catch(function () { /* không đọc được file (mở offline / file://) → bỏ qua */ });
   }
 

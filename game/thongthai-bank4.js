@@ -442,7 +442,6 @@ window.TT_ADD(`
 3|toan|Số π làm tròn đến 4 chữ số thập phân là bao nhiêu?|3,1416|3,1415|3,1428|3,1406
 5|toan|Số hoàn hảo nhỏ nhất (bằng tổng các ước thực sự của nó) là số nào?|6|28|12|1
 3|toan|Căn bậc hai của 2 là loại số nào?|Số vô tỉ|Số nguyên|Số hữu tỉ|Số chính phương
-4|toan|Thể tích khối cầu bán kính r được tính theo công thức nào?|4/3·π·r³|4·π·r²|π·r³|2/3·π·r³
 4|toan|Một radian xấp xỉ bằng bao nhiêu độ?|57,3°|45°|60°|90°
 4|toan|Hệ trục tọa độ vuông góc được gọi theo tên nhà toán học nào?|René Descartes|Blaise Pascal|Pierre de Fermat|Leonhard Euler
 4|toan|Cùng với Isaac Newton, ai được coi là người sáng lập phép tính vi tích phân?|Gottfried Leibniz|Leonhard Euler|Carl Friedrich Gauss|Blaise Pascal

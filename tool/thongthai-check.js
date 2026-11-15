@@ -9,6 +9,8 @@ require(path.join(__dirname, '../game/thongthai-bank2.js'));
 require(path.join(__dirname, '../game/thongthai-bank3.js'));
 require(path.join(__dirname, '../game/thongthai-bank4.js'));
 require(path.join(__dirname, '../game/thongthai-bank5.js'));
+require(path.join(__dirname, '../game/thongthai-bank6.js'));
+require(path.join(__dirname, '../game/thongthai-bank7.js'));
 require(path.join(__dirname, '../game/thongthai-wiki.js'));
 require(path.join(__dirname, '../game/thongthai-wiki2.js'));
 require(path.join(__dirname, '../game/thongthai-gen.js'));

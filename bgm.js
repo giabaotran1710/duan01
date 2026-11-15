@@ -10,7 +10,7 @@
   var vol = parseFloat(me.getAttribute('data-volume'));
   var bgm = new Audio(me.getAttribute('data-src'));
   bgm.loop = true;
-  bgm.preload = 'auto';
+  bgm.preload = 'none';   /* chỉ tải nhạc khi bắt đầu phát (lần chạm đầu), không tốn mạng lúc mở trang */
   bgm.volume = isNaN(vol) ? 0.35 : Math.max(0, Math.min(1, vol));
 
   /* giữ các lắng nghe này suốt trang: nếu trình duyệt chặn phát lại sau khi quay lại tab, lần chạm kế tiếp sẽ bật lại nhạc */
