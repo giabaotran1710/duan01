@@ -896,10 +896,12 @@ var MD = (function(){
       if(R()<0.5) g=mirror(g);
       var map=g.map(function(row){ return row.join(''); }), L=parse(map);
       if(validate(L).length) continue;
-      var s=solve(L,{maxT:31,cap:1200,q:4,trace:true}); // hầm dài hơn 30 giây vốn bị bỏ, nên không cần tìm lâu hơn
+      // giải thô trước để bỏ sớm bản dựng hỏng, chỉ bản đạt mới giải kỹ (hầm dài hơn 30 giây vốn bị bỏ)
+      if(lay!=='room'){ var sq=solve(L,{maxT:31,cap:500,q:6}); if(sq.all===null && sq.first===null) continue; }
+      var s=solve(L,{maxT:31,cap:1200,q:4,trace:true});
       if(s.first===null || s.all===null) continue;
       // hầm quá dễ thở (chạm lệch nhịp vẫn hiếm khi ngã) thì dựng lại; phòng gọn đã tự đo khi đặt bẫy; sau 8 lần thử thì nhận bản qua được
-      if(lay!=='room' && attempt<8 && s.path && jitter(L,s.path,24,n*31+attempt)<0.35+0.3*d) continue;
+      if(lay!=='room' && attempt<8 && s.path && jitter(L,s.path,24,n*31+attempt)<(lay==='hall'?0.5:0.35)+0.3*d) continue;
       if(s.first<(lay==='room'?3:5) || s.all>30) continue; // quá ngắn hoặc quá dài: bỏ (phòng gọn thì ngắn hơn nhưng nhiều bẫy chặn đường)
       var nm=th.place[n%th.place.length]+' '+NAME_B[(n+Math.floor(n/th.place.length)*3)%NAME_B.length];
       return {name:nm, map:map, par:Math.ceil(s.all*1.35+2), best:s.first, tries:attempt+1, theme:themeOf(n), lay:lay};
@@ -931,7 +933,7 @@ var cv=$('cv'), ctx=cv.getContext('2d'), box=$('box');
 var reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- Lưu trữ ---------- */
-var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=6;
+var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=7;
 // stars/best: theo số hầm (bắt đầu từ 1); maxN: hầm xa nhất đã qua; gen: hầm đã dựng sẵn
 var save={stars:{},best:{},maxN:0,mute:false,gen:{},gv:GEN_VER};
 try{ var raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
