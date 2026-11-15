@@ -698,7 +698,7 @@ var MD = (function(){
         }
         else if(kind==='cannonSide'){ // đại bác gắn vách bắn ngang qua tầng, phải nhảy qua đạn
           if(side>=2 || ln.bottom || !(ln.lo<=1 || ln.hi>=30)) { g[F-1][c]='^'; }
-          else { var lft = ln.lo<=1 && (ln.hi<30 || R()<0.5); var rr1=F-1; if(lft && g[rr1][1]!=='S'){ g[rr1][0]='1'; side++; } else if(!lft && g[rr1][30]!=='s'){ g[rr1][31]='5'; side++; } else g[F-1][c]='^'; continue; }
+          else { var lft = ln.lo<=1 && (ln.hi<30 || R()<0.5); var rr1=F-1; if(/[CSs]/.test(g[rr1].join(''))) { g[F-1][c]='^'; continue; } if(lft && g[rr1][1]!=='S'){ g[rr1][0]='1'; side++; } else if(!lft && g[rr1][30]!=='s'){ g[rr1][31]='5'; side++; } else g[F-1][c]='^'; continue; }
         }
         else if(kind==='chaser'){
           if(!free(c,4)) { g[F-1][c]='^'; }
@@ -709,7 +709,7 @@ var MD = (function(){
           if(kind==='rail'){
             if(ln.h<4) { g[F-1][c]='^'; }
             else { var rr=ln.ceil===0?3:ln.ceil+1, q0=Math.max(ln.lo,c-4), q1=Math.min(ln.hi,c+4);
-              if(F-rr<3 || g[rr][c]!=='.') { g[F-1][c]='^'; } else { if(g[rr][q0]==='.') g[rr][q0]='!'; if(g[rr][q1]==='.') g[rr][q1]='!'; g[rr][c]='W'; for(var u5=q0;u5<=q1;u5++) used.push(u5); } }
+              if(F-rr<3 || g[rr][c]!=='.' || /C/.test(g[rr].join('')+g[rr+1].join(''))) { g[F-1][c]='^'; } else { if(g[rr][q0]==='.') g[rr][q0]='!'; if(g[rr][q1]==='.') g[rr][q1]='!'; g[rr][c]='W'; for(var u5=q0;u5<=q1;u5++) used.push(u5); } }
           } else { // ray bắn lên đặt trên sàn tầng dưới, bắn xuyên qua tầng đang đứng
             var q2=Math.max(ln.lo,c-3), q3=Math.min(ln.hi,c+3);
             if(ln.h<3) { g[F-1][c]='^'; } else { if(g[F-1][q2]==='.') g[F-1][q2]='!'; if(g[F-1][q3]==='.') g[F-1][q3]='!'; g[F-1][c]='M'; for(var u6=q2;u6<=q3;u6++) used.push(u6); }
@@ -727,10 +727,12 @@ var MD = (function(){
       var mid=lanes[2], kc=ri(R,mid.lo+3,mid.hi-3);
       if(g[mid.F-2][kc]==='.' && g[mid.F-1][kc]==='.'){
         g[mid.F-2][kc]='K';
-        var dc= o.last.right ? 6 : 25; for(var r=1;r<o.top;r++) if(g[r][dc]==='.') g[r][dc]='D';
+        var dc= o.last.right ? 6 : 25, okd=true; for(var r=1;r<o.top;r++) if(g[r][dc]==='C'||g[r][dc]==='K') okd=false;
+        // cửa chắn kín cả cột (đè lên ván, ngọc, bẫy nếu có) để không lách qua được khi chưa có chìa
+        if(okd) for(var r1=1;r1<o.top;r1++) g[r1][dc]='D'; else g[mid.F-2][kc]='.';
       }
     }
-    if(!gems){ var ln0=lanes[lanes.length-1]; for(var t=0;t<30;t++){ var cg=ri(R,ln0.lo+2,ln0.hi-2); if(g[ln0.F-2] && g[ln0.F-2][cg]==='.' && g[ln0.F-1][cg]==='.'){ g[ln0.F-2][cg]='*'; break; } } }
+    for(var li=lanes.length-1; !gems && li>=0; li--){ var ln0=lanes[li]; for(var t=0;t<30;t++){ var cg=ri(R,ln0.lo+2,ln0.hi-2); if(g[ln0.F-2] && g[ln0.F-2][cg]==='.' && g[ln0.F-1][cg]==='.'){ g[ln0.F-2][cg]='*'; gems++; break; } } }
   }
   function mirror(g){ return g.map(function(row){ return row.slice().reverse().map(function(ch){ return ch==='S'?'s':ch==='s'?'S':ch==='1'?'5':ch==='5'?'1':ch==='2'?'4':ch==='4'?'2':ch; }); }); }
   function buildLevel(n,R,lay,d){
@@ -747,7 +749,8 @@ var MD = (function(){
     for(var attempt=0; attempt<40; attempt++){
       var R=rng(n*7919+attempt*104729+17);
       // thử nhiều lần không được thì đổi sang kiểu địa hình khác của khu
-      var lay = attempt<14 ? base : th.lay[(th.lay.indexOf(base)+1+Math.floor(attempt/14))%th.lay.length];
+      var others=th.lay.filter(function(x){ return x!==base; });
+      var lay = attempt<14 ? base : others[Math.floor(attempt/14-1)%others.length];
       var g=buildLevel(n,R,lay,d);
       if(R()<0.5) g=mirror(g);
       var map=g.map(function(row){ return row.join(''); }), L=parse(map);
@@ -1011,6 +1014,7 @@ function openMenu(){ mode='menu'; paused=false; waiting=0; showHud(false); $('ta
   showOv('menu');
   request(next);
   var lv=levelData(next)||LEVELS[Math.min(next,HAND)-1];
+  setTheme(levelData(next)?next:Math.min(next,HAND));
   L=MD.parse(lv.map); S=MD.newRun(L); staticDirty=true; started=false;
 }
 var page=0, PER=10;
