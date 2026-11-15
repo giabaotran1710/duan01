@@ -68,6 +68,7 @@ Mức lỗi: **P0** game không chơi được / mất dữ liệu; **P1** sai l
 - Hoạt ảnh canvas kiểm bằng cách đặt thời gian giả hoặc chụp nhiều khung; hoạt ảnh CSS kiểm bằng `document.getAnimations()`.
 - Mỗi thay đổi người chơi thấy được thì thêm vào `patchnote.txt` (mục "CẬP NHẬT VỀ TRÒ CHƠI" của ngày mới nhất), trừ khi người dùng nói đó là bí mật.
 - Cách viết patchnote: **ngắn gọn nhưng đủ ý** để người chơi hiểu bản cập nhật có gì. Mỗi trò chơi một mục `## Tên trò chơi` riêng, mỗi ý một dòng ngắn. Không liệt kê dài tên thẻ/cổ vật, không ghi con số cân bằng hay cách tính, không nhắc tên file hay thuật ngữ kỹ thuật nội bộ. Văn tự nhiên, không máy móc.
+- Game chỉ chơi màn hình ngang dùng lõi chung `../landscape.js` (`LandscapeGate.bind(nútOK, {note, onSkip, onOk})`): lớp phủ "Xoay ngang điện thoại" chỉ có một nút **OK**, bấm vào thì vào toàn màn hình và khóa hướng ngang để máy tự xoay. Máy không hỗ trợ (iPhone) thì hiện ghi chú nhờ xoay tay, bấm OK lần nữa mới chơi ở màn hình dọc. Việc hiện/ẩn lớp phủ do từng game tự quyết theo kích thước khung nhìn; mẫu: `game/meodem.html`, `game/kelacdoan.html`. Không viết lại cách xoay riêng cho từng game.
 - Trả lời người dùng bằng tiếng Việt, gửi ảnh khi đổi giao diện.
 
 ## 5. Chọn công nghệ đồ họa theo mục đích
