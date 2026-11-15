@@ -510,18 +510,25 @@ var MD = (function(){
   }
 
   // Chọn bộ bẫy cho hầm: luôn có bẫy đặc trưng của khu, tối đa 4 loại, hầm đầu khu chỉ dạy bẫy đặc trưng
-  function kindsFor(R,n,lay){
-    var ti=themeOf(n), th=THEMES[ti], p=(n-11)%10, z=zoneOf(n), pool=th.kinds.slice(), out=[];
+  function kindsRaw(n,lay,avoid){
+    var ti=themeOf(n), th=THEMES[ti], p=(n-11)%10, z=zoneOf(n), pool=th.kinds.slice(), out=[], R=rng(n*977+3);
     if(z>=THEMES.length){ var o=THEMES[(ti+1+(z%5))%THEMES.length]; o.kinds.forEach(function(k){ if(pool.indexOf(k)<0) pool.push(k); }); }
     var sig = th.sig==='key' ? null : th.sig;
     if(sig==='chaserV' && lay!=='shaft') sig='vspike';
     if(sig) out.push(sig);
     var want = p===0 ? 1 : p===4 ? 2 : p<4 ? 3 : 4;
     if(p===0) out.push('spike');
-    var tries=0;
-    while(out.length<want && tries<40){ tries++; var k=pick(R,pool); if(k==='chaserV' && lay!=='shaft') continue; if(out.indexOf(k)<0) out.push(k); }
+    // ưu tiên bẫy phụ mà hầm ngay trước không dùng, để hai hầm liền nhau khác cảm giác
+    var fresh=pool.filter(function(k){ return out.indexOf(k)<0 && (!avoid || avoid.indexOf(k)<0) && !(k==='chaserV' && lay!=='shaft'); });
+    var rest=pool.filter(function(k){ return out.indexOf(k)<0 && fresh.indexOf(k)<0 && !(k==='chaserV' && lay!=='shaft'); });
+    [fresh,rest].forEach(function(arr){ while(out.length<want && arr.length){ var i=Math.floor(R()*arr.length); out.push(arr.splice(i,1)[0]); } });
     return out;
   }
+  function kindsFor(R,n,lay){
+    var prev = (n>11 && zoneOf(n-1)===zoneOf(n)) ? kindsRaw(n-1,layoutOf(n-1),null).slice(1) : null;
+    return kindsRaw(n,lay,prev);
+  }
+
 
   // Kiểu 1: các tầng zíc zắc nối bằng ván một chiều, khoảng cách tầng thay đổi, sàn có mô đá, bậc, ván phụ
   function genTiers(R,d,opt){
@@ -740,28 +747,39 @@ var MD = (function(){
     if(s.all===null || !s.path || s.first<2.8) return null;
     var placed=0, tries=0, path=s.path, t0=Date.now();
     var near=function(c,r,o){ return Math.abs(c-o.c)<=2 && Math.abs(r-o.r)<=2; };
-    var target=0.45+0.35*d, jd=0, L3=null;
+    var target=0.45+0.35*d, jd=0, order=kinds.slice();
+    for(var oi=order.length-1;oi>0;oi--){ var oj=Math.floor(R()*(oi+1)), ot=order[oi]; order[oi]=order[oj]; order[oj]=ot; }
     // đặt đủ số bẫy, rồi đặt thêm (tối đa 9) nếu đường đi vẫn còn dễ thở
     while((placed<want || (jd<target && placed<9)) && tries<want*6 && Date.now()-t0<15000){
       tries++;
       var pts=path.filter(function(p){ return p.t>1.2; }); if(pts.length<6) break;
-      var P=pts[Math.floor(R()*(pts.length-4))], kind=pick(R,kinds), cx=Math.floor((P.x+9)/T), cy=Math.floor((P.y+13)/T), cells=[];
+      var P=pts[Math.floor(R()*(pts.length-4))], kind=order[(placed+tries)%order.length], cx=Math.floor((P.x+9)/T), cy=Math.floor((P.y+13)/T), cells=[];
       if(near(cx,cy,info.start) || near(cx,cy,info.chest)) continue;
       var floorBelow = g[cy+1] && g[cy+1][cx]==='#';
+      var ceilAbove=function(){ var rc=cy; while(rc>0 && g[rc-1][cx]==='.') rc--; return (rc>0 && g[rc-1][cx]==='#') ? rc-1 : -1; };
+      var wallSide=function(){ var dir=R()<0.5?-1:1; for(var tt2=0;tt2<2;tt2++,dir=-dir){ var xx=cx; while(xx>0 && xx<31 && g[cy][xx]==='.') xx+=dir; if(g[cy][xx]==='#' && Math.abs(xx-cx)>=3) return {c:xx,dir:dir}; } return null; };
       if(P.gr && floorBelow){
         if(kind==='fire') cells=[[cy+1,cx,R()<0.5?'F':'f']];
         else if(kind==='crumble') cells=[[cy+1,cx-1,'='],[cy+1,cx,'='],[cy+1,cx+1,'=']];
         else if(kind==='sawH'||kind==='chaser'){ var a0=cx-3, a1=cx+3; cells=[[cy,cx,kind==='sawH'?'H':'X']]; if(g[cy][a0]==='.') cells.push([cy,a0,'!']); if(g[cy][a1]==='.') cells.push([cy,a1,'!']); }
+        else if(kind==='railUp'){ var b0=cx-3, b1=cx+3; cells=[[cy,cx,'M']]; if(g[cy][b0]==='.') cells.push([cy,b0,'!']); if(g[cy][b1]==='.') cells.push([cy,b1,'!']); }
+        else if(kind==='spring') cells=[[cy,cx,'T']];
+        else if(kind==='cannonSide'){ var ws=wallSide(); if(ws) cells=[[cy,ws.c,ws.dir>0?'5':'1']]; }
+        else if(kind==='cannon'||kind==='aim'){ var ca=ceilAbove(); if(ca>0 && cy-ca<=6) cells=[[ca,cx,kind==='aim'?'Q':'3']]; }
+        else if(kind==='vspike'){ var cv2=ceilAbove(); if(cv2>0 && cy-cv2<=4 && g[cv2+1][cx]==='.') cells=[[cv2+1,cx,'v']]; }
+        else if(kind==='orbit') cells=[[cy-1,cx,'O']];
         else cells=[[cy,cx,'^']];
       } else if(!P.gr){
-        if(kind==='orbit'||kind==='spring'||kind==='chaserV') cells=[[cy+pick(R,[-1,0,1]),cx+pick(R,[-1,1]),'O']];
+        if(kind==='orbit'||kind==='chaserV') cells=[[cy+pick(R,[-1,0,1]),cx+pick(R,[-1,1]),'O']];
         else if(kind==='sawV') cells=[[cy,cx,'V']];
-        else if(kind==='cannon'||kind==='rail'||kind==='railUp'||kind==='aim'||kind==='cannonSide'){ var rc=cy; while(rc>0 && g[rc-1][cx]==='.') rc--; if(rc>0 && g[rc-1][cx]==='#' && rc-1>0) cells=[[rc-1,cx,'3']]; }
-        else if(kind==='vspike'){ var rv=cy; while(rv>0 && g[rv-1][cx]==='.') rv--; if(cy-rv<=3) cells=[[rv,cx,'v']]; }
+        else if(kind==='cannon'||kind==='aim'||kind==='rail'){ var cc2=ceilAbove(); if(cc2>0){ if(kind==='rail'){ var w0=cx-4, w1=cx+4; if(g[cc2+1][cx]==='.'){ cells=[[cc2+1,cx,'W']]; if(g[cc2+1][w0]==='.') cells.push([cc2+1,w0,'!']); if(g[cc2+1][w1]==='.') cells.push([cc2+1,w1,'!']); } } else cells=[[cc2,cx,kind==='aim'?'Q':'3']]; } }
+        else if(kind==='cannonSide'){ var ws2=wallSide(); if(ws2) cells=[[cy,ws2.c,ws2.dir>0?'5':'1']]; }
+        else if(kind==='vspike'){ var rv=ceilAbove(); if(rv>0 && cy-rv<=3) cells=[[rv+1,cx,'v']]; }
+        else if(kind==='sawH'){ cells=[[cy,cx,'H']]; if(g[cy][cx-3]==='.') cells.push([cy,cx-3,'!']); if(g[cy][cx+3]==='.') cells.push([cy,cx+3,'!']); }
         else cells=[[cy,cx,'O']];
       }
       if(!cells.length) continue;
-      var okc=true; cells.forEach(function(q){ var ch=g[q[0]]&&g[q[0]][q[1]]; if(ch===undefined) okc=false; else if(q[2]==='F'||q[2]==='f'||q[2]==='='||q[2]==='3'){ if(ch!=='#') okc=false; } else if(ch!=='.') okc=false; if(q[0]<=0||q[0]>=17||q[1]<=0||q[1]>=31) { if(q[2]!=='3') okc=false; } });
+      var okc=true; cells.forEach(function(q){ var ch=g[q[0]]&&g[q[0]][q[1]]; if(ch===undefined) okc=false; else if(q[2]==='F'||q[2]==='f'||q[2]==='='||q[2]==='3'||q[2]==='Q'||q[2]==='1'||q[2]==='5'){ if(ch!=='#') okc=false; } else if(ch!=='.') okc=false; if(q[0]<=0||q[0]>=17||q[1]<=0||q[1]>=31) { if(!/[3Q15]/.test(q[2])) okc=false; } });
       if(!okc) continue;
       var old=cells.map(function(q){ return g[q[0]][q[1]]; });
       cells.forEach(function(q){ g[q[0]][q[1]]=q[2]; });
@@ -863,7 +881,7 @@ var MD = (function(){
     if(lay==='hall') return genHall(R,d,opt);
     if(lay==='roofs') return genRoofs(R,d,opt);
     if(lay==='shaft') return genShaft(R,d,opt);
-    if(lay==='room'){ var rm=genRoom(R,d,opt); var want=Math.max(4,Math.min(7,3+Math.round(d*3)+(((n-11)%10)===9?1:0)-(((n-11)%10)===4?1:0))); var jd=trapRoom(R,rm.g,rm.room,kinds.filter(function(k){ return k!=='key'; }),d,want); if(jd===null || jd<0.25+0.35*d) return null; return rm.g; }
+    if(lay==='room'){ var rm=genRoom(R,d,opt); var want=Math.max(4,Math.min(7,3+Math.round(d*3)+(((n-11)%10)===9?1:0)-(((n-11)%10)===4?1:0))); var jd=trapRoom(R,rm.g,rm.room,kinds.filter(function(k){ return k!=='key'; }),d,want); if(jd===null || jd<0.4+0.3*d) return null; return rm.g; }
     return genTiers(R,d,opt);
   }
   function gen(n){
@@ -911,7 +929,7 @@ var cv=$('cv'), ctx=cv.getContext('2d'), box=$('box');
 var reduceMotion = window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
 
 /* ---------- Lưu trữ ---------- */
-var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=4;
+var SAVE_KEY='meodem_v1', HAND=LEVELS.length, GEN_VER=5;
 // stars/best: theo số hầm (bắt đầu từ 1); maxN: hầm xa nhất đã qua; gen: hầm đã dựng sẵn
 var save={stars:{},best:{},maxN:0,mute:false,gen:{},gv:GEN_VER};
 try{ var raw=JSON.parse(localStorage.getItem(SAVE_KEY)||'null');
