@@ -66,6 +66,12 @@ body.playing #stage{display:flex}
 .pc .gl{fill:none;stroke:rgba(255,214,107,.35);stroke-width:7;stroke-linecap:round}
 .pc.ok{border-color:var(--ok);box-shadow:0 0 18px rgba(125,255,196,.55);animation:okPop .45s ease-out forwards;pointer-events:none}
 .pc.ok .st{stroke:var(--ok)}
+.pc.ok svg{opacity:0;transition:opacity .12s}
+.fly{position:fixed;z-index:60;pointer-events:none;will-change:transform}
+.fly svg{width:100%;height:100%;overflow:visible}
+.fly .gl{fill:none;stroke:rgba(255,214,107,.35);stroke-width:7;stroke-linecap:round}
+.fly .st{fill:none;stroke:#f6e7bd;stroke-width:3.3;stroke-linecap:round;filter:drop-shadow(0 0 5px rgba(255,214,107,.9));animation:flyCol .66s forwards}
+@keyframes flyCol{0%{stroke:#f6e7bd}60%{stroke:#fff}100%{stroke:var(--gold)}}
 @keyframes okPop{0%{transform:scale(1)}35%{transform:scale(1.14)}100%{transform:scale(.9);opacity:.35}}
 .pc.bad{animation:badShake .4s forwards;pointer-events:none;filter:grayscale(1) brightness(.6);border-color:rgba(255,255,255,.15)}
 .pc.bad .st{stroke:#9a9aa6}
@@ -334,6 +340,34 @@ body.playing #stage{display:flex}
     layoutPool();
   }
 
+  // Mảnh ghép đúng: tự xoay (và lật) về thẳng, bay vào khuôn rồi sáng lên đúng chỗ của nó.
+  const FLY_MS = 660;
+  const calm = () => window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches;
+  function flyIn(el, c, gl, lit) {
+    const land = () => lit.classList.add('on');
+    if (calm() || !el.animate) return land();
+    const r = el.getBoundingClientRect(), t = gl.svg.getBoundingClientRect(), bb = bbox(c.segs), cs = r.width;
+    const tx = t.left + bb.cx / 100 * t.width, ty = t.top + bb.cy / 100 * t.height;
+    const k = (t.width / 100) / (cs / 144);
+    const fx = document.createElement('div'); fx.className = 'fly';
+    fx.style.cssText = `left:${tx - cs / 2}px;top:${ty - cs / 2}px;width:${cs}px;height:${cs}px`;
+    const s = svg('-22 -22 144 144'), g = document.createElementNS(NS, 'g');
+    g.setAttribute('transform', `translate(50 50) translate(${-bb.cx} ${-bb.cy})`);
+    const d = pathsOf(c.segs); g.appendChild(path(d, 'gl')); g.appendChild(path(d, 'st'));
+    s.appendChild(g); fx.appendChild(s); document.body.appendChild(fx);
+    const rot = ((c.rot + 180) % 360 + 360) % 360 - 180, f = c.flip ? -1 : 1;
+    const dx = r.left + r.width / 2 - tx, dy = r.top + r.height / 2 - ty;
+    const a = fx.animate([
+      { transform: `translate(${dx}px,${dy}px) rotate(${rot}deg) scale(${f},1)`, offset: 0 },
+      { transform: `translate(${dx * .55}px,${dy * .55 - 18}px) rotate(${rot * .45}deg) scale(${(f + 1.25) / 2 * 1.1},1.1)`, offset: .38, easing: 'ease-in-out' },
+      { transform: `translate(0px,0px) rotate(0deg) scale(${k * 1.12},${k * 1.12})`, offset: .85, easing: 'ease-in' },
+      { transform: `translate(0px,0px) rotate(0deg) scale(${k},${k})`, offset: 1 }
+    ], { duration: FLY_MS, easing: 'cubic-bezier(.3,.1,.2,1)', fill: 'forwards' });
+    let ended = false;
+    const end = () => { if (ended) return; ended = true; fx.remove(); land(); };
+    a.onfinish = end; setTimeout(end, FLY_MS + 120);
+  }
+
   function pick(i, el) {
     if (S.mode !== 'play') return;
     const c = S.level.cards[i];
@@ -343,11 +377,12 @@ body.playing #stage{display:flex}
       el.classList.add('ok');
       S.combo++; S.found++;
       const gl = S.level.glyphs[c.glyph];
-      const lit = path(pathsOf(c.segs), 'lit on'); gl.svg.appendChild(lit); gl.found++;
+      const lit = path(pathsOf(c.segs), 'lit'); gl.svg.appendChild(lit); gl.found++;
       gl.cnt.textContent = gl.found + '/' + gl.k;
+      flyIn(el, c, gl, lit);
       const pts = 100 + Math.min(5, S.combo - 1) * 25;
       addScore(pts); floatText('+' + pts, x, y); SND.ok(S.combo - 1); buzz(15);
-      if (gl.found === gl.k) { gl.el.classList.add('done'); S.glyphsDone++; SND.glyph(); }
+      if (gl.found === gl.k) { S.glyphsDone++; setTimeout(() => { gl.el.classList.add('done'); SND.glyph(); }, FLY_MS); }
       if (S.found === S.need) levelClear();
     } else {
       el.classList.add('bad');
