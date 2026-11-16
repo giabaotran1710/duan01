@@ -2821,6 +2821,7 @@ body.clue-focus-mode .nonogram-line-clue:not(.is-active){visibility:hidden!impor
       <div class="top-actions">
         <button class="target-pill" id="tutorialBtn" hidden aria-label="Tutorial"><i class="fa-solid fa-graduation-cap" aria-hidden="true"></i><span>Tutorial</span></button>
         <button class="icon-btn target-gear target-research" id="researchBtn" aria-label="Nghiên cứu" title="Nghiên cứu"><i class="fa-solid fa-flask" aria-hidden="true"></i></button>
+        <button class="icon-btn target-gear target-place" id="placeBtn" aria-label="Đặt clue" title="Đặt clue"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="2.5" y="2.5" width="8.5" height="8.5" rx="2.2" fill="#F44336"/><rect x="13" y="2.5" width="8.5" height="8.5" rx="2.2" fill="#2196F3"/><rect x="2.5" y="13" width="8.5" height="8.5" rx="2.2" fill="#FFC107"/><rect x="13" y="13" width="8.5" height="8.5" rx="2.2" fill="#172033"/><text x="17.25" y="20.2" text-anchor="middle" font-family="Inter,system-ui,sans-serif" font-weight="900" font-size="7.5" fill="#fff">3</text></svg></button>
         <button class="target-pill target-modesel" id="modeSelectBtn" aria-label="Chọn chế độ"><span class="pill-k">CHỌN CHẾ ĐỘ</span><span class="pill-v" id="modeSelectValue">Ngẫu nhiên</span></button>
         <button class="icon-btn target-gear" id="helpBtn" aria-label="Hướng dẫn">⚙</button>
       </div>
@@ -18714,6 +18715,425 @@ function cancelNewGameIntro(){
     else m.addedNodes.forEach(walk);
   }}).observe(document.body,{childList:true,subtree:true,characterData:true});
   window.__emoIcons=ICONS;
+})();
+</script>
+<!-- ============ CHẾ ĐỘ ĐẶT CLUE ============
+     Bàn đã tô kín màu, không có dữ kiện. Người chơi lấy từng ký tự clue
+     trong khay và đặt vào ô sao cho clue đúng với màu trên bàn. Mỗi màn
+     được sinh sao cho chỉ có đúng một cách đặt hết khay. Khối này độc lập
+     với trò Tô màu (DOM, trạng thái và hàm riêng). -->
+<style>
+.pm-screen{position:fixed;inset:0;z-index:900;background:#f3f5fa;display:flex;flex-direction:column;align-items:center;overflow-y:auto;overflow-x:hidden;touch-action:manipulation;padding:max(8px,env(safe-area-inset-top)) 12px max(12px,env(safe-area-inset-bottom))}
+.pm-screen[hidden]{display:none}
+.pm-wrap{width:100%;max-width:460px;display:flex;flex-direction:column;gap:10px}
+.pm-top{display:flex;align-items:center;gap:8px}
+.pm-back,.pm-help{height:38px;border-radius:12px;background:#fff;color:#172033;font:800 13px/1 Inter,system-ui,sans-serif;box-shadow:0 2px 6px rgba(23,32,51,.1);cursor:pointer;padding:0 12px}
+.pm-help{width:38px;padding:0;font-size:16px;font-weight:900}
+.pm-title{flex:1;text-align:center;font:900 18px/1.1 Inter,system-ui,sans-serif;color:#172033}
+.pm-title small{display:block;font-size:10.5px;font-weight:800;letter-spacing:.06em;color:#6d4c9f;margin-top:2px;text-transform:uppercase}
+.pm-levels{display:flex;gap:6px;justify-content:center}
+.pm-lv{flex:1;max-width:120px;height:34px;border-radius:11px;background:#fff;color:#4a5468;font:800 13px/1 Inter,system-ui,sans-serif;border:2px solid #e3e7ef;cursor:pointer}
+.pm-lv.on{border-color:#6d4c9f;background:#f1ebfa;color:#3d2470}
+.pm-status{display:flex;justify-content:space-between;align-items:center;font:800 13px/1 Inter,system-ui,sans-serif;color:#4a5468;padding:0 2px}
+.pm-hearts{color:#e53950;letter-spacing:2px;font-size:16px}
+.pm-hearts .off{color:#d5d9e2}
+.pm-board{display:grid;gap:5px;width:100%;margin:0 auto}
+.pm-cell{position:relative;aspect-ratio:1;border-radius:22%;container-type:size;cursor:pointer;box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),0 2px 4px rgba(23,32,51,.12);display:flex;align-items:center;justify-content:center;transition:transform .12s ease,box-shadow .15s ease}
+.pm-cell.slot::before{content:"";position:absolute;inset:20%;background:rgba(255,255,255,.5);border-radius:26%;box-shadow:inset 0 2px 5px rgba(0,0,0,.22)}
+.pm-cell.can{box-shadow:inset 0 -3px 0 rgba(0,0,0,.14),0 0 0 2px #fff,0 0 0 4px rgba(109,76,159,.35)}
+.pm-cell.bad{animation:pmShake .38s ease}
+.pm-cell.pop .pm-g{animation:pmPop .3s ease}
+@keyframes pmShake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-4px)}80%{transform:translateX(3px)}}
+@keyframes pmPop{0%{transform:scale(.4);opacity:0}70%{transform:scale(1.12)}100%{transform:scale(1);opacity:1}}
+.pm-cell.bad::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:inset 0 0 0 4px #e53950;animation:pmFade .6s ease forwards}
+@keyframes pmFade{to{opacity:0}}
+.pm-g{position:relative;width:100%;height:100%;display:flex;align-items:center;justify-content:center;font-family:Inter,system-ui,sans-serif;font-weight:900;line-height:1;pointer-events:none}
+.pm-cell .pm-g{font-size:52cqw;color:var(--fg,#fff);text-shadow:0 2px 3px rgba(0,0,0,.18)}
+.pm-g .pm-ring{position:absolute;left:50%;top:50%;width:70%;height:70%;transform:translate(-50%,-50%);border:2px solid currentColor;border-radius:50%}
+.pm-g .pm-arrow{position:absolute;font-size:.46em;font-weight:900}
+.pm-g .pm-arrow.up{top:4%;left:50%;transform:translateX(-50%)}
+.pm-g .pm-arrow.down{bottom:4%;left:50%;transform:translateX(-50%)}
+.pm-g .pm-arrow.left{left:6%;top:50%;transform:translateY(-50%)}
+.pm-g .pm-arrow.right{right:6%;top:50%;transform:translateY(-50%)}
+.pm-g .pm-diag{position:absolute;inset:6%;width:88%;height:88%}
+.pm-g .pm-far{position:absolute;inset:9%;border:2px dashed currentColor;border-radius:22%}
+.pm-g .pm-inv{position:absolute;top:4%;right:9%;font-size:.42em}
+.pm-g .pm-knight{font-size:1.2em;text-shadow:none}
+.pm-info{min-height:40px;background:#fff;border-radius:12px;padding:8px 11px;font:600 12.5px/1.45 Inter,system-ui,sans-serif;color:#4a5468;box-shadow:0 2px 6px rgba(23,32,51,.07)}
+.pm-info b{color:#172033}
+.pm-info .err{color:#c62828;font-weight:800}
+.pm-info .ok{color:#2e7d32;font-weight:800}
+.pm-tray{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;padding:10px;background:#e7eaf2;border-radius:16px;min-height:72px}
+.pm-tile{width:54px;height:54px;border-radius:14px;background:#172033;color:#fff;cursor:pointer;container-type:size;box-shadow:0 3px 0 #0b1120,0 4px 8px rgba(23,32,51,.25);transition:transform .12s ease,box-shadow .12s ease}
+.pm-tile .pm-g{font-size:46cqw}
+.pm-tile.sel{transform:translateY(-4px);box-shadow:0 0 0 3px #ffb300,0 6px 12px rgba(23,32,51,.3)}
+.pm-tile.used{background:transparent;box-shadow:inset 0 0 0 2px #c9cfdb;cursor:default}
+.pm-tile.used .pm-g{visibility:hidden}
+.pm-actions{display:flex;gap:8px}
+.pm-actions button{flex:1;height:42px;border-radius:13px;font:800 14px/1 Inter,system-ui,sans-serif;cursor:pointer}
+.pm-new{background:#6d4c9f;color:#fff}
+.pm-clear{background:#fff;color:#172033;box-shadow:0 2px 6px rgba(23,32,51,.1)}
+.pm-msg{position:fixed;inset:0;z-index:910;display:flex;align-items:center;justify-content:center;background:rgba(15,20,35,.55);padding:20px}
+.pm-msg[hidden]{display:none}
+.pm-card{background:#fff;border-radius:20px;padding:20px 18px;max-width:340px;width:100%;text-align:center;font-family:Inter,system-ui,sans-serif;color:#172033}
+.pm-card h3{margin:0 0 6px;font-size:20px;font-weight:900}
+.pm-card p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:#4a5468}
+.pm-card ul{text-align:left;margin:0 0 14px;padding-left:4px;list-style:none;font-size:12.5px;line-height:1.45;color:#4a5468}
+.pm-card li{display:flex;gap:9px;align-items:center;margin-bottom:7px}
+.pm-card li .pm-tile{flex:none;width:36px;height:36px;border-radius:10px;cursor:default;box-shadow:none}
+.pm-card .pm-row{display:flex;gap:8px}
+.pm-card .pm-row button{flex:1;height:42px;border-radius:13px;font:800 14px/1 Inter,system-ui,sans-serif;cursor:pointer}
+.pm-rules-card{max-height:86vh;overflow-y:auto}
+.target-gear.target-place{width:48px}
+.target-place svg{width:22px;height:22px;display:block}
+@media(max-width:400px){.target-gear.target-place{width:42px}}
+body.tutorial-active #placeBtn,body.sd-running #placeBtn{pointer-events:none;opacity:.35}
+</style>
+<div class="pm-screen" id="pmScreen" hidden role="dialog" aria-label="Chế độ Đặt clue">
+  <div class="pm-wrap">
+    <header class="pm-top">
+      <button type="button" class="pm-back" id="pmBack">‹ Tô màu</button>
+      <div class="pm-title">Đặt clue<small id="pmLevelLabel">Dễ</small></div>
+      <button type="button" class="pm-help" id="pmHelpBtn" aria-label="Cách chơi">?</button>
+    </header>
+    <div class="pm-levels" id="pmLevels"></div>
+    <div class="pm-status"><span class="pm-hearts" id="pmHearts"></span><span id="pmCount"></span><span id="pmTime">00:00</span></div>
+    <div class="pm-board" id="pmBoard"></div>
+    <div class="pm-info" id="pmInfo" aria-live="polite"></div>
+    <div class="pm-tray" id="pmTray"></div>
+    <div class="pm-actions">
+      <button type="button" class="pm-clear" id="pmClear">Gỡ hết</button>
+      <button type="button" class="pm-new" id="pmNew">Ván mới</button>
+    </div>
+  </div>
+  <div class="pm-msg" id="pmMsg" hidden><div class="pm-card" id="pmCard"></div></div>
+</div>
+<script>
+(()=>{
+  'use strict';
+  const $=id=>document.getElementById(id);
+  const PALETTE=[
+    {hex:'#F44336',name:'đỏ',fg:'#fff'},{hex:'#2196F3',name:'xanh dương',fg:'#fff'},
+    {hex:'#FFC107',name:'vàng',fg:'#172033'},{hex:'#4CAF50',name:'xanh lá',fg:'#fff'},
+    {hex:'#9C27B0',name:'tím',fg:'#fff'}
+  ];
+  // k = number of tiles in the tray; types: b cơ bản, s chính nó, d chỉ hướng,
+  // k quân mã, B quân tượng, f vòng xa, i số phản.
+  const LEVELS={
+    easy:{label:'Dễ',n:5,k:5,types:['b','s','d']},
+    mid:{label:'Vừa',n:6,k:6,types:['b','s','d','k']},
+    hard:{label:'Khó',n:6,k:7,types:['b','s','d','k','B','f','i']}
+  };
+  const DIRS={up:[-1,0,'↑','lên trên'],down:[1,0,'↓','xuống dưới'],left:[0,-1,'←','sang trái'],right:[0,1,'→','sang phải']};
+  const store={
+    get(k,d){try{const v=localStorage.getItem(k);return v===null?d:v;}catch(_){return d;}},
+    set(k,v){try{localStorage.setItem(k,v);}catch(_){}}
+  };
+
+  // ---------- regions ----------
+  function inb(r,c,n){return r>=0&&c>=0&&r<n&&c<n;}
+  function ring(i,n,d){
+    const r=Math.floor(i/n),c=i%n,o=[];
+    for(let dr=-d;dr<=d;dr++)for(let dc=-d;dc<=d;dc++){
+      if(Math.max(Math.abs(dr),Math.abs(dc))!==d)continue;
+      if(inb(r+dr,c+dc,n))o.push((r+dr)*n+c+dc);
+    }
+    return o;
+  }
+  function ray(i,n,dr,dc){
+    const o=[];let r=Math.floor(i/n)+dr,c=i%n+dc;
+    while(inb(r,c,n)){o.push(r*n+c);r+=dr;c+=dc;}
+    return o;
+  }
+  function region(t,i,n){
+    const r=Math.floor(i/n),c=i%n;
+    switch(t.type){
+      case 'b':case 'i':return ring(i,n,1);
+      case 's':return [i,...ring(i,n,1)];
+      case 'd':{const D=DIRS[t.dir];return ray(i,n,D[0],D[1]);}
+      case 'k':return [[-2,-1],[-2,1],[-1,-2],[-1,2],[1,-2],[1,2],[2,-1],[2,1]].filter(([a,b])=>inb(r+a,c+b,n)).map(([a,b])=>(r+a)*n+c+b);
+      case 'B':return [[-1,-1],[-1,1],[1,-1],[1,1]].flatMap(([a,b])=>ray(i,n,a,b));
+      case 'f':return ring(i,n,2);
+    }
+    return [];
+  }
+  // Number this kind of clue would show on cell i of board sol (null = cannot go there).
+  function valueAt(t,i,sol,n){
+    const cells=region(t,i,n);
+    if(!cells.length)return null;
+    const same=cells.filter(j=>sol[j]===sol[i]).length;
+    if(t.type==='k')return same===1?1:null;
+    if(t.type==='i')return cells.length-same;
+    return same;
+  }
+  const holds=(t,i,sol,n)=>valueAt(t,i,sol,n)===t.num;
+  const keyOf=t=>t.type+(t.dir||'')+':'+t.num;
+
+  // ---------- generator ----------
+  function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]];}return a;}
+  // Another way to put every tile on its own cell (each tile on a cell where
+  // it holds), different from the intended one; null when the intended
+  // placement is the only one.
+  function findOther(tiles,V){
+    const order=tiles.map((_,x)=>x).sort((a,b)=>V[a].length-V[b].length);
+    const used=new Set(),at=Array(tiles.length);let res=null;
+    (function go(k,diff){
+      if(res)return;
+      if(k===order.length){if(diff)res=at.slice();return;}
+      const x=order[k];
+      // try the other cells first: an alternative is found sooner
+      const cand=V[x].slice().sort((a,b)=>(a===tiles[x].target)-(b===tiles[x].target));
+      for(const cell of cand){
+        if(used.has(cell))continue;
+        used.add(cell);at[x]=cell;
+        go(k+1,diff||cell!==tiles[x].target);
+        used.delete(cell);
+        if(res)return;
+      }
+    })(0,false);
+    return res;
+  }
+  function generate(L){
+    const n=L.n,total=n*n;
+    const kinds=[];
+    for(const type of L.types){
+      if(type==='d')Object.keys(DIRS).forEach(dir=>kinds.push({type,dir}));
+      else kinds.push({type});
+    }
+    for(let att=0;att<400;att++){
+      const sol=Array.from({length:total},()=>Math.floor(Math.random()*3));
+      const cnt=[0,1,2].map(c=>sol.filter(x=>x===c).length);
+      if(Math.min(...cnt)<total/6)continue;
+      // every clue that could go on each cell, and where each clue holds
+      const where=new Map(),options=[];
+      for(let i=0;i<total;i++){
+        options[i]=[];
+        for(const kd of kinds){
+          const v=valueAt(kd,i,sol,n);if(v===null)continue;
+          const t={...kd,num:v},key=keyOf(t);
+          if(!where.has(key))where.set(key,[]);
+          where.get(key).push(i);
+          options[i].push(t);
+        }
+      }
+      // The empty slots: k cells, no two touching (they are marked on the
+      // board; every clue goes on one of them).
+      const slots=[];
+      for(const i of shuffle([...Array(total).keys()])){
+        if(slots.length>=L.k)break;
+        if(!options[i].length||slots.some(j=>ring(j,n,1).includes(i)))continue;
+        slots.push(i);
+      }
+      if(slots.length<L.k)continue;
+      const inSlots=new Set(slots);
+      for(const [key,list] of where)where.set(key,list.filter(i=>inSlots.has(i)));
+      const W=t=>where.get(keyOf(t)).length;
+      // a clue that fits 2–3 slots makes the player think; 1 is a sure start
+      const rank=t=>{const m=W(t);return m===2||m===3?0:m===1?1:2;};
+      const tiles=[];const keys=new Set();
+      // keep the kinds mixed: a kind already in the tray is tried later
+      const used=t=>tiles.filter(x=>x.type===t.type).length;
+      for(const i of slots){
+        const opts=shuffle(options[i].filter(t=>!keys.has(keyOf(t)))).sort((a,b)=>(rank(a)>1)-(rank(b)>1)||used(a)-used(b)||rank(a)-rank(b));
+        if(!opts.length)break;
+        tiles.push({...opts[0],target:i});keys.add(keyOf(opts[0]));
+      }
+      if(tiles.length<L.k)continue;
+      // repair: while another full placement exists, swap the clue on one
+      // cell that moved for a clue that cannot go where it moved to
+      let ok=false;
+      for(let step=0;step<60;step++){
+        const V=tiles.map(t=>where.get(keyOf(t)));
+        const alt=findOther(tiles,V);
+        if(!alt){ok=true;break;}
+        const moved=shuffle(tiles.map((t,x)=>alt[x]!==t.target?x:-1).filter(x=>x>=0));
+        let fixed=false;
+        for(const x of moved){
+          const t=tiles[x],bad=alt[x];
+          const opts=shuffle(options[t.target].filter(o=>{
+            const k=keyOf(o);return k!==keyOf(t)&&!keys.has(k)&&!where.get(k).includes(bad);
+          })).sort((a,b)=>rank(a)-rank(b));
+          if(!opts.length)continue;
+          keys.delete(keyOf(t));tiles[x]={...opts[0],target:t.target};keys.add(keyOf(opts[0]));
+          fixed=true;break;
+        }
+        if(!fixed)break;
+      }
+      if(!ok)continue;
+      const sure=tiles.filter(t=>W(t)===1).length;
+      if(sure>Math.ceil(L.k/3)+(att>200?1:0))continue;
+      if(L.types.length>2&&new Set(tiles.map(t=>t.type)).size<Math.min(4,L.types.length-1))continue;
+      return {n,sol,slots,tiles:shuffle(tiles.map(t=>({...t,at:-1})))};
+    }
+    return null;
+  }
+
+  // ---------- drawing ----------
+  const DIAG='<svg class="pm-diag" viewBox="0 0 24 24"><path d="M2 2l3.4 3.4M22 2l-3.4 3.4M2 22l3.4-3.4M22 22l-3.4-3.4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" fill="none"/></svg>';
+  function glyph(t){
+    if(t.type==='k')return '<span class="pm-g"><span class="pm-knight">♞</span></span>';
+    let extra='';
+    if(t.type==='s')extra='<span class="pm-ring"></span>';
+    if(t.type==='d')extra=`<span class="pm-arrow ${t.dir}">${DIRS[t.dir][2]}</span>`;
+    if(t.type==='B')extra=DIAG;
+    if(t.type==='f')extra='<span class="pm-far"></span>';
+    if(t.type==='i')extra='<span class="pm-inv">≠</span>';
+    return `<span class="pm-g">${extra}<span>${t.num}</span></span>`;
+  }
+  const KIND_NAME={b:'Cơ bản',s:'Chính nó',d:'Chỉ hướng',k:'Quân mã',B:'Quân tượng',f:'Vòng xa',i:'Số phản'};
+  function meaning(t){
+    const n=t.num;
+    switch(t.type){
+      case 'b':return `có đúng <b>${n}</b> ô cùng màu trong 8 ô xung quanh.`;
+      case 's':return `có đúng <b>${n}</b> ô cùng màu, tính cả chính ô đặt clue và 8 ô xung quanh.`;
+      case 'd':return `có đúng <b>${n}</b> ô cùng màu khi đi ${DIRS[t.dir][3]} tới mép bàn.`;
+      case 'k':return 'có đúng <b>1</b> ô cùng màu trong các ô quân mã nhảy tới.';
+      case 'B':return `có đúng <b>${n}</b> ô cùng màu trên 4 đường chéo tới mép bàn.`;
+      case 'f':return `có đúng <b>${n}</b> ô cùng màu ở vòng cách 2 ô (8 ô sát bên không tính).`;
+      case 'i':return `có đúng <b>${n}</b> ô xung quanh <b>không</b> cùng màu.`;
+    }
+    return '';
+  }
+
+  // ---------- state ----------
+  let lvl=store.get('cs.pm.level','easy');if(!LEVELS[lvl])lvl='easy';
+  let G=null,sel=-1,timer=null,colors=null;
+  function fmt(s){return String(Math.floor(s/60)).padStart(2,'0')+':'+String(s%60).padStart(2,'0');}
+  function newBoard(){
+    const L=LEVELS[lvl];
+    const g=generate(L);
+    if(!g){setInfo('<span class="err">Không tạo được màn, bấm Ván mới để thử lại.</span>');return;}
+    colors=shuffle(PALETTE.slice()).slice(0,3);
+    G={...g,lives:3,wrong:0,sec:0,started:false,done:false};
+    sel=-1;
+    stopClock();
+    render();
+    setInfo('Chọn một clue trong khay, rồi đặt vào <b>ô trống</b> (có ô vuông sáng ở giữa) mà clue đó đúng.');
+  }
+  function startClock(){
+    if(G.started||G.done)return;
+    G.started=true;
+    timer=setInterval(()=>{if(!G||G.done)return;G.sec++;$('pmTime').textContent=fmt(G.sec);},1000);
+  }
+  function stopClock(){if(timer){clearInterval(timer);timer=null;}}
+  function setInfo(html){$('pmInfo').innerHTML=html;}
+  function tileAt(cell){return G.tiles.findIndex(t=>t.at===cell);}
+
+  function render(){
+    const n=G.n,L=LEVELS[lvl];
+    $('pmLevelLabel').textContent=L.label;
+    $('pmLevels').innerHTML=Object.entries(LEVELS).map(([id,x])=>`<button type="button" class="pm-lv${id===lvl?' on':''}" data-lv="${id}">${x.label}</button>`).join('');
+    $('pmHearts').innerHTML=[0,1,2].map(k=>`<span class="${k<G.lives?'':'off'}">♥</span>`).join('');
+    const left=G.tiles.filter(t=>t.at<0).length;
+    $('pmCount').textContent=left?`Còn ${left} clue`:'Đã đặt hết';
+    $('pmTime').textContent=fmt(G.sec);
+    const B=$('pmBoard');
+    B.style.gridTemplateColumns=`repeat(${n},1fr)`;
+    B.style.maxWidth=Math.min(440,n*72)+'px';
+    B.innerHTML=G.sol.map((c,i)=>{
+      const ti=tileAt(i),col=colors[c],slot=G.slots.includes(i);
+      const canGo=sel>=0&&ti<0&&slot;
+      return `<div class="pm-cell${slot&&ti<0?' slot':''}${canGo?' can':''}" data-i="${i}" style="background:${col.hex};--fg:${col.fg}" role="button" aria-label="Ô hàng ${Math.floor(i/n)+1} cột ${i%n+1}, màu ${col.name}${ti>=0?', đã đặt clue':''}">${ti>=0?glyph(G.tiles[ti]):''}</div>`;
+    }).join('');
+    $('pmTray').innerHTML=G.tiles.map((t,x)=>
+      `<button type="button" class="pm-tile${t.at>=0?' used':''}${x===sel?' sel':''}" data-t="${x}" aria-label="Clue ${KIND_NAME[t.type]} ${t.type==='k'?'':t.num}"${t.at>=0?' disabled':''}>${glyph(t)}</button>`).join('');
+  }
+
+  function selectTile(x){
+    if(!G||G.done)return;
+    sel=sel===x?-1:x;
+    render();
+    if(sel>=0){
+      const t=G.tiles[sel];
+      setInfo(`<b>${KIND_NAME[t.type]}</b>: ô đặt clue ${meaning(t)}`);
+    }else setInfo('Chọn một clue trong khay.');
+  }
+  function why(t,i){
+    const n=G.n,v=valueAt(t,i,G.sol,n),col=colors[G.sol[i]].name;
+    if(v===null)return t.type==='d'?'ô này sát mép, không có ô nào theo hướng mũi tên.':'không có ô nào trong vùng đếm.';
+    if(t.type==='k'){const same=region(t,i,n).filter(j=>G.sol[j]===G.sol[i]).length;return `quân mã nhảy tới ${same} ô ${col}, cần đúng 1.`;}
+    if(t.type==='i')return `ô ${col} này có ${v} ô xung quanh khác màu, không phải ${t.num}.`;
+    return `ô ${col} này cho số ${v}, không phải ${t.num}.`;
+  }
+  function tapCell(i){
+    if(!G||G.done)return;
+    const ti=tileAt(i);
+    if(ti>=0){                       // pick a placed clue back up
+      G.tiles[ti].at=-1;sel=ti;render();
+      setInfo(`Đã nhấc clue lên. <b>${KIND_NAME[G.tiles[ti].type]}</b>: ô đặt clue ${meaning(G.tiles[ti])}`);
+      return;
+    }
+    if(!G.slots.includes(i)){setInfo('Chỉ đặt clue vào các <b>ô trống</b> (có ô vuông sáng ở giữa).');return;}
+    if(sel<0){setInfo('Chọn một clue trong khay trước.');return;}
+    startClock();
+    const t=G.tiles[sel];
+    if(holds(t,i,G.sol,G.n)){
+      t.at=i;sel=-1;render();
+      const el=$('pmBoard').querySelector(`[data-i="${i}"]`);el?.classList.add('pop');
+      if(G.tiles.every(x=>x.at>=0))return win();
+      setInfo('<span class="ok">Đúng!</span> Chọn clue tiếp theo. Nếu một clue không còn chỗ nào, hãy nhấc một clue đã đặt sang ô khác.');
+    }else{
+      G.lives--;G.wrong++;
+      render();
+      const el=$('pmBoard').querySelector(`[data-i="${i}"]`);
+      if(el){el.classList.remove('bad');void el.offsetWidth;el.classList.add('bad');}
+      setInfo(`<span class="err">Sai:</span> ${why(t,i)}`);
+      if(G.lives<=0)lose();
+    }
+  }
+  function card(html){$('pmCard').className='pm-card';$('pmCard').innerHTML=html;$('pmMsg').hidden=false;}
+  function win(){
+    G.done=true;stopClock();
+    const k='cs.pm.best.'+lvl,best=Number(store.get(k,'0'))||0;
+    const rec=!best||G.sec<best;if(rec)store.set(k,String(G.sec));
+    setInfo('<span class="ok">Hoàn thành!</span>');
+    card(`<h3>Hoàn thành!</h3><p>Mức ${LEVELS[lvl].label} · ${fmt(G.sec)} · sai ${G.wrong} lần${rec?'<br><b>Kỷ lục mới!</b>':`<br>Kỷ lục: ${fmt(best)}`}</p><div class="pm-row"><button type="button" class="pm-clear" data-act="close">Xem bàn</button><button type="button" class="pm-new" data-act="new">Ván mới</button></div>`);
+  }
+  function lose(){
+    G.done=true;stopClock();
+    card(`<h3>Hết tim</h3><p>Bạn đã đặt sai 3 lần. Thử lại bàn này hoặc chơi ván mới.</p><div class="pm-row"><button type="button" class="pm-clear" data-act="retry">Chơi lại</button><button type="button" class="pm-new" data-act="new">Ván mới</button></div>`);
+  }
+  function retry(){
+    G.tiles.forEach(t=>t.at=-1);
+    Object.assign(G,{lives:3,wrong:0,sec:0,started:false,done:false});sel=-1;
+    render();setInfo('Chọn một clue trong khay, rồi đặt vào <b>ô trống</b> (có ô vuông sáng ở giữa) mà clue đó đúng.');
+  }
+  function rules(){
+    const ex=[{type:'b',num:3},{type:'s',num:4},{type:'d',dir:'right',num:2},{type:'k',num:1},{type:'B',num:2},{type:'f',num:3},{type:'i',num:5}];
+    $('pmCard').className='pm-card pm-rules-card';
+    $('pmCard').innerHTML=`<h3>Cách chơi Đặt clue</h3><p>Bàn đã tô kín màu nhưng chưa có số nào. Đặt mọi clue trong khay vào các <b>ô trống</b> (có ô vuông sáng ở giữa). Clue lấy màu của ô nó nằm trên, và phải <b>đúng</b> ở ô đó. Mỗi ô một clue; mỗi màn chỉ có <b>một cách</b> đặt hết khay.</p><ul>${ex.map(t=>`<li><span class="pm-tile">${glyph(t)}</span><span><b>${KIND_NAME[t.type]}</b>: ${meaning(t)}</span></li>`).join('')}</ul><p>Đặt sai mất 1 tim (có 3 tim). Chạm vào clue đã đặt để nhấc nó lên. Mức Dễ có Cơ bản, Chính nó, Chỉ hướng; Vừa thêm Quân mã; Khó thêm Quân tượng, Vòng xa, Số phản.</p><div class="pm-row"><button type="button" class="pm-new" data-act="close">Đã hiểu</button></div>`;
+    $('pmMsg').hidden=false;
+  }
+
+  // ---------- open / close ----------
+  function open(){
+    $('pmScreen').hidden=false;
+    if(!G||G.done)newBoard();else render();
+    if(store.get('cs.pm.seen','')!=='1'){store.set('cs.pm.seen','1');rules();}
+  }
+  function close(){
+    $('pmScreen').hidden=true;$('pmMsg').hidden=true;
+  }
+  $('placeBtn')?.addEventListener('click',open);
+  $('pmBack').addEventListener('click',close);
+  $('pmHelpBtn').addEventListener('click',rules);
+  $('pmNew').addEventListener('click',newBoard);
+  $('pmClear').addEventListener('click',()=>{if(!G||G.done)return;G.tiles.forEach(t=>t.at=-1);sel=-1;render();setInfo('Đã gỡ hết clue về khay.');});
+  $('pmLevels').addEventListener('click',e=>{
+    const b=e.target.closest('.pm-lv');if(!b||b.dataset.lv===lvl)return;
+    lvl=b.dataset.lv;store.set('cs.pm.level',lvl);newBoard();
+  });
+  $('pmBoard').addEventListener('click',e=>{const c=e.target.closest('.pm-cell');if(c)tapCell(Number(c.dataset.i));});
+  $('pmTray').addEventListener('click',e=>{const b=e.target.closest('.pm-tile');if(b&&!b.disabled)selectTile(Number(b.dataset.t));});
+  $('pmMsg').addEventListener('click',e=>{
+    const a=e.target.closest('[data-act]')?.dataset.act;
+    if(!a){if(e.target.id==='pmMsg')$('pmMsg').hidden=true;return;}
+    $('pmMsg').hidden=true;
+    if(a==='new')newBoard();else if(a==='retry')retry();
+  });
+  // for automated checks only
+  window.__pmGenerate=l=>generate(LEVELS[l]);
+  window.__pmState=()=>G;
 })();
 </script>
 <script src="../activity.js?v=20261103ban" defer></script>
