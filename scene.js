@@ -19,7 +19,7 @@
   //  curtain: hai cánh màn kéo ra (cờ, bàn chơi)      iris: vòng tròn khép/mở (hành động, phản xạ)
   //  blinds : rèm sọc dọc lần lượt cuộn lên (trí tuệ)   tiles: ô vuông lật dần theo đường chéo (ghi nhớ, quan sát)
   //  diagonal: tấm chéo lướt ngang (thể thao, giải trí)
-  //  caro   : riêng Cờ Caro, trang vở ô ly được đánh X/O dồn dập rồi gạch đường thắng, mở ra theo vết gạch
+  //  caro   : riêng Cờ Caro, trang vở ô ly, thế cờ thắng viết bằng bút mực rồi gạch đỏ, trang mở ra từ giữa
   var THEMES = {
     'word-game': ['blinds', '#1e3a8a', '#3b82f6', '#fde68a'],
     gamecaro: ['caro', '#fbfaf3', '#f3f1e6', '#1b4fc4'],
@@ -91,8 +91,8 @@
   var kind = reduce ? 'fade' : t[0];
 
   // Thời gian (ms): đóng màn, mở màn, và độ trễ lệch nhau tối đa giữa các mảnh của kiểu đó
-  var CLOSE_MS = reduce ? 160 : kind === 'caro' ? 240 : 340, OPEN_MS = reduce ? 200 : kind === 'caro' ? 260 : 480, HOLD_MS = reduce ? 60 : kind === 'caro' ? 160 : 120;
-  var STAGGER = { blinds: 7 * 30, tiles: (7 + 11) * 12, caro: 340 }[kind] || 0;
+  var CLOSE_MS = reduce ? 160 : kind === 'caro' ? 190 : 340, OPEN_MS = reduce ? 200 : kind === 'caro' ? 240 : 480, HOLD_MS = reduce ? 60 : kind === 'caro' ? 160 : 120;
+  var STAGGER = { blinds: 7 * 30, tiles: (7 + 11) * 12, caro: 330 }[kind] || 0;
   var ENTRY_MIN_MS = reduce ? 250 : 650, ENTRY_MAX_MS = 2000;
 
   var CSS = [
@@ -102,7 +102,7 @@
     '.root.opening,.root.open{--d:' + OPEN_MS + 'ms}',
     '.p{position:absolute;background:linear-gradient(135deg,var(--c1),var(--c2));transition:transform var(--d) var(--ease),clip-path var(--d) var(--ease),opacity var(--d) ease;will-change:transform}',
     // khi chưa chạy hiệu ứng (đặt thẳng trạng thái) thì không có transition
-    '.root.instant .p,.root.instant .p::before,.root.instant .p::after,.root.instant .strike{transition:none!important}',
+    '.root.instant .p,.root.instant .ink{transition:none!important}',
     // ---- curtain: hai cánh màn ----
     '.curtain .p{top:0;bottom:0;width:50.5%}',
     '.curtain .l{left:0;box-shadow:inset -4px 0 0 var(--ac),12px 0 40px rgba(0,0,0,.45)}',
@@ -128,22 +128,20 @@
     '.diagonal .p{top:-20%;bottom:-20%;left:-40%;width:180%;transform:skewX(-16deg) translateX(0);box-shadow:inset 6px 0 0 var(--ac),inset -6px 0 0 var(--ac)}',
     '.diagonal.from .p{transform:skewX(-16deg) translateX(-112%)}',
     '.diagonal.opening .p,.diagonal.open .p{transform:skewX(-16deg) translateX(112%)}',
-    // ---- caro: trang vở ô ly, X/O đánh dồn dập rồi gạch đường thắng ----
+    // ---- caro: trang vở ô ly, nước cờ thắng được viết bằng bút mực rồi gạch đỏ ----
     '.caro .grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr)}',
-    '.caro .p{position:relative;inset:auto;background:var(--c1);box-shadow:inset 0 0 0 1px rgba(74,128,206,.32);transform:scale(1.02);transition-delay:var(--dl)}',
-    '.caro .p:nth-child(3n){background:var(--c2)}',
-    '.caro .p.x::before,.caro .p.x::after{content:"";position:absolute;left:50%;top:50%;width:64%;height:9%;margin:-4.5% 0 0 -32%;border-radius:99px;background:var(--ac);transform:rotate(45deg) scaleX(1);transition:transform calc(var(--d) * .8) cubic-bezier(.3,1.4,.5,1) calc(var(--dl) + 70ms)}',
-    '.caro .p.x::after{transform:rotate(-45deg) scaleX(1);transition-delay:calc(var(--dl) + 150ms)}',
-    '.caro .p.o::before{content:"";position:absolute;left:50%;top:50%;width:54%;height:54%;margin:-27% 0 0 -27%;border:var(--bw) solid #cf2d2d;border-radius:50%;transform:scale(1);transition:transform calc(var(--d) * .9) cubic-bezier(.3,1.5,.5,1) calc(var(--dl) + 90ms)}',
-    '.caro .strike{position:absolute;left:0;top:0;border-radius:99px;background:#d93232;box-shadow:0 0 0 2px rgba(251,250,243,.85),0 3px 10px rgba(120,20,20,.35);transform-origin:0 50%;transform:rotate(var(--sa)) scaleX(1);z-index:3;opacity:1;transition:transform .22s cubic-bezier(.5,0,.2,1) .3s,opacity .2s ease .12s}',
-    '.caro.from .p,.caro.opening .p,.caro.open .p{transform:scale(0) rotate(-24deg)}',
-    '.caro.opening .p,.caro.open .p{transition-delay:var(--do)}',
-    '.caro.from .p.x::before,.caro.opening .p.x::before,.caro.open .p.x::before{transform:rotate(45deg) scaleX(0)}',
-    '.caro.from .p.x::after,.caro.opening .p.x::after,.caro.open .p.x::after{transform:rotate(-45deg) scaleX(0)}',
-    '.caro.from .p.o::before,.caro.opening .p.o::before,.caro.open .p.o::before{transform:scale(0)}',
-    '.caro.opening .p.x::before,.caro.opening .p.x::after,.caro.opening .p.o::before{transition-delay:var(--do)}',
-    '.caro.from .strike{transform:rotate(var(--sa)) scaleX(0);transition:none}',
-    '.caro.opening .strike,.caro.open .strike{opacity:0;transition:opacity .22s ease .1s}',
+    '.caro .p{position:relative;inset:auto;background:var(--c1);box-shadow:inset 0 0 0 .5px rgba(74,128,206,.4);transform:scale(1.03);transition-delay:var(--dl)}',
+    '.caro.from .p{transform:scale(.72);opacity:0}',
+    '.caro.opening .p,.caro.open .p{transform:scale(.72);opacity:0;transition-delay:var(--do)}',
+    '.caro svg{position:absolute;inset:0;width:100%;height:100%;z-index:2;overflow:visible}',
+    '.caro .ink{fill:none;stroke-linecap:round;stroke-linejoin:round;stroke-dasharray:1 2;stroke-dashoffset:0;transition:stroke-dashoffset var(--ti,.11s) cubic-bezier(.4,.1,.3,1) var(--ds,0ms),opacity .14s ease}',
+    '.caro .x{stroke:var(--ac)}',
+    '.caro .o{stroke:#cf2d2d}',
+    '.caro .strike{stroke:#d62b2b}',
+    '.caro .ghost{opacity:.2}',
+    '.caro .margin{stroke:#e05a5a;opacity:.5}',
+    '.caro.from .ink{stroke-dashoffset:1.01;transition:none}',
+    '.caro.opening .ink,.caro.open .ink{opacity:0;transition:opacity .16s ease}',
     // ---- fade (người dùng chọn giảm chuyển động) ----
     '.fade .p{inset:0}',
     '.fade.opening .p,.fade.open .p{opacity:0}'
@@ -152,7 +150,7 @@
   function pieces() {
     var h = '', i, x, y;
     if (kind === 'curtain') h = '<div class="p l"></div><div class="p r"></div>';
-    else if (kind === 'caro') h = '<div class="grid"></div><div class="strike"></div>';
+    else if (kind === 'caro') h = '<div class="grid"></div><svg class="inkbox" xmlns="http://www.w3.org/2000/svg"></svg>';
     else if (kind === 'iris') h = '<div class="p"></div><div class="ring"></div>';
     else if (kind === 'blinds') for (i = 0; i < 8; i++) h += '<div class="p" style="--i:' + i + '"></div>';
     else if (kind === 'tiles') {
@@ -174,33 +172,54 @@
   shadow.innerHTML = '<style>' + CSS + '</style><div class="root ' + kind + ' instant closed" style="--c1:' + t[1] + ';--c2:' + t[2] + ';--ac:' + t[3] + '">' +
     pieces() + '</div>';
   var el = shadow.querySelector('.root');
-  // Caro: dựng lại lưới ô vuông theo cỡ màn hình; X/O rải ngẫu nhiên, đường chéo là một hàng X liền (nét gạch thắng đi qua đó)
+  // Caro: dựng lại trang vở theo cỡ màn hình. Giữa trang là một thế cờ: năm X liền chéo (nét mực vẽ dần) bị gạch đỏ,
+  // xung quanh vài O chặn hai đầu; vài nước mờ rải rác cho có không khí ván đã đánh dở.
   function buildCaro() {
-    var grid = el.querySelector('.grid'), strike = el.querySelector('.strike');
-    if (!grid || !strike) return;
-    var W = window.innerWidth || 360, H = window.innerHeight || 640, cols = 7, s = W / cols, rows = Math.ceil(H / s);
-    var A = Math.atan2(H, W), ca = Math.cos(A), sa = Math.sin(A), maxD = 1, maxL = 1, cells = [], x, y, d, l;
+    var grid = el.querySelector('.grid'), ink = el.querySelector('.inkbox');
+    if (!grid || !ink) return;
+    var W = window.innerWidth || 360, H = window.innerHeight || 640, cols = 7, s = W / cols, rows = Math.ceil(H / s) + 1;
+    var rnd = function (a) { return (Math.random() - .5) * a; };
+    var cxo = (cols - 1) / 2, cyo = (rows - 1) / 2, maxL = Math.hypot(cxo + .5, cyo + .5), h = '', x, y;
     for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) {
-      var cx = (x + .5) * s, cy = (y + .5) * s;
-      d = Math.abs(cx * sa - cy * ca); l = Math.hypot(cx - W / 2, cy - H / 2);
-      if (d > maxD) maxD = d; if (l > maxL) maxL = l;
-      cells.push([x, y, d, l]);
+      var l = Math.hypot(x - cxo, y - cyo) / maxL;
+      h += '<div class="p" style="--dl:' + Math.round(l * 190) + 'ms;--do:' + Math.round(30 + l * 260) + 'ms"></div>';
     }
-    var h = '';
-    cells.forEach(function (c) {
-      var onLine = c[1] === Math.floor((c[0] + .5) * H / W), r = Math.random();
-      var m = onLine ? 'x' : r < .3 ? 'x' : r < .6 ? 'o' : '';
-      h += '<div class="p' + (m ? ' ' + m : '') + '" style="--dl:' + Math.round(c[3] / maxL * 290 + Math.random() * 30) + 'ms;--do:' + Math.round(40 + c[2] / maxD * 300 + Math.random() * 20) + 'ms"></div>';
-    });
     grid.style.gridAutoRows = s + 'px';
     grid.innerHTML = h;
     el.style.setProperty('--bw', Math.max(3, s * .07) + 'px');
-    strike.style.width = Math.hypot(W, H) + 24 + 'px';
-    strike.style.height = Math.max(5, s * .12) + 'px';
-    strike.style.marginTop = -Math.max(5, s * .12) / 2 + 'px';
-    el.style.setProperty('--sa', A * 180 / Math.PI + 'deg');
+    ink.setAttribute('viewBox', '0 0 ' + W + ' ' + H);
+    var sw = Math.max(3, s * .085), r = s * .31, used = {}, out = '';
+    var ctr = function (gx, gy) { return [(gx + .5) * s, (gy + .5) * s]; };
+    var f = function (v) { return v.toFixed(1); };
+    var tag = function (cls, d, ds, extra) {
+      return '<path class="ink ' + cls + '" pathLength="1" d="' + d + '" style="--ds:' + Math.round(ds) + 'ms;' + (extra || '') + '" stroke-width="' + f(sw) + '"/>';
+    };
+    var X = function (gx, gy, ds, cls) {
+      var c = ctr(gx, gy); used[gx + ',' + gy] = 1;
+      return tag('x ' + (cls || ''), 'M' + f(c[0] - r + rnd(3)) + ' ' + f(c[1] - r + rnd(3)) + 'L' + f(c[0] + r + rnd(3)) + ' ' + f(c[1] + r + rnd(3)), ds) +
+             tag('x ' + (cls || ''), 'M' + f(c[0] + r + rnd(3)) + ' ' + f(c[1] - r + rnd(3)) + 'L' + f(c[0] - r + rnd(3)) + ' ' + f(c[1] + r + rnd(3)), ds + 60);
+    };
+    var O = function (gx, gy, ds, cls) {
+      var c = ctr(gx, gy), q = function (deg, k) { var a = deg * Math.PI / 180; return f(c[0] + Math.cos(a) * r * k) + ' ' + f(c[1] + Math.sin(a) * r * k); };
+      used[gx + ',' + gy] = 1;
+      return tag('o ' + (cls || ''), 'M' + q(-110, 1) + 'A' + f(r) + ' ' + f(r) + ' 0 1 1 ' + q(70, 1) + 'A' + f(r * 1.05) + ' ' + f(r * 1.05) + ' 0 0 1 ' + q(-92, 1.06), ds, '--ti:.2s');
+    };
+    // đường vĩ tuyến thấp trên màn: bắt đầu x0 sao cho năm ô nằm giữa chiều ngang
+    var x0 = Math.floor((cols - 5) / 2), y0 = Math.floor(rows / 2) - 2, i;
+    out += tag('margin', 'M' + f(s) + ' 0L' + f(s) + ' ' + f(H), 60, '--ti:.3s').replace('stroke-width="' + f(sw) + '"', 'stroke-width="1.6"');
+    for (i = 0; i < 5; i++) out += X(x0 + i, y0 + i, 150 + i * 42);
+    out += O(x0 - 1, y0 - 1, 190) + O(x0 + 5, y0 + 5, 230) + O(x0 + 1, y0 + 2, 210) + O(x0 + 3, y0 + 1, 250) + O(x0 + 4, y0 + 3, 270);
+    for (i = 0; i < 9; i++) {
+      var gx = Math.floor(Math.random() * cols), gy = Math.floor(Math.random() * rows);
+      if (Math.abs(gx - (x0 + 2)) < 3 && Math.abs(gy - (y0 + 2)) < 4 || used[gx + ',' + gy]) continue;
+      out += Math.random() < .5 ? X(gx, gy, 120 + Math.random() * 160, 'ghost') : O(gx, gy, 120 + Math.random() * 160, 'ghost');
+    }
+    var a = ctr(x0, y0), b = ctr(x0 + 4, y0 + 4), dx = b[0] - a[0], dy = b[1] - a[1], L = Math.hypot(dx, dy), ux = dx / L, uy = dy / L, ext = s * .75;
+    var m = [(a[0] + b[0]) / 2 - uy * s * .08, (a[1] + b[1]) / 2 + ux * s * .08];
+    out += tag('strike', 'M' + f(a[0] - ux * ext) + ' ' + f(a[1] - uy * ext) + 'Q' + f(m[0]) + ' ' + f(m[1]) + ' ' + f(b[0] + ux * ext) + ' ' + f(b[1] + uy * ext), 340, '--ti:.17s').replace('stroke-width="' + f(sw) + '"', 'stroke-width="' + f(sw * 1.15) + '"');
+    ink.innerHTML = out;
   }
-  if (kind === 'caro') buildCaro();
+  if (kind === 'caro') { buildCaro(); document.addEventListener('DOMContentLoaded', buildCaro); }
   hostState(true);
   (document.body || document.documentElement).appendChild(host);
 
@@ -239,6 +258,7 @@
   function enter() {
     if (entered) return;
     entered = true;
+    if (kind === 'caro') buildCaro();   // lúc nạp script cỡ cửa sổ có thể chưa đúng
     nSetTimeout(function () { reveal(function () { busy = false; }); }, Math.max(0, ENTRY_MIN_MS - (Date.now() - t0)));
   }
   if (document.readyState === 'complete') enter(); else window.addEventListener('load', enter, { once: true });
