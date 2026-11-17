@@ -157,7 +157,7 @@
   }
   function addCloud(G, x, y, size, dark) {
     const c = { id: G.uid++, x, y, vx: 0, vy: 0, size, water: size >= 3 ? 7 : 0, bump: 0, dark: !!dark, fade: 0, seed: G.rnd() * 1000, rain: 0, age: 0 };
-    if (dark) c.water = 9;
+    if (dark) c.water = 7;
     G.clouds.push(c); return c;
   }
   function newKite(x) {
@@ -171,7 +171,7 @@
     G.mats.push({ x: W * 0.35 - 70, w: 140, exp: 0, covered: false, cover: 0 });
     G.mats.push({ x: W * 0.65 - 70, w: 140, exp: 0, covered: false, cover: 0 });
     // 3 đợt: [bắt đầu, kết thúc, khoảng giữa hai cơn giật, số mây đen, cơn kép?]
-    G.waves = [[3, 20, 3.6, 0, false], [24, 44, 2.5, 2, false], [48, 70, 1.8, 3, true]].map(w => ({ a: w[0], b: w[1], gap: w[2], clouds: w[3], dbl: w[4], next: w[0], cl: 0 }));
+    G.waves = [[3, 20, 3.6, 0, false], [24, 44, 2.5, 1, false], [48, 70, 1.9, 2, true]].map(w => ({ a: w[0], b: w[1], gap: w[2], clouds: w[3], dbl: w[4], next: w[0], cl: 0 }));
     for (let i = 0; i < 3; i++) addCloud(G, W * (0.2 + i * 0.3), 90 + i * 20, 1);
   }
 
@@ -218,7 +218,7 @@
     G.gustList.forEach(g => {
       if (!g.fired && G.t >= g.t) {
         g.fired = true;
-        G.jets.push({ x: G.cam - 60, y: g.y, tx: G.cam + G.W + 200, ty: g.y + 20, sp: 300, warn: 1.6, w0: 1.6, r: 70, life: 6, power: 330, nat: true });
+        G.jets.push({ x: G.cam - 60, y: g.y, tx: G.cam + G.W + 200, ty: g.y + 20, sp: 300, warn: 1.6, w0: 1.6, r: 70, life: 6, power: 400, nat: true });
         G.events.push({ type: 'gustWarn' });
       }
     });
@@ -271,8 +271,9 @@
       const win = G.done >= G.need;
       G.over = true; G.result = { win, why: win ? '' : 'Mới hoàn thành ' + G.done + ' / ' + G.need + ' ước nguyện cần thiết' };
     } else if (G.wishes.every(w => w.done || w.missed) && G.t > 3) {
+      // mọi ước nguyện đã có kết quả thì kết thúc luôn, không bắt chờ cảnh trôi hết
       const win = G.done >= G.need;
-      if (!win || G.wishes.every(w => w.done)) { G.over = true; G.result = { win, why: win ? '' : 'Mới hoàn thành ' + G.done + ' / ' + G.need + ' ước nguyện cần thiết' }; }
+      G.over = true; G.result = { win, why: win ? '' : 'Mới hoàn thành ' + G.done + ' / ' + G.need + ' ước nguyện cần thiết' };
     }
   }
 
@@ -382,8 +383,10 @@
       }
       F.sample(k.kx, k.ky, tmp);
       const wm = hyp(tmp.x, tmp.y);
-      if (k.state !== 'done' && wm > 340) {
-        k.state = 'broken'; k.brokenT = 4; k.vx = tmp.x * 0.8; k.vy = tmp.y * 0.8 - 60; k.aloft = 0;
+      // đứt dây khi gió gắt kéo dài 0,12 giây (một cái lướt tay nhanh thoáng qua chưa đứt)
+      k.harsh = wm > 340 ? (k.harsh || 0) + dt : Math.max(0, (k.harsh || 0) - dt * 2);
+      if (k.state !== 'done' && k.harsh > 0.12) {
+        k.state = 'broken'; k.brokenT = 4; k.harsh = 0; k.vx = tmp.x * 0.8; k.vy = tmp.y * 0.8 - 60; k.aloft = 0;
         G.events.push({ type: 'snap', x: k.kx, y: k.ky }); return;
       }
       if (k.state === 'done') {
@@ -468,8 +471,11 @@
     const k = W / G.len, sx = o => { o.x *= k; };
     G.roofs.forEach(sx); G.mats.forEach(m => { m.x *= k; m.w *= k; }); G.clouds.forEach(sx); G.wishes.forEach(sx);
     G.jets.forEach(j => { j.x *= k; j.tx *= k; }); G.vortices.forEach(sx); G.calms.forEach(sx);
-    const b = [G.field.bx, G.field.by];
-    G.field = new Field(W); G.field.setBase(b[0], b[1]);
+    // giữ nguyên gió đang thổi: lấy mẫu trường cũ sang trường mới theo tỉ lệ
+    const old = G.field, nf = new Field(W), tmpS = {};
+    nf.setBase(old.bx, old.by);
+    for (let j = 0; j < nf.ny; j++) for (let i = 0; i < nf.nx; i++) { old.sample(i * CELL / k, j * CELL, tmpS); const id = j * nf.nx + i; nf.vx[id] = tmpS.x; nf.vy[id] = tmpS.y; }
+    G.field = nf;
     G.len = W; G.W = W; G.cam = 0;
   }
   window.GM = { restretch, KITE_UP, H, GROUND, CELL, SKY_TOP, SKY_BOT, LEVELS, load, step, stroke, vortex, calm, cloudR, rng, clamp };

@@ -243,7 +243,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   let save = { best: [], mute: false, rotSkip: false, seenHelp: false };
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch (e) {}
   if (!Array.isArray(save.best)) save.best = [];
-  save.best = save.best.map(v => v == null || !Number.isFinite(+v) ? null : Math.max(0, Math.floor(+v)));
+  const MAXW = LEVELS.map(L => L.storm ? 3 : (L.fields || []).length + (L.kites || []).length + (L.beds || []).length);
+  save.best = save.best.slice(0, LEVELS.length).map((v, i) => v == null || v === '' || !Number.isFinite(+v) ? null : clamp(Math.floor(+v), 0, MAXW[i]));
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
   const passed = i => save.best[i] != null;
   const unlocked = i => i === 0 || passed(i - 1);
@@ -351,8 +352,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     const cnt = { field: 0, kite: 0, bed: 0, roof: 0 }; G.wishes.forEach(w => cnt[w.type]++);
     const lab = { field: '🌾 Tưới ruộng', kite: '🪁 Thả diều', bed: '🌼 Gieo hoa', roof: '🏮 Giữ mái chợ' };
     $('introWish').innerHTML = Object.keys(cnt).filter(k => cnt[k]).map(k => '<span>' + lab[k] + ' × ' + cnt[k] + '</span>').join('') + (L.storm ? '<span>Giữ ít nhất 1 lá</span>' : '<span>Cần ' + L.need + ' / ' + G.wishes.length + '</span>');
-    layer('intro', true);
+    layer('intro', true); introAt = performance.now();
   }
+  let introAt = 0;
 
   // ================= HUD =================
   const LEAF = '<svg viewBox="0 0 24 24"><path d="M5 19C5 9 11 4 20 4c0 9-5 15-15 15z" fill="#5fae57" stroke="#2f6b2a" stroke-width="1.5"/><path d="M5 19l9-9" stroke="#2f6b2a" stroke-width="1.5"/></svg>';
@@ -597,7 +599,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   $('resumeBtn').onclick = resume;
   $('pauseAgain').onclick = () => { paused = false; closeAll(); startLevel(li); };
   $('pauseMenu').onclick = () => { paused = false; toMenu(); };
-  $('introGo').onclick = () => { SND.ensure(); SND.click(); layer('intro', false); mode = 'play'; paused = false; last = performance.now(); acc = 0; if (li === 0 && !save.seenHelp) { save.seenHelp = true; store(); } };
+  $('introGo').onclick = () => { if (performance.now() - introAt < 450) return; SND.ensure(); SND.click(); layer('intro', false); mode = 'play'; paused = false; last = performance.now(); acc = 0; if (li === 0 && !save.seenHelp) { save.seenHelp = true; store(); paused = true; layer('help', true); } };
   $('resNext').onclick = () => { closeAll(); startLevel(Math.min(li + 1, LEVELS.length - 1)); };
   $('resAgain').onclick = () => { closeAll(); startLevel(li); };
   $('resMenu').onclick = () => toMenu();
