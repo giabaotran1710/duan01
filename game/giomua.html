@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <script src="../maintenance.js?v=20261116a" data-game="giomua"></script>
 <script src="../scene.js" data-game="giomua"></script>
+<script src="../bgm.js?v=20261115"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#2c2140">
 <title>Gió mùa</title>
@@ -252,10 +253,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   function submitScore() { try { const s = total(); if (window.Scores && s > 0) Scores.submit('giomua', s); } catch (e) {} }
 
   // ================= ÂM THANH =================
+  // Nhạc nền: audio/giomua.mp3, phát bằng Web Audio (không dùng thẻ audio) nên điện thoại không hiện thanh điều khiển nhạc.
+  const BGM = window.WebLoop ? WebLoop('../audio/giomua.mp3', 0.42) : { play() {}, stop() {} };
   const SND = (function () {
     let ac = null, master = null, windG = null, windF = null, rainG = null, musicT = 0, noiseBuf = null;
     const PENTA = [261.63, 293.66, 329.63, 392.0, 440.0, 523.25, 587.33, 659.25, 783.99, 880.0];
     function ensure() {
+      if (!save.mute) BGM.play();
       if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
       try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { return; }
       master = ac.createGain(); master.gain.value = save.mute ? 0 : 0.8; master.connect(ac.destination);
@@ -282,7 +286,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     return {
       ensure,
       suspend(h) { if (!ac) return; try { h ? ac.suspend() : ac.resume(); } catch (e) {} },
-      setMute(m) { if (master) master.gain.setTargetAtTime(m ? 0 : 0.8, ac.currentTime, 0.05); },
+      setMute(m) { if (m) BGM.stop(); else BGM.play(); if (master) master.gain.setTargetAtTime(m ? 0 : 0.8, ac.currentTime, 0.05); },
       wind(level, rain) { if (!ac) return; const t = ac.currentTime; windG.gain.setTargetAtTime(clamp(level, 0, 1) * 0.5, t, 0.12); windF.frequency.setTargetAtTime(380 + clamp(level, 0, 1) * 900, t, 0.15); rainG.gain.setTargetAtTime(clamp(rain, 0, 1) * 0.16, t, 0.3); },
       music(dt, mood) {
         if (!ac) return; musicT -= dt; if (musicT > 0) return;
@@ -553,7 +557,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
         windLevel *= Math.exp(-dt * 3);
         const quiet = paused || mode !== 'play';
         SND.wind(quiet ? 0.03 : Math.max(windLevel, G.storm && !G.clear ? 0.35 : 0.08), quiet ? 0 : rain);
-        if (!quiet) SND.music(dt, G.storm ? 'storm' : LEVELS[li].tod[1] > 0.85 ? 'dusk' : 'day');
+        // nhạc nền là tệp giomua.mp3, không dùng nốt chuông tự sinh nữa
       } else SND.wind(0.08, 0);
     }
     if (tipT > 0) { tipT -= dt; if (tipT <= 0) $('tip').classList.remove('on'); }
