@@ -310,14 +310,17 @@
     A.grainPat = A.c.createPattern(A.grain, 'repeat');
     // viền tối nhẹ
     const v = document.createElement('canvas'); v.width = A.cv.width; v.height = A.cv.height;
-    const vc = v.getContext('2d'), g = vc.createRadialGradient(v.width / 2, v.height * 0.45, v.height * 0.35, v.width / 2, v.height * 0.5, v.width * 0.72);
+    const vc = v.getContext('2d');
+    vc.globalAlpha = 0.5; vc.fillStyle = vc.createPattern(A.grain, 'repeat'); vc.fillRect(0, 0, v.width, v.height); vc.globalAlpha = 1;
+    const g = vc.createRadialGradient(v.width / 2, v.height * 0.45, v.height * 0.35, v.width / 2, v.height * 0.5, v.width * 0.72);
     g.addColorStop(0, 'rgba(40,20,10,0)'); g.addColorStop(1, 'rgba(40,20,10,.30)');
     vc.fillStyle = g; vc.fillRect(0, 0, v.width, v.height); A.vign = v;
     if (A.scene) A.scene.layers.forEach(l => l.tiles.clear());
+    A.bgKey = null;
     A.spr.clear();
   }
   function setLevel(G) {
-    A.scene = buildScene(G);
+    A.scene = buildScene(G); A.bgKey = null;
     A.trails.length = 0; A.petals.length = 0; A.smoke.length = 0; A.parts.length = 0; A.rings.length = 0; A.rainP.length = 0; A.bolts.length = 0;
     const r = A.scene.r;
     for (let i = 0; i < (G.storm ? 40 : 60); i++) A.petals.push(newPetal(G, r, true));
@@ -336,7 +339,7 @@
     const x0 = ti * TILE - 10, x1 = (ti + 1) * TILE + 10;
     c.beginPath(); c.rect(x0, 0, TILE + 20, H); c.clip();
     layer.shapes.forEach(s => { if (s.x1 >= x0 - 120 && s.x0 <= x1 + 120) s.draw(c, rs); });
-    layer.tiles.set(ti, cv);
+    layer.tiles.set(ti, cv); A.built = true;
     if (layer.tiles.size > 8) { const k = layer.tiles.keys().next().value; layer.tiles.delete(k); }
     return cv;
   }
@@ -345,8 +348,10 @@
     for (let ti = a; ti <= b; ti++) {
       if (ti < -1) continue;
       const t = getTile(layer, ti);
-      c.drawImage(t, ti * TILE - off, 0, TILE + 0.6, H);
+      c.drawImage(t, Math.round((ti * TILE - off) * A.S) / A.S, 0, TILE + 0.6, H);
     }
+    // vẽ sẵn ô kế tiếp khi khung này chưa phải tạo ô nào, để lúc cuộn tới không bị giật
+    if (!A.built && !layer.tiles.has(b + 1)) getTile(layer, b + 1);
   }
 
   // ================= SPRITE MÂY =================
@@ -710,15 +715,10 @@
     if (A.rainP.length > 420) A.rainP.splice(0, A.rainP.length - 420);
   }
 
-  // ================= VẼ KHUNG HÌNH =================
-  function draw(G, view) {
-    const c = A.c, S = A.S, W = A.W, cam = G.cam, t = A.time;
-    const tod = lerp(G.L.tod[0], G.L.tod[1], clamp(G.t / G.dur, 0, 1));
-    const sk = skyAt(tod);
-    const storm = G.storm ? 1 - G.clear : 0;
-    const stormAmt = G.storm ? clamp((G.t - 1) / 4, 0, 1) * storm : 0;
-    const sh = view.shake || 0;
-    c.setTransform(S, 0, 0, S, sh ? (Math.random() - 0.5) * sh * S : 0, sh ? (Math.random() - 0.5) * sh * S : 0);
+  function drawBg(G, sk, tod, stormAmt, cam) {
+    if (!A.bg || A.bg.width !== A.cv.width || A.bg.height !== A.cv.height) { A.bg = document.createElement('canvas'); A.bg.width = A.cv.width; A.bg.height = A.cv.height; }
+    const c = A.bg.getContext('2d'), S = A.S, W = A.W;
+    c.setTransform(S, 0, 0, S, 0, 0);
     // trời
     const g = c.createLinearGradient(0, 0, 0, 380);
     g.addColorStop(0, stormAmt ? mixColor(sk.top, '#3d4556', stormAmt) : sk.top);
@@ -744,14 +744,6 @@
     // mây xa trang trí
     c.fillStyle = stormAmt ? 'rgba(80,88,104,.5)' : 'rgba(255,255,255,.45)';
     for (let i = 0; i < 6; i++) { const x = ((i * 380 - cam * 0.06) % (W + 400) + W + 400) % (W + 400) - 200, y = 60 + (i * 47 % 90); c.beginPath(); c.ellipse(x, y, 90 + i * 9, 10 + (i % 3) * 3, 0, 0, TAU); c.fill(); }
-    // chim
-    if (!G.storm) {
-      c.strokeStyle = 'rgba(60,50,60,.55)'; c.lineWidth = 1.4;
-      A.scene.birds.forEach((b, i) => {
-        const x = ((b.x + t * 26 - cam * 0.2) % (W + 200) + W + 200) % (W + 200) - 100, y = b.y + Math.sin(t * 0.7 + b.ph) * 8, f = Math.sin(t * 8 + b.ph) * 4;
-        c.beginPath(); c.moveTo(x - 7, y - f); c.quadraticCurveTo(x - 3, y - 2, x, y); c.quadraticCurveTo(x + 3, y - 2, x + 7, y - f); c.stroke();
-      });
-    }
     // lớp cảnh
     const layers = A.scene.layers;
     for (let i = 0; i < 3; i++) {
@@ -762,6 +754,31 @@
         c.fillStyle = hg; c.fillRect(-10, 160, W + 20, H);
       }
     }
+  }
+
+  // ================= VẼ KHUNG HÌNH =================
+  function draw(G, view) {
+    const c = A.c, S = A.S, W = A.W, cam = G.cam, t = A.time;
+    A.built = false;
+    const tod = lerp(G.L.tod[0], G.L.tod[1], clamp(G.t / G.dur, 0, 1));
+    const sk = skyAt(tod);
+    const storm = G.storm ? 1 - G.clear : 0;
+    const stormAmt = G.storm ? clamp((G.t - 1) / 4, 0, 1) * storm : 0;
+    const sh = view.shake || 0;
+    c.setTransform(S, 0, 0, S, sh ? (Math.random() - 0.5) * sh * S : 0, sh ? (Math.random() - 0.5) * sh * S : 0);
+    // nền xa (trời + 3 lớp cảnh xa) vẽ vào canvas đệm, chỉ vẽ lại khi lệch >= 1 điểm ảnh hoặc đổi màu trời
+    const bgKey = Math.round(cam * 0.62 * S) + '|' + Math.round(tod * 300) + '|' + Math.round(stormAmt * 30) + '|' + A.cv.width;
+    if (bgKey !== A.bgKey || !A.bg) { A.bgKey = bgKey; drawBg(G, sk, tod, stormAmt, cam); }
+    c.drawImage(A.bg, 0, 0, W, H);
+    // chim
+    if (!G.storm) {
+      c.strokeStyle = 'rgba(60,50,60,.55)'; c.lineWidth = 1.4;
+      A.scene.birds.forEach((b, i) => {
+        const x = ((b.x + t * 26 - cam * 0.2) % (W + 200) + W + 200) % (W + 200) - 100, y = b.y + Math.sin(t * 0.7 + b.ph) * 8, f = Math.sin(t * 8 + b.ph) * 4;
+        c.beginPath(); c.moveTo(x - 7, y - f); c.quadraticCurveTo(x - 3, y - 2, x, y); c.quadraticCurveTo(x + 3, y - 2, x + 7, y - f); c.stroke();
+      });
+    }
+    const layers = A.scene.layers;
     c.save(); c.translate(-cam, 0);
     // khói bếp (sau mặt đất chính một chút)
     A.smoke.forEach(s => { c.fillStyle = 'rgba(240,236,228,' + (0.45 * s.life / s.max) + ')'; c.beginPath(); c.arc(s.x, s.y, s.r, 0, TAU); c.fill(); });
@@ -896,8 +913,7 @@
     }
     // hạt giấy + viền tối
     c.setTransform(1, 0, 0, 1, 0, 0);
-    c.globalAlpha = 0.5; c.fillStyle = A.grainPat; c.fillRect(0, 0, A.cv.width, A.cv.height); c.globalAlpha = 1;
-    c.drawImage(A.vign, 0, 0);
+    c.drawImage(A.vign, 0, 0); // hạt giấy và viền tối đã gộp sẵn một ảnh
   }
   function mixColor(rgbStr, hexB, t) { // rgbStr là 'rgb(r,g,b)'
     const m = rgbStr.match(/\d+/g).map(Number), B = hex(hexB);
