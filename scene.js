@@ -19,9 +19,10 @@
   //  curtain: hai cánh màn kéo ra (cờ, bàn chơi)      iris: vòng tròn khép/mở (hành động, phản xạ)
   //  blinds : rèm sọc dọc lần lượt cuộn lên (trí tuệ)   tiles: ô vuông lật dần theo đường chéo (ghi nhớ, quan sát)
   //  diagonal: tấm chéo lướt ngang (thể thao, giải trí)
+  //  caro   : riêng Cờ Caro, trang vở ô ly được đánh X/O dồn dập rồi gạch đường thắng, mở ra theo vết gạch
   var THEMES = {
     'word-game': ['blinds', '#1e3a8a', '#3b82f6', '#fde68a'],
-    gamecaro: ['curtain', '#1b4fc4', '#3a6ad8', '#fbfaf3'],
+    gamecaro: ['caro', '#fbfaf3', '#f3f1e6', '#1b4fc4'],
     memori: ['tiles', '#4c1d95', '#7c3aed', '#f0abfc'],
     magic: ['tiles', '#3b0764', '#a21caf', '#fde68a'],
     crab: ['diagonal', '#0c4a6e', '#0891b2', '#fed7aa'],
@@ -90,8 +91,8 @@
   var kind = reduce ? 'fade' : t[0];
 
   // Thời gian (ms): đóng màn, mở màn, và độ trễ lệch nhau tối đa giữa các mảnh của kiểu đó
-  var CLOSE_MS = reduce ? 160 : 340, OPEN_MS = reduce ? 200 : 480, HOLD_MS = reduce ? 60 : 120;
-  var STAGGER = { blinds: 7 * 30, tiles: (7 + 11) * 12 }[kind] || 0;
+  var CLOSE_MS = reduce ? 160 : kind === 'caro' ? 240 : 340, OPEN_MS = reduce ? 200 : kind === 'caro' ? 260 : 480, HOLD_MS = reduce ? 60 : kind === 'caro' ? 160 : 120;
+  var STAGGER = { blinds: 7 * 30, tiles: (7 + 11) * 12, caro: 340 }[kind] || 0;
   var ENTRY_MIN_MS = reduce ? 250 : 650, ENTRY_MAX_MS = 2000;
 
   var CSS = [
@@ -101,7 +102,7 @@
     '.root.opening,.root.open{--d:' + OPEN_MS + 'ms}',
     '.p{position:absolute;background:linear-gradient(135deg,var(--c1),var(--c2));transition:transform var(--d) var(--ease),clip-path var(--d) var(--ease),opacity var(--d) ease;will-change:transform}',
     // khi chưa chạy hiệu ứng (đặt thẳng trạng thái) thì không có transition
-    '.root.instant .p{transition:none!important}',
+    '.root.instant .p,.root.instant .p::before,.root.instant .p::after,.root.instant .strike{transition:none!important}',
     // ---- curtain: hai cánh màn ----
     '.curtain .p{top:0;bottom:0;width:50.5%}',
     '.curtain .l{left:0;box-shadow:inset -4px 0 0 var(--ac),12px 0 40px rgba(0,0,0,.45)}',
@@ -127,6 +128,22 @@
     '.diagonal .p{top:-20%;bottom:-20%;left:-40%;width:180%;transform:skewX(-16deg) translateX(0);box-shadow:inset 6px 0 0 var(--ac),inset -6px 0 0 var(--ac)}',
     '.diagonal.from .p{transform:skewX(-16deg) translateX(-112%)}',
     '.diagonal.opening .p,.diagonal.open .p{transform:skewX(-16deg) translateX(112%)}',
+    // ---- caro: trang vở ô ly, X/O đánh dồn dập rồi gạch đường thắng ----
+    '.caro .grid{position:absolute;inset:0;display:grid;grid-template-columns:repeat(7,1fr)}',
+    '.caro .p{position:relative;inset:auto;background:var(--c1);box-shadow:inset 0 0 0 1px rgba(74,128,206,.32);transform:scale(1.02);transition-delay:var(--dl)}',
+    '.caro .p:nth-child(3n){background:var(--c2)}',
+    '.caro .p.x::before,.caro .p.x::after{content:"";position:absolute;left:50%;top:50%;width:64%;height:9%;margin:-4.5% 0 0 -32%;border-radius:99px;background:var(--ac);transform:rotate(45deg) scaleX(1);transition:transform calc(var(--d) * .8) cubic-bezier(.3,1.4,.5,1) calc(var(--dl) + 70ms)}',
+    '.caro .p.x::after{transform:rotate(-45deg) scaleX(1);transition-delay:calc(var(--dl) + 150ms)}',
+    '.caro .p.o::before{content:"";position:absolute;left:50%;top:50%;width:54%;height:54%;margin:-27% 0 0 -27%;border:var(--bw) solid #cf2d2d;border-radius:50%;transform:scale(1);transition:transform calc(var(--d) * .9) cubic-bezier(.3,1.5,.5,1) calc(var(--dl) + 90ms)}',
+    '.caro .strike{position:absolute;left:0;top:0;border-radius:99px;background:#d93232;box-shadow:0 0 0 2px rgba(251,250,243,.85),0 3px 10px rgba(120,20,20,.35);transform-origin:0 50%;transform:rotate(var(--sa)) scaleX(1);z-index:3;opacity:1;transition:transform .22s cubic-bezier(.5,0,.2,1) .3s,opacity .2s ease .12s}',
+    '.caro.from .p,.caro.opening .p,.caro.open .p{transform:scale(0) rotate(-24deg)}',
+    '.caro.opening .p,.caro.open .p{transition-delay:var(--do)}',
+    '.caro.from .p.x::before,.caro.opening .p.x::before,.caro.open .p.x::before{transform:rotate(45deg) scaleX(0)}',
+    '.caro.from .p.x::after,.caro.opening .p.x::after,.caro.open .p.x::after{transform:rotate(-45deg) scaleX(0)}',
+    '.caro.from .p.o::before,.caro.opening .p.o::before,.caro.open .p.o::before{transform:scale(0)}',
+    '.caro.opening .p.x::before,.caro.opening .p.x::after,.caro.opening .p.o::before{transition-delay:var(--do)}',
+    '.caro.from .strike{transform:rotate(var(--sa)) scaleX(0);transition:none}',
+    '.caro.opening .strike,.caro.open .strike{opacity:0;transition:opacity .22s ease .1s}',
     // ---- fade (người dùng chọn giảm chuyển động) ----
     '.fade .p{inset:0}',
     '.fade.opening .p,.fade.open .p{opacity:0}'
@@ -135,6 +152,7 @@
   function pieces() {
     var h = '', i, x, y;
     if (kind === 'curtain') h = '<div class="p l"></div><div class="p r"></div>';
+    else if (kind === 'caro') h = '<div class="grid"></div><div class="strike"></div>';
     else if (kind === 'iris') h = '<div class="p"></div><div class="ring"></div>';
     else if (kind === 'blinds') for (i = 0; i < 8; i++) h += '<div class="p" style="--i:' + i + '"></div>';
     else if (kind === 'tiles') {
@@ -156,6 +174,33 @@
   shadow.innerHTML = '<style>' + CSS + '</style><div class="root ' + kind + ' instant closed" style="--c1:' + t[1] + ';--c2:' + t[2] + ';--ac:' + t[3] + '">' +
     pieces() + '</div>';
   var el = shadow.querySelector('.root');
+  // Caro: dựng lại lưới ô vuông theo cỡ màn hình; X/O rải ngẫu nhiên, đường chéo là một hàng X liền (nét gạch thắng đi qua đó)
+  function buildCaro() {
+    var grid = el.querySelector('.grid'), strike = el.querySelector('.strike');
+    if (!grid || !strike) return;
+    var W = window.innerWidth || 360, H = window.innerHeight || 640, cols = 7, s = W / cols, rows = Math.ceil(H / s);
+    var A = Math.atan2(H, W), ca = Math.cos(A), sa = Math.sin(A), maxD = 1, maxL = 1, cells = [], x, y, d, l;
+    for (y = 0; y < rows; y++) for (x = 0; x < cols; x++) {
+      var cx = (x + .5) * s, cy = (y + .5) * s;
+      d = Math.abs(cx * sa - cy * ca); l = Math.hypot(cx - W / 2, cy - H / 2);
+      if (d > maxD) maxD = d; if (l > maxL) maxL = l;
+      cells.push([x, y, d, l]);
+    }
+    var h = '';
+    cells.forEach(function (c) {
+      var onLine = c[1] === Math.floor((c[0] + .5) * H / W), r = Math.random();
+      var m = onLine ? 'x' : r < .3 ? 'x' : r < .6 ? 'o' : '';
+      h += '<div class="p' + (m ? ' ' + m : '') + '" style="--dl:' + Math.round(c[3] / maxL * 290 + Math.random() * 30) + 'ms;--do:' + Math.round(40 + c[2] / maxD * 300 + Math.random() * 20) + 'ms"></div>';
+    });
+    grid.style.gridAutoRows = s + 'px';
+    grid.innerHTML = h;
+    el.style.setProperty('--bw', Math.max(3, s * .07) + 'px');
+    strike.style.width = Math.hypot(W, H) + 24 + 'px';
+    strike.style.height = Math.max(5, s * .12) + 'px';
+    strike.style.marginTop = -Math.max(5, s * .12) / 2 + 'px';
+    el.style.setProperty('--sa', A * 180 / Math.PI + 'deg');
+  }
+  if (kind === 'caro') buildCaro();
   hostState(true);
   (document.body || document.documentElement).appendChild(host);
 
@@ -166,7 +211,8 @@
   function cover(done) {
     nClearTimeout(timer);
     hostState(true);
-    if (kind === 'diagonal') { phase('from', true); void el.offsetWidth; }
+    if (kind === 'caro') buildCaro();
+    if (kind === 'diagonal' || kind === 'caro') { phase('from', true); void el.offsetWidth; }
     phase('closing');
     timer = nSetTimeout(function () { phase('closed'); if (done) done(); }, CLOSE_MS + STAGGER + 20);
   }
