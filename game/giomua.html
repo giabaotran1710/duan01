@@ -109,7 +109,27 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
 .rules b{color:var(--red2)}
 .rot{font-size:46px;line-height:1;margin:4px 0 8px;display:inline-block;animation:rot 1.8s ease-in-out infinite}
 @keyframes rot{0%,30%{transform:rotate(0)}60%,100%{transform:rotate(-90deg)}}
-@media (max-height:430px){.card{padding:12px 16px}.card h2{font-size:28px}.rules li{margin:5px 0}.rules .gi{flex-basis:34px;height:34px}.rules .gi svg{width:24px;height:24px}.stg{min-height:40px;padding:5px 8px}.brand p{font-size:13px;margin:4px 0 8px}.big{min-height:42px;margin-top:6px}.ghost{min-height:38px}.breath .bar{width:120px}.legend{display:none}}
+#rotate{background:var(--night)}
+.layer{z-index:100000}
+.brand .ghost{color:var(--ink)}
+.ico{width:44px;height:44px}
+.ghost{min-height:44px}
+.homeLink{padding:12px 14px;min-height:44px;display:flex;align-items:center;top:max(4px,env(safe-area-inset-top))}
+.track.storm .rail{background:rgba(255,248,236,.4)}
+.wishPill .num{display:inline-flex;gap:3px;align-items:baseline}
+.stg .t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stg .t small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stg .t{min-width:0}
+@media (min-height:760px){
+  .pill{font-size:16px;padding:6px 14px;border-radius:14px}.leaves svg{width:22px;height:22px}
+  .ico{width:52px;height:52px;border-radius:15px}.ico svg{width:24px;height:24px}
+  .tip{font-size:17px;padding:9px 18px;top:76px}.breath .lab{font-size:15px}.breath .bar{width:220px;height:15px}
+  .legend span{font-size:14px;padding:5px 11px}.track{max-width:640px}
+  .chap{width:min(560px,40%);padding:16px 18px}.stg{min-height:58px}.stg .t{font-size:15px}.stg .t small{font-size:12.5px}.season{font-size:15px}
+  .brand p{font-size:18px;max-width:420px}.brand .big,.brand .row{max-width:340px}
+  .card{max-width:520px}
+}
+@media (max-height:430px){.card{padding:12px 16px}.card h2{font-size:28px}.rules li{margin:5px 0}.rules .gi{flex-basis:34px;height:34px}.rules .gi svg{width:24px;height:24px}.stg{min-height:44px;padding:5px 8px}.stg .t{font-size:12.5px}.chapNote{display:none}.brand p{font-size:13px;margin:4px 0 8px}.big{min-height:42px;margin-top:6px}.ghost{min-height:38px}.breath .bar{width:120px}.legend{display:none}}
 @media (max-width:640px){.brand{max-width:48%}.chap{width:50%}.stages{grid-template-columns:1fr}}
 @media (prefers-reduced-motion:reduce){.toast,.tip{transition:none}.rot{animation:none}}
 </style>
@@ -223,6 +243,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   let save = { best: [], mute: false, rotSkip: false, seenHelp: false };
   try { const s = JSON.parse(localStorage.getItem(SAVE_KEY) || 'null'); if (s && typeof s === 'object') save = Object.assign(save, s); } catch (e) {}
   if (!Array.isArray(save.best)) save.best = [];
+  save.best = save.best.map(v => v == null || !Number.isFinite(+v) ? null : Math.max(0, Math.floor(+v)));
   function store() { try { localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {} }
   const passed = i => save.best[i] != null;
   const unlocked = i => i === 0 || passed(i - 1);
@@ -259,6 +280,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     }
     return {
       ensure,
+      suspend(h) { if (!ac) return; try { h ? ac.suspend() : ac.resume(); } catch (e) {} },
       setMute(m) { if (master) master.gain.setTargetAtTime(m ? 0 : 0.8, ac.currentTime, 0.05); },
       wind(level, rain) { if (!ac) return; const t = ac.currentTime; windG.gain.setTargetAtTime(clamp(level, 0, 1) * 0.5, t, 0.12); windF.frequency.setTargetAtTime(380 + clamp(level, 0, 1) * 900, t, 0.15); rainG.gain.setTargetAtTime(clamp(rain, 0, 1) * 0.16, t, 0.3); },
       music(dt, mood) {
@@ -302,8 +324,10 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     $('rotate').classList.toggle('on', vw < vh && !save.rotSkip);
   }
   function refit(g) {
-    g.W = W;
-    if (g.storm) g.cam = (g.len - W) / 2; else g.camV = Math.max(1, (g.len - W) / g.dur);
+    if (g.demo) { g.W = W; g.cam = clamp(g.cam, 0, Math.max(0, g.len - W)); return; }
+    if (g.storm) { const before = g.len; GM.restretch(g, W); if (before !== g.len) GA.setLevel(g); return; }
+    g.W = W; g.cam = clamp(g.cam, 0, Math.max(0, g.len - W));
+    g.camV = Math.max(1, (g.len - W - g.cam) / Math.max(1, g.dur - g.t));
   }
 
   // ================= TRẠNG THÁI =================
@@ -313,7 +337,8 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   }
   function startLevel(i) {
     li = i; G = GM.load(i, W); refit(G); GA.setLevel(G);
-    hintI = 0; firstMerge = false; shake = 0;
+    hintI = 0; firstMerge = false; shake = 0; tipT = 0; toastT = 0;
+    $('hand').classList.remove('on'); $('tip').classList.remove('on'); $('toast').classList.remove('on');
     buildTrack();
     mode = 'intro'; showIntro();
     $('hud').hidden = false; $('breath').hidden = false; $('legend').hidden = false;
@@ -343,13 +368,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
       lastHearts = G.hearts;
     }
     if (force || G.done !== lastDone) {
-      $('wishPill').innerHTML = G.storm ? 'Mái chợ <b>' + G.roofs.filter(r => !r.gone).length + '/3</b>' : 'Ước nguyện <b>' + G.done + '</b> / ' + G.need;
+      $('wishPill').innerHTML = G.storm ? 'Mái chợ <b>' + G.roofs.filter(r => !r.gone).length + '/3</b>' : 'Ước nguyện <span class="num"><b>' + G.done + '</b>/ ' + G.need + '</span>';
       lastDone = G.done;
     }
     G.wishes.forEach(w => { if (w.el) w.el.className = 'mk' + (w.done ? ' done' : w.missed ? ' miss' : ''); });
     const p = G.storm ? clamp(G.t / G.dur, 0, 1) : clamp((G.cam + G.W * 0.5) / G.len, 0, 1);
     $('trackFill').style.width = (p * 100) + '%'; $('trackMe').style.left = (p * 100) + '%';
-    $('trackMe').textContent = G.storm ? '⛈' : '🍃';
+    $('trackMe').textContent = G.storm ? '⛈' : '🍃'; $('track').classList.toggle('storm', G.storm);
     $('breathBar').style.transform = 'scaleX(' + (G.breath / 100) + ')';
     $('breath').classList.toggle('low', G.breath < 20);
     if (G.storm) $('wishPill').innerHTML = 'Mái chợ <b>' + G.roofs.filter(r => !r.gone).length + '/3</b>';
@@ -382,10 +407,12 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   }
   function finish() {
     const r = G.result; mode = 'result';
+    $('tip').classList.remove('on'); $('hand').classList.remove('on'); tipT = 0;
     if (r.win) {
       const got = G.storm ? G.roofs.filter(o => !o.gone).length : G.done;
       const prev = save.best[li];
-      save.best[li] = Math.max(prev == null ? 0 : prev, got); store(); submitScore();
+      save.best[li] = Math.max(prev == null ? 0 : prev, got); store();
+      if (prev == null || got > prev) submitScore();
       const last = li === LEVELS.length - 1;
       $('resH').textContent = G.storm ? 'Giông đã tan!' : 'Làng vui rồi!';
       $('resNum').innerHTML = G.storm ? got + ' <small>/ 3 mái chợ</small>' : got + ' <small>/ ' + G.wishes.length + ' ước nguyện</small>';
@@ -395,7 +422,13 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     } else {
       $('resH').textContent = 'Chưa được rồi';
       $('resNum').innerHTML = G.storm ? G.roofs.filter(o => !o.gone).length + ' <small>/ 3 mái chợ</small>' : G.done + ' <small>/ cần ' + G.need + '</small>';
-      $('resWhy').textContent = r.why;
+      const TIPS = ['Mẹo: gom 3 mây nhỏ gần ruộng trước khi cảnh trôi tới, rồi đẩy nhẹ cho mây đứng yên trên ruộng.',
+        'Mẹo: vuốt đều tay, không quá nhanh, từ trái sang phải ngay dưới con diều.',
+        'Mẹo: vẽ một vòng tròn quanh đám hạt để gom lại, rồi thổi nhẹ về phía luống đất.',
+        'Mẹo: giữ yên ngón tay trước đám mây mưa khi thấy mũi tên gió giật.',
+        'Mẹo: làm trước các ước nguyện gần mép trái, chúng sắp trôi mất.',
+        'Mẹo: khi mũi tên đỏ hiện ra, giữ yên ngón tay ngay trước mái chợ bị nhắm.'];
+      $('resWhy').textContent = G.hearts <= 0 ? r.why + '. ' + TIPS[li] : TIPS[li];
       $('resNext').hidden = true;
       SND.lose();
     }
@@ -451,10 +484,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   function endPtr(e) { const s = ptrs.get(e.pointerId); ptrs.delete(e.pointerId); }
   cv.addEventListener('pointerup', endPtr); cv.addEventListener('pointercancel', endPtr); cv.addEventListener('lostpointercapture', endPtr);
   window.addEventListener('keydown', e => {
-    if (e.code === 'Space') { spaceHeld = true; e.preventDefault(); }
+    if (e.code === 'Space' && playing()) { spaceHeld = true; e.preventDefault(); }
     if (e.code === 'Escape' && mode === 'play') { if ($('pause').classList.contains('on')) resume(); else pause(); }
   });
   window.addEventListener('keyup', e => { if (e.code === 'Space') spaceHeld = false; });
+  window.addEventListener('blur', () => { spaceHeld = false; ptrs.clear(); });
   function inputStep(dt) {
     if (!playing()) return;
     const arr = [...ptrs.values()];
@@ -485,7 +519,7 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
     const x = G.cam + W * (0.25 + 0.5 * (0.5 + 0.5 * Math.sin(demoT * 0.35))), y = 140 + Math.sin(demoT * 0.9) * 60;
     const x2 = x + 30 + Math.cos(demoT * 0.6) * 10;
     if (Math.sin(demoT * 1.3) > 0.2) { G.breath = 100; GM.stroke(G, x, y, x2, y + Math.sin(demoT) * 10, 1 / 60 * 3); }
-    if (G.t > G.dur - 10) { const keep = demoT; loadDemo(); demoT = keep; }
+    if (G.over || G.t > G.dur - 10) { const keep = demoT; loadDemo(); demoT = keep; }
   }
   function frame(now) {
     let dt = (now - last) / 1000; last = now;
@@ -515,8 +549,9 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
         // âm thanh gió theo cường độ
         let rain = 0; G.clouds.forEach(c => { if (c.rain && c.x > G.cam - 100 && c.x < G.cam + W + 100) rain += c.dark ? 0.5 : 0.35; });
         windLevel *= Math.exp(-dt * 3);
-        SND.wind(Math.max(windLevel, G.storm && !G.clear ? 0.35 : 0.08), rain);
-        SND.music(dt, G.storm ? 'storm' : LEVELS[li].tod[1] > 0.85 ? 'dusk' : 'day');
+        const quiet = paused || mode !== 'play';
+        SND.wind(quiet ? 0.03 : Math.max(windLevel, G.storm && !G.clear ? 0.35 : 0.08), quiet ? 0 : rain);
+        if (!quiet) SND.music(dt, G.storm ? 'storm' : LEVELS[li].tod[1] > 0.85 ? 'dusk' : 'day');
       } else SND.wind(0.08, 0);
     }
     if (tipT > 0) { tipT -= dt; if (tipT <= 0) $('tip').classList.remove('on'); }
@@ -566,7 +601,11 @@ button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offse
   $('resNext').onclick = () => { closeAll(); startLevel(Math.min(li + 1, LEVELS.length - 1)); };
   $('resAgain').onclick = () => { closeAll(); startLevel(li); };
   $('resMenu').onclick = () => toMenu();
-  document.addEventListener('visibilitychange', () => { if (document.hidden && mode === 'play') pause(); });
+  document.addEventListener('visibilitychange', () => {
+    spaceHeld = false; ptrs.clear();
+    if (document.hidden && mode === 'play') pause();
+    SND.suspend(document.hidden);
+  });
   LandscapeGate.bind($('rotSkip'), { note: $('rotNote'), onSkip: () => { save.rotSkip = true; store(); layer('rotate', false); }, onOk: resize });
 
   window.addEventListener('resize', resize);

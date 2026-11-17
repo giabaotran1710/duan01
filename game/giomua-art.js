@@ -63,7 +63,7 @@
       const ph = r() * 100;
       while (x < len + 200) {
         // núi đá vôi đồng bằng: đỉnh tròn, sườn dốc
-        const y = b[1] - Math.abs(Math.sin(x * b[3] + ph)) * b[2] - Math.sin(x * b[3] * 3.1 + ph * 2) * 18 - (r() * 10);
+        const y = b[1] - (0.3 + 0.7 * Math.abs(Math.sin(x * b[3] + ph))) * b[2] - Math.sin(x * b[3] * 3.1 + ph * 2) * 22 - Math.sin(x * b[3] * 7.3 + ph) * 8 - (r() * 12);
         pts.push([x, y]); x += 34 + r() * 30;
       }
       S.push({ x0: -200, x1: len + 300, draw(c, rs) {
@@ -337,7 +337,7 @@
     c.beginPath(); c.rect(x0, 0, TILE + 20, H); c.clip();
     layer.shapes.forEach(s => { if (s.x1 >= x0 - 120 && s.x0 <= x1 + 120) s.draw(c, rs); });
     layer.tiles.set(ti, cv);
-    if (layer.tiles.size > 14) { const k = layer.tiles.keys().next().value; layer.tiles.delete(k); }
+    if (layer.tiles.size > 8) { const k = layer.tiles.keys().next().value; layer.tiles.delete(k); }
     return cv;
   }
   function drawLayer(c, layer, cam) {
@@ -354,9 +354,10 @@
     const key = size + (dark ? 'd' : '') + (seed % 5 | 0);
     let s = A.spr.get(key); if (s) return s;
     const R = GM.cloudR({ size, dark }), rs = A.rs, pad = 18;
-    const w = (R * 2.6 + pad * 2), h = (R * 1.7 + pad * 2);
+    // khung đủ cao cho cụm bông giữa (cao tới ~1,6R) và bóng đổ phía dưới
+    const ty = pad + R * 1.75, w = (R * 2.6 + pad * 2), h = ty + R * 0.42 + pad;
     const cv = document.createElement('canvas'); cv.width = Math.ceil(w * rs); cv.height = Math.ceil(h * rs);
-    const c = cv.getContext('2d'); c.scale(rs, rs); c.translate(w / 2, h / 2 + R * 0.12);
+    const c = cv.getContext('2d'); c.scale(rs, rs); c.translate(w / 2, ty);
     const r = GM.rng(seed % 5 * 977 + size * 31 + (dark ? 7 : 0) + 1);
     const base = dark ? '#5a6274' : size >= 3 ? '#9aa8bd' : size === 2 ? '#dfe5ee' : '#fbfdff';
     const lite = dark ? '#7a8496' : size >= 3 ? '#b8c4d4' : size === 2 ? '#f1f4f8' : '#ffffff';
@@ -364,17 +365,18 @@
     const puffs = [];
     const n = 4 + size * 2;
     for (let i = 0; i < n; i++) { const t = i / (n - 1); puffs.push([(t - 0.5) * R * 2.0, -Math.sin(t * Math.PI) * R * (0.42 + r() * 0.25), R * (0.38 + Math.sin(t * Math.PI) * 0.36 + r() * 0.1)]); }
-    const body = () => { c.beginPath(); puffs.forEach(p => { c.moveTo(p[0] + p[2], p[1]); c.arc(p[0], p[1], p[2], 0, TAU); }); c.rect(-R * 1.05, -R * 0.1, R * 2.1, R * 0.36); };
-    c.save(); c.shadowColor = 'rgba(50,60,80,.28)'; c.shadowBlur = 8 * rs; c.shadowOffsetY = 4 * rs;
+    // thân mây: các bông tròn + đáy bo tròn nhẹ (không dùng hình chữ nhật để khỏi lộ vạch cứng)
+    const body = () => {
+      c.beginPath(); puffs.forEach(p => { c.moveTo(p[0] + p[2], p[1]); c.arc(p[0], p[1], p[2], 0, TAU); });
+      c.moveTo(-R * 1.05, R * 0.1); c.quadraticCurveTo(-R * 1.1, R * 0.3, -R * 0.8, R * 0.3); c.lineTo(R * 0.8, R * 0.3); c.quadraticCurveTo(R * 1.1, R * 0.3, R * 1.05, R * 0.1); c.lineTo(R * 1.0, -R * 0.15); c.lineTo(-R * 1.0, -R * 0.15); c.closePath();
+    };
+    c.save(); c.shadowColor = 'rgba(50,60,80,.28)'; c.shadowBlur = 8 * rs; c.shadowOffsetY = 5 * rs;
     c.fillStyle = shade; body(); c.fill(); c.restore();
-    c.fillStyle = base; c.save(); c.translate(0, -3); body(); c.fill(); c.restore();
+    c.fillStyle = base; c.save(); c.translate(0, -3); c.scale(0.985, 0.97); body(); c.fill(); c.restore();
     c.fillStyle = lite; c.globalAlpha = 0.85;
     puffs.forEach(p => { c.beginPath(); c.arc(p[0] - p[2] * 0.18, p[1] - p[2] * 0.25 - 3, p[2] * 0.62, 0, TAU); c.fill(); });
     c.globalAlpha = 1;
-    // nét giấy cắt ở đáy
-    c.strokeStyle = dark ? 'rgba(20,24,34,.35)' : 'rgba(90,110,140,.25)'; c.lineWidth = 1.2;
-    c.beginPath(); c.moveTo(-R * 1.0, R * 0.25); c.lineTo(R * 1.0, R * 0.25); c.stroke();
-    s = { cv, w, h }; A.spr.set(key, s); return s;
+    s = { cv, w, h, oy: ty - R * 0.12 }; A.spr.set(key, s); return s;
   }
 
   // ================= NHÂN VẬT =================
@@ -616,7 +618,7 @@
     const fa = cl.fade > 0 ? 1 - cl.fade / 2.5 : 1;
     const wob = Math.sin(t * 0.8 + cl.seed) * 1.5;
     c.globalAlpha = fa * (cl.age < 0.8 ? cl.age / 0.8 : 1);
-    c.drawImage(s.cv, cl.x - s.w / 2 * b, cl.y - s.h / 2 * b + wob, s.w * b, s.h * b);
+    c.drawImage(s.cv, cl.x - s.w / 2 * b, cl.y - s.oy * b + wob, s.w * b, s.h * b);
     c.globalAlpha = 1;
     if (cl.size >= 3 && cl.fade === 0 && !cl.dark) { // vạch nước còn lại
       const R = GM.cloudR(cl), k = clamp(cl.water / 7, 0, 1);

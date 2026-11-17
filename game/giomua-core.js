@@ -113,7 +113,7 @@
     { name: 'Làng diều', sub: 'Giữ gió đều cho diều bay cao', len: 2600, dur: 112, tod: [0.3, 0.5], base: [18, 0], need: 2, seed: 23,
       clouds: [[300, 110, 1], [900, 140, 1], [1500, 100, 1], [2100, 130, 1]],
       kites: [470, 1190, 1950], cloudEvery: 0,
-      hints: [[0.6, 'Vuốt đều tay từ trái sang phải quanh con diều để nâng diều lên'], [12, 'Giữ diều trên cao 4 giây. Vuốt quá gắt sẽ làm đứt dây']] },
+      hints: [[0.6, 'Vuốt đều tay từ trái sang phải quanh con diều để nâng diều lên'], [12, 'Đưa diều lên trên vạch đứt và giữ 4 giây. Vuốt quá gắt sẽ làm đứt dây']] },
     { name: 'Hạt gió', sub: 'Thổi hạt bồ công anh xuống luống đất', len: 2700, dur: 122, tod: [0.42, 0.6], base: [20, 0], need: 2, seed: 37,
       clouds: [[1030, 120, 1], [1150, 175, 1], [1260, 110, 1], [1400, 160, 1]],
       dands: [360, 1880], beds: [[600, 170], [2130, 180]], fields: [[1420, 260]], cloudEvery: 13,
@@ -129,7 +129,7 @@
       gusts: [[44, 160], [96, 180]],
       hints: [[0.6, 'Chiều hội: 6 ước nguyện, cần hoàn thành 4']] },
     { name: 'Giông đầu mùa', sub: 'Chắn ba đợt gió giật, giữ mái chợ', storm: true, dur: 80, tod: [0.55, 0.62], base: [-26, 0], need: 0, seed: 71,
-      hints: [[0.6, 'Giông tới! Mũi tên đỏ báo gió giật sắp lao vào mái chợ'], [4.5, 'Thổi ngược lại hoặc giữ yên ngón tay để tạo vùng lặng chắn trước mái'], [24, 'Mây đen mang mưa: đẩy chúng ra xa sân phơi']] },
+      hints: [[0.6, 'Giông tới! Mũi tên đỏ báo gió giật sắp lao vào mái chợ'], [4.5, 'Thổi ngược lại hoặc giữ yên ngón tay chắn trước mái. Thanh vàng trên mái là độ bền'], [24, 'Mây đen mang mưa: đẩy chúng ra xa sân phơi']] },
   ];
 
   // ================= TRẠNG THÁI CHẶNG =================
@@ -210,7 +210,7 @@
     if (G.over) return;
     G.t += dt;
     const F = G.field;
-    if (!G.storm) G.cam = clamp(G.t * G.camV, 0, G.len - G.W);
+    if (!G.storm) G.cam = clamp(G.cam + G.camV * dt, 0, Math.max(0, G.len - G.W));
     // gợi ý
     // hơi gió
     if (G.breathRest > 0) G.breathRest -= dt; else G.breath = Math.min(100, G.breath + 16 * dt);
@@ -462,5 +462,15 @@
     });
   }
 
-  window.GM = { KITE_UP, H, GROUND, CELL, SKY_TOP, SKY_BOT, LEVELS, load, step, stroke, vortex, calm, cloudR, rng, clamp };
+  /* trận giông: cảnh rộng đúng bằng khung nhìn; đổi khung thì giãn mọi toạ độ ngang theo tỉ lệ và dựng lại trường gió */
+  function restretch(G, W) {
+    if (!G.storm || Math.abs(W - G.len) < 1) { G.W = W; return; }
+    const k = W / G.len, sx = o => { o.x *= k; };
+    G.roofs.forEach(sx); G.mats.forEach(m => { m.x *= k; m.w *= k; }); G.clouds.forEach(sx); G.wishes.forEach(sx);
+    G.jets.forEach(j => { j.x *= k; j.tx *= k; }); G.vortices.forEach(sx); G.calms.forEach(sx);
+    const b = [G.field.bx, G.field.by];
+    G.field = new Field(W); G.field.setBase(b[0], b[1]);
+    G.len = W; G.W = W; G.cam = 0;
+  }
+  window.GM = { restretch, KITE_UP, H, GROUND, CELL, SKY_TOP, SKY_BOT, LEVELS, load, step, stroke, vortex, calm, cloudR, rng, clamp };
 })();
