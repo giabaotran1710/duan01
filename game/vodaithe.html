@@ -1,0 +1,537 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#101a17">
+<title>Võ đài thẻ</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700&family=Pattaya&display=swap">
+<style>
+/* Kế hoạch thiết kế: bàn cờ chiến trường đêm, thẻ là thẻ tre.
+   Chất liệu: gỗ lim tối, thẻ tre sáng cho Lính, sơn mài đen viền vàng cho Mưu, dây đỏ buộc thẻ, ấn son báo giá.
+   Nguyên tắc: (1) mỗi loại thẻ một biểu tượng nét mực riêng, không phụ thuộc màu; (2) Lính sáng, Mưu tối, nhìn là biết;
+   (3) bên đối thủ luôn ở trên, mình ở dưới; (4) góc cắt vát thay cho bo tròn; (5) giai đoạn nào đang chơi nằm ngay trên đầu màn hình. */
+:root{
+  --wood:#101a17; --wood2:#0a110f; --plank:#1d2e28; --plank2:#26403a; --bamboo:#ecd79c; --bamboo2:#d3b66a; --ink:#1c1710; --ink2:#5d4a28;
+  --son:#b3261e; --son2:#6e1510; --gold:#e3b650; --gold2:#8d6a22; --lac:#1a1412; --text:#f6e8c8; --muted:#aab59f;
+  --foe:#7b2d28; --me:#2d6a5a;
+  --head:'Pattaya','Be Vietnam Pro',serif; --body:'Be Vietnam Pro',system-ui,sans-serif;
+  --cut:polygon(7px 0,calc(100% - 7px) 0,100% 7px,100% calc(100% - 7px),calc(100% - 7px) 100%,7px 100%,0 calc(100% - 7px),0 7px);
+  --cut12:polygon(12px 0,calc(100% - 12px) 0,100% 12px,100% calc(100% - 12px),calc(100% - 12px) 100%,12px 100%,0 calc(100% - 12px),0 12px);
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%;background:var(--wood2)}
+body{color:var(--text);font:500 14px/1.35 var(--body);display:flex;justify-content:center;overflow:hidden;touch-action:manipulation;
+  background:radial-gradient(80% 40% at 50% 0%,rgba(227,182,80,.10),transparent 70%),linear-gradient(var(--wood),var(--wood2))}
+button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;padding:0}
+button:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round}
+.app{width:100%;max-width:520px;height:100dvh;display:flex;flex-direction:column;position:relative}
+.screen{position:absolute;inset:0;display:none;flex-direction:column}
+.screen.on{display:flex}
+
+/* menu */
+#menu{align-items:center;justify-content:center;padding:24px 20px;gap:18px;text-align:center}
+.logo{font:400 52px/1.1 var(--head);color:var(--gold);text-shadow:0 3px 0 var(--son2),0 0 28px rgba(227,182,80,.25)}
+.logo small{display:block;font:700 12px/1 var(--body);letter-spacing:.35em;text-transform:uppercase;color:var(--muted);text-shadow:none;margin-top:8px}
+.menuBox{display:flex;flex-direction:column;gap:10px;width:100%;max-width:340px}
+.big{padding:15px 18px;font:700 16px/1.2 var(--body);background:var(--bamboo);color:var(--ink);clip-path:var(--cut12);min-height:52px;text-align:left;display:flex;flex-direction:column;justify-content:center;align-items:flex-start;gap:2px}
+.big small{font:500 12px/1.3 var(--body);color:var(--ink2);display:block;margin-top:2px}
+.big.dark{background:var(--plank2);color:var(--text)}
+.big.dark small{color:var(--muted)}
+.big[disabled]{opacity:.5;cursor:default}
+.big:not([disabled]):active{transform:scale(.98)}
+.lv{display:grid;grid-template-columns:repeat(4,1fr);gap:6px}
+.lv button{padding:10px 4px;font:700 13px/1.1 var(--body);background:var(--plank);color:var(--text);clip-path:var(--cut);border:0;min-height:44px}
+.lv button.on{background:var(--gold);color:var(--ink)}
+.menuNote{font-size:12px;color:var(--muted);max-width:320px}
+
+/* thanh trên */
+.top{display:grid;grid-template-columns:44px 1fr 44px;align-items:center;gap:6px;padding:6px 10px 0;min-height:48px}
+.ico{width:44px;height:44px;border-radius:50%;border:1.5px solid var(--gold2);color:var(--gold);display:grid;place-items:center;padding:11px}
+.phaseTitle{text-align:center;min-width:0}
+.phaseTitle b{display:block;font:400 21px/1.1 var(--head);color:var(--gold);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.phaseTitle span{font-size:12px;color:var(--muted)}
+.pills{display:grid;grid-template-columns:repeat(4,1fr);gap:4px;padding:6px 12px 4px}
+.pill{font:700 11px/1 var(--body);text-align:center;padding:7px 2px;background:var(--plank);color:var(--muted);clip-path:var(--cut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pill.cur{background:var(--gold);color:var(--ink)}
+.pill.done{background:var(--plank2);color:var(--text)}
+
+/* Thành */
+.castle{margin:2px 12px;padding:7px 10px;display:grid;grid-template-columns:1fr auto;gap:2px 10px;align-items:center;background:var(--plank);clip-path:var(--cut12);position:relative}
+.castle.foe{background:linear-gradient(90deg,#3a1a17,var(--plank))}
+.castle.me{background:linear-gradient(90deg,#173a31,var(--plank))}
+.castle .nm{font:700 13px/1.2 var(--body);display:flex;gap:6px;align-items:center;min-width:0}
+.role{font:700 10px/1 var(--body);padding:4px 6px;background:var(--son);color:#fff;white-space:nowrap}
+.role.def{background:var(--me)}
+.hpbar{grid-column:1/2;height:10px;background:rgba(0,0,0,.45);position:relative;border:1px solid rgba(227,182,80,.35)}
+.hpbar i{position:absolute;inset:0 auto 0 0;background:linear-gradient(#f06a4e,#b3261e);transition:width .35s}
+.castle.me .hpbar i{background:linear-gradient(#7fd1a0,#2d8f68)}
+.hpnum{font:700 19px/1 var(--body);color:var(--gold);grid-row:1/3;grid-column:2;text-align:right}
+.hpnum small{font-size:11px;color:var(--muted)}
+.meta{font-size:11px;color:var(--muted);display:flex;gap:10px;grid-column:1/3;flex-wrap:wrap}
+.meta b{color:var(--text)}
+.back{display:inline-block;width:12px;height:16px;background:var(--lac);border:1px solid var(--gold2);vertical-align:-3px;margin-right:2px}
+.shake{animation:shake .4s}
+@keyframes shake{20%{transform:translateX(-5px)}50%{transform:translateX(5px)}80%{transform:translateX(-3px)}}
+
+/* chiến trường */
+.board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(3,1fr);gap:6px;padding:4px 12px}
+.lane{position:relative;display:flex;flex-direction:column;background:repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 2px,transparent 2px 9px),var(--plank);clip-path:var(--cut12);padding:4px 4px 6px;gap:3px;min-width:0;text-align:left}
+.lane.can{outline:2px dashed var(--gold);outline-offset:-3px;animation:pulse 1s infinite}
+.lane.can .drop{display:flex}
+@keyframes pulse{50%{background-color:#2c4a42}}
+.lh{display:flex;justify-content:space-between;align-items:center;font:700 11px/1 var(--body);color:var(--muted);height:16px;padding:0 2px}
+.threat{background:var(--son);color:#fff;padding:2px 5px;font-size:11px}
+.side{display:flex;flex-direction:column;gap:3px;flex:1;min-height:0}
+.slot{flex:1;min-height:0;position:relative;border:1px dashed rgba(236,215,156,.18)}
+.slot.wide{flex:2}
+.mid{height:14px;display:flex;align-items:center;justify-content:center;position:relative;color:var(--gold2)}
+.mid::before{content:'';position:absolute;left:0;right:0;top:50%;border-top:1px solid rgba(227,182,80,.35)}
+.mid span{position:relative;background:var(--plank);padding:0 6px;font-size:10px;font-weight:700;letter-spacing:.1em}
+.drop{display:none;position:absolute;inset:0;align-items:center;justify-content:center;background:rgba(227,182,80,.12);font:700 12px/1 var(--body);color:var(--gold);z-index:2;pointer-events:none}
+.traps{min-height:18px;display:flex;gap:3px;flex-wrap:wrap}
+.chip{font:700 10px/1 var(--body);background:var(--lac);color:var(--gold);border:1px solid var(--gold2);padding:3px 5px;white-space:nowrap}
+
+/* thẻ Lính trên sân */
+.unit{position:absolute;inset:0;background:linear-gradient(var(--bamboo),var(--bamboo2));color:var(--ink);display:grid;grid-template-columns:22px 1fr;grid-template-rows:1fr auto;gap:0 3px;padding:3px 4px;clip-path:var(--cut);transition:opacity .35s,transform .35s;overflow:hidden}
+.unit.foe{background:linear-gradient(#e6c7a0,#c9946a)}
+.unit .em{width:22px;height:22px;color:var(--son2);align-self:center}
+.unit .nm{font:700 11px/1.1 var(--body);align-self:center;overflow:hidden}
+.unit .st{grid-column:1/3;display:flex;justify-content:space-between;font:700 13px/1 var(--body)}
+.unit .a{color:var(--son2)} .unit .h{color:#1c5a3f}
+.unit .tag{position:absolute;right:2px;top:1px;font:700 8px/1 var(--body);color:var(--son2)}
+.unit.dying{opacity:0;transform:scale(.7)}
+.unit.hurt{animation:shake .35s}
+.unit.sel{outline:3px solid var(--gold)}
+.unit.wide .em{width:30px;height:30px}
+.float{position:absolute;z-index:30;font:700 20px/1 var(--body);color:#fff;text-shadow:0 2px 0 #000,0 0 8px var(--son);pointer-events:none;animation:up 1s forwards;white-space:nowrap}
+.float.good{color:#9ff0c0}
+@keyframes up{from{opacity:1;transform:translateY(0)}to{opacity:0;transform:translateY(-34px)}}
+.flip{position:absolute;left:50%;top:50%;z-index:40;width:92%;transform:translate(-50%,-50%);background:var(--lac);color:var(--gold);border:2px solid var(--gold);padding:6px;text-align:center;font:700 12px/1.2 var(--body);animation:flip .9s forwards;clip-path:var(--cut)}
+.flip .ic{width:26px;height:26px;display:block;margin:0 auto 2px}
+.flip.cancel{color:#999;border-color:#666;text-decoration:line-through}
+@keyframes flip{0%{opacity:0;transform:translate(-50%,-50%) rotateY(90deg)}25%{opacity:1;transform:translate(-50%,-50%) rotateY(0)}85%{opacity:1}100%{opacity:0}}
+.banner{position:absolute;left:0;right:0;top:34%;z-index:50;text-align:center;font:400 40px/1.1 var(--head);color:var(--gold);text-shadow:0 3px 0 var(--son2),0 0 24px #000;animation:ban 1.3s forwards;pointer-events:none}
+@keyframes ban{0%{opacity:0;transform:scale(.7)}20%{opacity:1;transform:scale(1.05)}80%{opacity:1}100%{opacity:0}}
+
+/* thanh dưới và tay bài */
+.info{margin:0 12px;min-height:36px;padding:6px 10px;font-size:12px;line-height:1.35;background:rgba(0,0,0,.35);color:var(--text);display:flex;align-items:center}
+.bar{display:flex;gap:8px;align-items:stretch;padding:0 12px 4px}
+.orders{display:flex;gap:4px;align-items:center;flex:1;flex-wrap:wrap}
+.coin{width:18px;height:18px;transform:rotate(45deg);background:var(--son);border:2px solid var(--gold);margin:2px 3px}
+.coin.off{background:transparent;border-color:rgba(227,182,80,.35)}
+.go{min-width:150px;min-height:48px;padding:0 14px;font:700 14px/1.1 var(--body);background:var(--son);color:#fff;clip-path:var(--cut)}
+.go.war{background:var(--gold);color:var(--ink)}
+.go[disabled]{opacity:.5}
+.hand{display:flex;gap:6px;padding:4px 12px calc(10px + env(safe-area-inset-bottom));overflow-x:auto;min-height:126px;scrollbar-width:none;align-items:flex-end}
+.card{flex:0 0 84px;height:116px;position:relative;display:flex;flex-direction:column;text-align:left;padding:5px 6px;clip-path:var(--cut);transition:transform .15s}
+.card.unit{background:linear-gradient(var(--bamboo),var(--bamboo2));color:var(--ink)}
+.card.trick{background:linear-gradient(#2b2420,var(--lac));color:var(--gold);box-shadow:inset 0 0 0 2px var(--gold2)}
+.card .cost{position:absolute;top:0;left:0;width:26px;height:26px;background:var(--son);color:#fff;font:700 14px/26px var(--body);text-align:center;clip-path:polygon(0 0,100% 0,100% 70%,70% 100%,0 100%)}
+.card .em{width:38px;height:38px;margin:6px 0 0 auto}
+.card.unit .em{color:var(--son2)}
+.card .cn{font:700 12px/1.1 var(--body);margin-top:3px}
+.card .ct{font-size:9.5px;line-height:1.15;opacity:.85;margin-top:2px;flex:1;overflow:hidden}
+.card .cs{display:flex;justify-content:space-between;font:700 13px/1 var(--body)}
+.card.unit .cs .a{color:var(--son2)} .card.unit .cs .h{color:#1c5a3f}
+.card.no{opacity:.45}
+.card.sel{transform:translateY(-12px);outline:3px solid var(--gold)}
+.card.known::after{content:'lộ';position:absolute;right:3px;top:3px;font:700 9px/1 var(--body);background:var(--son);color:#fff;padding:2px 3px}
+
+/* lớp phủ */
+.veil{position:absolute;inset:0;z-index:100;background:var(--wood2);display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;text-align:center;padding:24px}
+.veil.on{display:flex}
+.veil h2{font:400 34px/1.1 var(--head);color:var(--gold);margin:0}
+.modal{position:absolute;inset:0;z-index:90;background:rgba(5,9,8,.86);display:none;padding:14px;overflow:auto}
+.modal.on{display:block}
+.sheet{max-width:480px;margin:0 auto;background:var(--plank);clip-path:var(--cut12);padding:16px 16px 20px}
+.sheet h2{font:400 28px/1.1 var(--head);color:var(--gold);margin:0 0 8px}
+.sheet h3{font:700 13px/1.2 var(--body);color:var(--gold);margin:14px 0 4px;text-transform:uppercase;letter-spacing:.08em}
+.sheet p,.sheet li{font-size:13.5px;margin:4px 0}
+.sheet ol,.sheet ul{padding-left:20px;margin:4px 0}
+.cl{display:grid;grid-template-columns:1fr;gap:4px}
+.cl div{display:grid;grid-template-columns:26px 1fr;gap:8px;align-items:start;font-size:12.5px;padding:4px 0;border-top:1px solid rgba(255,255,255,.07)}
+.cl .ic{width:24px;height:24px;color:var(--gold)}
+.result{text-align:center}
+.result .big{justify-content:center;text-align:center}
+@media (max-height:700px){.card{flex-basis:76px;height:104px}.hand{min-height:114px}.info{min-height:30px}.castle{padding:4px 10px}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
+</style>
+</head>
+<body>
+<div class="app">
+  <section class="screen on" id="menu">
+    <h1 class="logo">Võ đài thẻ<small>chiến trận ba làn</small></h1>
+    <div class="menuBox">
+      <div class="lv" id="lvBox" role="group" aria-label="Độ khó"></div>
+      <button class="big" id="bAi">Đấu máy<small id="lvNote"></small></button>
+      <button class="big dark" id="bPvp">Hai người, một máy<small>Chuyền máy qua lại, che màn hình mỗi lần đổi người.</small></button>
+      <button class="big dark" disabled>Đấu trực tuyến<small>Sắp ra mắt.</small></button>
+      <button class="big dark" id="bHelp">Cách chơi</button>
+    </div>
+    <p class="menuNote">Ra Lính, đặt Mưu úp, rồi Khai chiến. Phá Thành đối thủ trước.</p>
+  </section>
+
+  <section class="screen" id="game">
+    <div class="top">
+      <button class="ico" id="bBack" aria-label="Về menu"><svg class="ic" viewBox="0 0 24 24"><path d="M15 5l-7 7 7 7"/></svg></button>
+      <div class="phaseTitle"><b id="pT">Vòng 1</b><span id="pS"></span></div>
+      <button class="ico" id="bHelp2" aria-label="Cách chơi"><svg class="ic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 115 0c0 2-2.5 2-2.5 4M12 17v.5"/></svg></button>
+    </div>
+    <div class="pills" id="pills"></div>
+    <div class="castle foe" id="cFoe"></div>
+    <div class="board" id="board"></div>
+    <div class="castle me" id="cMe"></div>
+    <div class="info" id="info"></div>
+    <div class="bar"><div class="orders" id="orders"></div><button class="go" id="bGo">Xong giai đoạn</button></div>
+    <div class="hand" id="hand"></div>
+    <div class="veil" id="veil"><h2 id="veilT"></h2><p id="veilS"></p><button class="big" id="veilB" style="width:240px;justify-content:center;align-items:center">Sẵn sàng</button></div>
+  </section>
+
+  <div class="modal" id="mHelp"><div class="sheet" id="helpBody"></div></div>
+  <div class="modal" id="mEnd"><div class="sheet result" id="endBody"></div></div>
+</div>
+
+<script src="vodaithe-core.js"></script>
+<script src="vodaithe-ai.js"></script>
+<script>
+(function(){
+'use strict';
+const V = window.VDT, AI = window.VDTAI, C = V.CARDS;
+const $ = id => document.getElementById(id);
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const LV_NAMES = ['Dễ', 'Vừa', 'Khó', 'Rất khó'];
+const LV_NOTE = ['Hay bỏ phí Quân lệnh, đánh bừa.', 'Biết tính trước một vòng.', 'Đoán Mưu úp của bạn, khó bắt bài.', 'Như Khó, thêm nhớ thói quen úp Mưu của bạn.'];
+const PHASES = ['Xuất quân', 'Bày trận', 'Kế hiểm', 'Khai chiến'];
+const PHASE_HINT = ['Bên tấn công chỉ được ra Lính.', 'Bên phòng thủ ra Lính và Mưu (Mưu úp).', 'Bên tấn công đặt Mưu úp.', ''];
+const ICON = {
+  danbinh:'<path d="M4 20L17 7"/><path d="M17 7l-.5-4.5L21 7z"/><path d="M6 16l2 2"/>',
+  cungthu:'<path d="M7 3c8 3 8 15 0 18"/><path d="M7 3v18"/><path d="M7 12h14M17 9l4 3-4 3"/>',
+  khienthu:'<path d="M12 3l8 3v6c0 5-4 8-8 9-4-1-8-4-8-9V6z"/><path d="M12 7v10"/>',
+  kybinh:'<path d="M6 21c0-6 2-10 6-12l1-5 3 3 4 2-5 2c0 3-1 6-3 10z"/><circle cx="14" cy="8" r=".8"/>',
+  thambao:'<path d="M2 12c4-6 16-6 20 0-4 6-16 6-20 0z"/><circle cx="12" cy="12" r="3"/>',
+  tuongbinh:'<path d="M5 9c0-3 3-5 7-5s7 2 7 5v4c0 3 1 6-2 8-1-3-1-5-1-7H9c0 4-1 7-2 9-3-2-2-6-2-9z"/><circle cx="9" cy="9" r="1"/>',
+  phuckich:'<path d="M13 2L4 14h7l-1 8 9-12h-7z"/>',
+  hochong:'<path d="M3 20l3-12 3 12M9 20l3-12 3 12M15 20l3-12 3 12"/>',
+  rutquan:'<path d="M9 14L4 9l5-5"/><path d="M4 9h10a6 6 0 010 12h-3"/>',
+  dieuho:'<path d="M4 8h14l-4-4M20 16H6l4 4"/>',
+  hoacong:'<path d="M12 2c1 4 6 6 6 12a6 6 0 01-12 0c0-3 2-4 3-7 1 1 2 2 3 1-1-2-1-4 0-6z"/>',
+  phanke:'<circle cx="12" cy="12" r="8"/><path d="M6 6l12 12"/>',
+  nghibinh:'<path d="M12 3a7 7 0 00-7 7v11l3-2 2 2 2-2 2 2 2-2 3 2V10a7 7 0 00-7-7z"/><circle cx="9.5" cy="10.5" r="1"/><circle cx="14.5" cy="10.5" r="1"/>',
+  tangvien:'<path d="M12 4v16M4 12h16"/>'
+};
+const ic = k => '<svg class="ic" viewBox="0 0 24 24" aria-hidden="true">' + (ICON[k] || '') + '</svg>';
+
+let mode = 'ai', level = 1, s = null, ai = null, sel = null, busy = false, viewer = 0, token = 0, selUnit = null, castleDisp = [20, 20];
+try { const v = +localStorage.getItem('vdt_level'); if (v >= 0 && v <= 3) level = v; } catch (e) {}
+
+/* ---------- menu ---------- */
+function drawMenu() {
+  $('lvBox').innerHTML = LV_NAMES.map((n, i) => '<button data-lv="' + i + '" class="' + (i === level ? 'on' : '') + '">' + n + '</button>').join('');
+  $('lvNote').textContent = 'Mức ' + LV_NAMES[level] + ': ' + LV_NOTE[level];
+}
+$('lvBox').addEventListener('click', e => {
+  const b = e.target.closest('button[data-lv]'); if (!b) return;
+  level = +b.dataset.lv; try { localStorage.setItem('vdt_level', level); } catch (x) {}
+  drawMenu();
+});
+$('bAi').onclick = () => start('ai');
+$('bPvp').onclick = () => start('pvp');
+$('bHelp').onclick = $('bHelp2').onclick = () => { $('mHelp').classList.add('on'); };
+$('mHelp').addEventListener('click', e => { if (e.target.id === 'mHelp' || e.target.closest('[data-close]')) $('mHelp').classList.remove('on'); });
+$('bBack').onclick = () => { token++; busy = false; show('menu'); };
+function show(id) { for (const x of document.querySelectorAll('.screen')) x.classList.toggle('on', x.id === id); $('mEnd').classList.remove('on'); }
+
+/* ---------- hướng dẫn ---------- */
+(function buildHelp() {
+  const units = Object.keys(C).filter(k => C[k].t === 'unit'), tricks = Object.keys(C).filter(k => C[k].t === 'trick');
+  const row = k => '<div>' + ic(k) + '<span><b>' + C[k].n + '</b> (' + C[k].c + ')' + (C[k].t === 'unit' ? ' · ' + C[k].a + ' Công / ' + C[k].h + ' Máu' : '') + '. ' + (C[k].txt || '') + '</span></div>';
+  $('helpBody').innerHTML = '<h2>Cách chơi</h2>' +
+    '<p>Phá Thành đối thủ (20 máu) trước. Hết 10 vòng chưa ai thua thì ai còn nhiều máu hơn thắng.</p>' +
+    '<h3>Một vòng có 4 giai đoạn</h3><ol>' +
+    '<li><b>Xuất quân.</b> Bên tấn công chỉ được ra Lính.</li>' +
+    '<li><b>Bày trận.</b> Bên phòng thủ ra Lính (chặn hoặc phản công) và tối đa 2 Mưu úp.</li>' +
+    '<li><b>Kế hiểm.</b> Bên tấn công đặt tối đa 2 Mưu úp.</li>' +
+    '<li><b>Khai chiến.</b> Lật Mưu (Phản kế trước, rồi bên phòng thủ, rồi bên tấn công), sau đó Lính đánh nhau từng làn.</li></ol>' +
+    '<h3>Giao chiến</h3><ul>' +
+    '<li>Mỗi làn có 2 ô mỗi bên. Lính đánh Lính đứng đối diện cùng ô; không có ai đối diện thì đánh thẳng vào Thành.</li>' +
+    '<li>Lính phòng thủ đứng ở ô trống thì phản công Thành với nửa Công (làm tròn xuống).</li>' +
+    '<li>Lính sống sót ở lại sân, sang vòng sau đổi vai tấn công và phòng thủ.</li>' +
+    '<li>Mỗi vòng có Quân lệnh bằng số vòng cộng 2 (tối đa 8) để trả giá thẻ, không dồn sang vòng sau.</li>' +
+    '<li>Mưu đặt úp vào một làn. Đối thủ không biết lá nào, ở làn nào.</li></ul>' +
+    '<h3>Lính</h3><div class="cl">' + units.map(row).join('') + '</div>' +
+    '<h3>Mưu</h3><div class="cl">' + tricks.map(row).join('') + '</div>' +
+    '<p style="margin-top:14px"><button class="big" data-close style="justify-content:center;align-items:center">Đã hiểu</button></p>';
+})();
+
+/* ---------- bắt đầu ván ---------- */
+function start(m) {
+  mode = m; token++;
+  s = V.newGame((Date.now() ^ (Math.random() * 1e9)) >>> 0);
+  ai = m === 'ai' ? AI.create(level) : null;
+  viewer = 0; sel = null; selUnit = null; busy = false;
+  castleDisp = [s.hp[0], s.hp[1]];
+  show('game'); $('veil').classList.remove('on');
+  render();
+  turnLoop(true);
+}
+
+const myName = p => mode === 'ai' ? (p === 0 ? 'Bạn' : 'Máy (' + LV_NAMES[level] + ')') : 'Người ' + (p + 1);
+const isHuman = p => mode === 'pvp' || p === 0;
+
+/* ---------- vòng điều khiển ---------- */
+async function turnLoop(newRound) {
+  const my = token;
+  if (s.winner !== null) { showEnd(); return; }
+  if (newRound || s.phase === 1) await banner('Vòng ' + s.round + '/' + V.MAX_ROUND, my);
+  if (my !== token) return;
+  if (isHuman(s.turn)) {
+    if (mode === 'pvp') {
+      viewer = s.turn; sel = null; render();
+      await veil(my);
+      if (my !== token) return;
+    } else { viewer = 0; }
+    sel = null; render();
+  } else {
+    await aiTurn(my);
+  }
+}
+function veil(my) {
+  return new Promise(res => {
+    $('veilT').textContent = myName(s.turn);
+    $('veilS').textContent = 'Vòng ' + s.round + ' · ' + (s.turn === s.atk ? 'tấn công' : 'phòng thủ') + ' · Giai đoạn ' + s.phase + ': ' + PHASES[s.phase - 1];
+    $('veil').classList.add('on');
+    $('veilB').onclick = () => { $('veil').classList.remove('on'); res(); };
+  });
+}
+async function aiTurn(my) {
+  busy = true; render();
+  $('info').textContent = 'Máy đang nghĩ…';
+  await sleep(450);
+  if (my !== token) return;
+  const plan = ai.plan(V.viewFor(s, s.turn));
+  const seat = s.turn;
+  for (const a of plan) {
+    if (my !== token) return;
+    if (a.t === 'end') break;
+    V.apply(s, a);
+    render();
+    await sleep(650);
+  }
+  if (my !== token) return;
+  await endPhase(my);
+}
+async function endPhase(my) {
+  const wasWar = s.phase === 3;
+  V.apply(s, { t: 'end' });
+  sel = null; selUnit = null;
+  if (wasWar) { await replay(my); if (my !== token) return; }
+  busy = false;
+  render();
+  await turnLoop(wasWar);
+}
+
+/* ---------- vẽ ---------- */
+function myView() { return viewer; }
+function render() {
+  const me = myView(), foe = V.other(me);
+  $('pT').textContent = 'Vòng ' + s.round + '/' + V.MAX_ROUND + ' · ' + (s.atk === me ? 'Bạn tấn công' : 'Bạn phòng thủ').replace('Bạn', mode === 'pvp' ? myName(me) : 'Bạn');
+  $('pS').textContent = s.winner === null ? 'Giai đoạn ' + s.phase + ': ' + PHASES[s.phase - 1] + ' · ' + (s.turn === me ? 'lượt bạn' : 'lượt ' + myName(s.turn)) : 'Ván kết thúc';
+  $('pills').innerHTML = PHASES.map((n, i) => '<div class="pill ' + (i + 1 === s.phase ? 'cur' : i + 1 < s.phase ? 'done' : '') + '">' + (i + 1) + '. ' + n + '</div>').join('');
+  $('cFoe').innerHTML = castleHtml(foe, true);
+  $('cMe').innerHTML = castleHtml(me, false);
+  // bảng
+  const board = [];
+  const legal = (!busy && s.winner === null && s.turn === me && isHuman(me)) ? V.legal(s) : [];
+  const canLanes = {};
+  if (sel) for (const a of legal) if (a.id === sel) canLanes[a.lane] = 1;
+  for (let l = 0; l < V.LANES; l++) {
+    const threat = threatOf(l, me);
+    board.push('<button class="lane ' + (canLanes[l] ? 'can' : '') + '" data-lane="' + l + '" aria-label="Làn ' + V.LANE_NAMES[l] + '">' +
+      '<div class="lh"><span>' + V.LANE_NAMES[l] + '</span>' + (threat ? '<span class="threat" title="Công sẽ lọt vào Thành bạn nếu không chặn">−' + threat + '</span>' : '') + '</div>' +
+      '<div class="side">' + sideHtml(l, foe, 'foe') + '</div>' +
+      '<div class="mid"><span>⚔</span></div>' +
+      '<div class="side">' + sideHtml(l, me, 'own') + '</div>' +
+      '<div class="traps">' + s.traps[me].filter(t => t.lane === l).map(t => '<span class="chip">' + C[t.k].n + '</span>').join('') + '</div>' +
+      '<div class="drop">Đặt vào đây</div></button>');
+  }
+  $('board').innerHTML = board.join('');
+  // Quân lệnh
+  const o = s.orders[me], max = Math.min(8, s.round + 2);
+  let coins = ''; for (let i = 0; i < max; i++) coins += '<span class="coin ' + (i < o ? '' : 'off') + '"></span>';
+  $('orders').innerHTML = '<span style="font-size:11px;color:var(--muted)">Quân lệnh</span>' + coins;
+  const go = $('bGo'), myTurn = !busy && s.winner === null && s.turn === me && isHuman(me);
+  go.disabled = !myTurn;
+  go.className = 'go' + (s.phase === 3 ? ' war' : '');
+  go.textContent = s.phase === 3 ? 'Khai chiến!' : s.phase === 1 ? 'Xong, sang phòng thủ' : 'Xong giai đoạn';
+  // tay bài
+  const known = s.known[V.other(me)];
+  void known;
+  $('hand').innerHTML = s.hand[me].map(c => {
+    const d = C[c.k], playable = legal.some(a => a.id === c.id);
+    return '<button class="card ' + d.t + ' ' + (playable ? '' : 'no') + ' ' + (sel === c.id ? 'sel' : '') + '" data-card="' + c.id + '" aria-label="' + d.n + ', giá ' + d.c + '">' +
+      '<span class="cost">' + d.c + '</span><span class="em">' + ic(c.k) + '</span><span class="cn">' + d.n + '</span>' +
+      '<span class="ct">' + (d.txt || '') + '</span>' +
+      (d.t === 'unit' ? '<span class="cs"><span class="a">' + d.a + '</span><span class="h">' + d.h + '</span></span>' : '<span class="cs"><span>Mưu</span></span>') + '</button>';
+  }).join('') || '<span style="color:var(--muted);align-self:center">Hết bài trên tay.</span>';
+  infoLine(legal);
+}
+function castleHtml(p, top) {
+  const hp = Math.max(0, castleDisp[p]);
+  const isAtk = s.atk === p;
+  const nTrap = s.traps[p].length;
+  return '<div class="nm"><span>' + (top ? 'Thành ' : 'Thành ') + myName(p) + '</span><span class="role ' + (isAtk ? '' : 'def') + '">' + (isAtk ? 'TẤN CÔNG' : 'PHÒNG THỦ') + '</span></div>' +
+    '<div class="hpnum">' + hp + '<small>/' + V.START_HP + '</small></div>' +
+    '<div class="hpbar"><i style="width:' + Math.max(0, hp / V.START_HP * 100) + '%"></i></div>' +
+    '<div class="meta"><span>Tay: <b>' + s.hand[p].length + '</b></span><span>Mưu úp: <b>' + (top ? '<span class="back"></span>'.repeat(nTrap) || '0' : nTrap) + '</b></span>' + (top ? '<span>Quân lệnh: <b>' + s.orders[p] + '</b></span>' : '') + '</div>';
+}
+function sideHtml(l, p, cls) {
+  const units = s.lanes[l][p];
+  let out = '', slots = 0;
+  for (const u of units) {
+    const wide = u.sz === 2;
+    out += '<div class="slot ' + (wide ? 'wide' : '') + '">' + unitHtml(u, cls, wide) + '</div>'; slots += u.sz;
+  }
+  for (; slots < V.SLOTS; slots++) out += '<div class="slot"></div>';
+  return out;
+}
+function unitHtml(u, cls, wide) {
+  const d = C[u.k], a = V.atkOf(s, u);
+  return '<div class="unit ' + cls + ' ' + (wide ? 'wide' : '') + ' ' + (selUnit === u.id ? 'sel' : '') + '" data-uid="' + u.id + '" data-k="' + u.k + '"><span class="em">' + ic(u.k) + '</span><span class="nm">' + d.n + '</span>' +
+    '<span class="st"><span class="a">⚔' + a + '</span><span class="h">♥' + u.hp + '</span></span></div>';
+}
+// Công địch sẽ lọt vào Thành mình nếu không có ai chặn (chỉ tính khi mình đang phòng thủ).
+function threatOf(l, me) {
+  if (s.atk === me || s.winner !== null) return 0;
+  const foe = V.other(me);
+  const at = [null, null];
+  let slot = 0; for (const u of s.lanes[l][me]) { for (let z = 0; z < u.sz; z++) at[slot + z] = u; slot += u.sz; }
+  slot = 0; let sum = 0;
+  for (const u of s.lanes[l][foe]) { const blocked = at[slot] || (u.sz === 2 && at[slot + 1]); if (!blocked) sum += V.atkOf(s, u); slot += u.sz; }
+  return sum;
+}
+function infoLine(legal) {
+  const me = myView(), el = $('info');
+  if (busy && s.turn !== me) { el.textContent = 'Máy đang chơi…'; return; }
+  if (s.winner !== null) { el.textContent = ''; return; }
+  if (s.turn !== me) { el.textContent = 'Chờ ' + myName(s.turn) + '…'; return; }
+  if (sel) { const c = s.hand[me].find(x => x.id === sel); if (c) { const d = C[c.k]; el.textContent = d.n + ' (giá ' + d.c + '): ' + (d.t === 'unit' ? d.a + ' Công, ' + d.h + ' Máu. ' : '') + d.txt + ' Chạm một làn sáng để đặt.'; return; } }
+  if (selUnit) { for (let l = 0; l < V.LANES; l++) for (const p of [0, 1]) for (const u of s.lanes[l][p]) if (u.id === selUnit) { const d = C[u.k]; el.textContent = d.n + ': ' + V.atkOf(s, u) + ' Công, ' + u.hp + '/' + u.mh + ' Máu. ' + d.txt; return; } }
+  el.textContent = PHASE_HINT[s.phase - 1] + (legal.length <= 1 ? ' Không còn thẻ nào chơi được.' : ' Chạm một thẻ để chọn.');
+}
+
+/* ---------- nhập liệu ---------- */
+$('hand').addEventListener('click', e => {
+  const b = e.target.closest('.card'); if (!b || busy) return;
+  const id = +b.dataset.card, me = myView();
+  if (s.turn !== me || !isHuman(me)) return;
+  if (!V.legal(s).some(a => a.id === id)) { const c = s.hand[me].find(x => x.id === id); selUnit = null; sel = null; render(); flash(c ? C[c.k].n + ': ' + whyNot(c) : ''); return; }
+  sel = sel === id ? null : id; selUnit = null; render();
+});
+function whyNot(c) {
+  const d = C[c.k], me = myView();
+  if (d.c > s.orders[me]) return 'không đủ Quân lệnh.';
+  if (d.t === 'unit' && s.phase === 3) return 'giai đoạn này chỉ ra Mưu.';
+  if (d.t === 'trick' && s.phase === 1) return 'giai đoạn này chỉ ra Lính.';
+  if (d.t === 'trick') return 'đã đủ 2 Mưu úp.';
+  return 'các làn đã đầy.';
+}
+function flash(t) { if (t) $('info').textContent = t; }
+$('board').addEventListener('click', e => {
+  const u = e.target.closest('.unit');
+  const lane = e.target.closest('.lane');
+  if (busy) return;
+  const me = myView();
+  if (sel && lane && s.turn === me) {
+    const l = +lane.dataset.lane, c = s.hand[me].find(x => x.id === sel);
+    if (c && V.apply(s, { t: C[c.k].t === 'unit' ? 'unit' : 'trick', id: sel, lane: l })) {
+      sel = null; s.log = []; render(); return;
+    }
+    flash('Làn này không đặt được.'); return;
+  }
+  if (u) { selUnit = +u.dataset.uid === selUnit ? null : +u.dataset.uid; render(); }
+});
+$('bGo').onclick = () => { if (busy || s.turn !== myView()) return; busy = true; sel = null; endPhase(token); };
+
+/* ---------- hiệu ứng Khai chiến ---------- */
+function bannerEl(text) { const b = document.createElement('div'); b.className = 'banner'; b.textContent = text; $('game').appendChild(b); setTimeout(() => b.remove(), 1400); }
+async function banner(text, my) { bannerEl(text); await sleep(900); }
+function laneEl(l) { return $('board').children[l]; }
+function unitEl(uid) { return $('board').querySelector('[data-uid="' + uid + '"]'); }
+function floatAt(el, text, good) {
+  if (!el) return;
+  const g = $('game').getBoundingClientRect(), r = el.getBoundingClientRect();
+  const f = document.createElement('div'); f.className = 'float' + (good ? ' good' : ''); f.textContent = text;
+  f.style.left = (r.left - g.left + r.width / 2 - 14) + 'px'; f.style.top = (r.top - g.top + r.height / 2 - 10) + 'px';
+  $('game').appendChild(f); setTimeout(() => f.remove(), 1000);
+}
+function setHp(el, delta) {
+  if (!el) return;
+  const h = el.querySelector('.h'); if (!h) return;
+  const v = Math.max(0, (parseInt(h.textContent.slice(1), 10) || 0) + delta);
+  h.textContent = '♥' + v;
+  el.classList.remove('hurt'); void el.offsetWidth; el.classList.add('hurt');
+}
+async function replay(my) {
+  const log = s.log.slice(); s.log = [];
+  if (ai) ai.observe(log.filter(e => e.e === 'flip'), 1);
+  bannerEl('Khai chiến!'); await sleep(900);
+  const me = myView();
+  for (const e of log) {
+    if (my !== token) return;
+    if (e.e === 'flip') {
+      const lane = laneEl(e.lane);
+      const mid = lane && lane.querySelector('.mid');
+      if (mid) {
+        const f = document.createElement('div'); f.className = 'flip'; f.innerHTML = ic(e.k) + C[e.k].n + (e.cancels ? '<br>huỷ 1 Mưu!' : '');
+        lane.appendChild(f); setTimeout(() => f.remove(), 950);
+      }
+      if (e.k === 'hochong' && e.uid) { setHp(unitEl(e.uid), -2); floatAt(unitEl(e.uid), '−2'); }
+      if (e.k === 'hoacong') for (const u of laneEl(e.lane).querySelectorAll('.unit')) { setHp(u, -2); floatAt(u, '−2'); }
+      if (e.k === 'phuckich' && e.uid) floatAt(unitEl(e.uid), '+3 Công', true);
+      await sleep(850);
+    } else if (e.e === 'cancel') {
+      await sleep(200);
+    } else if (e.e === 'hit') {
+      const el = unitEl(e.to);
+      if (e.dmg > 0) { setHp(el, -e.dmg); floatAt(el, '−' + e.dmg); }
+      else floatAt(el, 'Đỡ!', true);
+      await sleep(260);
+    } else if (e.e === 'castle') {
+      castleDisp[e.target] -= e.dmg;
+      const cm = e.target === me ? $('cMe') : $('cFoe');
+      cm.innerHTML = castleHtml(e.target, e.target !== me);
+      cm.classList.remove('shake'); void cm.offsetWidth; cm.classList.add('shake');
+      floatAt(cm, '−' + e.dmg);
+      await sleep(320);
+    } else if (e.e === 'die') {
+      const el = unitEl(e.uid); if (el) el.classList.add('dying');
+      await sleep(240);
+    }
+  }
+  await sleep(350);
+  castleDisp = [s.hp[0], s.hp[1]];
+  s.log = [];
+}
+
+/* ---------- kết thúc ---------- */
+function showEnd() {
+  const w = s.winner, me = mode === 'ai' ? 0 : w;
+  const won = mode === 'ai' ? w === 0 : true;
+  castleDisp = [s.hp[0], s.hp[1]]; render();
+  $('endBody').innerHTML = '<h2>' + (mode === 'ai' ? (won ? 'Bạn thắng!' : 'Máy thắng') : myName(w) + ' thắng!') + '</h2>' +
+    '<p>' + s.why + ' · vòng ' + Math.min(s.round, V.MAX_ROUND) + ' · Thành bạn ' + Math.max(0, s.hp[0]) + ' · Thành ' + (mode === 'ai' ? 'máy' : 'người 2') + ' ' + Math.max(0, s.hp[1]) + '</p>' +
+    '<div class="menuBox" style="margin:14px auto 0"><button class="big" id="bAgain" style="justify-content:center;align-items:center">Chơi lại</button><button class="big dark" id="bMenu" style="justify-content:center;align-items:center">Về menu</button></div>';
+  $('mEnd').classList.add('on');
+  $('bAgain').onclick = () => start(mode);
+  $('bMenu').onclick = () => show('menu');
+  void me;
+}
+
+drawMenu();
+window.__vdt = { get s() { return s; }, V, AI };
+})();
+</script>
+</body>
+</html>
