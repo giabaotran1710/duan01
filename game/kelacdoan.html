@@ -78,7 +78,6 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       <div class="btns">
         <button class="ico" id="restartBtn" aria-label="Chơi lại từ đầu" title="Chơi lại từ đầu" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
         <button class="ico" id="helpBtn" aria-label="Cách chơi" title="Cách chơi" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg></button>
-        <button class="ico" id="pauseBtn" aria-label="Tạm dừng" title="Tạm dừng" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 5v14M15 5v14"/></svg></button>
       </div>
     </div>
     <div class="toast" id="toast"></div>
@@ -111,7 +110,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 <div class="layer" id="pause" role="dialog" aria-modal="true" aria-labelledby="pauseH">
   <div class="panel">
     <h2 id="pauseH">Tạm dừng</h2>
-    <p class="pnote">Đoàn đang đi được che lại. Chơi tiếp sẽ là đoàn khác, kẻ lạc đổi người.</p>
+    <p class="pnote" id="pnote">Đoàn đang đi được che lại. Tạm dừng giữa lúc đoàn đang đi tính là bỏ dở đoàn đó, mất 1 tim.</p>
     <button class="big" id="resumeBtn" data-no-scene>Chơi tiếp</button>
     <button class="ghost" id="pauseRestart" data-no-scene>Chơi lại từ đầu</button>
   </div>
@@ -125,7 +124,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   </div>
 </div>
 
-<footer class="tbFooter">Version: D20261119233000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261120001000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../landscape.js?v=20261115"></script>
 <script src="../scores.js?v=20261116a"></script>
 <script>
@@ -193,7 +192,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   const H = 900;
   let W = 1600;
   const ROWS = [{ y: 862, s: 1.42 }, { y: 772, s: 1.2 }, { y: 696, s: 1.02 }];
-  function makeParade(n, wantKind) {
+  function makeParade(n) {
     const c = cfgAt(n);
     const g = Math.random() < .5 ? 1 : 0, hats = g ? HATS_NU : HATS;
     const base = {
@@ -202,7 +201,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       hat: { t: pick(hats), h: rint(0, 359) }, item: { t: pick(ITEMS), h: rint(0, 359) },
       hand: 1, dir: 1, face: 1, eyes: 1, off: 0, hs: 1, tempo: 1, amp: 1,
     };
-    let kind = wantKind || pick(c.kinds);
+    let kind = pick(c.kinds);
     if (kind === 'tay' && base.item.t === 'trong') kind = 'nhip';
     if (kind === 'toc' && !g) kind = 'hoaVan';
     const odd = JSON.parse(JSON.stringify(base));
@@ -774,31 +773,23 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     lives = 3; caught = 0; parts = []; shake = 0;
     closeAll(); paused = false; newParade();
   }
-  // Chống xem lại: đang có đoàn mà tạm dừng (nút dừng, phím, cách chơi, rời tab, mất focus)
-  // thì che đoàn đi; chơi tiếp thì thay đoàn khác cùng kiểu lạc, cùng chỗ trên đường, cùng thời gian còn lại,
-  // kẻ lạc đổi sang người khác. Ảnh chụp/video quay lúc trước vì thế không dùng được.
+  // Chống xem lại: trang web không thể biết máy đang quay màn hình, nên làm cho việc quay rồi dừng để soi video vô ích.
+  // Tạm dừng (nút, phím, cách chơi, rời tab, mất focus) giữa lúc đoàn đang đi thì đoàn bị che đi, và đoàn đó
+  // coi như bỏ dở: chơi tiếp sẽ mất 1 tim, hiện đáp án rồi sang đoàn mới. Video quay đoàn cũ không còn dùng được nữa.
   function hidden() { return paused && P && st === 'walk'; }
   function pauseGame(id) {
     if (st === 'idle') return;
     paused = true; closeAll(); if (id) layer(id, true);
-    if (st === 'walk') P.dirty = 1;
+    if (st === 'walk') P.forfeit = 1;
+    $('pnote').style.display = st === 'walk' ? '' : 'none';
   }
   function resumeGame() {
     closeAll();
-    if (P && st === 'walk' && P.dirty) reshuffle();
     paused = false;
-  }
-  function reshuffle() {
-    const old = P;
-    let np = null;
-    for (let i = 0; i < 30 && (!np || np.kind !== old.kind); i++) np = makeParade(old.n, old.kind);
-    // kẻ lạc mới phải còn kịp chạm: đã vào hoặc sắp vào khung, chưa sắp ra khỏi mép phải
-    const ok = np.kids.filter(k => (np.kind !== 'mat' || k.row === 0) && old.head + k.dx < W - 260);
-    const rear = np.kids.filter(k => np.kind !== 'mat' || k.row === 0).sort((x, y) => x.dx - y.dx)[0];
-    const cur = np.kids.find(k => k.odd), to = ok.length ? pick(ok) : (rear || cur);
-    if (to !== cur) { const lk = cur.look; cur.look = to.look; to.look = lk; cur.odd = false; to.odd = true; }
-    Object.assign(np, { head: old.head, t: old.t, speed: old.speed, beatPrev: old.beatPrev });
-    P = np;
+    if (P && st === 'walk' && P.forfeit) {
+      lives--; sfx.miss(); lastWhy = 'tạm dừng giữa lúc đoàn đang đi';
+      toast('Bỏ dở đoàn!', 'bad', 'Tạm dừng giữa chừng mất 1 tim'); updHud(); openCard(false);
+    }
   }
   function kidPos(k) {
     const R = ROWS[k.row];
@@ -969,16 +960,12 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   $('pauseRestart').onclick = start;
   $('helpBtn').onclick = () => { if (st === 'idle') { closeAll(); layer('help', true); } else pauseGame('help'); };
   $('helpClose').onclick = () => { save.seenHelp = true; store(); resize(); if (st === 'idle') start(); else resumeGame(); };
-  $('pauseBtn').onclick = () => pauseGame('pause');
   $('resumeBtn').onclick = resumeGame;
   LandscapeGate.bind($('rotSkip'), { note: $('rotNote'), onSkip: () => { save.rotSkip = true; store(); layer('rotate', false); }, onOk: resize });
   cv.addEventListener('pointerdown', e => {
     e.preventDefault();
     const r = cv.getBoundingClientRect();
     onTap((e.clientX - r.left) / r.width * W, (e.clientY - r.top) / r.height * H);
-  });
-  document.addEventListener('keydown', e => {
-    if ((e.key === 'p' || e.key === 'Escape') && st !== 'idle' && !anyOpen()) pauseGame('pause');
   });
   const away = () => { if (st !== 'idle' && !anyOpen()) pauseGame('pause'); };
   document.addEventListener('visibilitychange', () => { if (document.hidden) away(); });
