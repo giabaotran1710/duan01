@@ -17,6 +17,7 @@ Nguồn (không đưa vào repo vì quá lớn, tải về trước khi chạy):
   6. tool/timochu/extra.tsv: từ do người rà soát tự chọn và tự viết gợi ý ("từ<TAB>Từ loại<TAB>Mô tả"), dành cho từ thông dụng bị
      loại vì gợi ý của Wiktionary chứa chính tiếng của đáp án ("tháp canh": "Tháp xây để canh gác...") hoặc chỉ ghi "Như ...".
      Từ trong tệp này vẫn qua kiểm tra chữ cái, danh sách cấm và kiểm tra lộ đáp án.
+     Nhãn "Văn chương" (mã V) dành cho từ chủ yếu dùng trong thơ văn; Wiktionary loại nhãn này nên chỉ thêm được qua extra.tsv.
   7. (tuỳ chọn) Tệp đếm tần suất trên văn bản viết (Wikipedia, báo) do corpus_freq.py tạo, đường dẫn trong biến môi trường
      TIMOCHU_FREQ_WRITTEN. Phụ đề phim ít có từ văn viết như "tháp canh", nên từ hai/ba tiếng đứng liền nhau đủ nhiều lần
      trong văn bản viết cũng được nhận, kể cả khi chưa có trong danh sách của game Nối từ. Ngưỡng: TIMOCHU_W2 (hai tiếng,
@@ -243,7 +244,7 @@ def main():
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 3: print('extra.tsv: dòng thiếu cột:', line.strip()); continue
             w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
-            if (lab not in POS_OK.values() and lab != 'Khẩu ngữ') or not word_ok(w):
+            if (lab not in POS_OK.values() and lab not in ('Khẩu ngữ', 'Văn chương')) or not word_ok(w):
                 print('extra.tsv: bỏ', w, lab); continue
             if w in best: continue                      # đã có từ Wiktionary
             rv = review.get(w, '')
@@ -266,7 +267,7 @@ def main():
             parts = line.rstrip('\n').split('\t')
             if len(parts) < 3: print('senses.tsv: dòng thiếu cột:', line.strip()); continue
             w, lab, desc = nfc(parts[0].strip()), parts[1].strip(), nfc(parts[2].strip())
-            if lab not in POS_OK.values() and lab != 'Khẩu ngữ': print('senses.tsv: nhãn lạ', w, lab); continue
+            if lab not in POS_OK.values() and lab not in ('Khẩu ngữ', 'Văn chương'): print('senses.tsv: nhãn lạ', w, lab); continue
             if w in best: tier = best[w]['tier']
             elif word_ok(w): tier = int(parts[3].strip()) if len(parts) >= 4 and parts[3].strip() in ('1', '2') else 2   # chưa có từ chính: thành mục mới
             else: print('senses.tsv: từ không hợp lệ, bỏ', w); continue
@@ -291,7 +292,7 @@ def main():
         f.write('tu\tchu\tnhan\tmo_ta\tmuc\n')
         for e in bank: f.write(f"{e['w']}\t{e['L']}\t{e['label']}\t{e['desc']}\t{e['tier']}\n")
     # --- xuất cho game: mỗi dòng "từ|nhãn|mô tả|mức" ---
-    CODE = {'Danh từ': 'D', 'Động từ': 'Đ', 'Tính từ': 'T', 'Khẩu ngữ': 'K'}
+    CODE = {'Danh từ': 'D', 'Động từ': 'Đ', 'Tính từ': 'T', 'Khẩu ngữ': 'K', 'Văn chương': 'V'}
     lines = []
     for e in sorted(bank, key=lambda e: e['w']):
         assert '|' not in e['desc'] and '\n' not in e['desc'] and '`' not in e['desc'] and '\\' not in e['desc']
@@ -301,7 +302,7 @@ def main():
         f.write('// Kho từ cho game Tìm ô chữ — tạo bởi tool/timochu/extract.py, không sửa tay.\n')
         f.write('// Định nghĩa dựa trên Wiktionary tiếng Việt (CC BY-SA 4.0, qua kaikki.org/Wiktextract),\n')
         f.write('// đã rà soát, rút gọn và viết lại thủ công. Độ phổ biến: phụ đề OpenSubtitles 2016 (OPUS).\n')
-        f.write('// Một từ đồng âm có thể xuất hiện nhiều dòng (mỗi dòng một nghĩa, một câu hỏi). Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)\n')
+        f.write('// Một từ đồng âm có thể xuất hiện nhiều dòng (mỗi dòng một nghĩa, một câu hỏi). Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ, V văn chương)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)\n')
         f.write('window.TIMOCHU_WORDS = `' + '\n'.join(lines) + '`;\n')
     print('đã ghi', out, os.path.getsize(out), 'byte')
     print('Tổng:', len(bank), dict(collections.Counter(e['label'] for e in bank)))

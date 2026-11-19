@@ -6,7 +6,7 @@
 (function(){['localStorage','sessionStorage'].forEach(function(n){try{window[n].getItem('__t')}catch(e){var m={};try{Object.defineProperty(window,n,{configurable:true,value:{getItem:function(k){return Object.prototype.hasOwnProperty.call(m,k)?m[k]:null},setItem:function(k,v){m[k]=String(v)},removeItem:function(k){delete m[k]},clear:function(){m={}},key:function(i){return Object.keys(m)[i]||null},get length(){return Object.keys(m).length}}})}catch(e2){}}})})();
 </script>
 <meta charset="UTF-8">
-<script src="../maintenance.js?v=20261103ban" data-game="truottuyet3d"></script>
+<script src="../maintenance.js?v=20261116a" data-game="truottuyet3d"></script>
 <script src="../scene.js" data-game="truottuyet3d"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0c4a6e">
@@ -67,6 +67,12 @@
   .speed-text small{font-size:12px;letter-spacing:2px;margin-left:4px;color:rgba(255,255,255,.85)}
   #powder{position:absolute;top:156px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:900;letter-spacing:3px;color:#ffb347;text-shadow:0 0 12px rgba(255,150,40,.8);opacity:0;transition:opacity .25s;white-space:nowrap}
   #powder.show{opacity:1}
+  #iceLabel{position:absolute;top:178px;left:50%;transform:translateX(-50%);font-size:12px;font-weight:900;letter-spacing:3px;color:#7fd8ff;text-shadow:0 0 12px rgba(80,190,255,.9);opacity:0;transition:opacity .2s;white-space:nowrap}
+  #iceLabel.show{opacity:1}
+  #toast{position:absolute;top:34%;left:50%;transform:translate(-50%,-50%) scale(.9);text-align:center;font-family:'Segoe UI',system-ui,sans-serif;font-size:clamp(20px,6vw,30px);font-weight:900;letter-spacing:2px;color:#fff;text-shadow:0 2px 14px rgba(0,30,70,.75);opacity:0;transition:opacity .25s,transform .25s;pointer-events:none;white-space:nowrap}
+  #toast small{display:block;font-size:13px;letter-spacing:2px;margin-top:4px;color:#ffd27a}
+  #toast.show{opacity:1;transform:translate(-50%,-50%) scale(1)}
+  #toast.bad{color:#ffb0a0}
   .back-btn{position:fixed;top:calc(12px + env(safe-area-inset-top,0px));left:12px;z-index:20;width:42px;height:42px;padding:0;margin:0;border-radius:13px;font-size:20px;letter-spacing:0;color:#e0f2fe;background:rgba(10,25,50,.55);border:1px solid rgba(125,211,252,.35);box-shadow:none;animation:none;display:grid;place-items:center}
   .back-btn:hover{transform:none}
   #overlay.hidden ~ .back-btn{display:none}
@@ -141,6 +147,8 @@
   <div class="danger-label" id="dangerLabel">⚠ ĐOẠN DỐC GẮT ⚠</div>
   <div id="slope-indicator"></div>
   <div id="powder">TUYẾT DÀY · RA KHỎI ĐƯỜNG TRƯỢT</div>
+  <div id="iceLabel">BĂNG TRƠN · KHÓ BẺ VÁN</div>
+  <div id="toast"></div>
   <div class="speed-text"><span id="speedVal">0</span><small>KM/H</small></div>
 </div>
 
@@ -193,7 +201,7 @@
             <path d="M50 14L62 19L50 24ZM78 14L66 19L78 24Z" fill="#ff6a1f" stroke="#0e2a47" stroke-width="1.6" stroke-linejoin="round"/>
             <circle class="dWeave" cx="64" cy="58" r="4.6" fill="#0e2a47"/>
           </svg>
-          <figcaption><b>Né &amp; qua cổng</b>Tránh cây, đá, gỗ</figcaption>
+          <figcaption><b>Né &amp; qua cổng</b>Lỡ cổng mất combo · lọt khe hàng rào</figcaption>
         </figure>
       </div>
       <div class="cta">
@@ -227,7 +235,7 @@
 
 <div id="loading">ĐANG TẢI...</div>
 
-<footer class="tbFooter">Version: D20261107150000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<footer class="tbFooter">Version: D20261118090000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 
 <script>
@@ -281,6 +289,15 @@ const CRASH_SPEED_KEEP = 0.45;
 const D_WARMUP = 250;
 const D_MID = 700;
 const D_HARD = 1400;
+// Nội dung tăng dần theo quãng đường
+const D_ICE = 300;               // mảng băng trơn: bẻ ván rất chậm, ván giữ nguyên hướng
+const D_FENCE = 600;             // hàng rào lưới chắn ngang đường, chỉ chừa một khe
+const ICE_STEER = 0.22;          // tỉ lệ tốc độ bẻ ván còn lại trên băng
+const ICE_MU = 0.008;
+const FENCE_SEG = 2.5;
+const FENCE_GAP_START = 7.5;     // bề rộng khe lúc mới xuất hiện (m)
+const FENCE_GAP_MIN = 4.4;       // khe hẹp nhất, ở quãng đường rất xa
+const FENCE_BONUS = 40;
 
 const SPAWN_AHEAD = 135;
 const RECYCLE_BEHIND = 25;
@@ -807,6 +824,47 @@ for (let i = 0; i < 4; i++) {
   const mesh = buildGate(GATE_GAP); mesh.visible = false; scene.add(mesh);
   gatePool.push({ mesh, active: false, worldX: 0, worldZ: 0, prevPlayerZ: 0, passed: false });
 }
+// Hàng rào lưới cam: các đoạn chỉ để nhìn, va chạm xét khi người chơi băng qua đường rào
+const fenceSegPool = [];
+(function buildFenceSegs() {
+  const netMat = new THREE.MeshStandardMaterial({ color: 0xff6a1f, roughness: 0.7, transparent: true, opacity: 0.88, side: THREE.DoubleSide });
+  const ropeMat = new THREE.MeshStandardMaterial({ color: 0x1a2236, roughness: 0.6 });
+  const postMat = new THREE.MeshStandardMaterial({ color: 0x2a2f3a, roughness: 0.6 });
+  const netGeo = new THREE.PlaneGeometry(1, 0.95), ropeGeo = new THREE.BoxGeometry(1, 0.05, 0.05), postGeo = new THREE.CylinderGeometry(0.04, 0.04, 1.25, 6);
+  for (let i = 0; i < 90; i++) {
+    const g = new THREE.Group();
+    const net = new THREE.Mesh(netGeo, netMat); net.position.y = 0.6; g.add(net);
+    const rope = new THREE.Mesh(ropeGeo, ropeMat); rope.position.y = 1.1; g.add(rope);
+    const post = new THREE.Mesh(postGeo, postMat); post.position.set(0, 0.62, 0); g.add(post);
+    g.visible = false; scene.add(g);
+    fenceSegPool.push({ mesh: g, net, rope, post, active: false });
+  }
+})();
+// Cọc đánh dấu hai mép khe: sọc đỏ trắng, cao hơn lưới để nhìn từ xa
+const gapPostPool = [];
+(function buildGapPosts() {
+  const c = document.createElement('canvas'); c.width = 8; c.height = 64;
+  const g2 = c.getContext('2d');
+  for (let i = 0; i < 8; i++) { g2.fillStyle = i % 2 ? '#ffffff' : '#e11d2e'; g2.fillRect(0, i * 8, 8, 8); }
+  const mat = new THREE.MeshStandardMaterial({ map: new THREE.CanvasTexture(c), roughness: 0.5 });
+  const geo = new THREE.CylinderGeometry(0.07, 0.07, 2.2, 8);
+  for (let i = 0; i < 6; i++) { const m = new THREE.Mesh(geo, mat); m.visible = false; scene.add(m); gapPostPool.push(m); }
+})();
+const fencePool = [];
+for (let i = 0; i < 3; i++) fencePool.push({ active: false, worldZ: 0, gapL: 0, gapR: 0, xL: 0, xR: 0, prevPlayerZ: 0, segs: [], posts: [] });
+
+// Mảng băng: đĩa phẳng bám theo mặt tuyết
+const ICE_RINGS = 6, ICE_SEGS = 30;
+const iceMat = new THREE.MeshStandardMaterial({ color: 0x6cc4f0, emissive: 0x1a5f8a, roughness: 0.1, metalness: 0.3, transparent: true, opacity: 0.8, side: THREE.DoubleSide, polygonOffset: true, polygonOffsetFactor: -3, polygonOffsetUnits: -3, depthWrite: false });
+const icePool = [];
+for (let i = 0; i < 4; i++) {
+  const geo = new THREE.RingGeometry(0, 1, ICE_SEGS, ICE_RINGS);
+  const unit = Float32Array.from(geo.attributes.position.array);
+  const mesh = new THREE.Mesh(geo, iceMat);
+  mesh.frustumCulled = false; mesh.visible = false; scene.add(mesh);
+  icePool.push({ mesh, unit, active: false, worldX: 0, worldZ: 0, rx: 4, rz: 9 });
+}
+
 const flakePool = [];
 const flakeMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x88ccff, emissiveIntensity: 0.9, roughness: 0.2 });
 const flakeGeo = new THREE.OctahedronGeometry(0.3, 0);
@@ -950,7 +1008,8 @@ function updateRibbon(r) {
 const player = { x: 0, z: 0, y: 0, heading: 0, speed: START_SPEED, omega: 0, pitch: 0, roll: 0, lean: 0 };
 const state = {
   mode: 'menu', distance: 0, score: 0, bonusScore: 0, lives: INITIAL_LIVES, gates: 0, combo: 0, comboTimer: 0,
-  invincible: 0, shake: 0, spawnTimer: 0, gateTimer: 0, flakeTimer: 0, decoTimer: 8, edgeNextZ: 0, topSpeed: 0, offPiste: false, grade: 0
+  invincible: 0, shake: 0, spawnTimer: 0, gateTimer: 0, flakeTimer: 0, decoTimer: 8, edgeNextZ: 0, topSpeed: 0, offPiste: false, grade: 0,
+  iceTimer: 0, fenceTimer: 0, onIce: false, phase: 0, fences: 0
 };
 let best = 0;
 try { best = parseInt(localStorage.getItem('ski3d_best') || '0', 10) || 0; } catch (e) {}
@@ -1036,6 +1095,16 @@ const dangerLabelEl = document.getElementById('dangerLabel');
 const slopeIndicatorEl = document.getElementById('slope-indicator');
 const powderEl = document.getElementById('powder');
 const vignetteEl = document.getElementById('vignette');
+const iceLabelEl = document.getElementById('iceLabel');
+const toastEl = document.getElementById('toast');
+let toastTimer = 0;
+function showToast(title, sub, bad) {
+  toastEl.innerHTML = title + (sub ? '<small>' + sub + '</small>' : '');
+  toastEl.classList.toggle('bad', !!bad);
+  toastEl.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => toastEl.classList.remove('show'), sub ? 2200 : 900);
+}
 const formatNum = n => n.toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.');
 
 function updateCameraRig() {
@@ -1050,6 +1119,7 @@ function resetPools() {
   for (const pool of [rockPool, logPool, gatePool, flakePool, particlePool, housePool, cableCarPool]) {
     pool.forEach(o => { o.active = false; o.mesh.visible = false; });
   }
+  for (const f of fencePool) hideFence(f);
   resetRibbons();
 }
 
@@ -1085,7 +1155,8 @@ function startGame() {
   player.y = getTerrainHeight(player.x, player.z);
   Object.assign(state, {
     distance: 0, score: 0, bonusScore: 0, lives: INITIAL_LIVES, gates: 0, combo: 0, comboTimer: 0,
-    invincible: 1.2, shake: 0, spawnTimer: 1.2, gateTimer: 2.5, flakeTimer: 2, decoTimer: 6, topSpeed: 0, offPiste: false
+    invincible: 1.2, shake: 0, spawnTimer: 1.2, gateTimer: 2.5, flakeTimer: 2, decoTimer: 6, topSpeed: 0, offPiste: false,
+    iceTimer: 0, fenceTimer: 0, onIce: false, phase: 0, fences: 0
   });
   deathCamActive = false; deathT = 0;
   resetPools();
@@ -1104,6 +1175,8 @@ function startGame() {
   dangerLabelEl.classList.remove('show');
   slopeIndicatorEl.style.opacity = 0;
   powderEl.classList.remove('show');
+  iceLabelEl.classList.remove('show');
+  toastEl.classList.remove('show'); clearTimeout(toastTimer);
   updatePlayerTransform(0);
   updateHUD();
 }
@@ -1265,6 +1338,122 @@ function spawnCableCar() {
   c.phase = Math.random() * Math.PI * 2;
   c.mesh.visible = true;
 }
+// --- Mảng băng: đặt chắn trên hướng đang lao tới ---
+function spawnIce() {
+  const ice = icePool.find(i => !i.active);
+  if (!ice) return;
+  const z = aheadZ() - 10;
+  const hard = state.distance > D_HARD;
+  ice.rx = (hard ? 4.5 : 3.5) + Math.random() * 2.5;
+  ice.rz = (hard ? 11 : 8) + Math.random() * 6;
+  ice.worldX = clampToPiste(predictX() + (Math.random() - 0.5) * 10, z, 2);
+  ice.worldZ = z; ice.active = true;
+  // không để cây, đá, gỗ nằm trên băng (đã trơn lại còn vật cản là bẫy không né được)
+  clearIce(ice);
+  const pos = ice.mesh.geometry.attributes.position, u = ice.unit;
+  for (let i = 0; i < pos.count; i++) {
+    const x = ice.worldX + u[i * 3] * ice.rx, zz = ice.worldZ + u[i * 3 + 1] * ice.rz;
+    pos.setXYZ(i, x, getTerrainHeight(x, zz) + 0.04, zz);
+  }
+  pos.needsUpdate = true;
+  ice.mesh.geometry.computeVertexNormals();
+  ice.mesh.visible = true;
+}
+function clearIce(ice) {
+  const inIce = (x, oz) => ((x - ice.worldX) / (ice.rx + 1.5)) ** 2 + ((oz - ice.worldZ) / (ice.rz + 1.5)) ** 2 < 1;
+  for (const t of trees) if (t.active && !t.edge && inIce(t.worldX, t.worldZ)) hideTree(t);
+  for (const pool of [rockPool, logPool]) for (const o of pool) if (o.active && inIce(o.worldX, o.worldZ)) { o.active = false; o.mesh.visible = false; }
+}
+function onIceAt(x, z) {
+  for (const i of icePool) {
+    if (!i.active) continue;
+    const dx = (x - i.worldX) / i.rx, dz = (z - i.worldZ) / i.rz;
+    if (dx * dx + dz * dz < 1) return true;
+  }
+  return false;
+}
+// --- Hàng rào lưới chắn ngang, chỉ chừa một khe ---
+function hideFence(f) {
+  f.active = false;
+  for (const s of f.segs) { s.active = false; s.mesh.visible = false; }
+  for (const p of f.posts) p.visible = false;
+  f.segs.length = 0; f.posts.length = 0;
+}
+function fenceGapWidth() {
+  const k = clamp((state.distance - D_FENCE) / 2200, 0, 1);
+  return FENCE_GAP_START - (FENCE_GAP_START - FENCE_GAP_MIN) * k;
+}
+function placeFenceRun(f, x0, x1, z) {
+  for (let x = x0; x < x1 - 0.05; x += FENCE_SEG) {
+    const s = fenceSegPool.find(s => !s.active);
+    if (!s) return;
+    const len = Math.min(FENCE_SEG, x1 - x), cx = x + len / 2;
+    s.active = true;
+    s.net.scale.x = len; s.rope.scale.x = len; s.post.position.x = -len / 2;
+    s.mesh.position.set(cx, Math.min(getTerrainHeight(x, z), getTerrainHeight(x + len, z)) - 0.05, z);
+    s.mesh.visible = true;
+    f.segs.push(s);
+  }
+}
+function spawnFence() {
+  const f = fencePool.find(f => !f.active);
+  if (!f) return false;
+  const z = aheadZ();
+  const c = pisteCenter(z), lh = laneHalf(z), fo = forkOff(z);
+  if (Math.abs(forkOff(z - 15) - fo) > 1.5 || Math.abs(forkOff(z + 15) - fo) > 1.5) return false;   // không chắn ngay chỗ đường đang tách hay nhập
+  const w = fenceGapWidth();
+  const side = Math.random() < 0.5 ? -1 : 1, px = player.x + (c - pisteCenter(player.z));   // chỗ sẽ tới nếu cứ thả ván theo đường trượt
+  let gx = clampToPiste(px + side * (6 + Math.random() * 8), z, w / 2 + 1.5);
+  if (Math.abs(gx - px) < 5.5) gx = clampToPiste(px - side * (6 + Math.random() * 8), z, w / 2 + 1.5);
+  Object.assign(f, { active: true, worldZ: z, gapL: gx - w / 2, gapR: gx + w / 2, xL: c - fo - lh - 4, xR: c + fo + lh + 4, prevPlayerZ: player.z });
+  // đoạn đường rẽ đôi: bỏ trống phần đảo rừng ở giữa, chỉ rào hai lối
+  const isleL = c - fo + lh + 2.5, isleR = c + fo - lh - 2.5;
+  const runs = [[f.xL, f.gapL], [f.gapR, f.xR]];
+  for (const [a, b] of runs) {
+    if (isleR - isleL > 1 && a < isleR && b > isleL) {
+      if (isleL > a) placeFenceRun(f, a, Math.min(b, isleL), z);
+      if (isleR < b) placeFenceRun(f, Math.max(a, isleR), b, z);
+    } else placeFenceRun(f, a, b, z);
+  }
+  for (const gxp of [f.gapL, f.gapR]) {
+    const p = gapPostPool.find(p => !p.visible);
+    if (!p) break;
+    p.position.set(gxp, getTerrainHeight(gxp, z) + 1.0, z); p.visible = true; f.posts.push(p);
+  }
+  // dọn khe và hai bên hàng rào cho công bằng: không có cây, đá, gỗ, cổng ngay sát
+  const near = (oz, d) => Math.abs(oz - z) < d;
+  for (const t of trees) if (t.active && !t.edge && near(t.worldZ, 9)) hideTree(t);
+  for (const t of trees) if (t.active && near(t.worldZ, 4) && t.worldX > f.gapL - 2 && t.worldX < f.gapR + 2) hideTree(t);
+  for (const pool of [rockPool, logPool, gatePool]) for (const o of pool) if (o.active && near(o.worldZ, 10)) { o.active = false; o.mesh.visible = false; }
+  for (const i of icePool) if (i.active && near(i.worldZ, i.rz + 6)) { i.active = false; i.mesh.visible = false; }
+  state.spawnTimer = Math.max(state.spawnTimer, 12 / Math.max(8, player.speed));
+  state.gateTimer = Math.max(state.gateTimer, 1.2);
+  return true;
+}
+function fenceNear(z, d) { return fencePool.some(f => f.active && Math.abs(f.worldZ - z) < d); }
+function checkFencePass(f) {
+  const px = player.x, pr = 0.35;
+  if (px > f.gapL + pr && px < f.gapR - pr) {
+    state.fences++;
+    state.bonusScore += FENCE_BONUS;
+    showToast('LỌT KHE +' + FENCE_BONUS);
+    beep(880, 0.08, 'triangle', 0.05);
+    return;
+  }
+  if (state.invincible > 0) return;
+  if (px > f.xL && px < f.xR) { crash(); burst(px, player.y + 0.5, f.worldZ, 16); }
+}
+function updatePhase() {
+  const d = state.distance;
+  const next = d >= D_HARD ? 3 : d >= D_FENCE ? 2 : d >= D_ICE ? 1 : 0;
+  if (next <= state.phase) return;
+  state.phase = next;
+  if (next === 1) showToast('MẢNG BĂNG TRƠN', 'Lên băng là khó bẻ ván · né từ xa');
+  else if (next === 2) showToast('HÀNG RÀO LƯỚI', 'Chỉ có một khe · nhìn cọc đỏ trắng');
+  else showToast('ĐOẠN DỐC ĐEN', 'Khe hẹp dần · vật cản dày hơn');
+  beep(520, 0.12, 'square', 0.04); setTimeout(() => beep(780, 0.14, 'square', 0.04), 120);
+}
+
 function spawnDecorations() {
   if (state.distance < DECO_MIN_DISTANCE) return;
   if (Math.random() < 0.6) spawnHouseCluster(); else spawnCableCar();
@@ -1281,7 +1470,9 @@ function updatePlaying(dt) {
   if (keys['ArrowRight'] || keys['KeyD']) tIn += 1;
   if (tIn === 0 && (touchActive || mouseControl)) tIn = inputX;
   const target = clamp(pisteHeading(player.x, player.z) + tIn * MAX_HEADING, -1.4, 1.4);
-  const rate = Math.abs(tIn) > 0.05 ? STEER_RATE * (0.55 + 0.45 * Math.abs(tIn)) : RETURN_RATE;
+  state.onIce = onIceAt(player.x, player.z);
+  const grip = state.onIce ? ICE_STEER : 1;
+  const rate = (Math.abs(tIn) > 0.05 ? STEER_RATE * (0.55 + 0.45 * Math.abs(tIn)) : RETURN_RATE) * grip;
   const prevHeading = player.heading;
   player.heading += clamp(target - player.heading, -rate * dt, rate * dt);
   const omega = (player.heading - prevHeading) / Math.max(dt, 1e-4);
@@ -1294,7 +1485,7 @@ function updatePlaying(dt) {
   const hz = (getTerrainHeight(player.x, player.z + e) - getTerrainHeight(player.x, player.z - e)) / (2 * e);
   const dhds = hx * sx + hz * sz;                     // độ cao đổi bao nhiêu khi đi 1 m theo hướng trượt
   state.offPiste = pisteDist(player.x, player.z) > laneHalf(player.z) + 0.5;
-  const mu = state.offPiste ? MU_POWDER : MU_PISTE;
+  const mu = state.offPiste ? MU_POWDER : state.onIce ? ICE_MU : MU_PISTE;
   const tuck = clamp(player.speed / 30, 0, 1) * (Math.abs(tIn) < 0.2 ? 1 : 0.4);
   const drag = DRAG * (1 - 0.25 * tuck);
   let a = -G * dhds / Math.sqrt(1 + dhds * dhds) - mu * G - drag * player.speed * player.speed
@@ -1325,6 +1516,13 @@ function updatePlaying(dt) {
   const recycleZ = player.z + RECYCLE_BEHIND;
   for (const t of trees) if (t.active && t.worldZ > recycleZ) hideTree(t);
   for (const pool of [rockPool, logPool]) for (const o of pool) if (o.active && o.worldZ > recycleZ) { o.active = false; o.mesh.visible = false; }
+  for (const f of fencePool) {
+    if (!f.active) continue;
+    if (f.prevPlayerZ > f.worldZ && player.z <= f.worldZ) checkFencePass(f);
+    f.prevPlayerZ = player.z;
+    if (f.worldZ > recycleZ) hideFence(f);
+  }
+  for (const i of icePool) if (i.active && i.worldZ - i.rz > recycleZ) { i.active = false; i.mesh.visible = false; }
   for (const g of gatePool) {
     if (!g.active) continue;
     if (!g.passed && g.prevPlayerZ > g.worldZ && player.z <= g.worldZ) checkGatePass(g);
@@ -1371,10 +1569,26 @@ function updatePlaying(dt) {
   state.spawnTimer -= dt;
   if (state.spawnTimer <= 0) {
     spawnWave();
+    for (const i of icePool) if (i.active) clearIce(i);
     state.spawnTimer = (getSpawnGap() / Math.max(8, player.speed)) * (0.7 + Math.random() * 0.6);
   }
+  updatePhase();
+  if (state.distance > D_ICE) {
+    state.iceTimer -= dt;
+    if (state.iceTimer <= 0) {
+      if (!fenceNear(aheadZ() - 10, 30)) spawnIce();
+      state.iceTimer = state.distance > D_HARD ? 4 + Math.random() * 3 : 6 + Math.random() * 4;
+    }
+  }
+  if (state.distance > D_FENCE) {
+    state.fenceTimer -= dt;
+    if (state.fenceTimer <= 0) {
+      const ok = spawnFence();
+      state.fenceTimer = ok ? (state.distance > D_HARD ? 3.5 + Math.random() * 1.5 : 4.5 + Math.random() * 2) : 1;
+    }
+  }
   state.gateTimer -= dt;
-  if (state.gateTimer <= 0) { spawnGate(); state.gateTimer = GATE_INTERVAL_MIN + Math.random() * (GATE_INTERVAL_MAX - GATE_INTERVAL_MIN); }
+  if (state.gateTimer <= 0 && !fenceNear(aheadZ(), 14)) { spawnGate(); state.gateTimer = GATE_INTERVAL_MIN + Math.random() * (GATE_INTERVAL_MAX - GATE_INTERVAL_MIN); }
   state.flakeTimer -= dt;
   if (state.flakeTimer <= 0) { spawnFlakes(); state.flakeTimer = 4 + Math.random() * 3; }
   state.decoTimer -= dt;
@@ -1402,6 +1616,7 @@ function updatePlaying(dt) {
   slopeIndicatorEl.style.color = state.grade > 0.33 ? '#ff8a5b' : '#e0f2fe';
   slopeIndicatorEl.style.opacity = 0.85;
   powderEl.classList.toggle('show', state.offPiste);
+  iceLabelEl.classList.toggle('show', state.onIce);
   updateHUD();
 }
 
@@ -1469,13 +1684,17 @@ function checkGatePass(g) {
   }
   if (px > lp && px < rp) {
     g.passed = true;
-    state.gates++; state.combo++; state.comboTimer = 4;
+    state.gates++; state.combo++; state.comboTimer = GATE_INTERVAL_MAX + 4;   // chuỗi chỉ đứt khi lỡ cổng hoặc ngã
     state.bonusScore += 50 * state.combo;
     updateComboUI();
     beep(600 + state.combo * 60, 0.1, 'sine', 0.05);
     const gy = getTerrainHeight(g.worldX, g.worldZ);
     for (let i = 0; i < 10; i++) spawnParticle(g.worldX + (Math.random() - 0.5) * GATE_GAP, gy + 1 + Math.random() * 1.5, g.worldZ,
       (Math.random() - 0.5) * 5, 2 + Math.random() * 4, (Math.random() - 0.5) * 5, 0.5);
+  } else {
+    // lỡ cổng: mất chuỗi combo
+    g.passed = true;
+    if (state.combo > 0) { state.combo = 0; state.comboTimer = 0; updateComboUI(); showToast('LỠ CỔNG', '', true); beep(220, 0.12, 'triangle', 0.04); }
   }
 }
 
@@ -1677,7 +1896,7 @@ snapCamera();
 document.getElementById('loading').classList.add('hidden');
 requestAnimationFrame(loop);
 </script>
-<script src="../scores.js?v=20261103ban"></script>
+<script src="../scores.js?v=20261116a"></script>
 <script src="../activity.js?v=20261103ban" defer></script>
 </body>
 </html>

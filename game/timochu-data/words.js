@@ -1,7 +1,7 @@
 // Kho từ cho game Tìm ô chữ — tạo bởi tool/timochu/extract.py, không sửa tay.
 // Định nghĩa dựa trên Wiktionary tiếng Việt (CC BY-SA 4.0, qua kaikki.org/Wiktextract),
 // đã rà soát, rút gọn và viết lại thủ công. Độ phổ biến: phụ đề OpenSubtitles 2016 (OPUS).
-// Một từ đồng âm có thể xuất hiện nhiều dòng (mỗi dòng một nghĩa, một câu hỏi). Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)
+// Một từ đồng âm có thể xuất hiện nhiều dòng (mỗi dòng một nghĩa, một câu hỏi). Mỗi dòng: từ|nhãn (D danh từ, Đ động từ, T tính từ, K khẩu ngữ, V văn chương)|mô tả|mức phổ biến (1 thông dụng, 2 ít hơn)
 window.TIMOCHU_WORDS = `a dua|Đ|Hùa theo người khác một cách vô ý thức hoặc để lấy lòng.|2
 a giao|D|Cao thuốc đông y nấu từ da động vật (thường là trâu, bò, lừa).|2
 album|D|Tập dùng để lưu giữ ảnh, tem; cũng chỉ tập hợp bài hát phát hành cùng nhau.|2
@@ -71,6 +71,7 @@ bia|D|Tấm đá lớn có khắc chữ để ghi nhớ việc quan trọng.|1
 binh lực|D|Số quân trực tiếp tham gia chiến đấu.|1
 binh nhì|D|Bậc quân hàm đầu tiên của người lính.|1
 binh thư|D|Sách có nội dung liên quan đến chiến lược quân sự.|2
+binh đao|V|Chiến tranh, cảnh đánh nhau bằng vũ khí.|2
 biên bản|D|Giấy ghi chép quá trình xảy ra hoặc kết quả điều tra một sự việc.|1
 biên giới|D|Chỗ hết phần đất của một nước và giáp với nước khác.|1
 biên lai|D|Giấy xác nhận đã nhận một khoản tiền hay một món hàng.|2
@@ -294,7 +295,9 @@ bóng|D|Quả hình cầu dùng trong thể thao, để đá, ném hoặc đập
 bóng|D|Quả thủy tinh trong lòng có dây tóc phát sáng.|1
 bóng|T|Nhẵn và sáng, phản chiếu ánh sáng.|1
 bóng bẩy|T|Có vẻ đẹp hào nhoáng bề ngoài.|2
+bóng câu|V|Hình ngựa trắng chạy vụt qua khe cửa; ví thời gian trôi rất nhanh.|2
 bóng tối|D|Phần không gian không có ánh sáng rọi tới.|1
+bóng xế|V|Ánh nắng lúc mặt trời sắp lặn; thường dùng để ví tuổi già.|2
 bóng đá|D|Môn thể thao hai đội dùng chân đưa quả tròn vào lưới đối phương.|1
 bóp|Đ|Nắm chặt vật gì làm cho dúm lại, bé đi, nát đi hay vỡ đi.|2
 bóp méo|Đ|Trình bày hoặc phản ánh cho sai lệch đi, do dụng ý không tốt.|1
@@ -325,6 +328,7 @@ bút|D|Đồ dùng để viết hay để vẽ.|2
 bút chiến|D|Cuộc tranh luận gay gắt bằng bài viết giữa các quan điểm khác nhau.|2
 bút lông|D|Dụng cụ viết chữ Nho có chóp mềm nhúng vào nghiên mực.|2
 bút máy|D|Loại viết có ngòi sắt và ruột chứa nước đen mà học trò thời trước rất quý.|1
+bút nghiên|V|Dụng cụ viết và mài mực; chỉ việc học hành, văn chương.|2
 băm|Đ|Chặt liên tiếp, làm cho nát vụn ra.|2
 băn khoăn|T|Không yên lòng vì đang có những điều bắt phải nghĩ ngợi.|1
 băng|D|Nước đông cứng trong thiên nhiên ở nơi có khí hậu lạnh.|1
@@ -352,6 +356,7 @@ bướng bỉnh|T|Ngoan cố, không chịu nghe lời người khác.|1
 bướu|D|Khối u nổi lên trên cơ thể.|2
 bưởi chùm|D|Loại quả họ cam, vỏ vàng hoặc hồng, múi hơi đắng, cho nhiều nước.|2
 bạc hà|D|Loài cây có lá thơm mát, dùng làm kẹo, kem đánh răng và pha trà.|1
+bạc mệnh|V|Có số phận ngắn ngủi, bất hạnh (thường nói về người phụ nữ đẹp).|2
 bạc nhược|T|Yếu đuối về tinh thần, thiếu ý chí.|2
 bạch dương|D|Cây to vùng ôn đới, thân thẳng, vỏ màu trắng thường bong thành từng mảng.|1
 bạch tuộc|D|Loài vật biển thân mềm, đầu tròn, có tám tay dài với nhiều giác hút.|1
@@ -383,6 +388,7 @@ bảng|D|Danh sách số liệu hay kết quả sắp xếp theo hàng và cột
 bảng|D|Nhóm các đội được chia để thi đấu với nhau trong một giải.|1
 bảng chọn|D|Danh sách lệnh hiện trên màn hình phần mềm để nhấp vào.|2
 bảng con|D|Tấm ván nhỏ sơn đen để học trò lớp vỡ lòng tập viết bằng phấn.|2
+bảng lảng|V|Lờ mờ, chập chờn, thường nói về khói sương lúc chiều tối.|2
 bảng nhãn|D|Học vị của người đỗ thứ hai trong kỳ thi đình thời xưa, sau trạng nguyên.|2
 bảnh|T|Đẹp, diện, ăn mặc chải chuốt.|2
 bảnh bao|T|Trau chuốt, tươm tất trong cách ăn mặc, có ý trưng diện.|1
@@ -484,6 +490,7 @@ bề thế|T|To lớn, đồ sộ, có vẻ vững chãi.|2
 bền|T|Chắc chắn, lâu hỏng.|2
 bền bỉ|T|Có khả năng chịu đựng gian khổ, khó nhọc được lâu dài để theo đuổi mục đích đến cùng.|1
 bền chí|T|Kiên trì, dù khó khăn cũng không nản.|2
+bể dâu|V|Những đổi thay lớn lao, dữ dội của cuộc đời.|2
 bể kèo|K|Cuộc hẹn hay thương vụ bị hủy ngang.|2
 bễ|D|Dụng cụ thổi gió làm cho lửa trong lò rèn cháy mạnh.|2
 bệ|D|Chỗ xây cao để đặt tượng, máy móc hay vật quý.|2
@@ -535,6 +542,7 @@ bồ câu|D|Chim nuôi làm cảnh và ăn thịt, cánh dài, bay giỏi, mỏ 
 bồ hòn|D|Cây có quả tròn, vị rất đắng, hay được ví với nỗi khổ phải nuốt vào lòng.|1
 bồ hóng|D|Mảng bụi đen đóng lại trên vách bếp, nóc bếp.|2
 bồ kết|D|Quả dài cong nấu nước gội đầu của phụ nữ xưa.|2
+bồ liễu|V|Thân phận yếu đuối của người phụ nữ, tự ví như cây yếu mềm.|2
 bồ nông|D|Chim lớn ở bờ nước, mỏ dài, dưới cổ có túi to để đựng cá.|2
 bồ đề|D|Cây to, lá hình tim có mũi nhọn dài, thường trồng ở sân chùa.|1
 bồi|Đ|Dán nhiều tờ giấy vào với nhau để cho thêm dày.|2
@@ -628,6 +636,7 @@ can|Đ|Ngăn giữ không cho người khác làm điều sai trái.|1
 can|D|Bình nhựa có quai để đựng nước hoặc xăng.|1
 can|Đ|Đặt giấy mỏng lên rồi vẽ theo hình bên dưới.|1
 can|D|Mười dấu hiệu như giáp, ất, bính dùng để tính ngày năm.|1
+can qua|V|Cái mộc và ngọn giáo; chỉ chiến tranh, loạn lạc.|2
 can thiệp|Đ|Dự vào việc của người khác nhằm tác động đến theo mục đích nào đó.|1
 can trường|T|Gan dạ, không sợ gian khổ, hiểm nguy.|2
 can đảm|T|Có sức mạnh tinh thần để không sợ nguy hiểm, đau khổ.|1
@@ -694,6 +703,8 @@ chia cắt|Đ|Phân ra thành nhiều đoạn, nhiều phần tách biệt nhau,
 chia sẻ|Đ|Cùng hưởng hoặc cùng gánh chịu với người khác; cho người khác cùng dùng cái mình có.|1
 chia tay|Đ|Rời xa nhau, mỗi người đi một ngả sau một thời gian ở bên nhau.|1
 chill|K|Thư giãn, thong thả, không áp lực.|1
+chinh phu|V|Người chồng phải đi đánh trận ở nơi xa.|2
+chinh phụ|V|Người vợ có chồng ra trận nơi xa.|2
 chinh phục|Đ|Vượt qua thử thách để đạt được điều khó, như leo lên đỉnh núi cao.|1
 chiêm bao|Đ|Thấy hình ảnh hiện ra trong lúc ngủ.|2
 chiêm bái|Đ|Dâng lễ ở một nơi tôn nghiêm.|2
@@ -701,6 +712,7 @@ chiên|Đ|Làm chín thức ăn bằng cách cho vào dầu, mỡ đang đun nó
 chiêu sinh|Đ|Mời gọi học viên đến đăng ký các khoá học.|2
 chiêu trò|D|Một hành động hoặc kế hoạch xảo quyệt hoặc khéo léo nhằm đánh lừa ai đó.|2
 chiếm|Đ|Giữ lấy làm của mình.|1
+chiến bào|V|Áo của tướng mặc khi ra trận.|2
 chiến dịch|D|Toàn bộ các việc tập trung lực lượng để giải quyết nhiệm vụ nào đó trong một thời gian nhất định.|1
 chiến sĩ|D|Người thuộc lực lượng vũ trang.|1
 chiến đấu|Đ|Đánh nhau với kẻ thù; cố gắng vượt qua khó khăn.|1
@@ -793,6 +805,7 @@ chân|D|Bộ phận dưới cùng của cơ thể người hay động vật, d�
 chân|D|Phần dưới cùng làm điểm tựa của bàn, ghế hay ngọn núi.|1
 chân|D|Vị trí hay tư cách thành viên trong một đội, một tổ chức.|1
 chân chính|T|Hoàn toàn xứng với tên gọi (tốt đẹp).|1
+chân mây|V|Nơi xa tít tắp, chỗ trời như giáp với đất.|2
 chân thật|T|Thành thực, ngay thẳng, nghĩ sao nói vậy.|1
 chân trời|D|Đường xa tít nơi nền xanh trên cao như chạm mặt đất hoặc mặt biển.|1
 chân tình|D|Tấm lòng thành thật.|2
@@ -1192,6 +1205,7 @@ cô|T|Lẻ loi, đơn độc, không có ai bên cạnh.|1
 cô bé|D|Em gái nhỏ tuổi.|1
 cô chiêu|D|Cách gọi con gái nhà quan hay nhà giàu thời trước.|2
 cô giáo|D|Người phụ nữ, đàn bà làm công việc giảng dạy.|1
+cô liêu|V|Lẻ loi, hiu quạnh, vắng vẻ.|2
 cô lập|Đ|Tách riêng ra, làm mất mối liên hệ với những cái khác.|1
 cô nhi viện|D|Nơi nuôi dưỡng chăm sóc trẻ em mồ côi.|2
 cô đào|D|Tiếng gọi nữ diễn viên hát bội hay cải lương thời trước.|2
@@ -1350,6 +1364,7 @@ cầm chừng|Đ|Làm ở mức nhẹ nhàng, cốt cho có, chờ thời cơ.|2
 cầm cập|T|Run lẩy bẩy, răng đánh vào nhau vì lạnh.|2
 cầm cố|Đ|Giao tài sản (thường là bất động sản) cho người khác giữ làm tin để vay tiền.|2
 cầm cự|Đ|Cố chống đỡ, giữ vững, chưa thắng được nhưng cũng chưa chịu thua.|1
+cầm sắt|V|Hai loại đàn hòa âm với nhau; ví tình vợ chồng hòa hợp.|2
 cầm thú|D|Chim muông, loài động vật nói chung.|2
 cầm trịch|Đ|Đứng ra điều khiển, dẫn dắt một công việc chung.|2
 cầm đồ|Đ|Việc gửi vật quý ở tiệm để vay tiền rồi chuộc về sau.|1
@@ -1544,6 +1559,7 @@ diện|Đ|Mặc quần áo đẹp để làm dáng.|2
 diện mạo|D|Bộ mặt, vẻ mặt con người.|1
 diện tích|D|Độ lớn của một bề mặt, đo bằng mét vuông, héc ta.|1
 diệp lục|D|Chất màu xanh trong lá cây, giúp cây hấp thu ánh sáng.|2
+diệu vợi|V|Xa xôi và khó khăn, cách trở.|2
 do dự|Đ|Chưa quyết định được vì còn ngần ngại.|1
 do thám|Đ|Dò xét để nắm được tình hình.|1
 doanh trại|D|Khu nhà riêng của đơn vị quân đội để ở và làm việc.|1
@@ -1555,10 +1571,12 @@ du kích|D|Người đánh giặc theo lối nhỏ lẻ, lúc ẩn lúc hiện, 
 du lịch|Đ|Đi xa cho biết xứ lạ khác với nơi mình ở.|1
 du mục|Đ|Sống nay đây mai đó, dắt bầy gia súc đi tìm đồng cỏ.|1
 du ngoạn|Đ|Đi chơi để ngắm xem cảnh vật.|1
+du tử|V|Người con xa nhà, lưu lạc nơi đất khách.|2
 dung dịch|D|Chất lỏng có một chất khác hòa tan trong đó.|1
 dung lượng|D|Phần không gian hoặc thể tích một vật có thể nhận hoặc chứa đựng, lưu trữ bên trong.|1
 dung mạo|D|Vẻ mặt và dáng vóc của một người.|2
 dung nham|D|Đá nóng chảy phun trào ra từ núi lửa.|1
+dung nhan|V|Vẻ mặt, dáng dấp xinh đẹp của người phụ nữ.|2
 dung túng|Đ|Bao che, để mặc cho kẻ khác làm điều sai trái.|2
 dung tục|T|Tầm thường và thô thiển, không tinh tế, không tế nhị.|2
 duy trì|Đ|Giữ cho tồn tại, không thay đổi trạng thái bình thường.|1
@@ -1635,6 +1653,7 @@ dư thừa|T|Có nhiều, quá mức yêu cầu.|1
 dư âm|D|Tiếng vang hay ảnh hưởng còn đọng sau sự việc đã qua.|2
 dưa|D|Món ăn làm bằng rau hay củ muối chua.|2
 dương cầm|D|Đàn piano, nhạc cụ có bàn phím đen trắng.|1
+dương thế|V|Cõi đời của người đang sống, đối lập với cõi âm.|2
 dưới|D|Những người cấp thấp hơn, thuộc quyền mình.|1
 dưỡng dục|Đ|Nuôi nấng và dạy dỗ con cái nên người.|2
 dưỡng lão|Đ|Chăm sóc, nuôi người già lúc tuổi cao.|2
@@ -1666,12 +1685,14 @@ dầu mỏ|D|Chất lỏng đen đào từ lòng đất, dùng làm xăng và nh
 dẫn|Đ|Cùng đi để đưa đến nơi nào đó.|1
 dẫn|Đ|Lấy lời của người khác ra làm chứng.|1
 dẫn|Đ|Đang hơn đối phương trong trận đấu.|1
+dập dìu|V|Đông vui, kẻ đến người đi nhộn nhịp.|2
 dậy|Đ|Thức giấc và rời khỏi chỗ nằm.|1
 dắt|Đ|Nắm dẫn đi, đưa đi cùng với mình.|2
 dằn|Đ|Đè, nén xuống, không cho trỗi dậy, nổi lên.|2
 dằn vặt|Đ|Làm cho phải đau đớn, khổ tâm một cách dai dẳng.|1
 dằng dặc|T|Kéo dài mãi như không dứt, không bao giờ hết.|2
 dặm|D|Đơn vị cũ đo chiều dài đường đi; thường dùng để chỉ quãng đường xa.|1
+dặm trường|V|Đường dài xa xôi.|2
 dặn|Đ|Bảo cho biết điều cần nhớ để làm.|2
 dẹp|Đ|Xếp gọn lại, xếp dồn vào một bên, một góc.|1
 dẹp loạn|Đ|Làm tan những cuộc nổi dậy chống chính quyền.|1
@@ -1804,6 +1825,7 @@ gia trưởng|T|Hay tự ý quyết định mọi việc, coi lời mình là qu
 gia tài|D|Của cải của ông cha để lại.|1
 gia tăng|Đ|Nâng cao lên, thêm vào.|1
 gia đình|D|Tập hợp những người có quan hệ hôn nhân và huyết thống sống trong cùng một nhà.|1
+giai nhân|V|Người phụ nữ có nhan sắc, duyên dáng.|1
 giai thoại|D|Mẩu chuyện lí thú được lưu truyền rộng, có liên quan ít nhiều tới nhân vật có thật.|1
 giai điệu|D|Chuỗi nốt nhạc nối tiếp nhau tạo thành nét nhạc của bài hát.|1
 giai đoạn|D|Phần thời gian có những sự việc riêng biệt trong một thời kì dài.|1
@@ -1948,6 +1970,7 @@ giếng khơi|D|Hố sâu đào thẳng xuống lòng đất để lấy mạch 
 giếng làng|D|Hố đào sâu lấy nước dùng chung của cả thôn thời xưa.|1
 giễu cợt|Đ|Nêu thành trò cười nhằm chế nhạo, đả kích.|2
 giọng|D|Độ cao thấp, mạnh yếu của lời nói, tiếng hát.|1
+giọt châu|V|Nước mắt, quý giá như ngọc.|2
 giỏ|D|Đồ đan để đựng, thường bằng tre, mây, hình trụ, thành cao, miệng hẹp, có quai xách.|2
 giới|D|Lớp người trong xã hội, có chung những đặc điểm nhất định.|1
 giới hạn|D|Mức độ nhất định không thể vượt qua.|1
@@ -2018,6 +2041,7 @@ góp|Đ|Bỏ phần của mình vào một việc chung.|2
 góp mặt|Đ|Dự phần vào công việc chung.|1
 góp sức|Đ|Dùng khả năng của mình vào việc chung.|2
 góp vốn|Đ|Bỏ tiền vào một công việc cùng với nhiều người khác, để kinh doanh.|2
+gót sen|V|Bước chân nhẹ nhàng của người con gái đẹp.|2
 gôm|D|Cục cao su dùng để xóa nét bút chì.|2
 gông cùm|D|Vật bằng gỗ hoặc sắt khóa cổ, chân tù nhân; sự ràng buộc nặng nề.|2
 gõ|Đ|Đập ngón tay hay vật gì vào một vật rắn cho phát ra từng tiếng khẽ.|2
@@ -2025,8 +2049,10 @@ gõ|Đ|Nhấn các phím trên bàn phím để nhập chữ.|2
 gõ cửa|Đ|Đập nhẹ vào tấm chắn lối ra vào để báo có người muốn vào.|1
 găm|Đ|Làm cho mắc vào vật khác bằng vật nhỏ dài, nhọn đầu.|2
 gươm đao|D|Vũ khí có lưỡi sắc thời xưa.|2
+gươm đàn|V|Thanh kiếm và nhạc cụ dây; chỉ cả võ lẫn văn.|2
 gương|D|Vật có bề mặt nhẵn bóng, có thể phản chiếu ánh sáng.|1
 gương|D|Người hay việc tốt đáng để người khác noi theo.|1
+gương nga|V|Mặt trăng.|2
 gượng|T|Thiếu tự nhiên vì cố làm cho có.|2
 gượng ép|T|Thiếu tự nhiên vì cố làm cho được.|2
 gạ gẫm|Đ|Nói khéo để hòng lợi dụng.|2
@@ -2146,11 +2172,13 @@ hoa hồng|D|Loài cây có gai, bông nhiều cánh xếp lớp, thơm, thườ
 hoa khôi|D|Cô gái được bầu là đẹp nhất trong một trường hay cuộc thi.|2
 hoa lệ|T|Đẹp một cách lộng lẫy.|2
 hoa mỹ|T|Được gọt giũa, trau chuốt nhiều để có cái vẻ đẹp phô trương bề ngoài.|2
+hoa niên|V|Quãng đời trẻ trung, tươi đẹp của tuổi mới lớn.|2
 hoa tiêu|D|Người dẫn đường cho tàu thuyền vào cảng hoặc qua luồng nguy hiểm.|1
 hoa văn|D|Hình trang trí được vẽ, chạm, khắc trên các đồ vật.|1
 hoang|T|Không được con người chăm sóc, sử dụng đến.|2
 hoang dã|T|Nói những nơi đất đai không trồng trọt, ít người lui tới.|1
 hoang dại|T|Mọc tự nhiên, sống tự nhiên, không do con người chăm sóc.|1
+hoang liêu|V|Vắng vẻ, quạnh hiu, không bóng người.|2
 hoang mang|Đ|Ở trạng thái không yên lòng, không biết tin theo cái gì và nên xử trí ra sao.|1
 hoang vu|T|Ở trạng thái bỏ không, để cho cây cỏ mọc tự nhiên, chưa hề có tác động của con người.|1
 hoe|T|Có màu vàng nhạt hay đỏ nhạt, ánh lên.|2
@@ -2272,6 +2300,7 @@ héo hon|T|Gầy mòn, tàn tạ dần vì buồn đau hoặc thiếu sức số
 hét|Đ|Kêu thật to, thật lớn tiếng.|1
 hình|D|Dáng vẻ bên ngoài của sự vật; cũng chỉ ảnh chụp hay tranh vẽ.|1
 hình dung|Đ|Tưởng tượng ra trong đầu một cách khá rõ.|1
+hình hài|V|Thân thể con người.|1
 hình sự|T|Thuộc về việc truy tố, xét xử người phạm tội.|1
 hình thức|D|Cái vẻ bên ngoài của sự vật.|1
 hình vuông|D|Tứ giác có bốn cạnh và bốn góc bằng nhau.|1
@@ -2375,6 +2404,7 @@ hạt nhân|D|Phần trung tâm của nguyên tử, mang điện tích dương.|
 hả hê|T|Hài lòng vì xong việc.|2
 hải cẩu|D|Loài thú ở các biển vùng hàn đới, chân có màng.|1
 hải dương|D|Vùng biển cả; ngành nghiên cứu về biển.|1
+hải hà|V|Rộng lớn như biển và sông; nói tấm lòng bao dung, độ lượng.|2
 hải lý|D|Đơn vị đo quãng đường trên biển.|1
 hải lưu|D|Dòng nước ở biển hay đại dương chảy theo một hướng nhất định.|2
 hải phận|D|Vùng biển thuộc phạm vi chủ quyền một nước.|2
@@ -2472,7 +2502,10 @@ hồn|D|Phần vô hình của con người, được cho là còn tồn tại s
 hồn nhiên|T|Ngây thơ, trong trẻo, không giả tạo.|2
 hồng|D|Loài cây cùng họ với cây thị, quả khi xanh thì có vị chát, khi chín thì ngọt.|1
 hồng hào|T|Nói nước da đỏ thắm vì khoẻ mạnh.|2
+hồng nhan|V|Người con gái đẹp.|1
+hồng quần|V|Cách gọi phụ nữ, nhất là người trẻ đẹp, thời xưa.|2
 hồng thủy|D|Trận lụt rất lớn thời xa xưa, theo truyền thuyết.|2
+hồng trần|V|Cõi đời với bao bụi bặm, phồn hoa.|2
 hồng tâm|D|Điểm tròn ở giữa cái bia để tập bắn hay thi bắn.|2
 hồng xiêm|D|Cây ăn quả có quả tròn nâu, thịt mềm ngọt, hạt đen bóng.|1
 hổ|D|Loài thú dữ cùng họ với mèo, ăn thịt, lông màu vàng có vằn đen.|1
@@ -2770,6 +2803,7 @@ kim loại|D|Chất cứng, dẫn điện, dẫn nhiệt tốt như sắt, đồ
 kim tự tháp|D|Công trình đá hình chóp đáy vuông ở Ai Cập, nơi chôn cất các vua xưa.|1
 kinh doanh|Đ|Tổ chức buôn bán để thu lời lãi.|1
 kinh hồn|Đ|Sợ hãi, hoảng sợ đến mất hết tinh thần.|2
+kinh kỳ|V|Thủ đô của nước thời xưa, nơi vua ở.|2
 kinh tuyến|D|Đường tròn lớn vòng quanh Trái Đất chạy qua hai cực.|2
 kinh tế|D|Tổng thể những hoạt động của con người nhằm thoả mãn nhu cầu vật chất.|1
 kinh điển|T|Được coi là mẫu mực, có giá trị lâu dài.|1
@@ -2997,6 +3031,7 @@ luộc|Đ|Làm cho đồ ăn chín trong nước đun sôi.|2
 luộm thuộm|K|Ăn mặc, bày biện thiếu gọn gàng.|1
 ly|D|Đồ thủy tinh có chân, dùng để uống rượu hay bia.|1
 ly|Đ|Rời xa, tách khỏi nhau, như trong từ Hán Việt.|2
+ly biệt|V|Chia tay, rời xa nhau mỗi người một nơi.|2
 ly khai|Đ|Tách mình ra khỏi một chính đảng, một cộng đồng xã hội, một trường phái triết học.|1
 ly thân|Đ|Không còn chung sống với nhau nữa, nhưng trên giấy tờ vẫn là vợ chồng hợp pháp của nhau.|2
 làm|Đ|Dùng công sức tạo ra cái trước đó không có.|1
@@ -3063,6 +3098,7 @@ lãng phí|Đ|Làm tốn kém, hao tổn một cách vô ích.|1
 lãng quên|Đ|Để chìm vào dĩ vãng, không còn nhớ đến.|1
 lãng tử|D|Kẻ thích cuộc sống lang thang nay đây mai đó.|2
 lãng xẹt|K|Vô duyên, chán, nhạt nhẽo.|2
+lãng đãng|V|Lơ lửng, nhẹ nhàng trôi, khi tụ khi tan như sương khói.|2
 lãnh thổ|D|Đất đai thuộc chủ quyền của một nước.|1
 lãnh đạm|T|Không có biểu hiện tình cảm, tỏ ra không muốn quan tâm đến.|2
 lãnh đạo|Đ|Dẫn dắt tổ chức phong trào theo đường lối cụ thể.|1
@@ -3106,6 +3142,7 @@ lòi|Đ|Lộ hẳn ra ngoài lớp bao bọc.|2
 lòng|D|Bụng của con người, coi là biểu tượng của mặt tâm lí, tình cảm, ý chí, tinh thần.|1
 lòng|D|Phần bên trong hõm xuống, như của sông, bàn tay.|1
 lòng|D|Ruột và các bộ phận trong bụng của lợn, dùng làm món ăn.|1
+lòng son|V|Tâm hồn thủy chung, trước sau không đổi.|2
 lòng tham|D|Sự ham muốn quá mức những lợi ích cho bản thân.|1
 lòng thòng|T|Rủ xuống dài và không gọn gàng.|2
 lòng tin|D|Sự tín nhiệm, trông cậy vào một người hay một điều gì.|1
@@ -3380,6 +3417,8 @@ lừng danh|T|Nổi tiếng khắp nơi, ai cũng biết.|1
 lừng lẫy|T|Nổi tiếng vang dội, ai ai cũng biết đến.|2
 lửa|D|Ánh sáng và nhiệt phát sinh đồng thời từ vật đang cháy.|1
 lửa|D|Cảm xúc mãnh liệt như giận dữ hay đam mê bùng lên trong lòng.|1
+lữ khách|V|Người đi đường xa.|2
+lữ thứ|V|Nơi đất khách, chốn dừng chân trên đường đi xa.|2
 lững lờ|T|Trôi đi chậm chạp, nhẹ nhàng, như đứng yên, thường nói về mây hay dòng nước.|2
 lựa|Đ|Chọn lấy những cái đáp ứng yêu cầu trong nhiều cái cùng loại.|2
 lực|D|Tác động làm vật chuyển động hoặc biến dạng.|1
@@ -3457,7 +3496,9 @@ màu mè|T|Có tính chất hình thức, khách sáo, không chân thật.|1
 màu mỡ|T|Có nhiều chất dinh dưỡng trong đất.|1
 màu sắc|D|Vẻ ngoài do ánh sáng tạo ra như đỏ, vàng, xanh.|1
 mày mò|Đ|Tìm tòi một cách kiên nhẫn, tỉ mỉ.|2
+mày ngài|V|Lông trên mắt cong và thanh như râu con bướm tằm; nét đẹp của người con gái.|2
 má|D|Phần hai bên mặt, từ miệng đến mang tai.|1
+má đào|V|Đôi bên mặt ửng hồng như hoa; ví người con gái trẻ đẹp.|2
 má ơi|K|Tiếng kêu thốt lên khi kinh ngạc hoặc sợ hãi.|1
 mách|Đ|Nói cho người khác biết điều cần thiết, có lợi cho họ.|2
 mách bảo|Đ|Chỉ cho điều hay, điều cần.|1
@@ -3627,6 +3668,7 @@ mắt|D|Lỗ hở nhỏ giữa các sợi đan của lưới, rổ, rá.|2
 mắt cá|D|Mẩu xương lồi hai bên của cổ chân.|1
 mặc|Đ|Che thân bằng quần áo.|1
 mặc|Đ|Không để ý tới, để mọi việc diễn ra thế nào cũng được.|1
+mặc khách|V|Người sành thơ văn, chữ nghĩa thời xưa.|2
 mặc kệ|K|Không đoái hoài, để cho mọi sự tự diễn ra.|1
 mặc niệm|Đ|Đứng im lặng để tưởng nhớ người đã mất.|2
 mặn|T|Có vị như vị của muối.|2
@@ -3664,6 +3706,7 @@ mỉa|Đ|Nói ngược ý để giễu cợt, châm chọc.|2
 mỉa mai|Đ|Nói hoặc làm trái ý với điều thật, để chê bai hoặc châm chọc.|1
 mị dân|Đ|Dùng lời hứa suông, lời đường mật để lừa quần chúng ủng hộ mình.|2
 mịn|T|Nhỏ mặt, nhỏ hạt và mượt, sờ dịu tay.|2
+mịt mùng|V|Tối tăm, mù mờ, không thấy đâu là giới hạn.|2
 mọc|Đ|Nhô lên khỏi mặt đất hay chân trời, như cây cỏ, mặt trời.|1
 mọng|T|Căng tròn, chứa đầy nước.|2
 mọt|D|Loài sâu bọ khoét đục gỗ hay các hạt khô.|2
@@ -3723,6 +3766,7 @@ mụ vườn|D|Người đỡ đẻ không qua trường lớp ở thôn quê th
 mục|T|Bị hư hỏng, bở ra vì để lâu ngày, như gỗ, vải.|1
 mục kích|Đ|Chính mắt trông thấy.|2
 mục tiêu|D|Đích đặt ra cần phải đạt tới đối với một công tác, nhiệm vụ.|1
+mục đồng|V|Trẻ chăn trâu.|1
 mụn|D|Nhọt nhỏ nổi ở ngoài da.|2
 mủ|D|Chất lỏng đặc màu vàng hay xanh ở chỗ viêm nhiễm.|2
 mức|D|Giới hạn hay phạm vi cần đạt tới.|1
@@ -3736,6 +3780,7 @@ mực tàu|D|Thỏi đen dùng để viết chữ Hán, vẽ tranh thủy mặc.
 mỹ lệ|T|Đẹp đẽ, lộng lẫy ở mức độ cao.|2
 mỹ mãn|T|Tốt đẹp đến mức độ cao hoặc đầy đủ, hoàn toàn phù hợp với lòng mong ước.|2
 mỹ nghệ|D|Nghề dùng sự khéo léo của tay để làm những việc như thêu, chạm trổ.|1
+mỹ nhân|V|Người đẹp, thường chỉ phụ nữ có sắc đẹp nổi bật.|1
 na|D|Cây ăn quả, quả tròn có nhiều mắt, thịt trắng, ngọt, nhiều hạt đen.|1
 na ná|T|Gần giống, trông tựa như nhau.|2
 nai|D|Thú rừng cùng họ với hươu, lông màu nâu, con đực có sừng.|2
@@ -3746,6 +3791,7 @@ nan|D|Thanh mỏng bằng tre, nứa hoặc kim loại.|2
 nan hoa|D|Những thanh mảnh nối trục với vành bánh xe đạp.|2
 nanh|D|Răng nhọn, sắc mọc ở giữa răng cửa và răng hàm.|2
 nanh vuốt|D|Răng nhọn và móng sắc của thú dữ; ví sự kìm kẹp nguy hiểm.|2
+nao nao|V|Xao xuyến nhẹ nhàng trong lòng.|2
 nao núng|Đ|Thấy có sự lung lay, không còn vững vàng nữa.|2
 nem|D|Món ăn làm từ thịt, gói bằng lá, hoặc cuốn rồi rán giòn.|2
 neo|Đ|Thả mỏ sắt xuống nước để giữ tàu thuyền đứng yên một chỗ.|2
@@ -3841,6 +3887,9 @@ nguồn gốc|D|Nơi bắt đầu, chỗ sinh ra của sự vật.|1
 nguội|T|Hết nóng, trở thành nhiệt độ bình thường.|2
 ngà|D|Răng nanh hàm trên con voi mọc dài ra hai bên miệng.|2
 ngà ngà|K|Hơi chếnh choáng vì rượu bia, chưa say hẳn.|1
+ngàn dâu|V|Bãi cây nuôi tằm bát ngát, gợi cảnh xa cách mênh mông.|2
+ngàn thu|V|Rất lâu dài, đời đời mãi mãi.|2
+ngàn trùng|V|Muôn lớp xa xôi, cách trở.|2
 ngào|Đ|Trộn với đường rồi đảo đều cho thấm.|2
 ngào ngạt|T|Có mùi thơm lan toả rộng và kích thích mạnh vào khứu giác.|2
 ngày|D|Khoảng thời gian từ nửa đêm trước đến nửa đêm sau.|1
@@ -3896,6 +3945,7 @@ ngũ sắc|D|Năm màu là xanh, vàng, đỏ, trắng, đen.|2
 ngũ vị|D|Năm mùi (mặn, đắng, chát, cay, ngọt).|2
 ngơ ngác|T|Ngẩn ra, bối rối vì thấy lạ hoặc bất ngờ.|2
 ngư dân|D|Người làm nghề đánh cá.|1
+ngư phủ|V|Người đánh cá.|2
 ngư trường|D|Khu vực biển có nguồn thủy sản tập trung cao, thuận tiện cho việc đánh bắt.|2
 ngư ông|D|Người làm nghề đánh bắt cá trên sông, trên biển.|2
 ngưng|Đ|Thôi, không tiếp tục làm hay diễn ra nữa.|1
@@ -3941,6 +3991,7 @@ ngọc|D|Đá quý, thường dùng làm vật trang sức, trang trí.|1
 ngọc bích|D|Loại đá quý màu xanh lục.|1
 ngọc lam|D|Loại đá quý màu xanh nhạt hơi ngả lục, đục, dùng làm đồ trang sức.|2
 ngọc lan|D|Cây thân gỗ cao, hoa trắng thơm ngát, thường trồng làm cảnh.|2
+ngọc ngà|V|Trắng trong và quý giá như châu báu, thường nói về thân thể người con gái.|2
 ngọc thạch|D|Thứ đá quí, màu lục.|2
 ngọn|D|Phần chót cao nhất của một vật.|2
 ngọn|D|Từ đếm các vật như đèn, đuốc, núi, gió.|2
@@ -4223,6 +4274,7 @@ nâng|Đ|Dùng tay đỡ và đưa lên cao.|1
 nâng|Đ|Làm cho tăng lên về mức độ, giá trị hoặc chất lượng.|1
 nâng niu|Đ|Chăm chút một cách âu yếm.|2
 nâu|T|Có màu như màu đất hay màu hạt cà phê rang.|2
+não nùng|V|Buồn đau thấm thía, da diết.|2
 nè|K|Từ đệm để kéo sự chú ý, hay nghe ở miền Nam.|1
 né|Đ|Nghiêng hoặc nép về một bên để tránh.|2
 né tránh|Đ|Không muốn đối diện với ai.|1
@@ -4354,6 +4406,7 @@ nể|Đ|Kính trọng, e ngại nên không dám làm trái.|2
 nể nang|Đ|E dè vì sợ mất lòng.|2
 nệm|D|Tấm bằng vật chất mềm để ngủ.|2
 nện|Đ|Đập mạnh vào một vật.|2
+nỉ non|V|Âm thanh nhỏ nhẹ, kéo dài, nghe buồn và tha thiết.|2
 nịnh|Đ|Khen ngợi người trên một cách quá đáng để làm người nghe vui lòng.|2
 nịnh hót|Đ|Tâng công kẻ trên để hòng trục lợi.|2
 nọc|D|Chất nước độc ở cơ thể của một số động vật như rắn, rết, ong.|2
@@ -4557,7 +4610,9 @@ phù dung|D|Loài hoa to, sáng nở màu trắng, chiều chuyển sang màu h�
 phù hiệu|D|Biểu tượng nhỏ đeo trên áo, mũ để cho biết đơn vị hay chức vụ.|1
 phù phiếm|T|Hão huyền, không thiết thực.|2
 phù sa|D|Đất mịn do sông bồi đắp, rất màu mỡ.|1
+phù sinh|V|Kiếp người ngắn ngủi, trôi nổi.|2
 phù thuỷ|D|Nhân vật tưởng tượng trong truyện cổ tích, có nhiều phép lạ, thường rất độc ác và hay làm hại người.|1
+phù vân|V|Đám mây trôi nổi; ví những thứ hư ảo, chóng qua như giàu sang, danh vọng.|2
 phú thương|D|Người buôn bán giàu có.|2
 phúc|D|Điều may lớn, điều mang lại những sự tốt lành lớn.|2
 phúc đức|D|Điều may mắn, do đời trước ăn ở tốt lành để lại cho đời sau.|2
@@ -4598,6 +4653,7 @@ phần|D|Suất ăn dọn sẵn cho mỗi người.|1
 phần mềm|D|Chương trình điều khiển máy tính thực hiện công việc.|1
 phẫn nộ|Đ|Căm hờn tức giận đến cao độ, thể hiện ở nét mặt, thái độ, cử chỉ, hành động.|1
 phẫu thuật|D|Một môn của y học chuyên trị bệnh bằng cách mổ xẻ.|1
+phận bạc|V|Số kiếp hẩm hiu, không may mắn.|2
 phận sự|D|Việc về phần mình phải làm.|1
 phẳng|T|Bằng, đều trên bề mặt.|2
 phẳng lặng|T|Yên ả, không gợn sóng, không có gì xáo động.|2
@@ -4642,6 +4698,7 @@ quan hệ|D|Sự gắn bó chặt chẽ, có tác động qua lại lẫn nhau.|
 quan họ|D|Điệu dân ca hát đối của vùng Bắc Ninh.|1
 quan liêu|T|Chỉ ra lệnh bằng giấy tờ, xa rời thực tế, xa dân.|1
 quan niệm|D|Cách hiểu, cách nghĩ riêng về một vấn đề.|1
+quan san|V|Cửa ải và núi non; chỉ đường xa cách trở.|2
 quan sát|Đ|Nhìn, xem xét để thấy, để biết rõ sự vật, hiện tượng nào đó.|1
 quan tiền|D|Xâu những đồng kẽm tròn lỗ vuông làm đơn vị tính thời phong kiến.|2
 quan tài|D|Hòm đựng xác người chết để chôn cất hoặc hỏa táng.|1
@@ -5008,6 +5065,7 @@ suy đồi|T|Sút kém và hư hỏng đến mức tồi tệ về đạo đức
 suông|T|Chỉ có lời nói bề ngoài, thiếu nội dung và thiếu hành động thực tế.|2
 suýt soát|T|Gần bằng nhau, chỉ hơn kém chút ít.|2
 suất|D|Phần chia cho từng người theo mức đã định.|2
+suối vàng|V|Cõi bên kia, nơi người đã khuất trở về.|2
 suồng sã|T|Thân mật quá trớn đến mức thiếu đứng đắn.|2
 sà|Đ|Hạ thấp xuống, nhào xuống gần mặt đất.|2
 sà lan|D|Thuyền lớn đáy bằng để chở hàng trên sông.|2
@@ -5086,6 +5144,7 @@ sơn|Đ|Quét một lớp chất màu lên bề mặt đồ vật cho đẹp, ch
 sơn|D|Chất lỏng có màu, quét lên bề mặt đồ vật.|1
 sơn ca|D|Chim nhỏ, hót rất hay, thường dùng để ví giọng hát hay.|2
 sơn dương|D|Loài dê rừng, sừng ngắn, sống trên núi đá, chạy rất nhanh.|1
+sơn hà|V|Núi sông; chỉ đất nước, Tổ quốc.|2
 sư phạm|D|Khoa học về giáo dục và giảng dạy trong trường học.|1
 sư tử|D|Thú dữ lớn, lông màu vàng hung, con đực có bờm.|1
 sưng|T|Nói một bộ phận trong cơ thể phồng lên.|2
@@ -5222,6 +5281,7 @@ tan nát|T|Biến thành những mảnh vụn, không dùng được nữa; tiê
 tan rã|Đ|Bị rời ra từng mảng, không còn là một khối có tổ chức, có lực lượng nữa.|1
 tanh|T|Có mùi như mùi cá sống.|2
 tanh bành|T|Bị xáo tung, bừa bãi, ngổn ngang.|2
+tao nhân|V|Người phong nhã, ưa ngâm vịnh thơ văn.|2
 tau|K|Đại từ xưng của người miền Trung khi nói về mình.|2
 tay|D|Bộ phận của cơ thể người từ vai đến các ngón, dùng để cầm, nắm.|1
 tay|D|Phần để vịn hay gác khuỷu ở hai bên chiếc ghế bành.|1
@@ -5237,6 +5297,7 @@ tem phiếu|D|Giấy in định lượng để mua gạo vải thịt thời bao
 teo|Đ|Thu nhỏ lại, bé dần lại.|2
 tha|Đ|Giữ chặt bằng miệng, bằng mỏ mà mang đi.|1
 tha hóa|Đ|Trở nên biến chất, xấu đi.|2
+tha hương|V|Quê người, nơi xa xứ sở của mình.|1
 thai|D|Cơ thể con đang hình thành nằm trong bụng mẹ, đã có tính chất của loài.|2
 thai nghén|Đ|Nuôi dưỡng trong lòng, chuẩn bị cho sự ra đời.|2
 tham|T|Ham muốn quá mức, lúc nào cũng muốn có thêm.|2
@@ -5258,6 +5319,7 @@ thanh niên|D|Người trẻ tuổi, đang ở độ tuổi trưởng thành.|1
 thanh nữ|D|Người con gái trẻ tuổi.|2
 thanh thản|T|Ở trạng thái nhẹ nhàng, thoải mái vì trong lòng không có điều gì phải áy náy, lo nghĩ.|1
 thanh toán|Đ|Trả tiền để kết thúc một khoản mua bán hay nợ nần.|1
+thanh tân|V|Trẻ trung và trong trắng, thường nói về người con gái.|2
 thanh tịnh|T|Yên ắng, không chút xao động nào.|2
 thanh vắng|T|Yên lặng, không có bóng người.|2
 thanh đạm|T|Giản dị, không cầu kì, không đắt tiền.|2
@@ -5290,6 +5352,8 @@ thiên lôi|D|Thần làm ra sấm sét trong truyền thuyết.|2
 thiên lý|D|Cây leo, hoa vàng lục, dùng để nấu canh hoặc xào.|2
 thiên lệch|T|Cách nhìn, cách đánh giá, cách đối xử không công bằng, hầu như sẽ nghiêng về một phía.|2
 thiên nga|D|Chim lớn cùng họ với ngỗng, cổ dài, lông trắng muốt, bơi rất đẹp.|1
+thiên nhai|V|Chân trời; nơi xa xôi cách biệt.|2
+thiên thu|V|Nghìn năm; khoảng thời gian dài vô tận.|1
 thiên văn|D|Ngành nghiên cứu các vì sao và vũ trụ.|1
 thiên vị|T|Đối xử không công bằng, ưu ái hẳn một bên.|1
 thiên địch|D|Kẻ thù tự nhiên của một loài (chẳng hạn, thường ăn thịt loài đó).|2
@@ -5307,6 +5371,7 @@ thiệt hại|D|Sự mất mát về người, về của cải.|1
 thiệt mạng|Đ|Chết một cách oan uổng, phí hoài.|1
 thoi|D|Bộ phận của khung cửi, đưa sợi ngang qua lại.|2
 thoi thóp|Đ|Thở rất yếu, như sắp tắt thở.|2
+thoi đưa|V|Nói thời gian trôi nhanh như chiếc dụng cụ dệt vải lướt qua lại.|2
 thon|T|Dài, tròn và nhỏ dần về phía đầu.|2
 thoái lui|Đ|Lùi lại phía sau khi gặp trở ngại.|2
 thoái thác|Đ|Kiếm cớ từ chối, không làm điều người khác yêu cầu.|2
@@ -5323,6 +5388,7 @@ thu hút|Đ|Lôi cuốn, làm dồn mọi sự chú ý vào.|1
 thu hồi|Đ|Lấy lại cái đã nhường, phát, cho người khác.|1
 thu nhập|D|Khoản tiền hoặc của cải nhận được trong một thời gian nhất định.|1
 thu nhặt|Đ|Góp từng món, từng lượng nhỏ lại.|2
+thu thủy|V|Làn nước trong của mùa lá rụng; ví đôi mắt sáng đẹp của người con gái.|2
 thu vén|Đ|Nói người nội trợ biết tổ chức và quản lý gia đình một cách tiết kiệm.|2
 thu xếp|Đ|Sắp đặt cho gọn, cho ổn thoả.|1
 thui thủi|T|Cô đơn một mình, lặng lẽ không bầu bạn.|2
@@ -5390,6 +5456,7 @@ thâm hụt|Đ|Thiếu đi do chi tiêu quá mức.|1
 thâm nhập|Đ|Đi sâu vào bên trong để tìm hiểu kĩ.|1
 thâm niên|D|Số năm đã làm việc trong một nghề.|2
 thâm thúy|T|Sâu sắc, hàm ý kín đáo.|2
+thâm u|V|Sâu kín và tối tăm.|2
 thân|T|Có quan hệ gần gũi, gắn bó mật thiết.|1
 thân|D|Phần chính của cây, đi từ gốc lên tới cành.|1
 thân|D|Phần cơ thể người, không kể đầu và tay chân.|1
@@ -5781,6 +5848,7 @@ tiền thân|D|Tổ chức có trước, trở thành tổ chức có sau.|1
 tiền tệ|D|Phương tiện dùng để mua bán, trao đổi trong một nước.|1
 tiền án|D|Bản kết tội đã bị tòa tuyên trước đây, ghi trong lí lịch của một người.|1
 tiền đồ|D|Con đường phía trước; dùng để chỉ tương lai, triển vọng.|2
+tiều phu|V|Người kiếm củi trong rừng.|2
 tiều tụy|T|Có dáng vẻ tàn tạ, xơ xác đến thảm hại.|2
 tiểu học|D|Bậc đầu tiên trong giáo dục phổ thông, từ lớp một đến lớp năm.|1
 tiểu luận|D|Bài viết ngắn bàn về một vấn đề, thường là bài tập của sinh viên.|1
@@ -5838,6 +5906,7 @@ tri huyện|D|Chức quan cai trị vùng nhỏ dưới tỉnh trong thời phon
 tri kỷ|D|Người bạn rất thân, hiểu biết mình.|2
 tri phủ|D|Chức quan đứng đầu vùng rộng hơn huyện thời phong kiến.|1
 tri thức|D|Những điều hiểu biết có hệ thống về sự vật, hiện tượng tự nhiên hoặc xã hội.|1
+tri âm|V|Bạn thân hiểu thấu tâm tư, tình cảm của mình.|1
 trinh sát|Đ|Dò xét, thu thập tin tức về đối phương.|1
 triền miên|T|Kéo dài mãi không dứt, hết ngày này sang ngày khác.|2
 triều|D|Hiện tượng nước biển dâng lên và rút xuống theo giờ nhất định trong ngày.|2
@@ -5884,6 +5953,7 @@ trám|Đ|Lấp kín chỗ hở, lỗ hổng bằng chất dính.|2
 trán|D|Phần trên của mặt từ chân tóc đến lông mày.|2
 tráng kiện|T|Khỏe mạnh, lực lưỡng.|2
 tráng lệ|T|Đẹp lộng lẫy (thường nói về công trình kiến trúc).|2
+tráng sĩ|V|Người đàn ông có sức mạnh và chí khí, sẵn lòng làm việc nghĩa.|1
 tránh|Đ|Tự dời chỗ sang một bên để khỏi làm vướng nhau, khỏi va vào nhau.|1
 tráo trở|T|Dễ dàng thay đổi, làm trái lại điều đã nói, đã hứa.|2
 tráp|D|Hộp gỗ nhỏ có nắp của các cụ xưa đựng giấy tờ hay đồ quý.|2
@@ -5932,6 +6002,7 @@ trùng điệp|T|Hết lớp này đến lớp khác liên tiếp nhau.|2
 trú ngụ|Đ|Ở, sinh sống tạm tại một nơi nào đó không phải quê hương mình.|2
 trú ẩn|Đ|Lánh vào một nơi để tránh tai nạn.|1
 trúc|D|Cây cùng loại với tre, thân nhỏ, thẳng, thường trồng làm cảnh.|2
+trúc mai|V|Ví tình nghĩa gắn bó, thủy chung giữa hai người.|2
 trúc đào|D|Cây bụi có hoa hồng hoặc trắng rất đẹp, lá thon dài nhưng có độc.|2
 trúng|Đ|Đúng vào cái đích nhắm tới.|1
 trút|Đ|Đổ nhiều từ trên xuống dưới.|2
@@ -5955,6 +6026,7 @@ trường hợp|D|Tình huống cụ thể đã hoặc có thể xảy ra.|1
 trường đời|D|Cuộc sống xã hội, nơi con người học hỏi kinh nghiệm thực tế.|2
 trưởng|D|Người đứng đầu một đơn vị, tổ chức.|1
 trưởng ban|D|Người đứng đầu một tổ chức.|1
+trượng phu|V|Người đàn ông có chí khí lớn, đáng kính trọng.|2
 trượt|Đ|Bị trơn, chuyển đi một quãng ngoài ý muốn trên mặt phẳng.|1
 trượt|Đ|Không đạt kết quả trong kỳ thi, trái với đỗ.|1
 trại|D|Lều dựng để ở tạm tại một nơi chỉ đến một thời gian rồi đi.|1
@@ -5979,6 +6051,7 @@ trầm mặc|T|Lặng lẽ, ít nói, có vẻ luôn luôn suy nghĩ.|2
 trầm trọng|T|Ở tình trạng có thể dẫn tới hậu quả hết sức tai hại.|1
 trầm tư|T|Đang chìm đắm trong suy nghĩ.|2
 trần|D|Phần phía trên đầu, bên trong của công trình xây dựng, là giới hạn trên của nó.|1
+trần ai|V|Cõi đời đầy gian truân, khổ cực.|2
 trần gian|D|Cõi đời của con người, phân biệt với cõi trời, cõi tiên.|1
 trần trụi|T|Không có gì che đậy; phơi bày hết ra.|1
 trầu cau|D|Thứ lá và quả các cụ xưa nhai với vôi và dùng đi hỏi cưới.|2
@@ -5987,6 +6060,7 @@ trận|D|Từ đếm một đợt mưa, gió, hay một lần cười, đánh nh
 trận mạc|D|Việc đánh nhau bằng vũ khí, nói chung.|2
 trận tuyến|D|Đường ranh giới bố trí lực lượng giữa hai bên giao chiến.|2
 trận đấu|D|Cuộc so tài thể thao giữa hai bên.|1
+trập trùng|V|Nhiều lớp cao thấp nối tiếp nhau.|2
 trật tự|D|Hàng lối trước sau, trên dưới.|1
 trắc trở|T|Gặp khó khăn, không trôi chảy.|2
 trắng|T|Có màu như màu của vôi, của bông.|1
@@ -6057,6 +6131,7 @@ tuyển sinh|Đ|Chọn người đủ điều kiện để nhận vào trường
 tuyển tập|D|Sách gồm những tác phẩm đã được chọn lọc.|1
 tuyệt|T|Hay, đẹp, tốt đến mức không còn gì hơn.|1
 tuyệt diệu|T|Tốt, tài khéo đến cực độ.|1
+tuyệt sắc|V|Đẹp hơn hẳn mọi người, không ai sánh bằng.|2
 tuyệt thực|Đ|Nhịn đói, không ăn uống để phản đối hoặc đòi hỏi điều gì.|2
 tuyệt vời|T|Hay, đẹp đến mức không gì sánh bằng.|1
 tuyệt đỉnh|D|Điểm hoặc mức độ cao nhất.|1
@@ -6070,11 +6145,14 @@ tuần hoàn|Đ|Chuyển động theo vòng, lặp đi lặp lại.|1
 tuần lễ|D|Khoảng thời gian bảy ngày từ thứ hai đến chủ nhật.|1
 tuần lộc|D|Hươu nuôi để kéo xe, sừng có nhiều nhánh, sống ở vùng cực.|1
 tuần tra|Đ|Đi lại xem xét để canh gác, giữ gìn trật tự an ninh.|1
+tuế nguyệt|V|Năm tháng, thời gian trôi qua.|2
 tuồng|D|Loại hình sân khấu cổ truyền, hát và diễn theo lối ước lệ.|1
 tuổi|D|Thời gian đã qua kể từ khi sinh tính bằng năm đến một thời điểm nào đó.|1
+tuổi hạc|V|Cách nói kính trọng chỉ số năm sống của người cao niên.|2
 tuổi thọ|D|Thời gian sống được của một người, một sinh vật.|1
 tuổi trẻ|D|Thời kỳ thanh thiếu niên.|1
 tuột|Đ|Không còn giữ lại được nữa, cứ tự nhiên rời ra khỏi.|2
+tà dương|V|Mặt trời lúc sắp lặn; nắng chiều tàn.|2
 tà vẹt|D|Thanh gỗ, sắt hoặc bê tông dùng để kê ngang dưới đường ray.|2
 tài|D|Khả năng đặc biệt làm một việc nào đó.|1
 tài chính|D|Việc quản lí tiền bạc, thu chi.|1
@@ -6218,6 +6296,8 @@ tĩnh lặng|T|Hoàn toàn yên ắng, không một tiếng động.|1
 tĩnh mịch|T|Vắng vẻ và yên lặng.|2
 tơ|D|Sợi do con tằm hay một số sâu bọ nhả ra.|2
 tơ hồng|D|Sợi chỉ đỏ se duyên vợ chồng theo quan niệm xưa.|2
+tơ liễu|V|Cành cây rủ mảnh mai như sợi chỉ; ví dáng người con gái yểu điệu.|2
+tơ lòng|V|Tình cảm sâu kín, mảnh mai và dễ rung động trong tâm hồn.|2
 tơ tưởng|Đ|Luôn nghĩ đến, mong ước thầm lặng.|2
 tơi|T|Rời ra, không dính vào nhau.|2
 tơi bời|T|Tan tành, không còn ra hình thù gì nữa (do bị tàn phá quá mức).|2
@@ -6275,6 +6355,7 @@ tảng|D|Khối rắn tương đối lớn.|2
 tảng lờ|Đ|Giả vờ như không biết, không để ý.|2
 tảo hôn|Đ|Lấy vợ lấy chồng quá sớm, vào lúc vị thành niên.|2
 tấc|D|Đơn vị đo chiều dài cũ bằng một phần mười thước.|1
+tấc lòng|V|Tấm dạ nhỏ bé nhưng chân thành (lời nói khiêm nhường).|2
 tấm|D|Từ đếm các vật phẳng và mỏng như vải, ván, ảnh.|1
 tấm|D|Hạt gạo bị vỡ nhỏ khi xay giã.|2
 tấm lòng|D|Tình cảm chân thành, tha thiết đối với người khác.|1
@@ -6337,6 +6418,7 @@ tỉnh dậy|Đ|Chuyển từ trạng thái ngủ sang trạng thái thức.|1
 tỉnh giấc|Đ|Thức dậy sau khi ngủ.|1
 tỉnh táo|T|Đầu óc minh mẫn, sáng suốt, không bị mê muội.|1
 tị nạn|Đ|Đi nơi khác để tránh những nguy hiểm do chiến tranh hoặc loạn lạc gây nên.|1
+tịch mịch|V|Vắng lặng và yên tĩnh đến mức gợi cảm giác buồn.|2
 tọa lạc|Đ|(Nhà cửa, đất đai) nằm ở một vị trí nào đó.|1
 tọa đàm|Đ|Họp mặt trao đổi thân mật về một vấn đề.|1
 tọa độ|D|Các con số xác định vị trí của một điểm trên mặt phẳng hay trong không gian.|1
@@ -6345,6 +6427,7 @@ tỏa|Đ|Lan truyền ra khắp xung quanh.|2
 tỏa hương|Đ|Đưa mùi thơm lan ra khắp xung quanh, như hoa nở.|2
 tố cáo|Đ|Nói cho mọi người biết tội ác của kẻ khác.|1
 tố giác|Đ|Báo cho cơ quan chính quyền biết người hoặc hành động phạm pháp nào đó.|1
+tố nga|V|Người con gái đẹp, trẻ trung và trong trắng.|2
 tốc độ|D|Mức nhanh chậm của chuyển động, đo bằng quãng đường đi trong một giờ.|1
 tối|T|Thiếu ánh sáng, không nhìn rõ được.|1
 tối|T|Chậm hiểu, kém thông minh.|1
@@ -6418,6 +6501,8 @@ tự tiện|T|Theo ý thích của mình, không xin phép, không hỏi ai cả
 tự truyện|D|Tác phẩm kể lại cuộc đời của chính tác giả.|1
 tựa|Đ|Áp sát vào vật gì để giữ nguyên một tư thế nhất định.|2
 tựa hồ|Đ|Giống như là, có vẻ như là.|2
+u hoài|V|Nỗi buồn sâu kín, triền miên trong lòng.|2
+u tịch|V|Vắng lặng và tối tăm, sâu kín đến mức gợi cảm giác lạnh lẽo.|2
 u uất|T|Buồn rầu dồn chứa trong lòng.|2
 u ám|T|Tối tăm, mù mịt, nhiều mây đen.|1
 ung dung|T|Có cử chỉ, dáng điệu thư thái, nhàn nhã, không vội vàng, không lo lắng, bận tâm gì.|2
@@ -6455,6 +6540,7 @@ viền|Đ|Khâu thêm vào một miếng vải cho kín và làm nổi rõ lên 
 viển vông|T|Xa vời thực tế, không thể thành hiện thực.|2
 viễn chinh|Đ|Tham gia chiến tranh đánh nhau ngoài bờ cõi của quốc gia đang sống.|1
 viễn thông|T|Nói sự liên lạc với những nơi rất xa.|1
+viễn xứ|V|Nơi xa xôi, đất khách quê người.|2
 việc|D|Cái phải làm hằng ngày để sinh sống và được trả công.|1
 việc làm|D|Nghề nghiệp có thu nhập đều đặn.|1
 viện trợ|Đ|Giúp đỡ nước khác về của cải tiền bạc.|1
@@ -6493,6 +6579,7 @@ vét|Đ|Lấy cho kì hết những gì còn chút ít ở sát đáy.|2
 vênh váo|T|Có vẻ mặt kiêu ngạo, hợm hĩnh, tỏ ra không coi ai ra gì.|2
 ví|D|Bao nhỏ thường bằng da dùng để đựng tiền và giấy má cần đem theo mình.|1
 vò|Đ|Dùng tay làm nhàu, nát hoặc rối.|2
+vò võ|V|Lẻ loi một mình, lặng lẽ kéo dài.|2
 vòi|D|Bộ phận hình ống để dẫn nước hoặc phun chất lỏng ra.|2
 vòi|Đ|Nài nỉ đòi hỏi liên tục để được cái mình muốn.|2
 vòi|D|Bộ phận dài như ống ở mũi của voi.|2
@@ -6502,6 +6589,7 @@ vòng|D|Vật có hình cong khép kín.|1
 vòng|D|Một lượt trong cuộc thi đấu hoặc cuộc đua.|1
 vòng vo|T|Nói hoặc làm quanh co, không đi thẳng vào vấn đề chính.|1
 vó|D|Bàn chân của ngựa, trâu, bò.|2
+vó câu|V|Móng chân ngựa; thường chỉ ngựa đang phi.|2
 vón|Đ|Đóng lại thành từng cục nhỏ, không còn mịn.|2
 vô biên|T|Rộng lớn, không có giới hạn.|2
 vô bổ|T|Không mang lại ích lợi gì.|2
@@ -6585,6 +6673,7 @@ vấp|Đ|Chân đụng phải vật cản khiến loạng choạng hoặc ngã.|
 vất vưởng|T|Lay lắt, trôi dạt, không nơi nương tựa.|2
 vất vả|T|Ở vào tình trạng phải bỏ ra nhiều sức lực hoặc tâm trí vào một việc gì.|1
 vần|D|Phần âm giống nhau ở cuối các tiếng, giúp câu thơ nghe êm tai.|2
+vầng ô|V|Mặt trời.|2
 vẩn vơ|T|Lan man, không tập trung, không nhằm vào điều gì cụ thể.|2
 vẫy|Đ|Đưa tay lên, đưa qua đưa lại để ra hiệu hay chào.|2
 vận|D|Điều may rủi đến với một người trong một thời gian.|1
@@ -6641,6 +6730,7 @@ vớ vẩn|T|Linh tinh, vô nghĩa, không đâu vào đâu.|1
 với|Đ|Vươn tay lên để chạm tới vật ở xa hoặc cao.|1
 vớt|Đ|Lấy, đem từ dưới nước lên.|2
 vờ|Đ|Làm ra vẻ như thật để người khác tưởng lầm.|2
+vời vợi|V|Cao, xa đến mức như không cùng.|2
 vở|D|Tập giấy đóng thành quyển, dùng để viết bài.|2
 vở kịch|D|Tác phẩm sân khấu do các diễn viên đóng vai để biểu diễn.|1
 vỡ|Đ|Rời ra thành nhiều mảnh.|1
@@ -6741,6 +6831,11 @@ xuyên suốt|T|Kéo dài liên tục từ đầu đến cuối.|1
 xuyên tạc|Đ|Cố ý nói sai sự thật với ý xấu.|2
 xuân|D|Mùa đầu tiên trong năm, thời tiết ấm áp, cây cối đâm chồi nảy lộc.|2
 xuân|D|Cách nói văn chương chỉ một năm tuổi đời của con người.|2
+xuân huyên|V|Cha và mẹ.|2
+xuân sơn|V|Núi đồi mùa cây đâm chồi; ví nét lông mày đẹp của người con gái.|2
+xuân sắc|V|Vẻ đẹp tươi trẻ của người con gái.|2
+xuân thì|V|Thời con gái đang độ trẻ trung, xinh đẹp.|2
+xuân xanh|V|Tuổi trẻ, thời thanh niên đang độ đẹp nhất.|2
 xuýt xoa|Đ|Hít hơi qua kẽ răng thành tiếng khẽ để tỏ vẻ đau, tiếc hay khen ngợi.|2
 xuất chúng|T|Vượt hẳn, hơn hẳn mọi người về tài năng và trí tuệ.|1
 xuất dương|Đ|Đi ra khỏi nước mình bằng đường biển.|2
@@ -7040,6 +7135,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đa|D|Cây to có rễ phụ mọc từ cành thõng xuống, trồng để lấy bóng mát.|2
 đa giác|D|Hình do một đường gấp khúc khép kín tạo thành.|2
 đa tạ|Đ|Lời cảm ơn trang trọng dùng ngày xưa.|1
+đa đoan|V|Lắm nỗi éo le, nhiều chuyện phải lo nghĩ.|2
 đai|D|Vòng thường bằng kim loại bao quanh một vật để cho chặt.|2
 đam mê|Đ|Rất say sưa, ham thích một điều gì đến mức khó dứt ra.|1
 đan|Đ|Làm cho vật hình thanh mỏng hoặc sợi luồn qua lại với nhau, kết lại thành tấm.|2
@@ -7148,6 +7244,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đào hoa|T|Có duyên, được nhiều phụ nữ yêu mến.|2
 đào kép|D|Cách gọi chung diễn viên nữ và diễn viên nam của tuồng, chèo, cải lương.|2
 đào mộ|K|Lôi chuyện cũ của ai đó ra bàn lại, nhất là trên mạng.|1
+đào nguyên|V|Chốn yên bình, tươi đẹp, tách biệt với cuộc đời như cõi tiên.|2
 đào ngũ|Đ|Nói quân nhân bỏ đơn vị của mình mà trốn đi.|1
 đào tạo|Đ|Làm cho trở thành người có năng lực theo những tiêu chuẩn nhất định.|1
 đày|Đ|Đưa tội nhân đi giam ở một nơi xa.|2
@@ -7200,6 +7297,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đê hèn|T|Thấp kém về mặt tư cách.|2
 đê mê|T|Có cảm giác say sưa, thích thú đến tê dại, vì sự kích thích, vì sung sướng.|2
 đêm|D|Khoảng thời gian từ khi mặt trời lặn hẳn đến khi mặt trời mọc.|1
+đêm trường|V|Khoảng tối trời kéo dài như không bao giờ hết; thường ví cảnh khổ cực tăm tối.|2
 đình|D|Ngôi nhà chung của làng thời xưa, nơi thờ thành hoàng và hội họp.|2
 đình chỉ|Đ|Ngừng lại hoặc làm cho ngừng lại trong một thời gian hoặc vĩnh viễn.|1
 đình làng|D|Nơi dân thôn quê họp việc chung và thờ vị thần bảo hộ.|1
@@ -7232,6 +7330,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đông|D|Một trong bốn phương chính, ở về phía mặt trời mọc, đối lập với phương tây.|1
 đông|T|Có nhiều người tụ họp, không vắng vẻ.|1
 đông|Đ|Chuyển từ thể lỏng sang thể rắn khi gặp lạnh.|1
+đông phong|V|Gió mùa xuân.|2
 đùa|Đ|Làm hoặc nói điều gì để cho vui, không phải là thật.|1
 đùi|D|Phần của chi dưới người ta, từ háng đến đầu gối.|2
 đùm bọc|Đ|Giúp đỡ và che chở với tất cả tình thương.|2
@@ -7336,6 +7435,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 đầu tiên|T|Không có gì đi trước.|1
 đầu tàu|D|Toa có máy ở phía trước, kéo cả đoàn xe lửa chạy.|2
 đầu tư|Đ|Bỏ tiền của, công sức vào một việc để thu lợi về sau.|1
+đầu xanh|V|Tuổi còn trẻ, còn non dại.|2
 đầu óc|D|Khả năng suy nghĩ, trí tuệ của con người.|1
 đầu đuôi|D|Toàn bộ câu chuyện từ khi khởi sự cho tới lúc kết thúc.|2
 đầu độc|Đ|Cho chất có hại vào đồ ăn, đồ uống để làm hại người; nghĩa bóng là làm hư hỏng tư tưởng.|1
@@ -7611,6 +7711,7 @@ yểu điệu|T|(Phụ nữ) Có dáng người mềm mại, thướt tha.|2
 ẩn giấu|Đ|Chứa đựng một cách kín đáo, không để lộ ra.|1
 ẩn náu|Đ|Lánh ở nơi kín đáo để chờ dịp hoạt động.|1
 ẩn nấp|Đ|Giấu mình ở nơi kín đáo hoặc nơi có vật che chở.|1
+ẩn sĩ|V|Người có tài đức nhưng lánh đời, sống ở nơi vắng vẻ.|2
 ẩn số|D|Điều chưa biết, đang cần tìm ra.|2
 ập|Đ|Đến một cách nhanh, mạnh, đột ngột, với số lượng nhiều.|2
 ẻo lả|T|Mảnh khảnh với vẻ thướt tha, yểu điệu.|1

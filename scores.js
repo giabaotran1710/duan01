@@ -63,6 +63,7 @@
     { id: 'tiaso', name: 'Tia số', fmt: v => v + ' điểm' },
     { id: 'xuyentuong', name: 'Vật thể xuyên tường', fmt: v => v + ' tường' },
     { id: 'kelacdoan', name: 'Kẻ lạc đoàn', fmt: v => v + ' đoàn' },
+    { id: 'giomua', name: 'Gió mùa', fmt: v => v + ' ước nguyện' },
     { id: 'thongthai', name: 'Thông thái trắc nghiệm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
@@ -242,6 +243,8 @@
     const entry = { game, name: name ? setName(name) : getName(), score: s, at: new Date().toISOString() };
     localAdd(game, { name: entry.name, score: entry.score, at: entry.at });
     maybeAskName();
+    // chưa đặt tên thì chỉ lưu trên máy, không gửi lên bảng xếp hạng chung (tránh dòng vô danh / điểm do bot)
+    if (!hasName() && !name) return { ok: true, online: false, local: true };
     // chỉ gửi khi cao hơn điểm đã gửi thành công của game này (server giữ điểm cao nhất mỗi người)
     const sent = readJson(SENT_KEY, {})[game];
     if (sent !== undefined && s <= sent) return { ok: true, online: true, skipped: true };
@@ -250,18 +253,21 @@
     return res;
   }
 
+  // Dòng không có tên thật (trống hoặc "Người chơi") là điểm gửi từ máy chưa đặt tên, thường do bot kiểm thử: không hiện lên bảng
+  const isAnon = n => { const c = cleanName(n); return !c || c.toLowerCase() === 'người chơi'; };
   async function top(game, limit) {
     limit = limit || 10;
+    const fetchN = Math.min(300, limit + 100);   // lấy dư để sau khi bỏ dòng vô danh vẫn đủ số dòng
     try {
       if (apiBase()) {
-        const res = await http(apiBase() + '/api/scores/' + encodeURIComponent(game) + '?limit=' + limit);
-        return { online: true, scores: res.scores };
+        const res = await http(apiBase() + '/api/scores/' + encodeURIComponent(game) + '?limit=' + fetchN);
+        return { online: true, scores: (res.scores || []).filter(x => !isAnon(x.name)).slice(0, limit) };
       }
-      const data = await http(FIREBASE_URL + '/leaderboards/' + encodeURIComponent(game) + '.json?orderBy=%22score%22&limitToLast=' + limit);
+      const data = await http(FIREBASE_URL + '/leaderboards/' + encodeURIComponent(game) + '.json?orderBy=%22score%22&limitToLast=' + fetchN);
       const me = getUid();
-      const scores = Object.keys(data || {}).map(uid => {
+      const scores = Object.keys(data || {}).filter(uid => !isAnon((data[uid] || {}).name)).map(uid => {
         const d = data[uid] || {};
-        return { name: cleanName(d.name) || 'Người chơi', score: Number(d.score) || 0, at: d.at ? new Date(d.at).toISOString() : '', me: uid === me, _t: d.at || 0 };
+        return { name: cleanName(d.name), score: Number(d.score) || 0, at: d.at ? new Date(d.at).toISOString() : '', me: uid === me, _t: d.at || 0 };
       }).sort((a, b) => b.score - a.score || a._t - b._t).slice(0, limit);
       scores.forEach(s => delete s._t);
       return { online: true, scores };
@@ -291,7 +297,7 @@
       host.innerHTML = '<div style="width:100%;max-width:360px;margin:auto;background:linear-gradient(170deg,#1a2147,#0d1226);border:1px solid #34406e;border-radius:20px;padding:22px 20px 18px;color:#eef1ff;box-shadow:0 24px 60px rgba(0,0,0,.55)">' +
         '<div style="font-size:34px;text-align:center">🏆</div>' +
         '<div style="font-weight:800;font-size:19px;text-align:center;margin:6px 0 4px">Chọn tên người chơi</div>' +
-        '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
+        '<div style="font-size:13px;color:#9aa6d8;text-align:center;margin-bottom:14px">' + (opts.required ? 'Bạn cần đặt tên trước khi chơi. ' : '') + 'Tên của bạn sẽ hiện trên bảng xếp hạng.</div>' +
         '<input id="lbNameIn" maxlength="' + NAME_MAX + '" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false" placeholder="vd: gamer2026" style="width:100%;padding:13px 14px;border-radius:12px;border:1px solid #34406e;background:#0a0f22;color:#fff;font-size:18px;font-weight:700;letter-spacing:.06em;outline:none;margin-bottom:12px">' +
         '<div id="lbNameRules" style="font-size:12.5px;line-height:1.75;color:#8f9bd0;margin-bottom:14px"></div>' +
         '<div style="display:flex;gap:8px">' + (opts.required ? '' : '<button id="lbNameSkip" type="button" style="flex:1;padding:12px;border-radius:12px;border:1px solid #34406e;background:transparent;color:#9aa6d8;font-size:15px;cursor:pointer">Bỏ qua</button>') +
