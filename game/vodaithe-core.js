@@ -1,6 +1,7 @@
 /* Võ đài thẻ: bộ luật (không đụng DOM, tất định theo hạt giống, chạy được cả trong trình duyệt lẫn Node).
  *
  * Mỗi vòng có một bên TẤN CÔNG và một bên PHÒNG THỦ, đổi vai sau mỗi vòng. Một vòng có 4 giai đoạn:
+ * Quân lệnh mỗi vòng bằng số vòng (vòng 1 có 1, vòng 10 có 10), không dồn sang vòng sau. Tay đầu 5 lá, giống nhau cho hai bên.
  *   1. Bên tấn công chỉ ra Lính.
  *   2. Bên phòng thủ ra Lính và Mưu (Mưu đặt úp).
  *   3. Bên tấn công ra Mưu (úp).
@@ -14,7 +15,7 @@
 (function (root) {
   'use strict';
 
-  const LANES = 3, SLOTS = 2, MAX_HAND = 8, MAX_ROUND = 10, START_HP = 20, START_HAND = 6, DRAW = 2, TRAPS_MAX = 2;
+  const LANES = 3, SLOTS = 2, MAX_HAND = 8, MAX_ROUND = 10, START_HP = 20, START_HAND = 5, DRAW = 2, TRAPS_MAX = 2;
   const LANE_NAMES = ['Trái', 'Giữa', 'Phải'];
 
   // a = Công, h = Máu, c = giá (Quân lệnh), sz = số ô chiếm
@@ -57,9 +58,15 @@
       lanes: [], traps: [[], []], orders: [0, 0], atk: 0, phase: 1, turn: 0, known: [[], []], winner: null, why: '', log: []
     };
     for (let l = 0; l < LANES; l++) s.lanes.push([[], []]);
+    // Tay đầu: 5 lá ngẫu nhiên nhưng GIỐNG HỆT nhau cho hai bên (công bằng). Luôn có ít nhất 1 Dân binh để vòng 1 (1 Quân lệnh) có nước đi.
+    const first = shuffle(s, DECK_LIST.slice());
+    let start = first.slice(0, START_HAND);
+    if (start.indexOf('danbinh') < 0) start[0] = 'danbinh';
+    const rest = DECK_LIST.slice();
+    for (const k of start) rest.splice(rest.indexOf(k), 1);
     for (let p = 0; p < 2; p++) {
-      s.deck[p] = shuffle(s, DECK_LIST.map(k => ({ id: s.uid++, k })));
-      draw(s, p, START_HAND);
+      s.hand[p] = start.map(k => ({ id: s.uid++, k }));
+      s.deck[p] = shuffle(s, rest.map(k => ({ id: s.uid++, k })));
     }
     startRound(s);
     return s;
@@ -76,7 +83,7 @@
   }
 
   function startRound(s) {
-    const o = Math.min(8, s.round + 2);
+    const o = Math.min(MAX_ROUND, s.round);
     s.orders = [o, o];
     s.atk = s.round % 2 === 1 ? 0 : 1;
     s.phase = 1; s.turn = s.atk;
