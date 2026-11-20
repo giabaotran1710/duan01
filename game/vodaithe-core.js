@@ -1,7 +1,7 @@
 /* Võ đài thẻ: bộ luật (không đụng DOM, tất định theo hạt giống, chạy được cả trong trình duyệt lẫn Node).
  *
  * Mỗi vòng có một bên TẤN CÔNG và một bên PHÒNG THỦ, đổi vai sau mỗi vòng. Một vòng có 4 giai đoạn:
- * Quân lệnh cộng dồn: mỗi vòng thêm 1, phần chưa dùng giữ lại (không có trần). Tay đầu 5 lá giống nhau cho hai bên; sau mỗi Khai chiến mỗi bên rút 1 lá.
+ * Quân lệnh cộng dồn: mỗi vòng nhận đúng bằng số vòng, phần chưa dùng giữ lại (không có trần). Tay đầu 5 lá giống nhau cho hai bên; sau mỗi Khai chiến mỗi bên rút 1 lá.
  *   1. Bên tấn công chỉ ra Lính.
  *   2. Bên phòng thủ ra Lính và Mưu (Mưu đặt úp).
  *   3. Bên tấn công ra Mưu (úp).
@@ -83,8 +83,8 @@
   }
 
   function startRound(s) {
-    // Quân lệnh cộng dồn: mỗi vòng thêm 1, phần chưa dùng giữ lại.
-    s.orders = [s.orders[0] + 1, s.orders[1] + 1];
+    // Quân lệnh cộng dồn: mỗi lượt nhận đúng bằng số vòng, phần chưa dùng giữ lại.
+    s.orders = [s.orders[0] + s.round, s.orders[1] + s.round];
     s.atk = s.round % 2 === 1 ? 0 : 1;
     s.phase = 1; s.turn = s.atk;
   }
