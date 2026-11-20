@@ -1,5 +1,6 @@
 /* Võ đài thẻ: bộ luật (không đụng DOM, tất định theo hạt giống, chạy được cả trong trình duyệt lẫn Node).
  *
+ * Chiến trường có 5 làn: Núi, ba làn Đồng bằng, Biển.
  * Mỗi vòng có một bên TẤN CÔNG và một bên PHÒNG THỦ, đổi vai sau mỗi vòng. Một vòng có 4 giai đoạn:
  * Quân lệnh cộng dồn: mỗi vòng nhận đúng bằng số vòng, phần chưa dùng giữ lại (không có trần). Tay đầu 5 lá giống nhau cho hai bên; sau mỗi Khai chiến mỗi bên rút 1 lá.
  *   1. Bên tấn công chỉ ra Lính.
@@ -15,8 +16,8 @@
 (function (root) {
   'use strict';
 
-  const LANES = 3, SLOTS = 2, MAX_HAND = 8, MAX_ROUND = 10, START_HP = 20, START_HAND = 5, DRAW = 1, TRAPS_MAX = 2;
-  const LANE_NAMES = ['Trái', 'Giữa', 'Phải'];
+  const LANES = 5, SLOTS = 2, MAX_HAND = 8, MAX_ROUND = 10, START_HP = 20, START_HAND = 5, DRAW = 1, TRAPS_MAX = 2;
+  const LANE_NAMES = ['Núi', 'Đồng bằng', 'Đồng bằng', 'Đồng bằng', 'Biển'];
 
   // a = Công, h = Máu, c = giá (Quân lệnh), sz = số ô chiếm
   const CARDS = {
