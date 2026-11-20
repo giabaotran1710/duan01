@@ -12,7 +12,7 @@
 (function (root) {
   'use strict';
   const MAXV = 9999;
-  const GEN_VER = 2;
+  const GEN_VER = 3;
 
   const isOpCard = c => /^[+\-*\/]\d+$/.test(c);
   function label(c) {
@@ -131,19 +131,15 @@
   }
   function hashStr(t) { let h = 2166136261; for (let i = 0; i < t.length; i++) { h ^= t.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
 
-  // Cấu hình theo bậc (1, 2, 3...). Độ khó tăng dần, từ bậc 30 giữ ở mức cao nhất.
-  //  slots: số ô trống, extra: thẻ thừa, ops: phép được dùng, maxN: số lớn nhất trên thẻ,
-  //  maxV: giá trị trung gian lớn nhất, maxSols: số lời giải tối đa, kinds: kiểu đề có thể ra
-  function cfgAt(n) {
-    if (n <= 3) return { slots: 2, extra: 0, ops: '+-*', maxN: 5, maxV: 40, maxSols: 1, kinds: ['op'] };
-    if (n <= 6) return { slots: 3, extra: 0, ops: '+-*', maxN: 6, maxV: 60, maxSols: 2, kinds: ['op'] };
-    if (n <= 9) return { slots: 3, extra: 0, ops: '+-*/', maxN: 6, maxV: 80, maxSols: 2, kinds: ['op', 'num'] };
-    if (n <= 13) return { slots: 3, extra: 1, ops: '+-*/', maxN: 8, maxV: 100, maxSols: 2, kinds: ['op', 'num', 'mix'] };
-    if (n <= 18) return { slots: 4, extra: 1, ops: '+-*/', maxN: 9, maxV: 150, maxSols: 2, kinds: ['op', 'num', 'mix'] };
-    if (n <= 24) return { slots: 5, extra: 1, ops: '+-*/', maxN: 9, maxV: 200, maxSols: 1, kinds: ['op', 'num', 'mix'] };
-    if (n <= 29) return { slots: 5, extra: 2, ops: '+-*/', maxN: 12, maxV: 300, maxSols: 1, kinds: ['num', 'mix', 'op'] };
-    return { slots: 6, extra: 2, ops: '+-*/', maxN: 12, maxV: 400, maxSols: 1, kinds: ['num', 'mix', 'op'] };
-  }
+  // Ba mức đề. slots: [ít nhất, nhiều nhất] ô trống; decoys: số thẻ nhiễu; maxN: số lớn nhất trên thẻ;
+  // maxV: giá trị dở dang lớn nhất; maxSols: số lời giải tối đa (kể cả thẻ nhiễu); kinds: kiểu đề có thể ra.
+  // Nhãn thật của đề không lấy từ mức này mà từ phép đo analyze/rate bên dưới.
+  const TIERS = {
+    de:     { slots: [2, 3], decoys: [0, 1], ops: '+-*',  maxN: 6,  maxV: 40,  maxSols: 2, kinds: ['op', 'op', 'num'] },
+    thuong: { slots: [3, 4], decoys: [1, 2], ops: '+-*/', maxN: 9,  maxV: 100, maxSols: 2, kinds: ['op', 'num', 'mix'] },
+    kho:    { slots: [5, 6], decoys: [2, 3], ops: '+-*/', maxN: 12, maxV: 300, maxSols: 1, kinds: ['mix', 'num', 'op'] }
+  };
+  const TIER_NAME = { de: 'Dễ', thuong: 'Thường', kho: 'Khó' };
 
   const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
   const between = (r, a, b) => a + Math.floor(r() * (b - a + 1));
@@ -169,22 +165,93 @@
 
   function shuffle(r, a) { for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(r() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; }
 
-  // Sinh một đề: dựng lời giải trước, rồi khoét ô trống và thêm thẻ thừa. Kiểm lại bằng solve().
-  function generateWith(cfg, r) {
+  // Tính chuỗi lần lượt từ trái sang phải, bỏ qua thứ tự ưu tiên: cách tính "ngây thơ" mà người chơi hay nhầm.
+  function ltrValue(lv, fill) {
+    const slots = slotsOf(lv), at = {};
+    slots.forEach((s, k) => { at[s.pos] = fill[k]; });
+    let v = lv.start != null ? lv.start : Number(at[-1]);
+    for (let i = 0; i < lv.steps.length; i++) {
+      let op = lv.steps[i].op, n = lv.steps[i].n;
+      if (op == null) { const c = at[i]; op = c[0]; n = Number(c.slice(1)); }
+      else if (n == null) n = Number(at[i]);
+      v = apply(op, n, v);
+      if (v === null) return null;
+    }
+    return v;
+  }
+
+  // Duyệt mọi cách xếp thẻ để đo đề:
+  //  space: tổng số cách xếp khác nhau; sols: số cách đúng; near: số cách ra sát đáp án (lệch ≤ 2) nhưng sai;
+  //  trap: số cách sai theo luật nhân chia trước nhưng lại đúng nếu tính lần lượt từ trái sang phải (bẫy cho người hay nhầm).
+  function analyze(lv, capSols) {
+    const slots = slotsOf(lv);
+    const pool = {};
+    lv.tray.forEach(c => { pool[c] = (pool[c] || 0) + 1; });
+    const keys = Object.keys(pool), fill = new Array(slots.length);
+    let space = 0, sols = 0, near = 0, trap = 0, first = null;
+    (function rec(k) {
+      if (capSols && sols > capSols) return;
+      if (k === slots.length) {
+        space++;
+        const r = evaluate(lv, fill);
+        if (r.win) { sols++; if (!first) first = fill.slice(); return; }
+        if (r.value !== undefined && Math.abs(r.value - lv.target) <= 2) near++;
+        if (ltrValue(lv, fill) === lv.target) trap++;
+        return;
+      }
+      for (const c of keys) {
+        if (!pool[c] || isOpCard(c) !== (slots[k].kind === 'op')) continue;
+        pool[c]--; fill[k] = c; rec(k + 1); pool[c]++;
+      }
+    })(0);
+    return { space, sols, near, trap, first };
+  }
+
+  // Điểm độ khó của đề: log2(số cách xếp) cộng thêm cho bẫy, cho cách xếp sát đáp án và cho phép chia.
+  function rate(lv, an) {
+    const div = lv.steps.some(st => st.op === '/') || lv.tray.some(c => c[0] === '/');
+    return Math.log2(Math.max(an.space, 1)) + (an.trap > 0 ? 1 : 0) + Math.min(an.near, 6) * 0.25 + (div ? 0.5 : 0);
+  }
+  // Ngưỡng nhãn, chỉnh theo phân bố đo được ở tool/toanhoc-check.js.
+  const CUT = { de: 4.5, thuong: 9 };
+  function labelOf(score) { return score < CUT.de ? 'de' : score < CUT.thuong ? 'thuong' : 'kho'; }
+
+  // Ứng viên thẻ nhiễu: thẻ trông giống thẻ thật. Phép: cùng số nhưng đổi dấu (+4 / −4, ×3 / ÷3),
+  // cùng phép lệch một đơn vị (×6 / ×7), cùng số khác phép (+3 / ×3). Số: lệch 1-2 so với số thật.
+  function decoyCandidates(lv, cfg) {
+    const have = new Set(lv.tray);
+    const out = new Set();
+    const OPP = { '+': '-', '-': '+', '*': '/', '/': '*' };
+    const lo = o => (o === '*' || o === '/') ? 2 : 1;
+    lv.tray.forEach(c => {
+      if (isOpCard(c)) {
+        const o = c[0], n = Number(c.slice(1));
+        out.add(OPP[o] + n);
+        [n - 1, n + 1].forEach(m => { if (m >= lo(o) && m <= cfg.maxN + 2) out.add(o + m); });
+        cfg.ops.split('').forEach(o2 => { if (o2 !== o && n >= lo(o2)) out.add(o2 + n); });
+      } else {
+        const n = Number(c);
+        [n - 2, n - 1, n + 1, n + 2].forEach(m => { if (m >= 1 && m <= cfg.maxN + 2) out.add(String(m)); });
+      }
+    });
+    return [...out].filter(c => !have.has(c) && (!isOpCard(c) || cfg.ops.includes(c[0])));
+  }
+
+  // Dựng một đề thô (chưa có thẻ nhiễu): dựng lời giải trước rồi khoét ô trống.
+  function buildBase(cfg, r) {
     const kind = pick(r, cfg.kinds);
-    // số bước: kiểu op mỗi bước một ô; kiểu num có ô đầu chuỗi nên ít hơn một bước
-    const nSteps = kind === 'num' ? cfg.slots - 1 : cfg.slots;
+    const slotsN = between(r, cfg.slots[0], cfg.slots[1]);
+    const nSteps = kind === 'num' ? slotsN - 1 : slotsN;   // kiểu num có thêm ô đầu chuỗi
     const start = between(r, 2, Math.min(12, cfg.maxN + 3));
     const sol = [];
-    let v = start;
     for (let i = 0; i < nSteps; i++) {
       const st = randomStep(r, start, sol, cfg);
       if (!st) return null;
-      sol.push(st); v = st.v;
+      sol.push(st);
     }
-    if (v < 1) return null;
+    const target = sol[sol.length - 1].v;
+    if (target < 1) return null;
     if (new Set(sol.map(s => s.op)).size < Math.min(2, nSteps)) return null;   // cần ít nhất hai loại phép
-    const target = v;
     const steps = [], tray = [];
     let lvStart = start;
     if (kind === 'op') {
@@ -193,7 +260,6 @@
       lvStart = null; tray.push(String(start));
       sol.forEach(s => { steps.push({ op: s.op, n: null }); tray.push(String(s.n)); });
     } else {
-      // mix: một số bước khoét cả phép, số khác chỉ khoét số; đủ cfg.slots ô
       let opSlots = 0;
       sol.forEach(s => {
         if (r() < 0.5) { steps.push({ op: null, n: null }); tray.push(s.op + s.n); opSlots++; }
@@ -201,37 +267,55 @@
       });
       if (!opSlots || opSlots === sol.length) return null;
     }
-    // thẻ thừa: cùng loại với các ô có trên bàn
-    const hasOp = steps.some(s => s.op == null), hasNum = lvStart == null || steps.some(s => s.op != null && s.n == null);
-    for (let e = 0; e < cfg.extra; e++) {
-      const asOp = hasOp && (!hasNum || r() < 0.5);
-      if (asOp) { const o = pick(r, cfg.ops.split('')); tray.push(o + between(r, 2, Math.min(cfg.maxN, 9))); }
-      else tray.push(String(between(r, 2, cfg.maxN)));
+    return { start: lvStart, steps, tray, target };
+  }
+
+  // Sinh một đề thuộc mức `tier`: dựng đề thô, rồi thêm thẻ nhiễu. Mỗi thẻ nhiễu chọn trong vài ứng viên,
+  // lấy thẻ làm nhiều cách xếp sai sát đáp án hoặc trúng bẫy nhất, nhưng không được tạo thêm lời giải.
+  function generateOnce(tier, r) {
+    const cfg = TIERS[tier];
+    const lv = buildBase(cfg, r);
+    if (!lv) return null;
+    const nd = between(r, cfg.decoys[0], cfg.decoys[1]);
+    const kindsPresent = new Set(slotsOf(lv).map(sl => sl.kind));
+    let an = analyze(lv, cfg.maxSols);
+    if (an.sols < 1 || an.sols > cfg.maxSols) return null;
+    for (let d = 0; d < nd; d++) {
+      const cands = shuffle(r, decoyCandidates(lv, cfg)).filter(c => kindsPresent.has(isOpCard(c) ? 'op' : 'num')).slice(0, 8);
+      let best = null, bestAn = null, bestScore = -1;
+      for (const c of cands) {
+        lv.tray.push(c);
+        const a2 = analyze(lv, cfg.maxSols);
+        lv.tray.pop();
+        if (a2.sols < 1 || a2.sols > cfg.maxSols) continue;
+        const sc = a2.near + 4 * a2.trap + r();
+        if (sc > bestScore) { best = c; bestAn = a2; bestScore = sc; }
+      }
+      if (!best) break;
+      lv.tray.push(best); an = bestAn;
     }
-    const lv = { start: lvStart, steps, tray: shuffle(r, tray), target };
-    const s = solve(lv, cfg.maxSols + 1);
-    if (s.count < 1 || s.count > cfg.maxSols) return null;
-    // thứ tự phải có ý nghĩa: các cách xếp ra ít nhất 3 kết quả khác nhau,
-    // và xếp nguyên theo khay không được trúng ngay
-    if (s.results < (cfg.slots <= 2 ? 2 : 3)) return null;
-    const naive = slotsOf(lv).map(() => undefined);
-    const used = {};
-    slotsOf(lv).forEach((sl, k) => {
-      const c = lv.tray.find((t, j) => !used[j] && isOpCard(t) === (sl.kind === 'op') && (used[j] = true));
-      naive[k] = c;
+    lv.decoys = lv.tray.length - slotsOf(lv).length;
+    lv.tray = shuffle(r, lv.tray);
+    // xếp nguyên theo khay không được trúng ngay
+    const used = {}, naive = slotsOf(lv).map(sl => {
+      const j = lv.tray.findIndex((t, i) => !used[i] && isOpCard(t) === (sl.kind === 'op'));
+      used[j] = true; return lv.tray[j];
     });
     if (evaluate(lv, naive).win) return null;
-    lv.sol = s.first;
+    lv.sol = an.first;
+    lv.score = rate(lv, an);
+    lv.tier = labelOf(lv.score);
+    lv.stats = { space: an.space, near: an.near, trap: an.trap };
     return lv;
   }
 
-  // Đề của bậc n: tất định theo n (ai cũng gặp cùng một đề ở cùng một bậc).
-  function levelAt(n) {
-    const cfg = cfgAt(n);
-    const r = rng(hashStr('toanhoc|' + GEN_VER + '|' + n));
-    for (let t = 0; t < 4000; t++) {
-      const lv = generateWith(cfg, r);
-      if (lv) { lv.stage = n; return lv; }
+  // Sinh đề thuộc nhãn `tier` ('de' | 'thuong' | 'kho'); `seed` cố định thì ra cùng một đề.
+  // Nhãn gắn lên đề (lv.tier) là nhãn đo được từ chính đề đó, khớp với mức yêu cầu.
+  function generate(tier, seed) {
+    const r = rng(seed == null ? (Math.random() * 4294967296) >>> 0 : seed);
+    for (let t = 0; t < 600; t++) {
+      const lv = generateOnce(tier, r);
+      if (lv && lv.tier === tier) return lv;
     }
     return null;
   }
@@ -261,7 +345,7 @@
     return k < 0 ? null : { slot: k, card: best[k] };
   }
 
-  const api = { MAXV, GEN_VER, isOpCard, label, opLabel, apply, slotsOf, calc, evaluate, solve, cfgAt, levelAt, hintFor, rng, hashStr };
+  const api = { MAXV, GEN_VER, TIERS, TIER_NAME, isOpCard, label, opLabel, apply, slotsOf, calc, evaluate, solve, analyze, rate, generate, hintFor, rng, hashStr };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ToanHoc = api;
 })(this);
