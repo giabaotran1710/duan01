@@ -7,11 +7,12 @@
 //                       op có sẵn ('+','-','*','/'), n null: ô trống nhận thẻ số
 //                       op và n đều có: bước khắc sẵn
 //   tray: thẻ trong khay, chuỗi: thẻ phép tính "+3" "-2" "*4" "/2", thẻ số "7"
-// Chuỗi tính lần lượt từ trái sang phải. Chia không hết, ra số âm hoặc quá MAXV thì chuỗi đứt.
+// Tính theo thứ tự phép tính như môn toán: nhân chia trước, cộng trừ sau (9 − 6 × 2 = −3).
+// Chia không hết hoặc có số quá MAXV thì chuỗi đứt. Đáp án luôn là số không âm.
 (function (root) {
   'use strict';
   const MAXV = 9999;
-  const GEN_VER = 1;
+  const GEN_VER = 2;
 
   const isOpCard = c => /^[+\-*\/]\d+$/.test(c);
   function label(c) {
@@ -43,27 +44,47 @@
     return s;
   }
 
+  // Tính chuỗi theo thứ tự phép tính. steps: [{op, n}] (op hoặc n thiếu thì dừng tại đó).
+  // vals[i]: giá trị của biểu thức tính tới bước i (có thể âm khi đang dở dang), undefined nếu chưa tính được.
+  // broke: chỉ số bước làm đứt chuỗi (chia không hết: why 'div', term là số bị chia; quá lớn: why 'big').
+  function calc(start, steps) {
+    const vals = [];
+    let broke = -1, why = '', brokeTerm;
+    let total = 0, sign = 1, term = start, stop = start === undefined;
+    steps.forEach((st, i) => {
+      if (stop || st.op == null || st.n == null) { stop = true; vals.push(undefined); return; }
+      const n = st.n;
+      if (st.op === '+') { total += sign * term; sign = 1; term = n; }
+      else if (st.op === '-') { total += sign * term; sign = -1; term = n; }
+      else if (st.op === '*') term *= n;
+      else if (st.op === '/') {
+        if (n === 0 || term % n !== 0) { broke = i; why = 'div'; brokeTerm = term; stop = true; vals.push(undefined); return; }
+        term /= n;
+      }
+      const v = total + sign * term;
+      if (term > MAXV || Math.abs(v) > MAXV) { broke = i; why = 'big'; stop = true; vals.push(undefined); return; }
+      vals.push(v);
+    });
+    return { vals, broke, why, brokeTerm };
+  }
+
   // fill: mảng thẻ theo thứ tự ô trống (undefined = chưa đặt).
-  // Trả về {start, vals: giá trị sau mỗi bước (undefined nếu chưa tính được), broke: chỉ số bước đứt hoặc -1, full, value, win}
+  // Trả về {vals, broke, why, brokeTerm, full, value, win}
   function evaluate(lv, fill) {
     const slots = slotsOf(lv);
     const at = {};
     slots.forEach((s, k) => { at[s.pos] = fill[k]; });
-    let v = lv.start != null ? lv.start : (at[-1] != null ? Number(at[-1]) : undefined);
-    const vals = [];
-    let broke = -1;
-    lv.steps.forEach((st, i) => {
+    const start = lv.start != null ? lv.start : (at[-1] != null ? Number(at[-1]) : undefined);
+    const steps = lv.steps.map((st, i) => {
       let op = st.op, n = st.n;
       if (op == null) { const c = at[i]; if (c != null) { op = c[0]; n = Number(c.slice(1)); } }
       else if (n == null && at[i] != null) n = Number(at[i]);
-      if (v === undefined || broke >= 0 || op == null || n == null) { vals.push(undefined); v = undefined; return; }
-      const r = apply(op, n, v);
-      if (r === null) { broke = i; vals.push(undefined); v = undefined; return; }
-      vals.push(r); v = r;
+      return { op, n };
     });
+    const r = calc(start, steps);
     const full = slots.every((s, k) => fill[k] != null);
-    const value = broke < 0 && full ? vals[vals.length - 1] : undefined;
-    return { vals, broke, full, value, win: value === lv.target };
+    const value = r.broke < 0 && full ? r.vals[r.vals.length - 1] : undefined;
+    return { vals: r.vals, broke: r.broke, why: r.why, brokeTerm: r.brokeTerm, full, value, win: value === lv.target };
   }
 
   // Đếm số cách đặt thẻ (khác nhau về giá trị) cho ra đúng đích. Thẻ trùng nhau tính là một.
@@ -127,22 +148,21 @@
   const pick = (r, arr) => arr[Math.floor(r() * arr.length)];
   const between = (r, a, b) => a + Math.floor(r() * (b - a + 1));
 
-  // Chọn một bước hợp lệ từ giá trị v (không có bước vô nghĩa như +0, ×1, ÷1).
-  function randomStep(r, v, cfg, prevOp) {
-    for (let t = 0; t < 30; t++) {
+  // Chọn một bước hợp lệ nối thêm vào sol: mọi giá trị dở dang không âm, không vượt maxV,
+  // chia phải hết, không có bước vô nghĩa như +0, ×1, ÷1.
+  function randomStep(r, start, sol, cfg) {
+    const prev = sol.length ? sol[sol.length - 1].op : null;
+    for (let t = 0; t < 40; t++) {
       const op = pick(r, cfg.ops.split(''));
-      if (op === prevOp && r() < 0.6) continue;   // tránh lặp một phép liên tiếp
+      if (op === prev && r() < 0.6) continue;     // tránh lặp một phép liên tiếp
       let n;
-      if (op === '+') n = between(r, 1, cfg.maxN);
-      else if (op === '-') { if (v < 2) continue; n = between(r, 1, Math.min(cfg.maxN, v - 1)); }
-      else if (op === '*') { const lim = Math.min(cfg.maxN, Math.floor(cfg.maxV / Math.max(v, 1))); if (lim < 2) continue; n = between(r, 2, Math.min(lim, 6 + (cfg.maxN > 9 ? 3 : 0))); }
-      else {
-        const ds = []; for (let d = 2; d <= cfg.maxN; d++) if (v % d === 0 && v / d >= 1) ds.push(d);
-        if (!ds.length) continue; n = pick(r, ds);
-      }
-      const nv = apply(op, n, v);
-      if (nv === null || nv < 1 || nv > cfg.maxV) continue;
-      return { op, n, v: nv };
+      if (op === '+' || op === '-') n = between(r, 1, cfg.maxN);
+      else if (op === '*') n = between(r, 2, Math.min(cfg.maxN, 6 + (cfg.maxN > 9 ? 3 : 0)));
+      else n = between(r, 2, cfg.maxN);
+      const c = calc(start, sol.concat([{ op, n }]));
+      const v = c.vals[c.vals.length - 1];
+      if (c.broke >= 0 || v === undefined || v < 0 || v > cfg.maxV) continue;
+      return { op, n, v };
     }
     return null;
   }
@@ -156,12 +176,13 @@
     const nSteps = kind === 'num' ? cfg.slots - 1 : cfg.slots;
     const start = between(r, 2, Math.min(12, cfg.maxN + 3));
     const sol = [];
-    let v = start, prev = null;
+    let v = start;
     for (let i = 0; i < nSteps; i++) {
-      const st = randomStep(r, v, cfg, prev);
+      const st = randomStep(r, start, sol, cfg);
       if (!st) return null;
-      sol.push(st); v = st.v; prev = st.op;
+      sol.push(st); v = st.v;
     }
+    if (v < 1) return null;
     if (new Set(sol.map(s => s.op)).size < Math.min(2, nSteps)) return null;   // cần ít nhất hai loại phép
     const target = v;
     const steps = [], tray = [];
@@ -240,7 +261,7 @@
     return k < 0 ? null : { slot: k, card: best[k] };
   }
 
-  const api = { MAXV, GEN_VER, isOpCard, label, opLabel, apply, slotsOf, evaluate, solve, cfgAt, levelAt, hintFor, rng, hashStr };
+  const api = { MAXV, GEN_VER, isOpCard, label, opLabel, apply, slotsOf, calc, evaluate, solve, cfgAt, levelAt, hintFor, rng, hashStr };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.ToanHoc = api;
 })(this);
