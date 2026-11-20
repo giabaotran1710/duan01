@@ -52,7 +52,7 @@
     const o = 1 - me;
     if (st.winner === me) return 1e4;
     if (st.winner === o) return -1e4;
-    return (st.hp[me] - st.hp[o]) * 10 + fieldValue(st, me) - fieldValue(st, o) + (st.hand[me].length - st.hand[o].length) * 0.5;
+    return (st.hp[me] - st.hp[o]) * 10 + fieldValue(st, me) - fieldValue(st, o) + (st.hand[me].length - st.hand[o].length) * 0.5 + (st.orders[me] - st.orders[o]) * 0.8;
   }
 
   function finishRound(st, r, lazy) {
