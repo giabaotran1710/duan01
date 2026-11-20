@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js?v=20261116a" data-game="toanhoc"></script>
+<script src="../scene.js" data-game="toanhoc"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#0f151b">
+<title>Trò chơi toán học</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700;800&family=JetBrains+Mono:wght@700&display=swap">
+<style>
+/* Kế hoạch thiết kế: cùng bàn quang học của Tia số (khung đồng, phòng tối, tia hổ phách) nhưng tia chạy thẳng qua một
+   chuỗi ô. Nguyên tắc: (1) con số sau mỗi ô hiện ngay dưới ô, người chơi thấy 3 → 5 → 15 tức thì;
+   (2) thẻ phép tính (chữ hổ phách trên kính tối) khác hẳn thẻ số (chữ đậm trên nền đồng) để biết thẻ nào vào ô nào;
+   (3) đáp án không chỉ đổi màu mà có dấu ✓ / ✗ và số nhận được. */
+:root{
+  --bg:#0f151b; --bg2:#0a0e12; --board:#17212a; --slot:#22313d; --line:#2c3d4a;
+  --brass:#c9a24a; --brass2:#8c6d2c; --beam:#ffc94d; --beam2:#ff9d2e; --ok:#74e08a; --bad:#ff6b5b;
+  --text:#eef2f4; --muted:#93a4b1;
+  --body:'Be Vietnam Pro',system-ui,sans-serif; --mono:'JetBrains Mono',ui-monospace,monospace;
+  --cw:54px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:var(--bg2)}
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--text);font:500 14px/1.4 var(--body);
+  background:radial-gradient(80% 45% at 50% 35%,rgba(255,201,77,.08),transparent 70%),linear-gradient(var(--bg),var(--bg2)) fixed;
+  display:flex;flex-direction:column;align-items:center;overflow-x:hidden;touch-action:manipulation}
+main{width:100%;max-width:520px;padding:10px 16px 26px;display:flex;flex-direction:column;gap:12px;flex:1}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--beam);outline-offset:2px}
+header{display:flex;align-items:center;gap:6px;min-height:48px}
+header h1{font:800 17px/1.2 var(--body);margin:0;flex:1;text-align:center}
+header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
+.ico{width:44px;height:44px;border-radius:14px;border:0;background:rgba(255,255,255,.07);display:grid;place-items:center;padding:0;flex:none}
+.ico svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}
+.ico:active{transform:scale(.94)}
+
+.hint{background:rgba(255,255,255,.05);border-left:3px solid var(--brass);border-radius:10px;padding:8px 12px;font-size:13px;color:#d5dde3;margin:0}
+.status{display:flex;justify-content:space-between;font-size:13px;color:var(--muted)}
+.status b{color:var(--text)}
+
+.frame{background:linear-gradient(145deg,#d6b25a,#7a5a22);padding:6px;border-radius:18px;box-shadow:0 14px 40px rgba(0,0,0,.5)}
+.boardWrap{background:var(--board);border-radius:13px;padding:16px 8px 12px;
+  background-image:radial-gradient(circle at 1px 1px,rgba(255,255,255,.05) 1px,transparent 0);background-size:14px 14px}
+/* Chuỗi: các nút nối bằng tia, tự xuống dòng khi hẹp */
+#chain{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-start;row-gap:10px;user-select:none}
+.node{position:relative;display:flex;flex-direction:column;align-items:center;padding:0 4px;min-width:calc(var(--cw) + 8px)}
+.node .row{display:flex;align-items:center;height:var(--cw)}
+/* đoạn tia bên trái mỗi nút */
+.node:not(:first-child)::before{content:"";position:absolute;left:-4px;width:12px;top:calc(var(--cw)/2 - 2px);height:4px;border-radius:2px;background:#33495a}
+.node.lit::before{background:linear-gradient(90deg,#ffd77a,#ff9d2e);box-shadow:0 0 8px rgba(255,157,46,.7)}
+.node .wire{width:6px;height:4px;border-radius:2px;background:#33495a}
+.node.litIn .wire{background:#ffd77a;box-shadow:0 0 8px rgba(255,157,46,.7)}
+.src{width:var(--cw);height:var(--cw);border-radius:50%;background:#2a2214;border:3px solid var(--brass);display:grid;place-items:center;
+  font:700 20px var(--mono);color:#fff3cf;box-shadow:0 0 0 3px rgba(201,162,74,.12),0 0 18px rgba(255,201,77,.18)}
+.opb{width:24px;height:24px;border-radius:50%;background:#2a2214;border:2px solid var(--brass2);display:grid;place-items:center;font:800 15px var(--mono);color:var(--beam);flex:none}
+.cell{width:var(--cw);height:var(--cw);border-radius:12px;display:grid;place-items:center;font:700 18px var(--mono);border:0;padding:0;position:relative}
+.cell.empty{background:var(--slot);outline:2px dashed #46607a;outline-offset:-7px;color:#58718a;font-size:13px}
+.cell.empty.want{outline-color:var(--beam);animation:want 1.2s ease-in-out infinite}
+@keyframes want{50%{outline-color:rgba(255,201,77,.35)}}
+.cell.fix{background:#22323f;border:2px solid #4a6274;color:var(--beam);cursor:default}
+.cell.fix::after{content:"";position:absolute;inset:5px;background:
+  radial-gradient(circle,#6e8496 2px,transparent 2.5px) 0 0/100% 100% no-repeat,
+  radial-gradient(circle,#6e8496 2px,transparent 2.5px) 100% 0/100% 100% no-repeat;pointer-events:none;opacity:0}
+.cOp{background:linear-gradient(160deg,#2c4558,#1d2c38);border:2px solid var(--beam);color:var(--beam)}
+.cNum{background:linear-gradient(160deg,#f3dc9a,#c9a24a);border:2px solid #fff1c2;color:#2a1c06;font-size:21px}
+.pop{animation:pop .22s ease-out}
+@keyframes pop{from{transform:scale(.6);opacity:.3}}
+.pill{margin-top:6px;min-width:34px;height:22px;padding:0 7px;border-radius:11px;background:#fff1c2;border:1px solid #c98a1c;color:#3a2506;font:700 13px/20px var(--mono);text-align:center}
+.pill.off{background:transparent;border-color:transparent;color:transparent}
+.pill.dead{background:rgba(255,107,91,.16);border-color:var(--bad);color:var(--bad)}
+.eq{font:800 20px var(--mono);color:var(--muted);padding:0 3px 0 1px}
+.tgt{width:var(--cw);height:var(--cw);border-radius:50%;background:#10171d;border:3px solid var(--brass);display:grid;place-items:center;font:700 19px var(--mono);color:#f1e3c0;position:relative}
+.tgt.ok{border-color:var(--ok);color:#c9ffd3;box-shadow:0 0 0 6px rgba(116,224,138,.18);animation:okPulse 1.2s ease-in-out infinite}
+.tgt.bad{border-color:var(--bad)}
+.tgt .bdg{position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;font:800 12px/20px var(--body);color:#0d1216;text-align:center}
+.tgt.ok .bdg{background:var(--ok)} .tgt.bad .bdg{background:var(--bad)}
+@keyframes okPulse{50%{box-shadow:0 0 0 10px rgba(116,224,138,.06)}}
+.tgtLbl{margin-top:6px;font-size:11px;color:var(--muted);height:22px;line-height:22px}
+
+.trayH{display:flex;justify-content:space-between;align-items:baseline;font-size:13px;color:var(--muted);margin-bottom:-4px}
+.tray{display:flex;flex-wrap:wrap;gap:8px}
+.tile{position:relative;min-width:58px;height:58px;padding:0 10px;border-radius:14px;font:700 19px var(--mono);display:grid;place-items:center}
+.tile.op{border:2px solid #3b5163;background:linear-gradient(160deg,#2c4253,#1d2c38);color:var(--beam)}
+.tile.num{border:2px solid #a9842f;background:linear-gradient(160deg,#f3dc9a,#c9a24a);color:#2a1c06;font-size:21px}
+.tile.sel{border-color:var(--beam);box-shadow:0 0 0 3px rgba(255,201,77,.3),0 0 18px rgba(255,201,77,.35);transform:translateY(-2px)}
+.tile.num.sel{border-color:#fff}
+.tile:disabled{opacity:.28;cursor:default}
+.tile .n{position:absolute;top:-7px;right:-7px;min-width:22px;height:22px;border-radius:11px;background:var(--brass);color:#1b1408;font:800 12px/22px var(--body);text-align:center;padding:0 5px}
+.msg{min-height:20px;margin:0;text-align:center;font-size:13px;color:var(--muted)}
+.msg.err{color:var(--bad)}
+.tools{display:flex;gap:8px}
+.tools button{flex:1;min-height:44px;border:0;border-radius:14px;background:rgba(255,255,255,.07);font-weight:700;display:flex;align-items:center;justify-content:center;gap:6px}
+.tools button:disabled{opacity:.35;cursor:default}
+.tools svg{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+
+.layer{position:fixed;inset:0;background:rgba(5,8,11,.72);display:none;align-items:center;justify-content:center;padding:16px;z-index:50}
+.layer.on{display:flex}
+.panel{background:#18222b;border:1px solid #2e404e;border-radius:20px;padding:20px 18px;width:100%;max-width:400px;max-height:90vh;overflow:auto;text-align:center}
+.panel h2{margin:0 0 6px;font:800 22px var(--body)}
+.panel p{color:#c9d3da}
+.layer.sheet{align-items:flex-end;padding:0}
+.layer.sheet .panel{max-width:520px;max-height:88%;border-radius:24px 24px 0 0;padding:14px 16px 28px}
+.grab{width:40px;height:4px;border-radius:2px;background:rgba(255,255,255,.25);margin:0 auto 12px}
+.sheet h3{margin:14px 0 0;text-align:left;font:700 12px var(--body);letter-spacing:.14em;text-transform:uppercase;color:var(--muted)}
+.climb{width:100%;margin-top:8px;min-height:60px;border:0;border-radius:16px;background:linear-gradient(135deg,#d6b25a,#8c6d2c);color:#1b1408;font-weight:800;font-size:16px;display:flex;flex-direction:column;align-items:center;justify-content:center}
+.climb small{font-weight:600;color:#3d2c0c;font-size:12px}
+.intro{width:100%;margin-top:8px;min-height:50px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;display:flex;align-items:center;justify-content:space-between;padding:0 16px}
+.intro small{font-weight:500;color:var(--muted)}
+.intro svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round;transition:transform .2s}
+.intro[aria-expanded=true] svg{transform:rotate(180deg)}
+.climb:active,.intro:active{transform:scale(.97)}
+.lvGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:12px}
+.lv{aspect-ratio:1;border-radius:14px;border:2px solid #34495a;background:#1f2d38;font:800 20px var(--mono);color:var(--text);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px}
+.lv.cur{border-color:var(--beam)}
+.lv.done{border-color:rgba(116,224,138,.6)}
+.lv:disabled{opacity:.35;cursor:default}
+.lv .ck{width:22px;height:22px;fill:none;stroke:var(--ok);stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.best{margin:10px 0 0;font-size:13px;color:var(--muted)}
+.best b{color:var(--beam)}
+.tick{width:64px;height:64px;margin:6px auto;border-radius:50%;background:rgba(116,224,138,.16);border:3px solid var(--ok);display:grid;place-items:center}
+.tick svg{width:34px;height:34px;fill:none;stroke:var(--ok);stroke-width:3.4;stroke-linecap:round;stroke-linejoin:round}
+.formula{font:700 15px var(--mono);color:var(--beam);background:rgba(0,0,0,.25);border-radius:12px;padding:8px 10px;word-break:break-word}
+.big{width:100%;min-height:52px;border:0;border-radius:16px;background:var(--beam);color:#24180a;font-weight:800;font-size:16px;margin-top:8px}
+.ghost{width:100%;min-height:46px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;margin-top:8px}
+.rules{text-align:left;padding-left:20px;margin:8px 0;color:#c9d3da;font-size:14px}
+.rules li{margin:6px 0}
+.rules code{font-family:var(--mono);color:var(--beam)}
+@media (max-width:440px){:root{--cw:50px}}
+@media (max-width:370px){:root{--cw:44px}.cell{font-size:16px}.cNum{font-size:19px}}
+@media (orientation:landscape) and (max-height:560px){
+  main{max-width:960px;display:grid;grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);column-gap:18px;align-items:start}
+  header{grid-column:1/-1}
+  .frame{grid-row:2/8}
+  .hint,.status,.trayH,.tray,.msg,.tools{grid-column:2}
+}
+@media (prefers-reduced-motion:reduce){.pop,.tgt.ok,.cell.empty.want{animation:none}}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+</head>
+<body>
+<main>
+  <header>
+    <button class="ico" id="menuBtn" aria-label="Chọn màn" title="Chọn màn" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="4" width="6" height="6" rx="1.5"/><rect x="14" y="4" width="6" height="6" rx="1.5"/><rect x="4" y="14" width="6" height="6" rx="1.5"/><rect x="14" y="14" width="6" height="6" rx="1.5"/></svg></button>
+    <h1 id="lvTitle">Trò chơi toán học</h1>
+    <button class="ico" id="helpBtn" aria-label="Cách chơi" title="Cách chơi" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.5a2.5 2.5 0 1 1 3.6 2.2c-.7.4-1.1.9-1.1 1.8"/><path d="M12 17h.01"/></svg></button>
+    <button class="ico" id="resetBtn" aria-label="Gỡ hết thẻ" title="Gỡ hết thẻ" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12a9 9 0 1 0 3-6.7"/><path d="M3 4v5h5"/></svg></button>
+  </header>
+  <p class="hint" id="hint"></p>
+  <div class="frame"><div class="boardWrap"><div id="chain" role="group" aria-label="Chuỗi phép tính"></div></div></div>
+  <div class="status"><span>Đã đặt <b id="usedTxt">0</b>/<b id="slotTxt">0</b> ô</span><span id="bestWrap">Bậc cao nhất <b id="bestTxt">0</b></span></div>
+  <div class="trayH"><span>Khay thẻ: chọn một thẻ rồi chạm vào ô trống</span></div>
+  <div class="tray" id="tray"></div>
+  <p class="msg" id="msg" aria-live="polite"></p>
+  <div class="tools">
+    <button id="hintBtn" data-no-scene><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 18h6M10 21h4"/><path d="M12 3a6 6 0 0 0-3.5 10.9c.6.5 1 1.2 1 2.1h5c0-.9.4-1.6 1-2.1A6 6 0 0 0 12 3z"/></svg><span id="hintTxt">Gợi ý</span></button>
+  </div>
+</main>
+
+<div class="layer sheet" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuH">
+  <div class="panel">
+    <div class="grab"></div>
+    <h2 id="menuH">Trò chơi toán học</h2>
+    <h3>Leo bậc</h3>
+    <button class="climb" id="climbBtn" data-no-scene>Chơi tiếp<small id="climbInfo"></small></button>
+    <p class="best" id="menuBest"></p>
+    <button class="intro" id="introBtn" aria-expanded="false" aria-controls="lvGrid" data-no-scene><span>Hướng dẫn nhập môn<small id="introInfo"></small></span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 9 6 6 6-6"/></svg></button>
+    <div class="lvGrid" id="lvGrid" hidden></div>
+  </div>
+</div>
+<div class="layer" id="help" role="dialog" aria-modal="true" aria-labelledby="helpH">
+  <div class="panel">
+    <h2 id="helpH">Cách chơi</h2>
+    <ul class="rules">
+      <li>Đặt thẻ trong khay vào các ô trống sao cho chuỗi tính ra <b>đúng đáp án</b> ở cuối.</li>
+      <li>Chuỗi tính <b>lần lượt từ trái sang phải</b>: <code>3 +2 ×3</code> là (3 + 2) × 3 = 15. Số dưới mỗi ô là kết quả tới ô đó.</li>
+      <li>Thẻ tối có phép tính (<code>+2</code>, <code>×3</code>, <code>÷2</code>) đặt vào ô trống không ghi phép. Thẻ vàng chỉ có con số, đặt vào ô đã có sẵn phép tính hoặc ô đầu chuỗi.</li>
+      <li>Chia không hết hoặc ra số âm thì chuỗi <b>đứt</b>.</li>
+      <li>Phải lấp kín mọi ô. Khay có thể có thẻ thừa.</li>
+      <li>Chạm thẻ đã đặt để gỡ ra. Mỗi bậc được một lần gợi ý.</li>
+      <li>Leo bậc càng cao đề càng dài, có thêm phép chia và thẻ thừa. Điểm là bậc cao nhất bạn qua được.</li>
+    </ul>
+    <button class="big" id="helpClose" data-no-scene>Chơi</button>
+    <button class="ghost" id="helpIntro" data-no-scene>Vào hướng dẫn nhập môn</button>
+  </div>
+</div>
+<div class="layer" id="win" role="dialog" aria-modal="true" aria-labelledby="winH">
+  <div class="panel">
+    <h2 id="winH">Chính xác!</h2>
+    <div class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <p class="formula" id="winFormula"></p>
+    <p id="winWhy"></p>
+    <button class="big" id="nextBtn" data-no-scene>Bậc tiếp</button>
+    <button class="ghost" id="againBtn" data-no-scene>Xem lại</button>
+  </div>
+</div>
+
+<footer class="tbFooter">Version: D20261120230000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../scores.js?v=20261116a"></script>
+<script src="toanhoc-core.js?v=1"></script>
+<script src="toanhoc-levels.js?v=1"></script>
+<script>
+(function () {
+  'use strict';
+  const C = window.ToanHoc, LEVELS = window.TOANHOC_LEVELS;
+  const SAVE = 'toanhoc_v1';
+  const $ = id => document.getElementById(id);
+
+  let save = load();
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.tut) return s; } catch (e) {}
+    return { stage: 1, best: 0, tut: {}, seenHelp: false, hint: {} };
+  }
+  if (!save.hint) save.hint = {};
+  function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
+  // Điểm: bậc cao nhất đã qua
+  function submitScore() { try { if (window.Scores && save.best > 0) Scores.submit('toanhoc', save.best); } catch (e) {} }
+
+  // ---------- âm thanh ----------
+  let ac = null;
+  function tone(f, d, vol, type, delay) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = ac.currentTime + (delay || 0), o = ac.createOscillator(), g = ac.createGain();
+      o.type = type || 'sine'; o.frequency.setValueAtTime(f, t);
+      g.gain.setValueAtTime(vol || .06, t); g.gain.exponentialRampToValueAtTime(.0001, t + d);
+      o.connect(g).connect(ac.destination); o.start(t); o.stop(t + d);
+    } catch (e) {}
+  }
+  const sfx = {
+    place() { tone(660, .08, .05, 'triangle'); },
+    lift() { tone(330, .08, .04, 'triangle'); },
+    bad() { tone(196, .16, .05, 'square'); },
+    win() { [523, 659, 784, 1046].forEach((f, k) => tone(f, .25, .06, 'sine', k * .09)); }
+  };
+
+  // ---------- trạng thái ----------
+  let mode = { kind: 'tut', idx: 0 };
+  let lv = null, slots = [], fill = [], left = {}, sel = null, won = false, winTimer = 0, lastPlaced = -1;
+
+  const kindOf = c => C.isOpCard(c) ? 'op' : 'num';
+  function titleSmall() {
+    return mode.kind === 'tut' ? `Nhập môn ${mode.idx + 1} · ${LEVELS[mode.idx].name}` : `Bậc ${mode.stage}`;
+  }
+  const CLIMB_HINT = 'Đề luôn có lời giải. Bí thì tính ngược từ đáp án về số đầu chuỗi.';
+
+  function loadLevel(level) {
+    lv = level;
+    slots = C.slotsOf(lv);
+    fill = new Array(slots.length);
+    left = {};
+    lv.tray.forEach(c => { left[c] = (left[c] || 0) + 1; });
+    sel = firstAvail(); won = false; clearTimeout(winTimer);
+    $('lvTitle').innerHTML = 'Trò chơi toán học<small>' + titleSmall() + '</small>';
+    $('hint').textContent = mode.kind === 'tut' ? LEVELS[mode.idx].hint : CLIMB_HINT;
+    $('slotTxt').textContent = slots.length;
+    update();
+  }
+  function firstAvail(kind) {
+    const ks = Object.keys(left).filter(c => left[c] > 0);
+    return ks.find(c => !kind || kindOf(c) === kind) || ks[0] || null;
+  }
+  function startTut(i) { mode = { kind: 'tut', idx: i }; loadLevel(LEVELS[i]); }
+  function startClimb() {
+    const n = save.stage;
+    const level = C.levelAt(n);
+    if (!level) { $('msg').textContent = 'Chưa dựng được đề, thử lại nhé.'; return; }
+    mode = { kind: 'climb', stage: n };
+    loadLevel(level);
+  }
+
+  // ---------- vẽ ----------
+  function node(cls) { const d = document.createElement('div'); d.className = 'node' + (cls ? ' ' + cls : ''); return d; }
+  function pill(v, dead) {
+    const p = document.createElement('div');
+    p.className = 'pill' + (dead ? ' dead' : v === undefined ? ' off' : '');
+    p.textContent = dead ? '✕' : v === undefined ? '·' : v;
+    return p;
+  }
+  function slotBtn(k) {
+    const b = document.createElement('button');
+    b.setAttribute('data-no-scene', '');
+    b.dataset.k = k;
+    const c = fill[k];
+    if (c != null) {
+      b.className = 'cell ' + (kindOf(c) === 'op' ? 'cOp' : 'cNum') + (k === lastPlaced ? ' pop' : '');
+      b.textContent = C.label(c);
+      b.setAttribute('aria-label', 'Gỡ thẻ ' + C.label(c));
+    } else {
+      const want = sel && kindOf(sel) === slots[k].kind;
+      b.className = 'cell empty' + (want ? ' want' : '');
+      b.textContent = slots[k].kind === 'op' ? '?' : '#';
+      b.setAttribute('aria-label', slots[k].kind === 'op' ? 'Ô trống nhận thẻ phép tính' : 'Ô trống nhận thẻ số');
+    }
+    return b;
+  }
+
+  function render(ev) {
+    const box = $('chain');
+    box.innerHTML = '';
+    const slotAt = {};
+    slots.forEach((s, k) => { slotAt[s.pos] = k; });
+    // đầu chuỗi
+    const startV = lv.start != null ? lv.start : (fill[slotAt[-1]] != null ? Number(fill[slotAt[-1]]) : undefined);
+    let n0 = node(startV !== undefined ? '' : '');
+    const r0 = document.createElement('div'); r0.className = 'row';
+    if (lv.start != null) { const s = document.createElement('div'); s.className = 'src'; s.textContent = lv.start; r0.appendChild(s); }
+    else r0.appendChild(slotBtn(slotAt[-1]));
+    n0.appendChild(r0);
+    n0.appendChild(pill(lv.start != null ? undefined : startV));
+    if (lv.start != null) n0.lastChild.className = 'pill off';
+    box.appendChild(n0);
+    let prevLit = startV !== undefined;
+    lv.steps.forEach((st, i) => {
+      const nd = node(prevLit ? 'lit' : '');
+      const r = document.createElement('div'); r.className = 'row';
+      if (st.op != null && st.n == null) {
+        const ob = document.createElement('div'); ob.className = 'opb'; ob.textContent = C.opLabel(st.op);
+        const w = document.createElement('div'); w.className = 'wire';
+        r.appendChild(ob); r.appendChild(w);
+        if (prevLit) nd.classList.add('litIn');
+        r.appendChild(slotBtn(slotAt[i]));
+      } else if (st.op == null) r.appendChild(slotBtn(slotAt[i]));
+      else { const f = document.createElement('div'); f.className = 'cell fix'; f.textContent = C.opLabel(st.op) + st.n; r.appendChild(f); }
+      nd.appendChild(r);
+      nd.appendChild(pill(ev.vals[i], ev.broke === i));
+      box.appendChild(nd);
+      prevLit = ev.vals[i] !== undefined;
+    });
+    // đáp án
+    const nt = node(prevLit ? 'lit' : '');
+    const rt = document.createElement('div'); rt.className = 'row';
+    const eq = document.createElement('span'); eq.className = 'eq'; eq.textContent = '=';
+    const t = document.createElement('div');
+    const st = ev.win ? 'ok' : (ev.full && ev.broke < 0) ? 'bad' : '';
+    t.className = 'tgt' + (st ? ' ' + st : '');
+    t.textContent = lv.target;
+    if (st) { const b = document.createElement('span'); b.className = 'bdg'; b.textContent = st === 'ok' ? '✓' : '✗'; t.appendChild(b); }
+    t.setAttribute('aria-label', 'Đáp án ' + lv.target + (st === 'ok' ? ', đã đúng' : st === 'bad' ? ', chuỗi ra ' + ev.value : ''));
+    rt.appendChild(eq); rt.appendChild(t);
+    nt.appendChild(rt);
+    const tl = document.createElement('div'); tl.className = 'tgtLbl'; tl.textContent = 'đáp án';
+    nt.appendChild(tl);
+    box.appendChild(nt);
+    lastPlaced = -1;
+  }
+
+  function renderTray() {
+    const tray = $('tray');
+    tray.innerHTML = '';
+    // thẻ số trước, thẻ phép sau, giữ thứ tự trong khay
+    const ks = Object.keys(left);
+    ks.sort((a, b) => (kindOf(a) === 'op') - (kindOf(b) === 'op'));
+    ks.forEach(c => {
+      const b = document.createElement('button');
+      b.className = 'tile ' + kindOf(c) + (sel === c ? ' sel' : '');
+      b.setAttribute('data-no-scene', '');
+      b.dataset.c = c;
+      b.disabled = !left[c];
+      b.textContent = C.label(c);
+      b.setAttribute('aria-label', (kindOf(c) === 'op' ? 'Thẻ phép tính ' : 'Thẻ số ') + C.label(c) + ', còn ' + left[c]);
+      if (lv.tray.filter(x => x === c).length > 1) { const n = document.createElement('span'); n.className = 'n'; n.textContent = left[c]; b.appendChild(n); }
+      tray.appendChild(b);
+    });
+  }
+
+  function stepText(i) {
+    const st = lv.steps[i], slotAt = {};
+    slots.forEach((s, k) => { slotAt[s.pos] = k; });
+    if (st.op == null) return C.label(fill[slotAt[i]]);
+    return C.opLabel(st.op) + (st.n != null ? st.n : fill[slotAt[i]]);
+  }
+  function formula() {
+    const slotAt = {};
+    slots.forEach((s, k) => { slotAt[s.pos] = k; });
+    const s0 = lv.start != null ? lv.start : fill[slotAt[-1]];
+    return s0 + ' ' + lv.steps.map((_, i) => stepText(i)).join(' ') + ' = ' + lv.target;
+  }
+
+  function update() {
+    const ev = C.evaluate(lv, fill);
+    render(ev); renderTray();
+    const used = fill.filter(c => c != null).length;
+    $('usedTxt').textContent = used;
+    $('bestTxt').textContent = save.best;
+    const m = $('msg');
+    m.className = 'msg';
+    if (ev.broke >= 0) {
+      const prev = ev.broke === 0 ? (lv.start != null ? lv.start : Number(fill[0])) : ev.vals[ev.broke - 1];
+      const t = stepText(ev.broke);
+      m.textContent = t[0] === '÷' ? `Chuỗi đứt: ${prev} không chia hết cho ${t.slice(1)}.` : t[0] === '−' ? `Chuỗi đứt: ${prev} − ${t.slice(1)} ra số âm.` : `Chuỗi đứt: số vượt quá ${C.MAXV}.`;
+      m.className = 'msg err';
+    } else if (ev.full && !ev.win) {
+      m.textContent = `Ra ${ev.value}, chưa bằng ${lv.target}. Thử đổi chỗ các thẻ.`;
+      m.className = 'msg err';
+    } else if (!ev.win) m.textContent = sel ? 'Chạm ô trống để đặt ' + C.label(sel) + '.' : '';
+    else m.textContent = '';
+    const hb = $('hintBtn');
+    hb.disabled = ev.win || (mode.kind === 'climb' && !!save.hint[mode.stage]);
+    $('hintTxt').textContent = mode.kind === 'climb' && save.hint[mode.stage] ? 'Đã dùng gợi ý' : 'Gợi ý';
+    if (!ev.win) { won = false; clearTimeout(winTimer); }
+    else if (!won) { won = true; winTimer = setTimeout(onWin, 650); }
+  }
+
+  function onWin() {
+    sfx.win();
+    let title = 'Chính xác!', next = 'Bậc tiếp', why = '';
+    if (mode.kind === 'tut') {
+      save.tut[mode.idx] = 1;
+      if (mode.idx === LEVELS.length - 1) { title = 'Xong hướng dẫn!'; next = 'Bắt đầu leo bậc'; why = 'Đề ở chế độ leo bậc dài dần, có thêm thẻ thừa.'; }
+      else next = 'Màn tiếp';
+    } else {
+      if (mode.stage > save.best) save.best = mode.stage;
+      if (save.stage <= mode.stage) save.stage = mode.stage + 1;
+      why = `Qua bậc ${mode.stage}. Bậc cao nhất: ${save.best}.`;
+    }
+    store(); submitScore();
+    $('winH').textContent = title;
+    $('winFormula').textContent = formula();
+    $('winWhy').textContent = why;
+    $('nextBtn').textContent = next;
+    $('win').classList.add('on');
+  }
+
+  // ---------- thao tác ----------
+  function place(k, c) {
+    if (fill[k] != null) left[fill[k]]++;
+    fill[k] = c; left[c]--; lastPlaced = k;
+  }
+  $('chain').addEventListener('click', e => {
+    const b = e.target.closest('.cell[data-k]'); if (!b || won) return;
+    const k = +b.dataset.k;
+    if (fill[k] != null) {
+      left[fill[k]]++; sel = fill[k]; fill[k] = undefined; sfx.lift();
+      update(); return;
+    }
+    if (!sel || !left[sel]) { $('msg').textContent = 'Chọn một thẻ trong khay trước.'; return; }
+    if (kindOf(sel) !== slots[k].kind) {
+      // tự đổi sang thẻ đúng loại nếu chỉ còn một loại thẻ đó
+      const alt = firstAvail(slots[k].kind);
+      if (alt && kindOf(alt) === slots[k].kind && Object.keys(left).filter(c => left[c] && kindOf(c) === slots[k].kind).length === 1) sel = alt;
+      else {
+        sfx.bad();
+        const m = $('msg'); m.className = 'msg err';
+        m.textContent = slots[k].kind === 'op' ? 'Ô này cần thẻ phép tính (thẻ tối).' : 'Ô này cần thẻ số (thẻ vàng).';
+        return;
+      }
+    }
+    place(k, sel); sfx.place();
+    if (!left[sel]) sel = firstAvail(kindOf(sel));
+    update();
+  });
+  $('tray').addEventListener('click', e => {
+    const b = e.target.closest('.tile'); if (!b || b.disabled || won) return;
+    const c = b.dataset.c;
+    sel = c;
+    // chỉ còn đúng một ô trống hợp loại thì đặt luôn
+    const free = slots.map((s, k) => k).filter(k => fill[k] == null && slots[k].kind === kindOf(c));
+    if (free.length === 1) { place(free[0], c); sfx.place(); if (!left[c]) sel = firstAvail(kindOf(c)); update(); return; }
+    update();
+  });
+  $('resetBtn').addEventListener('click', () => { if (lv) loadLevel(lv); });
+  $('hintBtn').addEventListener('click', () => {
+    if (won || (mode.kind === 'climb' && save.hint[mode.stage])) return;
+    const h = C.hintFor(lv, fill);
+    if (!h) return;
+    // thẻ gợi ý đang nằm ở ô khác thì gỡ ra trước
+    if (!left[h.card]) {
+      const j = fill.findIndex((c, k) => c === h.card && k !== h.slot);
+      if (j >= 0) { left[fill[j]]++; fill[j] = undefined; }
+    }
+    if (mode.kind === 'climb') { save.hint[mode.stage] = 1; store(); }
+    place(h.slot, h.card); sfx.place();
+    sel = firstAvail(slots.find((s, k) => fill[k] == null) ? slots.find((s, k) => fill[k] == null).kind : undefined);
+    update();
+  });
+
+  function fillGrid() {
+    const g = $('lvGrid'); g.innerHTML = '';
+    LEVELS.forEach((L, n) => {
+      const b = document.createElement('button');
+      b.className = 'lv' + (mode.kind === 'tut' && n === mode.idx ? ' cur' : '');
+      b.setAttribute('data-no-scene', '');
+      const ok = !!save.tut[n];
+      if (ok) b.classList.add('done');
+      b.innerHTML = ok ? `${n + 1}<svg class="ck" viewBox="0 0 24 24" aria-hidden="true"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg>` : String(n + 1);
+      b.setAttribute('aria-label', `Màn ${n + 1}: ${L.name}${ok ? ', đã hoàn thành' : ''}`);
+      b.addEventListener('click', () => { $('menu').classList.remove('on'); startTut(n); });
+      g.appendChild(b);
+    });
+    $('introInfo').textContent = ` · ${Object.keys(save.tut).length}/${LEVELS.length}`;
+  }
+  function openMenu() {
+    fillGrid();
+    $('climbInfo').textContent = 'Bậc ' + save.stage;
+    $('menuBest').innerHTML = save.best ? 'Bậc cao nhất đã qua: <b>' + save.best + '</b>' : 'Chưa qua bậc nào.';
+    $('menu').classList.add('on');
+  }
+  function openIntro() { openMenu(); $('introBtn').setAttribute('aria-expanded', 'true'); $('lvGrid').hidden = false; }
+  $('introBtn').addEventListener('click', () => { const b = $('introBtn'), open = b.getAttribute('aria-expanded') !== 'true'; b.setAttribute('aria-expanded', open); $('lvGrid').hidden = !open; });
+  $('climbBtn').addEventListener('click', () => { $('menu').classList.remove('on'); startClimb(); });
+  $('menuBtn').addEventListener('click', openMenu);
+  $('menu').addEventListener('click', e => { if (e.target === $('menu')) $('menu').classList.remove('on'); });
+  $('helpBtn').addEventListener('click', () => $('help').classList.add('on'));
+  $('helpClose').addEventListener('click', () => { $('help').classList.remove('on'); save.seenHelp = true; store(); });
+  $('helpIntro').addEventListener('click', () => { $('help').classList.remove('on'); save.seenHelp = true; store(); openIntro(); });
+  $('nextBtn').addEventListener('click', () => {
+    $('win').classList.remove('on');
+    if (mode.kind === 'tut') { if (mode.idx < LEVELS.length - 1) startTut(mode.idx + 1); else startClimb(); }
+    else startClimb();
+  });
+  $('againBtn').addEventListener('click', () => $('win').classList.remove('on'));
+  document.addEventListener('keydown', e => { if (e.key === 'Escape') document.querySelectorAll('.layer.on').forEach(l => l.classList.remove('on')); });
+
+  // Lần đầu: vào nhập môn ở màn chưa qua đầu tiên; xong nhập môn thì vào leo bậc
+  const firstTut = LEVELS.findIndex((_, i) => !save.tut[i]);
+  if (firstTut >= 0 && save.best === 0) startTut(firstTut); else startClimb();
+  if (!save.seenHelp) $('help').classList.add('on');
+  submitScore();
+})();
+</script>
+<script src="../activity.js?v=20261103ban" defer></script>
+</body>
+</html>
