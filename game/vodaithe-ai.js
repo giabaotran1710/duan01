@@ -107,7 +107,7 @@
   function create(level, seed) {
     const cfg = LEVELS[Math.max(0, Math.min(3, level | 0))];
     const r = R(seed || (Date.now() & 0x7fffffff));
-    const mem = { lanes: [0, 0, 0] };
+    const mem = { lanes: new Array(LANES).fill(0) };
     return {
       level, mem,
       // Ghi nhớ nơi đối thủ hay úp Mưu (chỉ dùng ở mức Rất khó).
