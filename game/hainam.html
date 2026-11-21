@@ -1,0 +1,597 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<script src="../maintenance.js?v=20261116a" data-game="hainam"></script>
+<script src="../scene.js" data-game="hainam"></script>
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1f3324">
+<title>Hái nấm</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Patrick+Hand&family=Be+Vietnam+Pro:wght@500;600;700;800&display=swap">
+<style>
+/* Kế hoạch thiết kế: SỔ TAY CỦA NGƯỜI HÁI NẤM giữa rừng ẩm buổi sớm.
+   - Màn hình mở bằng chính khu rừng (nền rêu tối, đốm nắng lọt qua tán) và trang sổ tay giấy kẻ ô được ghim băng dính phía trên.
+   - Luật viết tay bằng mực xanh; luật độc gạch bút chì đỏ; luật mới tô bút dạ vàng. Không có thanh tiêu đề ba nút:
+     ngày chơi là tấm biển gỗ treo ở góc sổ (bấm để mở lối mòn chọn ngày), cách chơi là dải ruy băng đánh dấu trang.
+   - Chạm nấm thì hiện kính lúp ngay cạnh cây nấm, ghi đặc điểm nhìn thấy được, rồi mới bấm Hái. Giỏ mây ở góc phải dưới.
+   - Màn ngang: sổ tay thành cột trái, rừng bên phải.
+   Màu: rêu tối #1f3324, giấy #eef0e3, mực #1f3354, chì đỏ #c8372d, dạ vàng #f6df5c, cam nấm mỡ gà #e8902a (màu nhấn duy nhất cho nút). */
+:root{
+  --forest:#1f3324; --forest2:#2a4330; --moss:#6e9a45; --paper:#eef0e3; --paperLine:rgba(31,51,84,.09);
+  --ink:#1f3354; --ink2:#4a5a74; --red:#c8372d; --hl:#f6df5c; --chant:#e8902a; --chant2:#b9661a;
+  --wood:#7a5233; --wood2:#5b3b22; --cream:#fff8ea;
+  --hand:'Patrick Hand','Comic Sans MS',cursive; --ui:'Be Vietnam Pro',system-ui,sans-serif;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+[hidden]{display:none!important}
+html{background:var(--forest)}
+body{margin:0;min-height:100vh;min-height:100dvh;color:var(--ink);font:500 15px/1.45 var(--ui);background:
+  radial-gradient(60% 40% at 80% 10%,rgba(246,223,92,.10),transparent 70%),
+  radial-gradient(70% 50% at 10% 90%,rgba(110,154,69,.16),transparent 70%),var(--forest);
+  overflow-x:hidden;touch-action:manipulation}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:3px solid var(--hl);outline-offset:3px}
+.wrap{max-width:560px;margin:0 auto;height:100vh;height:100dvh;min-height:560px;display:flex;flex-direction:column}
+
+/* ---------- SỔ TAY ---------- */
+.note{position:relative;margin:18px 12px 6px;padding:12px 14px 16px 40px;background:
+  linear-gradient(90deg,transparent 29px,rgba(200,55,45,.45) 29px,rgba(200,55,45,.45) 31px,transparent 31px),
+  linear-gradient(var(--paperLine) 1px,transparent 1px) 0 10px/100% 24px,
+  linear-gradient(90deg,var(--paperLine) 1px,transparent 1px) 0 0/24px 100%,var(--paper);
+  border-radius:4px 4px 10px 6px;box-shadow:0 2px 0 #c9ccbb,0 14px 28px rgba(0,0,0,.35);transform:rotate(-.6deg);z-index:3}
+.note::before{content:"";position:absolute;left:50%;top:-12px;width:92px;height:24px;margin-left:-46px;transform:rotate(2deg);
+  background:repeating-linear-gradient(90deg,rgba(246,223,92,.82) 0 8px,rgba(240,210,80,.82) 8px 16px);box-shadow:0 1px 2px rgba(0,0,0,.18)}
+.noteHead{display:flex;align-items:baseline;gap:8px;min-height:56px;padding-right:96px}
+.noteHead h1{margin:0;font:400 27px/1.2 var(--hand);color:var(--ink)}
+.noteHead span{font:400 17px/1.3 var(--hand);color:var(--ink2)}
+.rules{list-style:none;margin:2px 0 0;padding:0;max-height:38vh;overflow:auto}
+.rules li{position:relative;display:flex;gap:9px;align-items:flex-start;font:400 19px/1.25 var(--hand);padding:3px 4px 3px 0;border-radius:6px;transition:background .3s}
+.rules li svg{flex:none;width:22px;height:22px;margin-top:1px}
+.rules li .tx{flex:1;min-width:0}
+.rules li.new .tx{background:linear-gradient(180deg,transparent 52%,rgba(246,223,92,.9) 52%,rgba(246,223,92,.9) 92%,transparent 92%)}
+.rules li.new .tx::after{content:"mới";font:700 11px var(--ui);color:var(--ink);background:var(--hl);border-radius:4px;padding:1px 5px;margin-left:6px;vertical-align:3px}
+.rules li.broke{background:rgba(200,55,45,.10);animation:shake .5s}
+.rules li.broke::after{content:"";position:absolute;inset:-3px -6px -3px -30px;border:2.5px solid var(--red);border-radius:46% 54% 50% 48%/60% 46% 54% 40%;transform:rotate(-1deg);pointer-events:none}
+.allrule{margin:6px 0 0;font:400 16px/1.3 var(--hand);color:var(--ink2)}
+.ribbon{position:absolute;left:44px;bottom:-30px;width:34px;height:42px;border:0;padding:6px 0 0;color:#fff;font:700 17px/1 var(--ui);
+  background:var(--red);clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%);box-shadow:none;z-index:-1}
+.ribbon:active{transform:translateY(2px)}
+/* biển gỗ treo góc sổ */
+.sign{position:absolute;right:10px;top:-6px;width:92px;height:74px;border:0;background:none;padding:0;z-index:4}
+.sign::before,.sign::after{content:"";position:absolute;top:0;width:2px;height:20px;background:#3b2a1a}
+.sign::before{left:20px}.sign::after{right:20px}
+.sign .board{position:absolute;left:0;right:0;top:18px;height:52px;border-radius:8px;background:
+  repeating-linear-gradient(176deg,rgba(0,0,0,.08) 0 3px,transparent 3px 9px),linear-gradient(var(--wood),var(--wood2));
+  box-shadow:inset 0 2px 0 rgba(255,255,255,.18),0 4px 0 #3b2a1a,0 8px 14px rgba(0,0,0,.3);color:var(--cream);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;transform-origin:50% -18px;animation:swing 4s ease-in-out infinite}
+.sign small{font:700 10px var(--ui);letter-spacing:.08em;opacity:.85}
+.sign b{font:400 26px/1 var(--hand)}
+.sign:active .board{transform:translateY(2px)}
+@keyframes swing{0%,100%{transform:rotate(-2deg)}50%{transform:rotate(2deg)}}
+
+/* ---------- KHU RỪNG ---------- */
+.woods{position:relative;flex:1;display:flex;flex-direction:column;min-height:0;padding:30px 4px 0}
+.stage{position:relative;flex:1;min-height:0;display:flex;align-items:center;justify-content:center}
+#forest{width:100%;height:100%;display:block;overflow:visible}
+.mu{cursor:pointer}
+.mu .lift{transition:transform .5s cubic-bezier(.3,1.6,.5,1),opacity .45s}
+.mu.picked{pointer-events:none}
+.mu.picked .lift{transform:translateY(-34px) scale(1.15);opacity:0}
+.mu.sel .ringSel{opacity:1}
+.ringSel{opacity:0;transition:opacity .15s}
+.mu.bad .xmark{opacity:1}
+.xmark{opacity:0;transition:opacity .3s}
+.mu.culprit .lift{animation:wob .6s}
+@keyframes wob{0%,100%{transform:rotate(0)}25%{transform:rotate(-9deg)}75%{transform:rotate(9deg)}}
+@keyframes shake{0%,100%{transform:translateX(0)}20%{transform:translateX(-5px)}40%{transform:translateX(5px)}60%{transform:translateX(-3px)}80%{transform:translateX(3px)}}
+
+/* kính lúp */
+.lens{position:absolute;z-index:6;width:236px;background:var(--cream);border-radius:16px;padding:10px 12px 12px;box-shadow:0 10px 30px rgba(0,0,0,.45),0 0 0 3px var(--chant);
+  animation:pop .18s ease-out}
+.lens::after{content:"";position:absolute;left:var(--ax,50%);width:16px;height:16px;margin-left:-8px;background:var(--cream);transform:rotate(45deg);box-shadow:3px 3px 0 0 var(--chant)}
+.lens.below::after{top:-8px;box-shadow:-3px -3px 0 0 var(--chant)}
+.lens:not(.below)::after{bottom:-8px}
+.lensTop{display:flex;gap:10px;align-items:center}
+.lensTop svg{width:58px;height:58px;flex:none;border-radius:50%;background:radial-gradient(circle at 40% 35%,#fff,#e9e2cf);box-shadow:inset 0 0 0 3px #3a2a1a}
+.lensTop h3{margin:0;font:400 21px/1.2 var(--hand);color:var(--ink)}
+.lensTop p{margin:2px 0 0;font:600 12px/1.35 var(--ui);color:var(--ink2)}
+.chips{display:flex;flex-wrap:wrap;gap:4px;margin:8px 0 10px}
+.chips span{font:600 12px/1 var(--ui);background:#efe6cf;color:#4a3a22;border-radius:999px;padding:5px 8px}
+.lensBtns{display:flex;gap:8px}
+.pickBtn{flex:1;border:0;border-radius:12px;background:var(--chant);color:#fff;font:800 16px var(--ui);min-height:44px;box-shadow:0 4px 0 var(--chant2)}
+.pickBtn:active{transform:translateY(3px);box-shadow:0 1px 0 var(--chant2)}
+.leaveBtn{border:0;border-radius:12px;background:#e6dcc4;color:#5a4a30;font:700 14px var(--ui);min-height:44px;padding:0 12px}
+@keyframes pop{from{transform:scale(.85);opacity:0}to{transform:none;opacity:1}}
+
+/* mặt đất phía dưới: lời nhắn + giỏ */
+.ground{display:flex;align-items:flex-end;gap:10px;padding:4px 8px calc(28px + env(safe-area-inset-bottom,0px)) 12px;flex:none}
+.say{flex:1;min-width:0;align-self:center;padding-right:18px!important;font:400 18px/1.3 var(--hand);color:#e6ecd9;padding:0 2px}
+.say b{color:var(--hl);font-weight:400}
+.say button{margin-top:6px;border:0;border-radius:10px;background:var(--chant);color:#fff;font:800 14px var(--ui);padding:9px 14px;box-shadow:0 3px 0 var(--chant2)}
+.basket{position:relative;width:124px;height:96px;flex:none}
+.basket svg{width:100%;height:100%;overflow:visible}
+.basket.bump{animation:bump .4s}
+@keyframes bump{30%{transform:scale(1.08,.92)}60%{transform:scale(.96,1.05)}}
+.tag{position:absolute;left:-12px;top:-2px;background:var(--cream);color:var(--ink);font:400 20px/1 var(--hand);padding:5px 9px 4px 14px;border-radius:4px 8px 8px 4px;
+  transform:rotate(-8deg);box-shadow:0 3px 6px rgba(0,0,0,.35);clip-path:polygon(9px 0,100% 0,100% 100%,9px 100%,0 50%)}
+.tag b{font-weight:400;color:var(--chant2)}
+
+/* ---------- LỚP PHỦ ---------- */
+.layer{position:fixed;inset:0;z-index:20;display:none;align-items:center;justify-content:center;padding:18px;background:rgba(12,22,14,.62)}
+.layer.on{display:flex}
+.card{position:relative;width:min(400px,100%);max-height:calc(100dvh - 36px);overflow:auto;background:var(--paper);border-radius:6px 6px 14px 10px;padding:22px 20px 20px;
+  background-image:linear-gradient(var(--paperLine) 1px,transparent 1px);background-size:100% 26px;box-shadow:0 20px 50px rgba(0,0,0,.5);animation:pop .2s ease-out}
+.card h2{margin:0 0 6px;font:400 32px/1.15 var(--hand);color:var(--ink)}
+.card p{margin:6px 0;font:500 15px/1.5 var(--ui);color:var(--ink2)}
+.card .quote{font:400 21px/1.3 var(--hand);color:var(--red);background:rgba(200,55,45,.08);border-left:4px solid var(--red);padding:8px 12px;border-radius:0 8px 8px 0;margin:10px 0}
+.card .big{display:block;width:100%;margin-top:14px;border:0;border-radius:14px;background:var(--chant);color:#fff;font:800 17px var(--ui);min-height:50px;box-shadow:0 4px 0 var(--chant2)}
+.card .big:active{transform:translateY(3px);box-shadow:0 1px 0 var(--chant2)}
+.card .ghost{display:block;width:100%;margin-top:8px;border:0;background:none;color:var(--ink2);font:700 15px var(--ui);min-height:44px;text-decoration:underline;text-underline-offset:3px}
+.howto{margin:8px 0 0;padding:0;list-style:none;counter-reset:s}
+.howto li{position:relative;padding:4px 0 6px 34px;font:500 15px/1.45 var(--ui);color:var(--ink)}
+.howto li::before{counter-increment:s;content:counter(s);position:absolute;left:0;top:4px;width:24px;height:24px;border-radius:50%;background:var(--ink);color:var(--paper);font:400 17px/24px var(--hand);text-align:center}
+.trail{display:flex;flex-wrap:wrap;gap:10px 8px;margin:12px 0 4px;padding:4px 2px}
+.stone{width:46px;height:40px;border:0;border-radius:48% 52% 45% 55%/55% 50% 50% 45%;background:#c9c6b4;color:var(--ink);font:400 20px/1 var(--hand);box-shadow:inset 0 -4px 0 rgba(0,0,0,.12)}
+.stone.done{background:#9cc46d;color:#1f3324}
+.stone.cur{background:var(--chant);color:#fff;box-shadow:inset 0 -4px 0 var(--chant2),0 0 0 3px var(--cream),0 0 0 5px var(--chant)}
+.stone:disabled{opacity:.4;cursor:default}
+.winArt{display:block;width:150px;height:110px;margin:4px auto 0}
+
+@media (orientation:landscape) and (min-width:720px){
+  .wrap{max-width:1100px;flex-direction:row;align-items:stretch;gap:8px;padding:0 10px}
+  .wrap{min-height:0}
+  .note{width:min(380px,36vw);flex:none;align-self:flex-start;margin:22px 0 10px}
+  .rules{max-height:calc(100dvh - 190px)}
+  .woods{flex-direction:row;padding:8px 0 22px}
+  .ground{flex-direction:column;align-items:center;justify-content:flex-end;width:150px;padding:10px 4px}
+  .say{align-self:stretch;padding-right:0!important;font-size:17px}
+}
+@media (max-height:680px) and (orientation:portrait){
+  .rules li{font-size:17px}
+  .noteHead{min-height:54px}.noteHead h1{font-size:24px}
+  .ground{min-height:92px;padding-bottom:calc(26px + env(safe-area-inset-bottom,0px))}
+  .basket{width:104px;height:80px}
+}
+@media (prefers-reduced-motion:reduce){.sign .board,.rules li.broke,.basket.bump,.lens,.card,.mu.culprit .lift{animation:none}.mu .lift{transition:none}}
+</style>
+<link rel="stylesheet" href="../footer.css?v=20261027174003">
+</head>
+<body>
+<div class="wrap">
+  <section class="note" aria-label="Sổ tay luật hái nấm">
+    <div class="noteHead"><h1>Sổ tay hái nấm</h1></div>
+    <button class="sign" id="signBtn" aria-label="Chọn ngày" data-no-scene><span class="board"><small>NGÀY</small><b id="dayTxt">1</b></span></button>
+    <ul class="rules" id="rules"></ul>
+    <p class="allrule" id="allrule">Cây nào hợp <u>mọi</u> dòng trên mới được hái. Sai một cây là thua.</p>
+    <button class="ribbon" id="helpBtn" aria-label="Cách chơi" title="Cách chơi" data-no-scene>?</button>
+  </section>
+  <section class="woods">
+    <div class="stage" id="stage">
+      <svg id="forest" viewBox="0 0 360 460" preserveAspectRatio="xMidYMid meet" role="img" aria-label="Khu rừng có nấm"></svg>
+    </div>
+    <div class="ground">
+      <p class="say" id="say" aria-live="polite"></p>
+      <div class="basket" id="basket" aria-label="Giỏ nấm">
+        <svg viewBox="0 0 124 96" aria-hidden="true">
+          <path d="M28 40 C30 6 94 6 96 40" fill="none" stroke="#5b3b22" stroke-width="7" stroke-linecap="round"/>
+          <path d="M28 40 C30 6 94 6 96 40" fill="none" stroke="#9a6a3e" stroke-width="3" stroke-linecap="round"/>
+          <g id="inBasket"></g>
+          <path d="M14 40 H110 L100 88 Q62 96 24 88 Z" fill="#b07a45" stroke="#4a3020" stroke-width="2.5" stroke-linejoin="round"/>
+          <g stroke="#8a5a30" stroke-width="2" fill="none" opacity=".9">
+            <path d="M17 52 H107"/><path d="M19 64 H105"/><path d="M21 76 H103"/>
+            <path d="M34 40 L36 90M50 40 L51 92M66 40 L66 93M82 40 L81 92M96 40 L94 90"/>
+          </g>
+          <path d="M12 38 H112 Q114 44 110 46 H14 Q10 44 12 38Z" fill="#c99159" stroke="#4a3020" stroke-width="2.5"/>
+        </svg>
+        <span class="tag" id="tag"><b id="gotTxt">0</b>/<span id="needTxt">0</span></span>
+      </div>
+    </div>
+  </section>
+</div>
+
+<div class="layer" id="help" role="dialog" aria-modal="true" aria-labelledby="helpH">
+  <div class="card">
+    <h2 id="helpH">Cách hái nấm</h2>
+    <ol class="howto">
+      <li>Mỗi ngày, sổ tay ghi vài luật: nấm nào độc, khu nào được hái, hái theo thứ tự nào.</li>
+      <li>Chạm một cây nấm để soi bằng kính lúp: màu mũ, dáng mũ, đốm, vòng cổ, to hay nhỏ, mọc ở đâu.</li>
+      <li>Thấy hợp mọi luật thì bấm <b>Hái</b>. Hái phải một cây sai luật là thua ngày đó.</li>
+      <li>Hái đủ số cây ghi trên giỏ là qua ngày. Những luật về giỏ tính theo thứ tự bạn hái, nên tính trước rồi hẵng hái.</li>
+    </ol>
+    <p>Điểm của bạn là ngày xa nhất đã qua.</p>
+    <button class="big" id="helpClose" data-no-scene>Vào rừng</button>
+  </div>
+</div>
+<div class="layer" id="menu" role="dialog" aria-modal="true" aria-labelledby="menuH">
+  <div class="card">
+    <h2 id="menuH">Lối mòn</h2>
+    <p id="menuBest"></p>
+    <div class="trail" id="trail"></div>
+    <button class="big" id="retryBtn" data-no-scene>Hái lại từ đầu ngày này</button>
+    <button class="ghost" id="menuClose" data-no-scene>Đóng</button>
+  </div>
+</div>
+<div class="layer" id="lose" role="dialog" aria-modal="true" aria-labelledby="loseH">
+  <div class="card">
+    <h2 id="loseH">Hái nhầm rồi!</h2>
+    <p id="loseWhy"></p>
+    <p class="quote" id="loseRule"></p>
+    <button class="big" id="againBtn" data-no-scene>Thử lại ngày này</button>
+    <button class="ghost" id="lookBtn" data-no-scene>Xem lại khu rừng</button>
+  </div>
+</div>
+<div class="layer" id="win" role="dialog" aria-modal="true" aria-labelledby="winH">
+  <div class="card">
+    <h2 id="winH">Giỏ đầy rồi!</h2>
+    <svg class="winArt" id="winArt" viewBox="0 0 124 96" aria-hidden="true"></svg>
+    <p id="winTxt"></p>
+    <button class="big" id="nextBtn" data-no-scene>Sang ngày tiếp</button>
+  </div>
+</div>
+
+<footer class="tbFooter">Version: D20261121140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../scores.js?v=20261116a"></script>
+<script src="hainam-core.js?v=1"></script>
+<script>
+(function () {
+  'use strict';
+  const H = window.HaiNam;
+  const SAVE = 'hainam_v1';
+  const $ = id => document.getElementById(id);
+  const NS = 'http://www.w3.org/2000/svg';
+
+  let save = load();
+  function load() {
+    try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.best >= 0) return s; } catch (e) {}
+    return { best: 0, cur: 1, seenHelp: false };
+  }
+  function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
+  function submitScore() { try { if (window.Scores && save.best > 0) Scores.submit('hainam', save.best); } catch (e) {} }
+
+  // ---------- vẽ nấm ----------
+  const CAP = { do: '#d23a2c', nau: '#8b5a34', vang: '#f2b632', trang: '#f1ebdf', tim: '#7e57b8' };
+  const CAP_DARK = { do: '#9e2219', nau: '#5e3a1f', vang: '#c4861a', trang: '#c9bfa9', tim: '#57388a' };
+  const STROKE = '#2a1d14';
+  const STEM_H = { tron: 19, nhon: 20, det: 23 };
+  function capPath(h) {
+    if (h === 'tron') return 'M-18 -17 C-19 -40 19 -40 18 -17 Q0 -12 -18 -17Z';
+    if (h === 'nhon') return 'M-15 -18 C-13 -30 -5 -44 0 -46 C5 -44 13 -30 15 -18 Q0 -13 -15 -18Z';
+    return 'M-21 -21 Q-20 -31 0 -32 Q20 -31 21 -21 Q0 -16 -21 -21Z';
+  }
+  const SPOTS = {
+    tron: [[-9, -27, 3.2], [3, -33, 2.6], [10, -24, 3], [-2, -22, 2]],
+    nhon: [[-6, -26, 2.6], [2, -36, 2.2], [7, -23, 2.6], [-1, -20, 1.8]],
+    det: [[-12, -25, 2.6], [-2, -28, 2.4], [9, -26, 2.8], [15, -23, 1.8]],
+  };
+  function mushroom(m, opt) {
+    opt = opt || {};
+    const sh = STEM_H[m.h], cap = CAP[m.c];
+    let s = '';
+    if (!opt.noShadow) s += '<ellipse cx="0" cy="1" rx="17" ry="4.5" fill="rgba(0,0,0,.35)"/>';
+    s += '<path d="M-6 0 C-6.5 -8 -5 -' + (sh - 2) + ' -4.5 -' + sh + ' L4.5 -' + sh + ' C5 -' + (sh - 2) + ' 6.5 -8 6 0 Q0 2 -6 0Z" fill="#f0e6cf" stroke="' + STROKE + '" stroke-width="1.5"/>';
+    s += '<path d="M2 -3 C3 -8 3 -' + (sh - 4) + ' 2.5 -' + (sh - 1) + '" stroke="#cdbf9f" stroke-width="1.6" fill="none"/>';
+    if (m.r) {
+      const y = -sh + 6;
+      s += '<path d="M-8.5 ' + y + ' Q0 ' + (y - 4) + ' 8.5 ' + y + ' L7 ' + (y + 5) + ' Q4 ' + (y + 3) + ' 2 ' + (y + 6) + ' Q0 ' + (y + 3) + ' -2 ' + (y + 6) + ' Q-4 ' + (y + 3) + ' -7 ' + (y + 5) + 'Z" fill="#fffaf0" stroke="' + STROKE + '" stroke-width="1.3" stroke-linejoin="round"/>';
+    }
+    s += '<path d="' + capPath(m.h) + '" fill="' + cap + '" stroke="' + STROKE + '" stroke-width="1.6" stroke-linejoin="round"/>';
+    // bóng dưới vành mũ + vệt sáng
+    const under = m.h === 'det' ? 'M-19 -21 Q0 -17 19 -21' : m.h === 'nhon' ? 'M-13 -18.5 Q0 -14.5 13 -18.5' : 'M-16 -17.5 Q0 -13.5 16 -17.5';
+    s += '<path d="' + under + '" stroke="' + CAP_DARK[m.c] + '" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+    const shine = m.h === 'det' ? 'M-13 -27 Q-6 -30 1 -30' : m.h === 'nhon' ? 'M-6 -36 Q-3 -41 -1 -42' : 'M-11 -30 Q-6 -35 1 -35';
+    s += '<path d="' + shine + '" stroke="rgba(255,255,255,.55)" stroke-width="2.4" fill="none" stroke-linecap="round"/>';
+    if (m.s) {
+      const dot = m.c === 'trang' ? '#9a7d58' : '#fffaf0';
+      SPOTS[m.h].forEach(p => { s += '<circle cx="' + p[0] + '" cy="' + p[1] + '" r="' + p[2] + '" fill="' + dot + '" stroke="rgba(42,29,20,.35)" stroke-width=".6"/>'; });
+    }
+    return s;
+  }
+
+  // ---------- vẽ khu rừng ----------
+  function rnd(seed) { let a = seed >>> 0; return () => { a = (a * 1664525 + 1013904223) >>> 0; return a / 4294967296; }; }
+  function blob(cx, cy, rx, ry, r, n) {
+    n = n || 14;
+    const pts = [];
+    for (let i = 0; i < n; i++) { const a = i / n * Math.PI * 2, k = 1 + (r() - 0.5) * 0.16; pts.push([cx + Math.cos(a) * rx * k, cy + Math.sin(a) * ry * k]); }
+    let d = '';
+    for (let i = 0; i < n; i++) {
+      const p = pts[i], q = pts[(i + 1) % n], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2;
+      d += (i ? ' Q' : 'M' + ((pts[n - 1][0] + p[0]) / 2).toFixed(1) + ' ' + ((pts[n - 1][1] + p[1]) / 2).toFixed(1) + ' Q') + p[0].toFixed(1) + ' ' + p[1].toFixed(1) + ' ' + mx.toFixed(1) + ' ' + my.toFixed(1);
+    }
+    return d + 'Z';
+  }
+  function zoneArt(kind, rc, r) {
+    const [x, y, w, h] = rc, cx = x + w / 2, cy = y + h / 2 + 8, rx = w / 2 - 6, ry = h / 2 - 10;
+    let s = '';
+    if (kind === 'reu') {
+      s += '<path d="' + blob(cx, cy, rx, ry, r) + '" fill="#5f8a3b" stroke="#41652a" stroke-width="2"/>';
+      s += '<path d="' + blob(cx - 4, cy - 4, rx - 12, ry - 14, r) + '" fill="#6e9a45"/>';
+      for (let i = 0; i < 70; i++) { const a = r() * 6.283, d = Math.sqrt(r()); s += '<circle cx="' + (cx + Math.cos(a) * d * (rx - 14)).toFixed(1) + '" cy="' + (cy + Math.sin(a) * d * (ry - 14)).toFixed(1) + '" r="' + (1 + r() * 2.2).toFixed(1) + '" fill="' + (r() < 0.5 ? '#86b556' : '#557f33') + '"/>'; }
+    } else if (kind === 'la') {
+      s += '<path d="' + blob(cx, cy, rx, ry, r) + '" fill="#7a4f26" stroke="#5a3818" stroke-width="2"/>';
+      const cols = ['#c07a35', '#a65e26', '#d39a4a', '#8e4d1f', '#b8873e'];
+      for (let i = 0; i < 26; i++) {
+        const a = r() * 6.283, d = Math.sqrt(r()), lx = cx + Math.cos(a) * d * (rx - 16), ly = cy + Math.sin(a) * d * (ry - 16), rot = (r() * 360) | 0, L = 9 + r() * 6;
+        s += '<g transform="translate(' + lx.toFixed(1) + ' ' + ly.toFixed(1) + ') rotate(' + rot + ')"><path d="M-' + L + ' 0 Q0 -' + (L * 0.55).toFixed(1) + ' ' + L + ' 0 Q0 ' + (L * 0.55).toFixed(1) + ' -' + L + ' 0Z" fill="' + cols[i % 5] + '"/><path d="M-' + L + ' 0 H' + L + '" stroke="rgba(60,30,10,.5)" stroke-width=".8"/></g>';
+      }
+    } else if (kind === 'suoi') {
+      s += '<path d="' + blob(cx, cy, rx, ry, r) + '" fill="#7d8a84" stroke="#5d6964" stroke-width="2"/>';
+      for (let i = 0; i < 40; i++) { const a = r() * 6.283, d = Math.sqrt(r()); s += '<ellipse cx="' + (cx + Math.cos(a) * d * (rx - 10)).toFixed(1) + '" cy="' + (cy + Math.sin(a) * d * (ry - 10)).toFixed(1) + '" rx="' + (3 + r() * 5).toFixed(1) + '" ry="' + (2.5 + r() * 3).toFixed(1) + '" fill="' + (r() < 0.5 ? '#a3aea8' : '#929e98') + '" stroke="#6b7772" stroke-width=".8"/>'; }
+      // dòng nước chảy dọc mép khu
+      const wide = w > 200;
+      const d = wide ? 'M' + (x + 8) + ' ' + (y + h - 16) + ' C' + (x + w * 0.3) + ' ' + (y + h - 34) + ' ' + (x + w * 0.6) + ' ' + (y + h + 2) + ' ' + (x + w - 8) + ' ' + (y + h - 20)
+        : 'M' + (x + w - 18) + ' ' + (y + 28) + ' C' + (x + w - 2) + ' ' + (y + h * 0.4) + ' ' + (x + w - 30) + ' ' + (y + h * 0.65) + ' ' + (x + w - 14) + ' ' + (y + h - 8);
+      s += '<path d="' + d + '" stroke="#2f6f8a" stroke-width="16" fill="none" stroke-linecap="round"/><path d="' + d + '" stroke="#5fa8c4" stroke-width="9" fill="none" stroke-linecap="round"/><path d="' + d + '" stroke="#bfe6f0" stroke-width="1.6" fill="none" stroke-dasharray="6 14" stroke-linecap="round"/>';
+    } else if (kind === 'goc') {
+      s += '<path d="' + blob(cx, cy, rx, ry, r) + '" fill="#4a3524" stroke="#33241a" stroke-width="2"/>';
+      for (let i = 0; i < 30; i++) { const a = r() * 6.283, d = Math.sqrt(r()); s += '<circle cx="' + (cx + Math.cos(a) * d * (rx - 12)).toFixed(1) + '" cy="' + (cy + Math.sin(a) * d * (ry - 12)).toFixed(1) + '" r="' + (0.8 + r() * 1.6).toFixed(1) + '" fill="#5f4630"/>'; }
+      const tx = x + w - 30, ty = y + 34;
+      for (let i = 0; i < 4; i++) { const a = Math.PI * (0.55 + i * 0.22); s += '<path d="M' + tx + ' ' + ty + ' Q' + (tx + Math.cos(a) * 40).toFixed(1) + ' ' + (ty + Math.sin(a) * 30).toFixed(1) + ' ' + (tx + Math.cos(a) * 70).toFixed(1) + ' ' + (ty + Math.sin(a) * 62).toFixed(1) + '" stroke="#2e2015" stroke-width="' + (9 - i) + '" fill="none" stroke-linecap="round"/>'; }
+      s += '<circle cx="' + tx + '" cy="' + ty + '" r="30" fill="#3a2819" stroke="#24170e" stroke-width="2.5"/>';
+      s += '<circle cx="' + tx + '" cy="' + ty + '" r="22" fill="#a77b4f"/><circle cx="' + tx + '" cy="' + ty + '" r="15" fill="none" stroke="#7d5634" stroke-width="1.5"/><circle cx="' + tx + '" cy="' + ty + '" r="8" fill="none" stroke="#7d5634" stroke-width="1.5"/>';
+      for (let i = 0; i < 3; i++) { const ax = x + 22 + r() * (w - 60), ay = y + h - 18 - r() * 30; s += '<g transform="translate(' + ax.toFixed(1) + ' ' + ay.toFixed(1) + ') rotate(' + ((r() * 60 - 30) | 0) + ')"><ellipse rx="3.6" ry="4.8" fill="#9b6b2f"/><path d="M-4 -2.5 Q0 -7 4 -2.5Z" fill="#5a3e1e"/></g>'; }
+    } else if (kind === 'go') {
+      const wide = w > 200;
+      if (wide) {
+        const lx = x + 14, ly = y + 40, lw = w - 28, lh = h - 46;
+        s += '<rect x="' + lx + '" y="' + ly + '" width="' + lw + '" height="' + lh + '" rx="' + (lh / 2) + '" fill="#6e4b2e" stroke="#3e2816" stroke-width="2.5"/>';
+        for (let i = 0; i < 7; i++) { const yy = ly + 14 + i * (lh - 28) / 6; s += '<path d="M' + (lx + 40 + r() * 20) + ' ' + yy.toFixed(1) + ' H' + (lx + lw - 30 - r() * 40) + '" stroke="#563820" stroke-width="2" stroke-linecap="round"/>'; }
+        s += '<ellipse cx="' + (lx + 18) + '" cy="' + (ly + lh / 2) + '" rx="16" ry="' + (lh / 2 - 4) + '" fill="#b88a5a" stroke="#3e2816" stroke-width="2"/><ellipse cx="' + (lx + 18) + '" cy="' + (ly + lh / 2) + '" rx="9" ry="' + (lh / 3) + '" fill="none" stroke="#8a6038" stroke-width="1.5"/>';
+      } else {
+        const lx = x + 18, ly = y + 30, lw = w - 36, lh = h - 34;
+        s += '<rect x="' + lx + '" y="' + ly + '" width="' + lw + '" height="' + lh + '" rx="' + (lw / 2.4).toFixed(1) + '" fill="#6e4b2e" stroke="#3e2816" stroke-width="2.5"/>';
+        for (let i = 0; i < 6; i++) { const xx = lx + 14 + i * (lw - 28) / 5; s += '<path d="M' + xx.toFixed(1) + ' ' + (ly + 40 + r() * 20).toFixed(1) + ' V' + (ly + lh - 14 - r() * 30).toFixed(1) + '" stroke="#563820" stroke-width="2" stroke-linecap="round"/>'; }
+        s += '<ellipse cx="' + (lx + lw / 2) + '" cy="' + (ly + 16) + '" rx="' + (lw / 2 - 4) + '" ry="14" fill="#b88a5a" stroke="#3e2816" stroke-width="2"/><ellipse cx="' + (lx + lw / 2) + '" cy="' + (ly + 16) + '" rx="' + (lw / 3) + '" ry="8" fill="none" stroke="#8a6038" stroke-width="1.5"/>';
+      }
+      for (let i = 0; i < 5; i++) s += '<circle cx="' + (x + 24 + r() * (w - 48)).toFixed(1) + '" cy="' + (y + 50 + r() * (h - 70)).toFixed(1) + '" r="' + (3 + r() * 4).toFixed(1) + '" fill="#6e9a45" opacity=".85"/>';
+    }
+    return s;
+  }
+  function zoneTag(kind, rc) {
+    const name = H.ZONE_NAME[kind], label = name.charAt(0).toUpperCase() + name.slice(1);
+    const tw = Math.round(label.length * 7.4 + 18), x = rc[0] + 6, y = rc[1] + 2;
+    return '<g transform="translate(' + x + ' ' + y + ') rotate(-3)"><rect width="' + tw + '" height="22" rx="3" fill="#eef0e3" stroke="#b9bca9"/><circle cx="8" cy="11" r="2.6" fill="#c8372d"/><text x="15" y="16" font-family="Patrick Hand, cursive" font-size="15" fill="#1f3354">' + label + '</text></g>';
+  }
+
+  function drawForest() {
+    const r = rnd(lv.day * 977 + 13);
+    let s = '<defs><radialGradient id="sun" cx="50%" cy="50%" r="50%"><stop offset="0" stop-color="#f6df5c" stop-opacity=".22"/><stop offset="1" stop-color="#f6df5c" stop-opacity="0"/></radialGradient></defs>';
+    for (let i = 0; i < 5; i++) s += '<circle cx="' + (r() * 360).toFixed(0) + '" cy="' + (r() * 460).toFixed(0) + '" r="' + (60 + r() * 60).toFixed(0) + '" fill="url(#sun)"/>';
+    for (let i = 0; i < 60; i++) {
+      const gx = r() * 360, gy = r() * 460, c = r() < 0.5 ? '#355a37' : '#2c4a30';
+      s += '<path d="M' + gx.toFixed(1) + ' ' + gy.toFixed(1) + ' l-3 -7 M' + gx.toFixed(1) + ' ' + gy.toFixed(1) + ' l1 -9 M' + gx.toFixed(1) + ' ' + gy.toFixed(1) + ' l4 -6" stroke="' + c + '" stroke-width="1.6" stroke-linecap="round"/>';
+    }
+    for (let i = 0; i < 6; i++) { const tx = r() * 360, ty = r() * 460, a = r() * 180; s += '<path transform="translate(' + tx.toFixed(0) + ' ' + ty.toFixed(0) + ') rotate(' + a.toFixed(0) + ')" d="M-14 0 H14 M4 0 l6 -5" stroke="#4a3a28" stroke-width="2.2" stroke-linecap="round"/>'; }
+    lv.rects.forEach((rc, zi) => { s += zoneArt(lv.zones[zi], rc, r); });
+    // bụi: vòng đất chung dưới chân các cây cùng bụi
+    const cls = {};
+    lv.ms.forEach((m, i) => { (cls[m.cl] = cls[m.cl] || []).push(i); });
+    Object.keys(cls).forEach(k => {
+      const ids = cls[k]; if (ids.length < 2) return;
+      const xs = ids.map(i => lv.ms[i].x), ys = ids.map(i => lv.ms[i].y);
+      const cx = (Math.min(...xs) + Math.max(...xs)) / 2, cy = (Math.min(...ys) + Math.max(...ys)) / 2 + 2;
+      s += '<ellipse cx="' + cx + '" cy="' + cy + '" rx="' + ((Math.max(...xs) - Math.min(...xs)) / 2 + 20) + '" ry="9" fill="rgba(40,26,14,.45)" stroke="rgba(255,248,234,.35)" stroke-width="1.2" stroke-dasharray="3 3"/>';
+    });
+    // vẽ nấm theo chiều sâu (y nhỏ trước)
+    const order = lv.ms.map((_, i) => i).sort((a, b) => lv.ms[a].y - lv.ms[b].y);
+    order.forEach(i => {
+      const m = lv.ms[i], sc = m.z ? 1.3 : 0.88;
+      s += '<g class="mu" data-i="' + i + '" transform="translate(' + m.x + ' ' + m.y + ')" role="button" tabindex="0" aria-label="Nấm số ' + (i + 1) + '">' +
+        '<ellipse class="ringSel" cx="0" cy="' + (-20 * sc).toFixed(1) + '" rx="' + (27 * sc + 4).toFixed(1) + '" ry="' + (30 * sc + 4).toFixed(1) + '" fill="rgba(246,223,92,.18)" stroke="#f6df5c" stroke-width="2.5" stroke-dasharray="5 4"/>' +
+        '<g class="lift"><g transform="scale(' + sc + ')">' + mushroom(m) + '</g></g>' +
+        '<g class="xmark" transform="translate(0 ' + (-22 * sc).toFixed(1) + ')"><circle r="9" fill="#fff8ea" stroke="#c8372d" stroke-width="2"/><path d="M-4 -4 L4 4 M4 -4 L-4 4" stroke="#c8372d" stroke-width="2.6" stroke-linecap="round"/></g>' +
+        '<circle cx="0" cy="' + (-20 * sc).toFixed(1) + '" r="' + (m.z ? 27 : 21) + '" fill="transparent"/></g>';
+    });
+    lv.rects.forEach((rc, zi) => { s += zoneTag(lv.zones[zi], rc); });
+    $('forest').innerHTML = s;
+  }
+
+  // ---------- sổ tay ----------
+  const ICON = {
+    doc: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0z" fill="none" stroke="#c8372d" stroke-width="2"/><path d="M10 12v6h4v-6" fill="none" stroke="#c8372d" stroke-width="2"/><path d="M3 3l18 18" stroke="#c8372d" stroke-width="2.2" stroke-linecap="round"/></svg>',
+    an: '<svg viewBox="0 0 24 24"><path d="M4 12a8 8 0 0 1 16 0z" fill="none" stroke="#2f7a3a" stroke-width="2"/><path d="M10 12v6h4v-6" fill="none" stroke="#2f7a3a" stroke-width="2"/><path d="M15 19l2.5 2.5L22 16" fill="none" stroke="#2f7a3a" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>',
+    vung: '<svg viewBox="0 0 24 24"><path d="M12 22s-7-6.5-7-12a7 7 0 0 1 14 0c0 5.5-7 12-7 12z" fill="none" stroke="#1f3354" stroke-width="2"/><circle cx="12" cy="10" r="2.6" fill="#1f3354"/></svg>',
+    cam: '<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="#1f3354" stroke-width="2"/><path d="M8 16c1-5 2-8 4-8s3 3 4 8" fill="none" stroke="#1f3354" stroke-width="2" stroke-linecap="round"/><path d="M5.6 5.6l12.8 12.8" stroke="#1f3354" stroke-width="2"/></svg>',
+    gio: '<svg viewBox="0 0 24 24"><path d="M6 10a6 6 0 0 1 12 0" fill="none" stroke="#b9661a" stroke-width="2"/><path d="M3 10h18l-2 10H5z" fill="none" stroke="#b9661a" stroke-width="2" stroke-linejoin="round"/><path d="M8 14h8M9 17h6" stroke="#b9661a" stroke-width="1.6"/></svg>',
+  };
+  function drawRules() {
+    $('rules').innerHTML = lv.rules.map((r, k) => '<li data-k="' + k + '"' + (r.isNew ? ' class="new"' : '') + '>' + ICON[H.RULE_GROUP[r.t]] + '<span class="tx">' + H.ruleText(r) + '</span></li>').join('');
+  }
+
+  // ---------- trạng thái ván ----------
+  let lv, picked, seq, sel = -1, over = false;
+  function start(d) {
+    lv = H.level(d);
+    save.cur = d; store();
+    picked = lv.ms.map(() => false); seq = []; sel = -1; over = false;
+    $('dayTxt').textContent = d;
+    $('allrule').hidden = d > 3;
+    drawRules(); drawForest(); drawBasket(); closeLens();
+    say(d === 1 && !save.best ? 'Chạm một cây nấm để soi kỹ bằng kính lúp.' : 'Đọc kỹ sổ tay rồi hái đủ <b>' + lv.quota + ' cây</b> nhé.');
+  }
+  function say(html) { $('say').innerHTML = html; }
+
+  function miniCaps() {
+    // nấm đã hái nhô lên khỏi miệng giỏ
+    let s = '';
+    seq.forEach((i, k) => {
+      const m = lv.ms[i], col = k % 6, row = Math.floor(k / 6);
+      const x = 24 + col * 15 + (row % 2) * 7, y = 42 - row * 7;
+      s += '<g transform="translate(' + x + ' ' + y + ') scale(.42) rotate(' + ((k * 37) % 30 - 15) + ')">' + mushroom(m, { noShadow: true }) + '</g>';
+    });
+    return s;
+  }
+  function drawBasket() {
+    $('inBasket').innerHTML = miniCaps();
+    $('gotTxt').textContent = seq.length; $('needTxt').textContent = lv.quota;
+    $('basket').setAttribute('aria-label', 'Giỏ nấm: đã hái ' + seq.length + ' trên ' + lv.quota + ' cây');
+  }
+
+  // ---------- kính lúp ----------
+  let lensEl = null;
+  function closeLens() {
+    if (lensEl) { lensEl.remove(); lensEl = null; }
+    document.querySelectorAll('.mu.sel').forEach(g => g.classList.remove('sel'));
+    sel = -1;
+  }
+  function openLens(i) {
+    closeLens();
+    sel = i;
+    const g = document.querySelector('.mu[data-i="' + i + '"]');
+    g.classList.add('sel');
+    const m = lv.ms[i];
+    const mates = lv.ms.filter(o => o.cl === m.cl).length;
+    const left = lv.ms.filter((o, j) => o.cl === m.cl && !picked[j]).length;
+    const el = document.createElement('div');
+    el.className = 'lens';
+    el.setAttribute('role', 'dialog');
+    el.setAttribute('aria-label', 'Kính lúp');
+    el.innerHTML = '<div class="lensTop"><svg viewBox="-28 -52 56 58" aria-hidden="true">' + mushroom(m, { noShadow: true }) + '</svg><div><h3>Nấm mũ ' + H.COLOR_NAME[m.c] + '</h3><p>Ở ' + H.ZONE_NAME[m.zone] + ' · ' +
+      (mates === 1 ? 'mọc lẻ' : 'bụi ' + mates + ' cây' + (left < mates ? ', còn ' + left : '')) + '</p></div></div>' +
+      '<div class="chips"><span>Mũ ' + H.SHAPE_NAME[m.h] + '</span><span>' + (m.s ? 'Có đốm' : 'Mũ trơn') + '</span><span>' + (m.r ? 'Có vòng cổ' : 'Không vòng cổ') + '</span><span>' + (m.z ? 'Cây to' : 'Cây nhỏ') + '</span></div>' +
+      '<div class="lensBtns"><button class="pickBtn" data-no-scene>Hái</button><button class="leaveBtn" data-no-scene>Để đó</button></div>';
+    $('stage').appendChild(el);
+    lensEl = el;
+    // đặt kính lúp sát cây nấm, ưu tiên phía trên
+    const st = $('stage').getBoundingClientRect(), gb = g.getBoundingClientRect();
+    const W = el.offsetWidth, Hh = el.offsetHeight;
+    let left0 = gb.left + gb.width / 2 - st.left - W / 2;
+    left0 = Math.max(4, Math.min(st.width - W - 4, left0));
+    let top = gb.top - st.top - Hh - 12, below = false;
+    if (top < 4) { top = gb.bottom - st.top + 12; below = true; }
+    el.style.left = left0 + 'px'; el.style.top = top + 'px';
+    el.style.setProperty('--ax', Math.max(18, Math.min(W - 18, gb.left + gb.width / 2 - st.left - left0)) + 'px');
+    el.classList.toggle('below', below);
+    el.querySelector('.pickBtn').addEventListener('click', () => doPick(i));
+    el.querySelector('.leaveBtn').addEventListener('click', closeLens);
+    el.querySelector('.pickBtn').focus({ preventScroll: true });
+  }
+
+  // ---------- hái ----------
+  function doPick(i) {
+    if (over || picked[i]) return;
+    closeLens();
+    const g = document.querySelector('.mu[data-i="' + i + '"]');
+    let k = H.staticBreak(lv, i), kind = 'static';
+    if (k < 0) { k = H.dynamicBreak(lv, i, picked, seq); kind = 'dyn'; }
+    if (k >= 0) { g.classList.add('culprit', 'bad'); return lose(k, i, kind); }
+    picked[i] = true; seq.push(i);
+    g.classList.add('picked');
+    g.setAttribute('aria-disabled', 'true');
+    drawBasket();
+    const b = $('basket'); b.classList.remove('bump'); void b.offsetWidth; b.classList.add('bump');
+    sfx('pick');
+    if (seq.length >= lv.quota) return setTimeout(win, 550);
+    // kẹt: không còn cách nào hái đủ giỏ mà không phạm luật
+    if (seq.length + H.maxPick(lv, picked, seq) < lv.quota) return setTimeout(() => lose(-1, i, 'stuck'), 500);
+    const need = lv.quota - seq.length;
+    say('Đã hái <b>' + seq.length + '</b> cây, còn <b>' + need + '</b> cây nữa.');
+  }
+
+  function lose(k, i, kind) {
+    over = true;
+    sfx('bad');
+    document.querySelectorAll('#rules li').forEach(li => li.classList.toggle('broke', +li.dataset.k === k));
+    const r = k >= 0 ? lv.rules[k] : null;
+    const m = lv.ms[i];
+    if (kind === 'stuck') {
+      $('loseH').textContent = 'Hết đường hái';
+      $('loseWhy').textContent = 'Với những cây đã ở trong giỏ, không còn cách nào hái đủ ' + lv.quota + ' cây mà vẫn đúng mọi luật. Lần sau hãy tính thứ tự trước khi hái.';
+      $('loseRule').hidden = true;
+    } else {
+      const poison = r && ['doc', 'chi', 'tru', 'lay'].includes(r.t);
+      $('loseH').textContent = poison ? 'Nấm độc rồi!' : 'Phạm luật rừng';
+      $('loseWhy').textContent = 'Cây nấm mũ ' + H.COLOR_NAME[m.c] + ' vừa hái phạm dòng này trong sổ tay:';
+      $('loseRule').hidden = false;
+      $('loseRule').textContent = H.ruleText(r);
+    }
+    $('againBtn').textContent = 'Thử lại ngày ' + lv.day;
+    setTimeout(() => $('lose').classList.add('on'), 700);
+  }
+  function revealBad() {
+    lv.ms.forEach((_, i) => { if (!picked[i] && H.staticBreak(lv, i) >= 0) document.querySelector('.mu[data-i="' + i + '"]').classList.add('bad'); });
+  }
+
+  function win() {
+    over = true;
+    say('Giỏ đầy rồi, về làng thôi!');
+    sfx('win');
+    const d = lv.day;
+    const first = d > save.best;
+    if (first) { save.best = d; submitScore(); }
+    save.cur = d + 1; store();
+    $('winArt').innerHTML = $('basket').querySelector('svg').innerHTML.replace('id="inBasket"', '');
+    $('winTxt').innerHTML = 'Xong ngày ' + d + ' với ' + seq.length + ' cây nấm lành.' + (first ? ' Ngày xa nhất của bạn giờ là <b>ngày ' + d + '</b>.' : '');
+    $('nextBtn').textContent = 'Sang ngày ' + (d + 1);
+    $('win').classList.add('on');
+  }
+
+  // ---------- âm thanh nhỏ (tổng hợp, không cần tệp) ----------
+  let ac = null;
+  function sfx(kind) {
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const t = ac.currentTime, o = ac.createOscillator(), g = ac.createGain();
+      o.connect(g); g.connect(ac.destination);
+      if (kind === 'pick') { o.type = 'triangle'; o.frequency.setValueAtTime(520, t); o.frequency.exponentialRampToValueAtTime(880, t + 0.09); g.gain.setValueAtTime(0.12, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.16); o.start(t); o.stop(t + 0.17); }
+      else if (kind === 'bad') { o.type = 'sawtooth'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(90, t + 0.35); g.gain.setValueAtTime(0.09, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.4); o.start(t); o.stop(t + 0.42); }
+      else { o.type = 'sine'; [523, 659, 784, 1046].forEach((f, k) => o.frequency.setValueAtTime(f, t + k * 0.09)); g.gain.setValueAtTime(0.1, t); g.gain.exponentialRampToValueAtTime(0.001, t + 0.5); o.start(t); o.stop(t + 0.52); }
+    } catch (e) {}
+  }
+
+  // ---------- sự kiện ----------
+  $('forest').addEventListener('click', e => {
+    if (over) return;
+    const g = e.target.closest('.mu');
+    if (!g) return closeLens();
+    const i = +g.dataset.i;
+    if (picked[i]) return;
+    if (sel === i) return closeLens();
+    openLens(i);
+  });
+  $('forest').addEventListener('keydown', e => {
+    const g = e.target.closest && e.target.closest('.mu');
+    if (g && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); if (!over && !picked[+g.dataset.i]) openLens(+g.dataset.i); }
+  });
+  document.addEventListener('keydown', e => {
+    if (e.key !== 'Escape') return;
+    if (lensEl) return closeLens();
+    ['help', 'menu'].forEach(id => $(id).classList.remove('on'));
+  });
+  window.addEventListener('resize', closeLens);
+
+  function openMenu() {
+    closeLens();
+    const top = save.best + 1;
+    $('menuBest').innerHTML = save.best ? 'Ngày xa nhất bạn đã qua: <b>ngày ' + save.best + '</b>. Chọn một hòn đá để đi tới ngày đó.' : 'Qua mỗi ngày thì lối mòn mở thêm một hòn đá.';
+    let s = '';
+    const from = Math.max(1, top - 29);
+    for (let d = from; d <= top; d++) s += '<button class="stone' + (d <= save.best ? ' done' : '') + (d === lv.day ? ' cur' : '') + '" data-d="' + d + '" aria-label="Ngày ' + d + '" data-no-scene>' + d + '</button>';
+    $('trail').innerHTML = s;
+    $('menu').classList.add('on');
+  }
+  $('trail').addEventListener('click', e => { const b = e.target.closest('.stone'); if (!b) return; $('menu').classList.remove('on'); start(+b.dataset.d); });
+  $('signBtn').addEventListener('click', openMenu);
+  $('menuClose').addEventListener('click', () => $('menu').classList.remove('on'));
+  $('retryBtn').addEventListener('click', () => { $('menu').classList.remove('on'); start(lv.day); });
+  $('menu').addEventListener('click', e => { if (e.target === $('menu')) $('menu').classList.remove('on'); });
+  $('helpBtn').addEventListener('click', () => { closeLens(); $('help').classList.add('on'); });
+  $('helpClose').addEventListener('click', () => { $('help').classList.remove('on'); save.seenHelp = true; store(); });
+  $('help').addEventListener('click', e => { if (e.target === $('help')) { $('help').classList.remove('on'); save.seenHelp = true; store(); } });
+  $('againBtn').addEventListener('click', () => { $('lose').classList.remove('on'); start(lv.day); });
+  $('lookBtn').addEventListener('click', () => {
+    $('lose').classList.remove('on'); revealBad();
+    say('Dấu đỏ là những cây không được hái. <br><button id="sayRetry" data-no-scene>Thử lại ngày ' + lv.day + '</button>');
+    $('sayRetry').addEventListener('click', () => start(lv.day));
+  });
+  $('nextBtn').addEventListener('click', () => { $('win').classList.remove('on'); start(lv.day + 1); });
+
+  const startDay = Math.max(1, Math.min(save.cur || 1, save.best + 1));
+  start(startDay);
+  if (!save.seenHelp) $('help').classList.add('on');
+  submitScore();
+})();
+</script>
+<script src="../activity.js?v=20261103ban" defer></script>
+</body>
+</html>
