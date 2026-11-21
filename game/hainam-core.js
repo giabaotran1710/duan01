@@ -228,12 +228,13 @@
   }
   const OFFS = { 1: [[0, 0]], 2: [[-23, 4], [23, -4]], 3: [[-39, 6], [0, -6], [39, 6]] };
 
-  function attempt(d, r) {
+  // fixed: giữ nguyên bộ luật và các khu của ngày, chỉ xếp lại vị trí khu, bụi và nấm (dùng khi chơi lại)
+  function attempt(d, r, fixed) {
     const n = Math.min(24, 6 + d + Math.floor(Math.max(0, d - 6) / 2));
-    const zoneCount = d >= 6 ? 4 : 3;
-    const zones = shuffle(r, ZONES.slice()).slice(0, zoneCount);
-    const kinds = kindsFor(d, r);
-    const rules = makeRules(r, d, kinds, zones);
+    const zoneCount = fixed ? fixed.zones.length : d >= 6 ? 4 : 3;
+    const zones = fixed ? shuffle(r, fixed.zones.slice()) : shuffle(r, ZONES.slice()).slice(0, zoneCount);
+    const kinds = fixed ? fixed.kinds : kindsFor(d, r);
+    const rules = fixed ? fixed.rules : makeRules(r, d, kinds, zones);
     const rects = zoneRects(zoneCount);
     const anchors = [];
     rects.forEach((rc, zi) => anchorsOf(rc).forEach(a => anchors.push({ x: a[0], y: a[1], zone: zones[zi] })));
@@ -317,8 +318,26 @@
   }
 
   const cache = {};
-  function level(d) {
+  // v > 0: lần chơi lại thứ v của ngày d. Cùng luật, khu rừng xếp khác (khu đổi chỗ, bụi và nấm mới).
+  function level(d, v) {
     d = Math.max(1, Math.floor(d));
+    v = Math.max(0, Math.floor(v || 0));
+    if (v > 0) {
+      const key = d + '#' + v;
+      if (cache[key]) return cache[key];
+      const base = level(d, 0);
+      const r = rng(d * 7919 + v * 6151 + GEN_VER * 104729);
+      let lv = null;
+      for (let t = 0; t < 6000 && !lv; t++) {
+        const cand = attempt(d, r, base);
+        // xếp lại phải khác hẳn lần trước: ít nhất một khu đổi chỗ
+        if (t < 3000 && cand.zones.every((z, i) => z === base.zones[i])) continue;
+        if (check(cand, t > 3000)) lv = cand;
+      }
+      if (!lv) lv = base;
+      lv = Object.assign({}, lv, { v });
+      return (cache[key] = lv);
+    }
     if (cache[d]) return cache[d];
     const r = rng(d * 7919 + GEN_VER * 104729);
     let lv = null;
