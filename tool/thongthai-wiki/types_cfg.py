@@ -295,8 +295,8 @@ TYPES = [
     T('worldcup_winner', 'worldcup_winner', 'the', lambda e: f'Đội tuyển nào vô địch {e["L"]}?', tiers=[(.3, 3), (.7, 4), (1, 5)], cap=60),
     # đã bỏ theo yêu cầu: câu 'X sinh ra ở đâu?' khó suy luận
     #     T('person_birthplace', 'person_birthplace', 'dl', lambda e: f'{e["L"]} sinh ra ở đâu?', tiers=[(.05, 2), (.3, 3), (.65, 4), (1, 5)], cap=700),
-    T('person_birthyear', 'person_birthyear', 'su', lambda e: f'{e["L"]} sinh năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=500),
-    T('person_deathyear', 'person_deathyear', 'su', lambda e: f'{e["L"]} mất năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=400),
+    #     T('person_birthyear', 'person_birthyear', 'su', lambda e: f'{e["L"]} sinh năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=500),
+    #     T('person_deathyear', 'person_deathyear', 'su', lambda e: f'{e["L"]} mất năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=400),
     T('person_citizenship', 'person_citizenship', 'dl', lambda e: f'{e["L"]} là công dân của quốc gia nào?', tiers=[(.08, 2), (.35, 3), (.7, 4), (1, 5)], cap=600, geo=True),
     T('person_notablework', 'person_notablework', 'van', lambda e: f'Tác phẩm/công trình nào sau đây gắn với tên tuổi của {e["L"]}?', mode='multi', tiers=[(.06, 2), (.3, 3), (.65, 4), (1, 5)], cap=700),
     T('person_father', 'person_father', 'su', lambda e: f'Cha của {e["L"]} là ai?', tiers=HARDISH, cap=250),
