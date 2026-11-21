@@ -3,14 +3,15 @@
 (function (root) {
   'use strict';
 
-  const GEN_VER = 1;
+  const GEN_VER = 2;
   const COLORS = ['do', 'nau', 'vang', 'trang', 'tim'];
   const COLOR_NAME = { do: 'đỏ', nau: 'nâu', vang: 'vàng', trang: 'trắng', tim: 'tím' };
   const SHAPES = ['tron', 'nhon', 'det'];
   const SHAPE_NAME = { tron: 'tròn', nhon: 'nhọn', det: 'dẹt' };
   const ZONES = ['go', 'reu', 'la', 'suoi', 'goc'];
   const ZONE_NAME = { go: 'khúc gỗ mục', reu: 'bãi rêu', la: 'đám lá khô', suoi: 'bờ suối', goc: 'gốc sồi' };
-  const POISON_KINDS = ['doc', 'chi', 'tru'];
+  const POISON_KINDS = ['doc', 'chi', 'tru', 'hoac'];
+  const DYN_KINDS = ['gioi', 'chua', 'dau', 'xen', 'tiep', 'gioikhu'];
 
   // ---------- ngẫu nhiên có hạt giống: cùng một ngày luôn ra cùng một khu rừng ----------
   function rng(seed) {
@@ -60,33 +61,48 @@
       case 'chua': return 'Bụi nào cũng phải chừa lại ít nhất một cây. Nấm mọc lẻ cũng là một bụi.';
       case 'dau': return 'Cây đầu tiên bỏ vào giỏ phải là nấm ' + describe(rule.p) + '.';
       case 'xen': return 'Không bỏ hai cây cùng màu mũ liền nhau vào giỏ.';
+      case 'hoac': return 'Nấm ' + describe([rule.p[0]], true) + ' hoặc nấm ' + describe([rule.p[1]], true) + ' đều là nấm độc.';
+      case 'bui': return rule.mode === 'max' ? 'Không hái ở bụi có hơn ' + rule.k + ' cây.' : 'Không hái nấm ở bụi có ít hơn ' + rule.k + ' cây.';
+      case 'trung': return 'Nấm cùng màu mũ với một cây khác trong bụi là nấm độc.';
+      case 'tiep': return 'Hai cây hái liền nhau phải khác dáng mũ.';
+      case 'gioikhu': return 'Mỗi khu chỉ hái tối đa ' + rule.k + ' cây.';
     }
     return '';
   }
   // Nhóm luật để vẽ biểu tượng trong sổ tay
-  const RULE_GROUP = { doc: 'doc', chi: 'an', tru: 'doc', non: 'cam', vung: 'vung', cam: 'vung', lay: 'doc', gioi: 'gio', chua: 'gio', dau: 'gio', xen: 'gio' };
+  const RULE_GROUP = { doc: 'doc', chi: 'an', tru: 'doc', non: 'cam', vung: 'vung', cam: 'vung', lay: 'doc', gioi: 'gio', chua: 'gio', dau: 'gio', xen: 'gio', hoac: 'doc', bui: 'vung', trung: 'doc', tiep: 'gio', gioikhu: 'gio' };
 
   // ---------- kiểm luật ----------
   function basePoisonBy(rule, m) {
     if (rule.t === 'doc') return matchAll(m, rule.p);
     if (rule.t === 'chi') return !matchAll(m, rule.p);
     if (rule.t === 'tru') return matchAll(m, rule.p) && !matchAll(m, rule.q);
+    if (rule.t === 'hoac') return rule.p.some(q => matchOne(m, q));
     return false;
   }
   function basePoison(lv, m) { return lv.rules.some(r => basePoisonBy(r, m)); }
 
   // Luật tĩnh đầu tiên mà cây i phạm (chỉ số trong lv.rules), -1 nếu không phạm
+  function clSize(lv, m) { return lv.ms.reduce((n, o) => n + (o.cl === m.cl ? 1 : 0), 0); }
+  function breaksRule(lv, i, k) {
+    const m = lv.ms[i], r = lv.rules[k];
+    if (basePoisonBy(r, m)) return true;
+    if (r.t === 'non') return m.z === 0;
+    if (r.t === 'vung') return m.zone !== r.z;
+    if (r.t === 'cam') return m.zone === r.z;
+    if (r.t === 'lay') return lv.ms.some((o, j) => j !== i && o.cl === m.cl && basePoison(lv, o));
+    if (r.t === 'bui') { const n = clSize(lv, m); return r.mode === 'max' ? n > r.k : n < r.k; }
+    if (r.t === 'trung') return lv.ms.some((o, j) => j !== i && o.cl === m.cl && o.c === m.c);
+    return false;
+  }
   function staticBreak(lv, i) {
-    const m = lv.ms[i];
-    for (let k = 0; k < lv.rules.length; k++) {
-      const r = lv.rules[k];
-      if (basePoisonBy(r, m)) return k;
-      if (r.t === 'non' && m.z === 0) return k;
-      if (r.t === 'vung' && m.zone !== r.z) return k;
-      if (r.t === 'cam' && m.zone === r.z) return k;
-      if (r.t === 'lay' && lv.ms.some((o, j) => j !== i && o.cl === m.cl && basePoison(lv, o))) return k;
-    }
+    for (let k = 0; k < lv.rules.length; k++) if (breaksRule(lv, i, k)) return k;
     return -1;
+  }
+  function staticBreakCount(lv, i) {
+    let n = 0;
+    for (let k = 0; k < lv.rules.length; k++) if (breaksRule(lv, i, k)) n++;
+    return n;
   }
   // Luật động (phụ thuộc thứ tự hái) mà việc hái cây i lúc này phạm
   function dynamicBreak(lv, i, picked, seq) {
@@ -100,6 +116,8 @@
       }
       if (r.t === 'dau' && seq.length === 0 && !matchAll(m, r.p)) return k;
       if (r.t === 'xen' && seq.length && lv.ms[seq[seq.length - 1]].c === m.c) return k;
+      if (r.t === 'tiep' && seq.length && lv.ms[seq[seq.length - 1]].h === m.h) return k;
+      if (r.t === 'gioikhu' && seq.filter(j => lv.ms[j].zone === m.zone).length >= r.k) return k;
     }
     return -1;
   }
@@ -115,7 +133,7 @@
     (function dfs(mask, depth) {
       if (depth > best) best = depth;
       if (best === goal) return;
-      const key = mask + ':' + (s.length ? lv.ms[s[s.length - 1]].c : '') + ':' + s.length;
+      const key = mask + ':' + (s.length ? lv.ms[s[s.length - 1]].c + lv.ms[s[s.length - 1]].h : '') + ':' + s.length;
       if (seen.has(key)) return;
       seen.add(key);
       for (let b = 0; b < valid.length; b++) {
@@ -139,20 +157,21 @@
   ];
   function kindsFor(d, r) {
     if (d <= SCHEDULE.length) return SCHEDULE[d - 1].slice();
-    const total = Math.min(5, 3 + (d >= 18 ? 1 : 0) + (d >= 30 ? 1 : 0));
+    const total = Math.min(5, 3 + (d >= 14 ? 1 : 0) + (d >= 24 ? 1 : 0));
     const kinds = [pick(r, POISON_KINDS)];
-    const pool = ['doc', 'tru', 'chi', 'non', 'vung', 'cam', 'lay', 'gioi', 'chua', 'dau', 'xen', 'lay', 'xen', 'gioi'];
+    const pool = ['doc', 'tru', 'chi', 'hoac', 'non', 'vung', 'cam', 'lay', 'gioi', 'chua', 'dau', 'xen', 'lay', 'bui', 'trung', 'tiep', 'gioikhu', 'trung', 'bui', 'tiep'];
     let guard = 0;
     while (kinds.length < total && guard++ < 100) {
       const k = pick(r, pool);
       if (k !== 'doc' && kinds.includes(k)) continue;
       if (k === 'chi' && kinds.includes('chi')) continue;
+      if (k === 'xen' && kinds.includes('tiep') || k === 'tiep' && kinds.includes('xen')) continue;
       if ((k === 'vung' && kinds.includes('cam')) || (k === 'cam' && kinds.includes('vung'))) continue;
       if (k === 'lay' && !kinds.some(x => POISON_KINDS.includes(x))) continue;
       kinds.push(k);
     }
     // luật độc đứng trước để "nấm độc" trong luật lây có nghĩa rõ ràng
-    const order = { doc: 0, chi: 0, tru: 0, lay: 1, non: 2, vung: 2, cam: 2, gioi: 3, chua: 3, dau: 3, xen: 3 };
+    const order = { doc: 0, chi: 0, tru: 0, hoac: 0, trung: 1, lay: 1, non: 2, vung: 2, cam: 2, bui: 2, gioi: 3, chua: 3, dau: 3, xen: 3, tiep: 3, gioikhu: 3 };
     return kinds.sort((a, b) => order[a] - order[b]);
   }
 
@@ -173,7 +192,7 @@
 
   function makeRules(r, d, kinds, zones) {
     return kinds.map(t => {
-      const pair = d >= 12 && r() < Math.min(0.6, 0.15 + d * 0.015);
+      const pair = d >= 4 && r() < Math.min(0.9, 0.1 + (d - 3) * 0.1);
       if (t === 'doc') return { t, p: predsFor(r, d, pair ? 2 : 1) };
       if (t === 'chi') {
         // một đặc điểm hay gặp để còn đủ nấm ăn được
@@ -185,6 +204,9 @@
         let q; do { q = randPred(r, true); } while (q.k === p[0].k);
         return { t, p, q: [q] };
       }
+      if (t === 'hoac') { const a = randPred(r, false); let b; do { b = randPred(r, true); } while (b.k === a.k); return { t, p: [a, b] }; }
+      if (t === 'bui') return r() < 0.5 ? { t, mode: 'max', k: 2 } : { t, mode: 'min', k: 2 + (d >= 20 && r() < 0.5 ? 1 : 0) };
+      if (t === 'gioikhu') return { t, k: r() < 0.7 ? 2 : 1 };
       if (t === 'vung' || t === 'cam') return { t, z: pick(r, zones) };
       if (t === 'gioi') return { t, k: r() < 0.6 ? 2 : 1 };
       if (t === 'dau') return { t, p: [pick(r, [{ k: 'c', v: pick(r, COLORS) }, { k: 'h', v: pick(r, SHAPES) }, { k: 'r', v: true }, { k: 's', v: true }])] };
@@ -207,7 +229,7 @@
   const OFFS = { 1: [[0, 0]], 2: [[-23, 4], [23, -4]], 3: [[-39, 6], [0, -6], [39, 6]] };
 
   function attempt(d, r) {
-    const n = Math.min(18, 6 + d);
+    const n = Math.min(24, 6 + d + Math.floor(Math.max(0, d - 6) / 2));
     const zoneCount = d >= 6 ? 4 : 3;
     const zones = shuffle(r, ZONES.slice()).slice(0, zoneCount);
     const kinds = kindsFor(d, r);
@@ -215,7 +237,7 @@
     const rects = zoneRects(zoneCount);
     const anchors = [];
     rects.forEach((rc, zi) => anchorsOf(rc).forEach(a => anchors.push({ x: a[0], y: a[1], zone: zones[zi] })));
-    const C = Math.max(3, Math.min(anchors.length, Math.ceil(n / 2.1)));
+    const C = Math.max(Math.ceil(n / 3), Math.min(anchors.length, Math.ceil(n / 2.5) + Math.floor(r() * 3) - 1));
     // mỗi khu có ít nhất một bụi, phần còn lại rải ngẫu nhiên
     const pool = shuffle(r, anchors.slice()), used = [];
     zones.forEach(z => { const k = pool.findIndex(a => a.zone === z); used.push(pool.splice(k, 1)[0]); });
@@ -242,11 +264,11 @@
     const breaks = lv.ms.map((_, i) => staticBreak(lv, i));
     const valid = breaks.filter(b => b < 0).length;
     if (valid < 3 || n - valid < 2) return false;
-    if (valid > Math.ceil(n * 0.7)) return false;
+    if (valid > Math.ceil(n * (lv.day >= 8 ? 0.55 : 0.7))) return false;
     // luật tĩnh nào cũng phải là lý do duy nhất loại ít nhất một cây
     for (let k = 0; k < lv.rules.length; k++) {
       const t = lv.rules[k].t;
-      if (['gioi', 'chua', 'dau', 'xen'].includes(t)) continue;
+      if (DYN_KINDS.includes(t)) continue;
       const only = lv.ms.some((m, i) => {
         if (breaks[i] < 0) return false;
         const others = { ...lv, rules: lv.rules.filter((_, j) => j !== k) };
@@ -260,13 +282,38 @@
       if (r.t === 'chua' && !lv.ms.some((m, i) => lv.ms.every((o, j) => o.cl !== m.cl || breaks[j] < 0))) return false;
       if (r.t === 'dau' && !(V.some(i => matchAll(lv.ms[i], r.p)) && V.some(i => !matchAll(lv.ms[i], r.p)))) return false;
       if (r.t === 'xen' && !COLORS.some(c => V.filter(i => lv.ms[i].c === c).length >= 2)) return false;
+      if (r.t === 'tiep' && !SHAPES.some(h => V.filter(i => lv.ms[i].h === h).length > Math.ceil(V.length / 3))) return false;
+      if (r.t === 'gioikhu' && !lv.zones.some(z => V.filter(i => lv.ms[i].zone === z).length > r.k)) return false;
     }
     // "trừ khi" phải cứu được ít nhất một cây
     for (const r of lv.rules) if (r.t === 'tru' && !lv.ms.some(m => matchAll(m, r.p) && matchAll(m, r.q))) return false;
     const M = maxPick(lv, new Array(n).fill(false), []);
-    if (M < Math.max(3, Math.min(5, 3 + Math.floor(lv.day / 8)) - (relax ? 2 : 0) - (lv.kinds.includes('vung') ? 1 : 0))) return false;
+    if (M < Math.max(3, Math.min(8, 4 + Math.floor(lv.day / 5)) - (relax ? 2 : 0) - (lv.kinds.includes('vung') ? 1 : 0))) return false;
+    // độ hóc: nấm "suýt hợp lệ" (chỉ phạm đúng một luật) là bẫy; người chơi hái ẩu thì dễ sa vào
+    const traps = lv.ms.filter((_, i) => breaks[i] >= 0 && staticBreakCount(lv, i) === 1).length;
+    if (lv.day >= 4 && traps < Math.min(7, 1 + Math.floor(lv.day / 2))) return false;
+    // luật thứ tự phải có tác dụng thật: hái liều theo thứ tự ngẫu nhiên thường thua
+    const dyn = lv.rules.some(r => DYN_KINDS.includes(r.t));
+    lv.luck = randomSuccess(lv, V, M, 150);
+    if (dyn && lv.day >= 6 && lv.luck > Math.max(0.1, 0.8 - lv.day * 0.04)) return false;
+    lv.traps = traps;
     lv.quota = M;
     return true;
+  }
+  function randomSuccess(lv, V, quota, trials) {
+    const r = rng(lv.day * 31 + 7);
+    let ok = 0;
+    for (let t = 0; t < trials; t++) {
+      const order = shuffle(r, V.slice()), picked = lv.ms.map(() => false), seq = [];
+      let fail = false;
+      for (const i of order) {
+        if (seq.length >= quota) break;
+        if (dynamicBreak(lv, i, picked, seq) >= 0) { fail = true; break; }
+        picked[i] = true; seq.push(i);
+      }
+      if (!fail) ok++;
+    }
+    return ok / trials;
   }
 
   const cache = {};
@@ -275,9 +322,9 @@
     if (cache[d]) return cache[d];
     const r = rng(d * 7919 + GEN_VER * 104729);
     let lv = null;
-    for (let t = 0; t < 4000; t++) {
+    for (let t = 0; t < 12000; t++) {
       const cand = attempt(d, r);
-      if (check(cand, t > 2500)) { lv = cand; break; }
+      if (check(cand, t > 6000)) { lv = cand; break; }
     }
     if (!lv) throw new Error('Không dựng được ngày ' + d);
     // đánh dấu luật mới lần đầu xuất hiện
