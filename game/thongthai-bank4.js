@@ -37,7 +37,6 @@ window.TT_ADD(`
 5|su|Trong thương vụ Louisiana năm 1803, Hoa Kỳ mua vùng đất này từ nước nào?|Pháp|Tây Ban Nha|Anh|Mexico
 3|su|Nội chiến Hoa Kỳ kết thúc vào năm nào?|1865|1861|1870|1898
 4|su|Địa danh Waterloo, nơi Napoléon thất bại năm 1815, nằm ở nước nào ngày nay?|Bỉ|Pháp|Hà Lan|Đức
-4|su|Napoléon Bonaparte sinh ra trên hòn đảo nào?|Corse|Elba|Saint Helena|Sardegna
 4|su|Vụ ám sát Thái tử Áo – Hung dẫn tới Chiến tranh thế giới thứ nhất xảy ra ở thành phố nào?|Sarajevo|Vienna|Belgrade|Budapest
 4|su|Hòa ước Versailles năm 1919 chủ yếu áp đặt các điều khoản lên nước nào?|Đức|Áo|Ý|Nhật Bản
 3|su|Nhật Bản tấn công căn cứ Trân Châu Cảng của Mỹ vào năm nào?|1941|1939|1942|1944

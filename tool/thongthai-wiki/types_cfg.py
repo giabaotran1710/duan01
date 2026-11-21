@@ -293,7 +293,8 @@ TYPES = [
     T('olympics_city', 'olympics_city', 'the', lambda e: f'{e["L"]} được tổ chức tại thành phố nào?', tiers=[(.3, 3), (.7, 4), (1, 5)], cap=80),
     T('worldcup_host', 'worldcup_host', 'the', lambda e: f'{e["L"]} được tổ chức tại quốc gia nào?', tiers=[(.3, 3), (.7, 4), (1, 5)], cap=60),
     T('worldcup_winner', 'worldcup_winner', 'the', lambda e: f'Đội tuyển nào vô địch {e["L"]}?', tiers=[(.3, 3), (.7, 4), (1, 5)], cap=60),
-    T('person_birthplace', 'person_birthplace', 'dl', lambda e: f'{e["L"]} sinh ra ở đâu?', tiers=[(.05, 2), (.3, 3), (.65, 4), (1, 5)], cap=700),
+    # đã bỏ theo yêu cầu: câu 'X sinh ra ở đâu?' khó suy luận
+    #     T('person_birthplace', 'person_birthplace', 'dl', lambda e: f'{e["L"]} sinh ra ở đâu?', tiers=[(.05, 2), (.3, 3), (.65, 4), (1, 5)], cap=700),
     T('person_birthyear', 'person_birthyear', 'su', lambda e: f'{e["L"]} sinh năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=500),
     T('person_deathyear', 'person_deathyear', 'su', lambda e: f'{e["L"]} mất năm nào?', mode='year', tiers=[(.15, 3), (.5, 4), (1, 5)], cap=400),
     T('person_citizenship', 'person_citizenship', 'dl', lambda e: f'{e["L"]} là công dân của quốc gia nào?', tiers=[(.08, 2), (.35, 3), (.7, 4), (1, 5)], cap=600, geo=True),
