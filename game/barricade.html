@@ -8,323 +8,193 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@200;300;400;500;600;700&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Be+Vietnam+Pro:wght@500;600;700&display=swap" rel="stylesheet">
   <title>Ngăn cản đến đích</title>
   <style>
+    /* Bàn cờ đá trên mặt bàn gỗ: tường là ván sơn màu đội, quân là con tốt sơn mài */
     :root {
-      --bg: #07070b;
-      --panel: #13131a;
-      --panel2: #1a1a24;
-      --cell1: #252530;
-      --cell2: #2b2b38;
-      --grid: #3d3d4d;
-      --text: #f3f4ff;
-      --muted: #9da3b8;
-      --blue: #4f8cff;
-      --blue2: #2d67e0;
-      --red: #ff5e67;
-      --red2: #d63d48;
-      --wall: #ff4d57;
-      --good: #42d392;
-      --warn: #ffd166;
-      --shadow: rgba(0, 0, 0, .35);
+      --felt: #1f3a30;
+      --felt2: #142820;
+      --wood: #6b4426;
+      --wood-dk: #3e2514;
+      --wood-lt: #9a6a3f;
+      --cream: #f3e6c8;
+      --ink: #2a1a10;
+      --muted: #c9b894;
+      --blue: #3f74c9;
+      --blue-dk: #1f3f7a;
+      --red: #c8473c;
+      --red-dk: #7c2219;
+      --gold: #e8b64c;
     }
-
-    * {
-      box-sizing: border-box;
-    }
-
-    html,
-    body {
-      margin: 0;
-      width: 100%;
-      height: 100%;
-      overflow: hidden;
+    * { box-sizing: border-box; }
+    html, body {
+      margin: 0; width: 100%; height: 100%; overflow: hidden;
       background:
-        radial-gradient(90% 40% at 50% 0%, rgba(79,140,255,.22), transparent 70%),
-        radial-gradient(90% 40% at 50% 100%, rgba(255,94,103,.18), transparent 70%),
-        #080b16;
-      color: var(--text);
-      font-family: "Oswald", sans-serif;
+        radial-gradient(70% 55% at 50% 48%, rgba(255,240,200,.10), transparent 70%),
+        repeating-linear-gradient(45deg, rgba(255,255,255,.018) 0 2px, transparent 2px 5px),
+        radial-gradient(120% 100% at 50% 50%, var(--felt), var(--felt2));
+      color: var(--cream);
+      font-family: "Be Vietnam Pro", system-ui, sans-serif;
       -webkit-tap-highlight-color: transparent;
       touch-action: none;
     }
+    .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
 
     .app {
-      width: 100%;
-      height: 100%;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-      padding: 12px;
-      align-items: center;
-      justify-content: space-between;
+      width: 100%; height: 100%;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr);
+      grid-template-rows: auto auto var(--bsz, 60vw) auto auto auto;
+      align-content: center;
+      grid-template-areas: "brand" "blue" "board" "red" "ctrl" "msg";
+      row-gap: 8px;
+      padding: calc(10px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom));
+      justify-items: center;
     }
+    .app > *:not(.mode-overlay) { width: min(100%, 560px); }
 
-    .topbar {
-      width: min(100%, 680px);
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 10px;
-      padding: 12px 14px;
-      border-radius: 18px;
-      background: linear-gradient(180deg, rgba(255, 255, 255, .06), rgba(255, 255, 255, .03));
-      border: 1px solid rgba(255, 255, 255, .08);
-      box-shadow: 0 14px 40px var(--shadow);
-      backdrop-filter: blur(10px);
-      flex-shrink: 0;
+    /* tên game: chữ khắc trên thanh gỗ nhỏ */
+    .brand { grid-area: brand; display: flex; align-items: baseline; gap: 8px; justify-content: center; }
+    .brand h1 {
+      margin: 0; font-family: "Oswald", sans-serif; font-weight: 600; font-size: 20px; letter-spacing: .06em; text-transform: uppercase;
+      color: var(--gold); text-shadow: 0 1px 0 #000, 0 -1px 0 rgba(255,255,255,.15);
     }
+    .brand h1 span { color: var(--cream); }
 
-    .titleWrap {
-      display: flex;
-      flex-direction: column;
-      gap: 2px;
-      min-width: 0;
+    /* khay tường của từng bên, đặt đúng phía của bên đó */
+    .tray {
+      position: relative; display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 10px;
+      padding: 7px 12px; border-radius: 10px;
+      background: linear-gradient(180deg, var(--wood-lt), var(--wood) 45%, var(--wood-dk));
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.22), inset 0 -2px 0 rgba(0,0,0,.35), 0 6px 14px rgba(0,0,0,.35);
+      transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+      filter: saturate(.7) brightness(.82);
     }
+    .tray.blue { grid-area: blue; }
+    .tray.red { grid-area: red; }
+    .tray .who { display: flex; align-items: center; gap: 8px; min-width: 0; }
+    .tray .tok {
+      width: 26px; height: 26px; border-radius: 50%; flex: none;
+      box-shadow: inset -3px -4px 6px rgba(0,0,0,.35), inset 2px 3px 4px rgba(255,255,255,.35), 0 2px 3px rgba(0,0,0,.5);
+    }
+    .tray.blue .tok { background: radial-gradient(circle at 35% 30%, #a9c8ff, var(--blue) 55%, var(--blue-dk)); }
+    .tray.red .tok { background: radial-gradient(circle at 35% 30%, #ffb3a8, var(--red) 55%, var(--red-dk)); }
+    .tray .name { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 18px; line-height: 1; color: var(--cream); }
+    .tray .goal { display: block; font-size: 11px; font-weight: 600; color: var(--muted); margin-top: 2px; white-space: nowrap; }
+    .rack { display: flex; gap: 3px; justify-content: center; align-items: center; height: 24px; padding: 0 6px;
+      background: rgba(0,0,0,.28); border-radius: 5px; box-shadow: inset 0 2px 4px rgba(0,0,0,.5); }
+    .rack i { display: block; width: 6px; height: 18px; border-radius: 2px; transition: opacity .3s, transform .3s; }
+    .tray.blue .rack i { background: linear-gradient(90deg, #2c5aa8, #5d8fe0 50%, #2c5aa8); }
+    .tray.red .rack i { background: linear-gradient(90deg, #9a3127, #e0665a 50%, #9a3127); }
+    .rack i.used { opacity: .12; transform: translateY(3px); }
+    .tray .cnt { font-family: "Oswald", sans-serif; font-weight: 600; font-size: 22px; min-width: 28px; text-align: right; color: var(--cream); }
+    .tray .badge {
+      position: absolute; top: -9px; left: 50%; transform: translateX(-50%) scale(.6); opacity: 0;
+      font-family: "Oswald", sans-serif; font-weight: 600; font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+      color: var(--ink); background: var(--gold); padding: 1px 10px; border-radius: 99px; box-shadow: 0 2px 0 rgba(0,0,0,.4);
+      transition: opacity .2s, transform .25s cubic-bezier(.2,.9,.3,1.4); white-space: nowrap;
+    }
+    body[data-turn="0"] .tray.blue, body[data-turn="1"] .tray.red { filter: none; transform: scale(1.02); }
+    body[data-turn="0"] .tray.blue { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 3px var(--blue), 0 8px 18px rgba(0,0,0,.4); }
+    body[data-turn="1"] .tray.red { box-shadow: inset 0 1px 0 rgba(255,255,255,.22), 0 0 0 3px var(--red), 0 8px 18px rgba(0,0,0,.4); }
+    body[data-turn="0"] .tray.blue .badge, body[data-turn="1"] .tray.red .badge { opacity: 1; transform: translateX(-50%) scale(1); }
 
-    .title {
-      font-size: 22px;
-      letter-spacing: .5px;
-      background: linear-gradient(90deg, #8fb6ff, #fff 50%, #ff9aa1);
-      -webkit-background-clip: text;
-      background-clip: text;
-      color: transparent;
-      font-weight: 800;
-      line-height: 1.1;
-    }
-
-    .subtitle {
-      font-size: 12px;
-      color: var(--muted);
-      line-height: 1.2;
-    }
-
-    .status {
-      display: flex;
-      align-items: center;
-      gap: 8px;
-      justify-content: flex-end;
-      flex-wrap: wrap;
-    }
-
-    .pill {
-      display: inline-flex;
-      align-items: center;
-      gap: 6px;
-      padding: 8px 8px;
-      border-radius: 999px;
-      background: rgba(255, 255, 255, .06);
-      border: 1px solid rgba(255, 255, 255, .08);
-      font-size: 12px;
-      font-weight: 999;
-      white-space: nowrap;
-    }
-
-    .pill.turnBlue {
-      background: rgba(79, 140, 255, .12);
-      min-width:75px;
-    }
-
-    .pill.turnRed {
-      background: rgba(255, 94, 103, .12);
-      min-width:75px;
-    }
-
-    .pill.blue {
-      box-shadow: inset 0 0 0 1px rgba(79, 140, 255, .18);
-      min-width: 50px;
-    }
-
-    .pill.red {
-      box-shadow: inset 0 0 0 1px rgba(255, 94, 103, .18);
-      min-width:50px;
-    }
-
-    .wall-icon-blue {
-      color: #4f8cff;
-    }
-    .wall-icon-red {
-      color: #ff5e67;
-    }
-
-    .boardWrap {
-      width: min(100%, 680px);
-      flex: 1;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      min-height: 0;
-    }
-
+    .boardWrap { grid-area: board; position: relative; width: 100%; height: 100%; min-height: 0; }
     canvas {
-      width: min(96vw, 640px, 62dvh);
-      height: min(96vw, 640px, 62dvh);
-      max-width: 640px;
-      max-height: 640px;
-      aspect-ratio: 1/1;
-      display: block;
-      border-radius: 22px;
-      background: #080b16;
-      box-shadow: 0 18px 50px rgba(0, 0, 0, .5), inset 0 0 0 1px rgba(255, 255, 255, .08);
-      touch-action: none;
-      cursor: pointer;
+      position: absolute; inset: 0; margin: auto; display: block;
+      border-radius: 14px; touch-action: none; cursor: pointer;
+      box-shadow: 0 22px 40px rgba(0,0,0,.55), 0 4px 0 #24150b;
     }
 
-    .controls {
-      width: min(100%, 680px);
-      display: flex;
-      justify-content: center;
-      gap: 14px;
-      flex-shrink: 0;
-      transition: opacity 0.4s ease;
-    }
-
-    .controls.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
-
+    .controls { grid-area: ctrl; display: flex; justify-content: center; gap: 12px; min-height: 48px; transition: opacity .3s ease; }
+    .controls.hidden { opacity: 0; pointer-events: none; }
     button {
-      appearance: none;
-      border: 0;
-      border-radius: 16px;
-      padding: 14px 24px;
-      font-size: 14px;
-      font-weight: 800;
-      color: var(--text);
-      background: linear-gradient(180deg, rgba(255, 255, 255, .12), rgba(255, 255, 255, .06));
-      border: 1px solid rgba(255, 255, 255, .08);
-      box-shadow: 0 10px 24px rgba(0, 0, 0, .22);
-      transition: transform .12s ease, filter .12s ease, background .12s ease;
-      min-width: 100px;
+      appearance: none; border: 0; cursor: pointer;
+      font-family: "Oswald", sans-serif; font-weight: 600; font-size: 17px; letter-spacing: .04em;
+      padding: 11px 20px; border-radius: 8px; min-width: 120px; color: var(--cream);
+      background: linear-gradient(180deg, #5a3a22, #3a2312);
+      box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 4px 0 #1d1008, 0 8px 14px rgba(0,0,0,.35);
+      transition: transform .1s ease;
     }
+    button:active { transform: translateY(3px); box-shadow: inset 0 1px 0 rgba(255,255,255,.2), 0 1px 0 #1d1008; }
+    button.secondary { color: var(--ink); background: linear-gradient(180deg, #f6cf6e, var(--gold)); box-shadow: inset 0 1px 0 rgba(255,255,255,.5), 0 4px 0 #8a6420, 0 8px 14px rgba(0,0,0,.35); }
+    button:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
 
-    button:active {
-      transform: scale(.96);
-      filter: brightness(1.08);
-    }
-
-    button.primary {
-      background: linear-gradient(180deg, rgba(79, 140, 255, .35), rgba(79, 140, 255, .16));
-      border-color: rgba(79, 140, 255, .28);
-    }
-
-    button.secondary {
-      background: linear-gradient(180deg, rgba(255, 209, 102, .24), rgba(255, 209, 102, .12));
-      border-color: rgba(255, 209, 102, .25);
-    }
-
-    .footer {
-      width: min(100%, 680px);
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-      align-items: center;
-      flex-shrink: 0;
-    }
-
+    .footer { grid-area: msg; display: flex; flex-direction: column; gap: 4px; align-items: center; }
     .msg {
-      width: 100%;
-      /* giữ chỗ 2 dòng: thông báo dài xuống dòng không đẩy bàn cờ */
-      line-height: 1.3;
-      min-height: 2.6em;
-      text-align: center;
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--warn);
+      width: 100%; line-height: 1.3; min-height: 2.6em; text-align: center; font-size: 14px; font-weight: 700; color: var(--cream);
+      display: flex; align-items: center; justify-content: center;
     }
+    .help { width: 100%; text-align: center; font-size: 12px; line-height: 1.4; color: var(--muted); }
+    .help i { color: var(--gold); }
 
-    .help {
-      width: 100%;
-      text-align: center;
-      font-size: 12px;
-      line-height: 1.4;
-      color: var(--muted);
-      padding: 0 6px;
-    }
-
-    .small {
-      font-size: 9px;
-      color: var(--muted);
-      opacity: .6;
-    }
-
+    /* hộp chọn chế độ: nắp hộp cờ bằng gỗ */
     .mode-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, .75);
-      backdrop-filter: blur(8px);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 100;
+      position: fixed; inset: 0; z-index: 100; display: flex; align-items: center; justify-content: center; padding: 16px;
+      background: radial-gradient(80% 60% at 50% 50%, rgba(10,20,15,.55), rgba(5,10,8,.88));
       transition: opacity .4s ease;
     }
-    .mode-overlay.hidden {
-      opacity: 0;
-      pointer-events: none;
-    }
+    .mode-overlay.hidden { opacity: 0; pointer-events: none; }
     .mode-box {
-      background: linear-gradient(180deg, #172036, #0d1222);
-      padding: 32px 40px;
-      border-radius: 28px;
-      border: 1px solid rgba(255, 255, 255, .08);
-      box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
-      text-align: center;
-      max-width: 380px;
-      width: 90%;
+      position: relative; width: min(380px, 100%); padding: 18px 18px 20px; border-radius: 16px; text-align: center;
+      background:
+        repeating-linear-gradient(90deg, rgba(0,0,0,.06) 0 3px, transparent 3px 11px, rgba(255,255,255,.04) 11px 13px, transparent 13px 23px),
+        linear-gradient(180deg, #8a5a33, #6b4426 50%, #52321b);
+      box-shadow: inset 0 0 0 4px #3e2514, inset 0 0 0 6px #a5744a, 0 26px 50px rgba(0,0,0,.6);
+      animation: lid .45s cubic-bezier(.2,.9,.3,1.15);
     }
-    .mode-box h2 {
-      margin: 0 0 8px 0;
-      font-weight: 700;
-      font-size: 26px;
-      letter-spacing: .5px;
+    @keyframes lid { from { transform: translateY(30px) rotateX(25deg); opacity: 0; } }
+    .mode-box .plate {
+      margin: 4px auto 12px; padding: 10px 12px 12px; border-radius: 6px; background: linear-gradient(180deg, #f3e6c8, #e2cfa4);
+      color: var(--ink); box-shadow: inset 0 0 0 2px #b89a62, 0 3px 0 rgba(0,0,0,.3);
     }
-    .mode-box p {
-      color: var(--muted);
-      font-size: 14px;
-      margin: 0 0 24px 0;
-    }
-    .mode-box .btn-group {
-      display: flex;
-      gap: 14px;
-      justify-content: center;
-      flex-wrap: wrap;
-    }
-    .mode-box .btn-group button {
-      min-width: 100px;
-      padding: 14px 28px;
-      font-size: 16px;
-    }
-    .mode-box .btn-group .ai-btn {
-      background: linear-gradient(180deg, rgba(79, 140, 255, .25), rgba(79, 140, 255, .10));
-      border-color: rgba(79, 140, 255, .25);
-    }
-    .mode-box .btn-group .pvp-btn {
-      background: linear-gradient(180deg, rgba(255, 209, 102, .25), rgba(255, 209, 102, .10));
-      border-color: rgba(255, 209, 102, .25);
-    }
+    .mode-box h2 { margin: 0; font-family: "Oswald", sans-serif; font-weight: 700; font-size: 30px; line-height: 1.1; text-transform: uppercase; letter-spacing: .03em; }
+    .mode-box h2 em { font-style: normal; color: var(--red); }
+    .mode-box .mini { display: block; width: 150px; height: 110px; margin: 10px auto 8px; }
+    .mode-box p { margin: 0; font-size: 13px; line-height: 1.45; color: #4a3523; }
+    .mode-box .btn-group { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+    .mode-box .btn-group button { min-width: 0; padding: 12px 8px; font-size: 17px; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+    .mode-box .btn-group button i { font-size: 20px; }
+    .mode-box .btn-group button small { font-family: "Be Vietnam Pro", sans-serif; font-weight: 600; font-size: 11px; letter-spacing: 0; opacity: .85; }
+    .mode-box .ai-btn { color: #fff; background: linear-gradient(180deg, #4f83d8, var(--blue-dk)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 0 #12264a, 0 8px 14px rgba(0,0,0,.35); }
+    .mode-box .pvp-btn { color: #fff; background: linear-gradient(180deg, #d65a4e, var(--red-dk)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 0 #4a120c, 0 8px 14px rgba(0,0,0,.35); }
 
-    @media (max-width: 420px) {
-      .topbar {
-        flex-direction: column;
-        align-items: flex-start;
+    @media (max-height: 700px) and (orientation: portrait) { .help { display: none; } }
+
+    /* màn ngang: bàn ở giữa, khay Xanh bên trái, khay Đỏ bên phải */
+    @media (orientation: landscape) {
+      .app {
+        align-content: stretch;
+        grid-template-columns: minmax(170px, 1fr) auto minmax(170px, 1fr);
+        /* khay Xanh ngang mép trên bàn (hàng nhà Xanh), khay Đỏ ngang mép dưới (hàng nhà Đỏ) */
+        grid-template-rows: auto minmax(0, 1fr) auto auto;
+        grid-template-areas: "blue board brand" "help board msg" "help board ctrl" "help board red";
+        column-gap: 18px; row-gap: 10px; align-items: start;
+        padding: calc(10px + env(safe-area-inset-top)) calc(14px + env(safe-area-inset-right)) calc(20px + env(safe-area-inset-bottom)) calc(14px + env(safe-area-inset-left));
       }
-      .status {
-        justify-content: flex-start;
-      }
-      button {
-        padding: 12px 16px;
-        min-width: 80px;
-      }
-      .mode-box {
-        padding: 24px 20px;
-      }
+      .app > *:not(.mode-overlay) { width: 100%; max-width: 300px; }
+      .app > .boardWrap { max-width: none; width: var(--bsz, 60vh); height: 100%; }
+      .brand { justify-content: flex-start; flex-direction: column; gap: 0; text-align: right; align-items: flex-end; }
+      .tray.red { align-self: end; }
+      .help { align-self: end; }
+      .brand h1 { font-size: 22px; line-height: 1.1; }
+      .footer { display: contents; }
+      .help { grid-area: help; text-align: left; }
+      .msg { grid-area: msg; justify-content: flex-start; text-align: left; align-self: start; }
+      .controls { flex-direction: column; align-items: stretch; gap: 10px; }
+      .tray { grid-template-columns: auto 1fr; }
+      .tray .rack { grid-column: 1 / -1; grid-row: 2; }
+      .tray .cnt { grid-column: 2; grid-row: 1; }
     }
+    @media (orientation: landscape) and (max-height: 560px) {
+      .mode-box { width: min(640px, 100%); display: grid; grid-template-columns: 1.3fr 1fr; gap: 14px; align-items: center; padding: 14px; }
+      .mode-box .plate { margin: 0; }
+      .mode-box h2 { font-size: 24px; }
+      .mode-box .mini { width: 120px; height: 88px; margin: 6px auto; }
+      .mode-box .btn-group { grid-template-columns: 1fr; }
+    }
+    @media (orientation: landscape) and (max-height: 430px) { .help { display: none; } .tray .goal { display: none; } }
   </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.2/css/all.min.css">
@@ -333,41 +203,63 @@
   <div class="app">
     <div id="modeOverlay" class="mode-overlay">
       <div class="mode-box">
-        <h2>Chọn chế độ</h2>
-        <p>Bạn muốn chơi với AI hay cùng bạn bè?</p>
+        <div class="plate">
+          <h2>Ngăn cản <em>đến đích</em></h2>
+          <svg class="mini" viewBox="0 0 150 110" aria-hidden="true">
+            <rect x="2" y="2" width="146" height="106" rx="8" fill="#4a2c17"/>
+            <g fill="#d9c49a">
+              <rect x="10" y="10" width="20" height="16" rx="2" fill="#5d86c4"/><rect x="34" y="10" width="20" height="16" rx="2" fill="#5d86c4"/><rect x="58" y="10" width="20" height="16" rx="2" fill="#5d86c4"/><rect x="82" y="10" width="20" height="16" rx="2" fill="#5d86c4"/><rect x="106" y="10" width="20" height="16" rx="2" fill="#5d86c4"/>
+              <rect x="10" y="30" width="20" height="16" rx="2"/><rect x="34" y="30" width="20" height="16" rx="2"/><rect x="58" y="30" width="20" height="16" rx="2"/><rect x="82" y="30" width="20" height="16" rx="2"/><rect x="106" y="30" width="20" height="16" rx="2"/>
+              <rect x="10" y="50" width="20" height="16" rx="2"/><rect x="34" y="50" width="20" height="16" rx="2"/><rect x="58" y="50" width="20" height="16" rx="2"/><rect x="82" y="50" width="20" height="16" rx="2"/><rect x="106" y="50" width="20" height="16" rx="2"/>
+              <rect x="10" y="70" width="20" height="16" rx="2"/><rect x="34" y="70" width="20" height="16" rx="2"/><rect x="58" y="70" width="20" height="16" rx="2"/><rect x="82" y="70" width="20" height="16" rx="2"/><rect x="106" y="70" width="20" height="16" rx="2"/>
+              <rect x="10" y="90" width="20" height="12" rx="2" fill="#c4655a"/><rect x="34" y="90" width="20" height="12" rx="2" fill="#c4655a"/><rect x="58" y="90" width="20" height="12" rx="2" fill="#c4655a"/><rect x="82" y="90" width="20" height="12" rx="2" fill="#c4655a"/><rect x="106" y="90" width="20" height="12" rx="2" fill="#c4655a"/>
+            </g>
+            <rect x="32" y="46.5" width="46" height="5" rx="1.5" fill="#c8473c" stroke="#3e2514"/>
+            <rect x="78.5" y="28" width="5" height="38" rx="1.5" fill="#3f74c9" stroke="#3e2514"/>
+            <circle cx="68" cy="38" r="7" fill="#3f74c9" stroke="#1f3f7a" stroke-width="2"/><circle cx="66" cy="36" r="2" fill="#bcd3ff"/>
+            <circle cx="92" cy="78" r="7" fill="#c8473c" stroke="#7c2219" stroke-width="2"/><circle cx="90" cy="76" r="2" fill="#ffc4ba"/>
+            <rect x="128" y="2" width="20" height="106" fill="#4a2c17"/>
+          </svg>
+          <p>Đưa quân của mình sang hàng xuất phát của đối thủ trước. Mỗi bên có 10 tấm ván để chắn đường.</p>
+        </div>
         <div class="btn-group">
-          <button id="aiModeBtn" class="ai-btn"><i class="fa-solid fa-robot" aria-hidden="true"></i> AI</button>
-          <button id="pvpModeBtn" class="pvp-btn"><i class="fa-solid fa-user-group" aria-hidden="true"></i> 2 người</button>
+          <button id="aiModeBtn" class="ai-btn"><i class="fa-solid fa-robot" aria-hidden="true"></i>Đấu với máy<small>Bạn cầm quân Xanh</small></button>
+          <button id="pvpModeBtn" class="pvp-btn"><i class="fa-solid fa-user-group" aria-hidden="true"></i>Hai người<small>Chuyền máy cho nhau</small></button>
         </div>
       </div>
     </div>
 
-    <div class="topbar">
-      <div class="titleWrap">
-        <div class="title">Ngăn cản đến đích</div>
-        <div class="subtitle">Chạm vào quân của mình để xem nước đi — chạm vào khe tường để đặt tường</div>
-      </div>
-      <div class="status">
-        <div id="turnPill" class="pill turnBlue">Lượt: <b id="turnText">Xanh</b></div>
-        <div class="pill blue"><span class="wall-icon-blue">━</span> <b id="blueWalls">10</b></div>
-        <div class="pill red"><span class="wall-icon-red">━</span> <b id="redWalls">10</b></div>
-      </div>
-    </div>
+    <header class="brand"><h1>Ngăn cản <span>đến đích</span></h1></header>
+    <div id="turnPill" class="sr turnBlue" aria-live="polite">Lượt: <b id="turnText">Xanh</b></div>
 
-    <div class="boardWrap">
+    <section class="tray blue" aria-label="Quân Xanh">
+      <div class="who"><span class="tok"></span><div><span class="name">Xanh</span><span class="goal">Về hàng đỏ phía dưới</span></div></div>
+      <div class="rack" id="blueRack" aria-hidden="true"></div>
+      <b class="cnt" id="blueWalls" title="Số ván còn lại">10</b>
+      <span class="badge">Đến lượt</span>
+    </section>
+
+    <div class="boardWrap" id="boardWrap">
       <canvas id="game"></canvas>
     </div>
 
+    <section class="tray red" aria-label="Quân Đỏ">
+      <div class="who"><span class="tok"></span><div><span class="name" id="redName">Đỏ</span><span class="goal">Về hàng xanh phía trên</span></div></div>
+      <div class="rack" id="redRack" aria-hidden="true"></div>
+      <b class="cnt" id="redWalls" title="Số ván còn lại">10</b>
+      <span class="badge">Đến lượt</span>
+    </section>
+
     <div class="controls hidden" id="controls">
-      <button id="confirmWallBtn" class="secondary" hidden>Xác nhận đặt tường</button>
+      <button id="confirmWallBtn" class="secondary" hidden>Đặt ván này</button>
       <button id="resetBtn" class="primary">Chơi lại</button>
     </div>
 
     <div class="footer">
       <div id="message" class="msg">Chạm vào quân Xanh để xem nước đi.</div>
-      <div class="help"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Chạm vào khe tường (giữa hai ô) để xem trước, rồi bấm "Xác nhận đặt tường". Tường không được chặn toàn bộ đường đi của bên nào.</div>
-      <footer class="tbFooter">Version: D20261103220000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+      <div class="help"><i class="fa-solid fa-lightbulb" aria-hidden="true"></i> Chạm khe giữa hai ô để xem trước tấm ván, rồi bấm "Đặt ván này". Ván không được bít kín mọi lối của bên nào.</div>
     </div>
+    <footer class="tbFooter">Version: D20261103220000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
   </div>
 
   <script>
@@ -426,6 +318,22 @@
         turnText.textContent = state.current === 0 ? 'Xanh' : 'Đỏ';
         turnPill.classList.toggle('turnBlue', state.current === 0);
         turnPill.classList.toggle('turnRed', state.current === 1);
+        document.body.dataset.turn = state.current;
+        document.body.dataset.over = state.gameOver ? '1' : '0';
+        for (const el of document.querySelectorAll('.tray .badge')) el.textContent = state.gameOver ? 'Về đích!' : 'Đến lượt';
+        fillRack(blueRack, state.blue.walls);
+        fillRack(redRack, state.red.walls);
+      }
+
+      // khay ván: mỗi tấm ván còn lại là một thanh nhỏ, ván đã dùng mờ đi
+      const blueRack = document.getElementById('blueRack');
+      const redRack = document.getElementById('redRack');
+      function fillRack(el, left) {
+        if (el.children.length !== WALLS_PER_PLAYER) {
+          el.textContent = '';
+          for (let i = 0; i < WALLS_PER_PLAYER; i++) el.appendChild(document.createElement('i'));
+        }
+        for (let i = 0; i < WALLS_PER_PLAYER; i++) el.children[i].classList.toggle('used', i >= left);
       }
 
       function updateResetButton() {
@@ -481,7 +389,26 @@
 
       function resizeCanvas() {
         const dpr = Math.max(1, Math.min(2, window.devicePixelRatio || 1));
-        const size = Math.floor(Math.min(window.innerWidth * 0.96, window.innerHeight * 0.62, 640));
+        // bàn lấp vừa khoảng trống còn lại của bố cục (dọc: giữa hai khay; ngang: cột giữa)
+        const wrap = document.getElementById('boardWrap');
+        const land = window.matchMedia('(orientation: landscape)').matches;
+        let size;
+        if (land) {
+          size = Math.min(wrap.clientHeight, window.innerWidth - 2 * 190 - 64, 640);
+        } else {
+          // dọc: khay hai bên ôm sát bàn, phần dư chia đều trên/dưới màn
+          const app = wrap.parentElement, cs = getComputedStyle(app);
+          let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), rows = 0;
+          for (const el of app.children) {
+            if (el === wrap || el.id === 'modeOverlay' || el.classList.contains('sr') || el.tagName === 'FOOTER') continue;
+            if (!el.offsetHeight) continue;
+            used += el.offsetHeight; rows++;
+          }
+          used += rows * (parseFloat(cs.rowGap) || 0);
+          size = Math.min(wrap.clientWidth, window.innerHeight - used, 640);
+        }
+        size = Math.max(200, Math.floor(size));
+        document.documentElement.style.setProperty('--bsz', size + 'px');
         canvas.style.width = size + 'px';
         canvas.style.height = size + 'px';
         canvas.width = Math.floor(size * dpr);
@@ -497,6 +424,7 @@
         const offsetY = Math.floor((size - boardPx) / 2);
 
         state.layout = { size, margin, pitch, cellSize, gap, boardPx, offsetX, offsetY };
+        buildBoardBase(dpr);
         render();
       }
 
@@ -1427,7 +1355,7 @@
             state.pendingWall = slot;
             state.selected = null;
             updateResetButton();
-            setMessage('Bấm "Xác nhận đặt tường" để đặt, hoặc chạm khe khác để đổi vị trí.');
+            setMessage('Bấm "Đặt ván này" để đặt, hoặc chạm khe khác để đổi vị trí.');
           } else {
             clearPendingWall();
             setMessage(me.walls <= 0 ? 'Bạn đã hết tường.' : 'Không thể đặt tường ở đây.');
@@ -1491,6 +1419,7 @@
         gameMode = mode;
         modeLocked = true;
         modeOverlay.classList.add('hidden');
+        document.getElementById('redName').textContent = mode === 'ai' ? 'Đỏ · Máy' : 'Đỏ';
         resetGame(true);
         setMessage(mode === 'ai' ? 'Bắt đầu chơi với AI.' : 'Bắt đầu chơi 2 người.');
       }
@@ -1499,6 +1428,7 @@
       pvpModeBtn.addEventListener('click', () => selectMode('pvp'));
 
       window.addEventListener('resize', resizeCanvas);
+      if (window.ResizeObserver) new ResizeObserver(() => resizeCanvas()).observe(document.getElementById('boardWrap'));
       window.addEventListener('orientationchange', resizeCanvas);
       document.addEventListener('contextmenu', e => e.preventDefault());
 
@@ -1513,54 +1443,85 @@
         ctx.closePath();
       }
 
-      function drawBoardBase() {
-        const { offsetX, offsetY, pitch, cellSize } = state.layout;
-
-        ctx.save();
-        const bw = SIZE * pitch - (pitch - cellSize) + 12;
-        const fg = ctx.createLinearGradient(0, offsetY - 6, 0, offsetY - 6 + bw);
-        fg.addColorStop(0, 'rgba(79,140,255,.45)');
-        fg.addColorStop(.5, 'rgba(120,130,170,.18)');
-        fg.addColorStop(1, 'rgba(255,94,103,.45)');
-        ctx.fillStyle = fg;
-        roundRect(ctx, offsetX - 8, offsetY - 8, bw + 4, bw + 4, 22);
-        ctx.fill();
-        ctx.fillStyle = '#0f1424';
-        roundRect(ctx, offsetX - 6, offsetY - 6, bw, bw, 20);
-        ctx.fill();
-
+      // Bàn vẽ sẵn một lần mỗi khi đổi cỡ: khung gỗ óc chó, rãnh tối, ô đá sa thạch
+      let boardBase = null;
+      function hash(x, y) { const n = Math.sin(x * 127.1 + y * 311.7) * 43758.5453; return n - Math.floor(n); }
+      function buildBoardBase(dpr) {
+        const L = state.layout, S = L.size;
+        boardBase = document.createElement('canvas');
+        boardBase.width = Math.floor(S * dpr); boardBase.height = Math.floor(S * dpr);
+        const g = boardBase.getContext('2d');
+        g.setTransform(dpr, 0, 0, dpr, 0, 0);
+        // khung gỗ
+        const wg = g.createLinearGradient(0, 0, S, S);
+        wg.addColorStop(0, '#8a5a33'); wg.addColorStop(.5, '#6b4426'); wg.addColorStop(1, '#4a2c17');
+        g.fillStyle = wg; roundRect(g, 0, 0, S, S, 14); g.fill();
+        g.save(); roundRect(g, 0, 0, S, S, 14); g.clip();
+        g.globalAlpha = .16; g.strokeStyle = '#2a170a'; g.lineWidth = 1;
+        for (let i = 0; i < 46; i++) { // vân gỗ
+          const y0 = (i / 46) * S + hash(i, 1) * 6;
+          g.beginPath(); g.moveTo(0, y0);
+          g.bezierCurveTo(S * .3, y0 + (hash(i, 2) - .5) * 14, S * .7, y0 + (hash(i, 3) - .5) * 14, S, y0 + (hash(i, 4) - .5) * 8);
+          g.stroke();
+        }
+        g.restore();
+        g.strokeStyle = 'rgba(255,230,190,.25)'; g.lineWidth = 1.5; roundRect(g, 1.5, 1.5, S - 3, S - 3, 13); g.stroke();
+        // lòng bàn trũng (rãnh tường)
+        const pad = Math.max(4, L.gap * .7);
+        g.fillStyle = '#24140a';
+        roundRect(g, L.offsetX - pad, L.offsetY - pad, L.boardPx + pad * 2, L.boardPx + pad * 2, 8); g.fill();
+        g.strokeStyle = 'rgba(0,0,0,.6)'; g.lineWidth = 2;
+        roundRect(g, L.offsetX - pad + 1, L.offsetY - pad + 1, L.boardPx + pad * 2 - 2, L.boardPx + pad * 2 - 2, 8); g.stroke();
+        // ô đá
         for (let y = 0; y < SIZE; y++) {
           for (let x = 0; x < SIZE; x++) {
-            const r = cellRect(x, y);
-            // ô nổi: màu theo hàng đích (xanh trên, đỏ dưới), giữa bàn xen kẽ hai sắc xanh thép
+            const r = cellRect(x, y), v = hash(x, y);
             let top, bot;
-            if (y === 0) { top = '#26437f'; bot = '#1a2d5c'; }
-            else if (y === 8) { top = '#7f2a35'; bot = '#5a1a22'; }
-            else if ((x + y) % 2 === 0) { top = '#33405e'; bot = '#252f47'; }
-            else { top = '#2c3854'; bot = '#212a40'; }
-            const g = ctx.createLinearGradient(0, r.y, 0, r.y + r.h);
-            g.addColorStop(0, top);
-            g.addColorStop(1, bot);
-            ctx.fillStyle = g;
-            roundRect(ctx, r.x, r.y, r.w, r.h, 8);
-            ctx.fill();
-
-            ctx.strokeStyle = 'rgba(255,255,255,.10)';
-            ctx.lineWidth = 1;
-            roundRect(ctx, r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1, 8);
-            ctx.stroke();
-            ctx.fillStyle = 'rgba(0,0,0,.22)';
-            ctx.fillRect(r.x + 3, r.y + r.h - 3, r.w - 6, 2);
+            if (y === 0) { top = '#6f97d6'; bot = '#3f6aae'; }
+            else if (y === 8) { top = '#d77a6c'; bot = '#a8483d'; }
+            else { const k = Math.round(v * 14 - 7); top = shade('#e4d2ab', k); bot = shade('#c7ae80', k); }
+            const cg = g.createLinearGradient(0, r.y, 0, r.y + r.h);
+            cg.addColorStop(0, top); cg.addColorStop(1, bot);
+            g.fillStyle = cg; roundRect(g, r.x, r.y, r.w, r.h, Math.max(3, r.w * .12)); g.fill();
+            // lốm đốm đá
+            g.save(); roundRect(g, r.x, r.y, r.w, r.h, Math.max(3, r.w * .12)); g.clip();
+            for (let k = 0; k < 7; k++) {
+              g.globalAlpha = .10 + hash(x * 7 + k, y * 3) * .12;
+              g.fillStyle = hash(k, x + y) > .5 ? '#fff8e6' : '#6b5232';
+              g.beginPath(); g.arc(r.x + hash(x + k, y * 2) * r.w, r.y + hash(y + k, x * 5) * r.h, .6 + hash(k, y) * 1.6, 0, Math.PI * 2); g.fill();
+            }
+            g.restore(); g.globalAlpha = 1;
+            // vát cạnh: sáng trên, tối dưới
+            g.fillStyle = 'rgba(255,255,255,.35)'; g.fillRect(r.x + 3, r.y + 1, r.w - 6, 1.5);
+            g.fillStyle = 'rgba(0,0,0,.28)'; g.fillRect(r.x + 3, r.y + r.h - 2.5, r.w - 6, 2);
           }
         }
-        ctx.restore();
+        // cờ đuôi nheo đánh dấu hàng đích ở hai đầu khung
+        const fl = (cx, cy, col, dir) => {
+          g.fillStyle = '#2a170a'; g.fillRect(cx - 1, cy - 7, 2, 14);
+          g.fillStyle = col; g.beginPath(); g.moveTo(cx + 1, cy - 7); g.lineTo(cx + 1 + 9 * dir, cy - 4); g.lineTo(cx + 1, cy - 1); g.closePath(); g.fill();
+        };
+        const m = L.offsetY / 2;
+        if (m > 7) {
+          fl(L.offsetX + 6, m, '#c8473c', 1); fl(L.offsetX + L.boardPx - 6, m, '#c8473c', -1);
+          fl(L.offsetX + 6, S - m, '#3f74c9', 1); fl(L.offsetX + L.boardPx - 6, S - m, '#3f74c9', -1);
+        }
+      }
+      function shade(hex, k) {
+        const n = parseInt(hex.slice(1), 16);
+        const c = v => Math.max(0, Math.min(255, v + k));
+        return 'rgb(' + c(n >> 16) + ',' + c((n >> 8) & 255) + ',' + c(n & 255) + ')';
+      }
+      function drawBoardBase() {
+        if (!boardBase) return;
+        ctx.drawImage(boardBase, 0, 0, state.layout.size, state.layout.size);
       }
 
       function drawEndGameFill() {
         if (!state.endEffect) return;
         const progress = state.endEffect.progress;
         const winner = state.endEffect.winner;
-        const color = winner === 0 ? '#4f8cff' : '#ff5e67';
+        const color = winner === 0 ? 'rgba(63,116,201,.6)' : 'rgba(200,71,60,.6)';
 
         for (let y = 0; y < SIZE; y++) {
           for (let x = 0; x < SIZE; x++) {
@@ -1578,74 +1539,68 @@
         }
       }
 
+      // tấm ván sơn màu đội: vân gỗ, hai đầu đinh, bóng đổ xuống rãnh
       function drawWallBar(x, y, w, h, color1, color2) {
+        const horiz = w >= h;
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,.3)';
-        ctx.shadowBlur = 12;
-        const g = ctx.createLinearGradient(x, y, x + w, y + h);
-        g.addColorStop(0, color1);
-        g.addColorStop(0.5, color2);
-        g.addColorStop(1, color1);
-        ctx.fillStyle = g;
-        roundRect(ctx, x, y, w, h, 5);
-        ctx.fill();
-        ctx.shadowBlur = 0;
-        ctx.strokeStyle = 'rgba(255,255,255,.15)';
-        ctx.lineWidth = 1;
-        roundRect(ctx, x + 0.5, y + 0.5, w - 1, h - 1, 5);
-        ctx.stroke();
+        ctx.fillStyle = 'rgba(0,0,0,.45)';
+        roundRect(ctx, x + 1.5, y + 2.5, w, h, 3); ctx.fill();
+        const ex = horiz ? 0 : 1.5, ey = horiz ? 1.5 : 0;   // ván nhô rộng hơn khe một chút
+        const X = x - ex, Y = y - ey, Wd = w + ex * 2, Hd = h + ey * 2;
+        const g = horiz ? ctx.createLinearGradient(0, Y, 0, Y + Hd) : ctx.createLinearGradient(X, 0, X + Wd, 0);
+        g.addColorStop(0, color1); g.addColorStop(.55, color2); g.addColorStop(1, shade(color2, -40));
+        ctx.fillStyle = g; roundRect(ctx, X, Y, Wd, Hd, 3); ctx.fill();
+        ctx.save(); roundRect(ctx, X, Y, Wd, Hd, 3); ctx.clip();
+        ctx.globalAlpha = .22; ctx.strokeStyle = '#1a0d05'; ctx.lineWidth = .8;
+        for (let i = 1; i < 3; i++) {
+          ctx.beginPath();
+          if (horiz) { const yy = Y + Hd * i / 3; ctx.moveTo(X, yy); ctx.bezierCurveTo(X + Wd * .3, yy - 1, X + Wd * .6, yy + 1, X + Wd, yy); }
+          else { const xx = X + Wd * i / 3; ctx.moveTo(xx, Y); ctx.bezierCurveTo(xx - 1, Y + Hd * .3, xx + 1, Y + Hd * .6, xx, Y + Hd); }
+          ctx.stroke();
+        }
+        ctx.restore();
+        ctx.strokeStyle = 'rgba(20,10,4,.7)'; ctx.lineWidth = 1; roundRect(ctx, X + .5, Y + .5, Wd - 1, Hd - 1, 3); ctx.stroke();
+        ctx.fillStyle = '#e8dcc0';
+        const nr = Math.max(1, Math.min(Wd, Hd) * .18);
+        for (const t of [.12, .88]) {
+          ctx.beginPath();
+          ctx.arc(horiz ? X + Wd * t : X + Wd / 2, horiz ? Y + Hd / 2 : Y + Hd * t, nr, 0, Math.PI * 2); ctx.fill();
+        }
         ctx.restore();
       }
 
       function drawWalls() {
-        if (!state.selected && !state.gameOver) {
-          ctx.save();
-          ctx.globalAlpha = 0.1;
-          for (let y = 0; y < 8; y++) {
-            for (let x = 0; x < 8; x++) {
-              const rh = hWallRect(x, y);
-              ctx.fillStyle = 'rgba(255,255,255,.08)';
-              roundRect(ctx, rh.x, rh.y, rh.w, rh.h, 4);
-              ctx.fill();
-              const rv = vWallRect(x, y);
-              roundRect(ctx, rv.x, rv.y, rv.w, rv.h, 4);
-              ctx.fill();
-            }
-          }
-          ctx.restore();
-        }
-
         for (const key of state.blueH) {
           const [x, y] = key.split(',').map(Number);
           const r = hWallRect(x, y);
-          drawWallBar(r.x, r.y, r.w, r.h, '#4f8cff', '#2d67e0');
+          drawWallBar(r.x, r.y, r.w, r.h, '#6f9be6', '#2f5fae');
         }
         for (const key of state.blueV) {
           const [x, y] = key.split(',').map(Number);
           const r = vWallRect(x, y);
-          drawWallBar(r.x, r.y, r.w, r.h, '#4f8cff', '#2d67e0');
+          drawWallBar(r.x, r.y, r.w, r.h, '#6f9be6', '#2f5fae');
         }
 
         for (const key of state.redH) {
           const [x, y] = key.split(',').map(Number);
           const r = hWallRect(x, y);
-          drawWallBar(r.x, r.y, r.w, r.h, '#ff5e67', '#d63d48');
+          drawWallBar(r.x, r.y, r.w, r.h, '#e8796c', '#b23a2f');
         }
         for (const key of state.redV) {
           const [x, y] = key.split(',').map(Number);
           const r = vWallRect(x, y);
-          drawWallBar(r.x, r.y, r.w, r.h, '#ff5e67', '#d63d48');
+          drawWallBar(r.x, r.y, r.w, r.h, '#e8796c', '#b23a2f');
         }
 
         if (state.pendingWall) {
           const pw = state.pendingWall;
           const r = pw.orientation === 'H' ? hWallRect(pw.x, pw.y) : vWallRect(pw.x, pw.y);
           ctx.save();
-          ctx.fillStyle = 'rgba(255,209,102,.18)';
-          roundRect(ctx, r.x, r.y, r.w, r.h, 5);
-          ctx.fill();
+          ctx.globalAlpha = .75;
+          drawWallBar(r.x, r.y, r.w, r.h, state.current === 0 ? '#6f9be6' : '#e8796c', state.current === 0 ? '#2f5fae' : '#b23a2f');
+          ctx.globalAlpha = 1;
           ctx.setLineDash([6, 4]);
-          ctx.strokeStyle = '#ffd166';
+          ctx.strokeStyle = '#ffe08a';
           ctx.lineWidth = 2;
           roundRect(ctx, r.x + 1, r.y + 1, r.w - 2, r.h - 2, 5);
           ctx.stroke();
@@ -1653,37 +1608,39 @@
         }
       }
 
+      // con tốt sơn mài nhìn từ trên chếch xuống: bóng, đế, thân, đầu tròn bóng loáng
       function drawPawnAt(x, y, color1, color2, label) {
         const r = cellRect(x, y);
         const cx = r.x + r.w / 2;
         const cy = r.y + r.h / 2;
-        const rad = Math.min(r.w, r.h) * 0.34;
-
+        const u = Math.min(r.w, r.h);
+        const dark = shade(color2, -45);
         ctx.save();
-        ctx.shadowColor = 'rgba(0,0,0,.45)';
-        ctx.shadowBlur = 10;
-        ctx.shadowOffsetY = 4;
-
-        const grad = ctx.createRadialGradient(cx - rad * .35, cy - rad * .35, rad * .2, cx, cy, rad * 1.1);
-        grad.addColorStop(0, '#ffffff');
-        grad.addColorStop(0.2, color1);
-        grad.addColorStop(1, color2);
-
-        ctx.fillStyle = grad;
+        ctx.fillStyle = 'rgba(30,15,5,.4)';
+        ctx.beginPath(); ctx.ellipse(cx + u * .05, cy + u * .3, u * .36, u * .13, 0, 0, Math.PI * 2); ctx.fill();
+        // đế
+        ctx.fillStyle = dark;
+        ctx.beginPath(); ctx.ellipse(cx, cy + u * .24, u * .34, u * .13, 0, 0, Math.PI * 2); ctx.fill();
+        const bg = ctx.createLinearGradient(cx - u * .34, 0, cx + u * .34, 0);
+        bg.addColorStop(0, color2); bg.addColorStop(.35, color1); bg.addColorStop(1, dark);
+        ctx.fillStyle = bg;
+        ctx.beginPath(); ctx.ellipse(cx, cy + u * .2, u * .34, u * .12, 0, 0, Math.PI * 2); ctx.fill();
+        // thân loe
         ctx.beginPath();
-        ctx.arc(cx, cy, rad, 0, Math.PI * 2);
-        ctx.fill();
-
-        ctx.shadowBlur = 0;
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(255,255,255,.22)';
-        ctx.stroke();
-
-        ctx.fillStyle = 'rgba(255,255,255,.94)';
-        ctx.font = 'bold 13px "Oswald", sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(label, cx, cy + 0.5);
+        ctx.moveTo(cx - u * .24, cy + u * .2);
+        ctx.quadraticCurveTo(cx - u * .1, cy + u * .02, cx - u * .1, cy - u * .1);
+        ctx.lineTo(cx + u * .1, cy - u * .1);
+        ctx.quadraticCurveTo(cx + u * .1, cy + u * .02, cx + u * .24, cy + u * .2);
+        ctx.closePath(); ctx.fill();
+        // cổ
+        ctx.fillStyle = dark;
+        ctx.beginPath(); ctx.ellipse(cx, cy - u * .1, u * .15, u * .05, 0, 0, Math.PI * 2); ctx.fill();
+        // đầu
+        const hg = ctx.createRadialGradient(cx - u * .07, cy - u * .27, u * .02, cx, cy - u * .2, u * .2);
+        hg.addColorStop(0, '#ffffff'); hg.addColorStop(.25, color1); hg.addColorStop(1, color2);
+        ctx.fillStyle = hg;
+        ctx.beginPath(); ctx.arc(cx, cy - u * .2, u * .17, 0, Math.PI * 2); ctx.fill();
+        ctx.strokeStyle = dark; ctx.lineWidth = 1; ctx.stroke();
         ctx.restore();
       }
 
@@ -1698,15 +1655,15 @@
           const curY = data.fromY + (data.toY - data.fromY) * progress;
 
           if (data.player === 0) {
-            drawPawnAt(curX, curY, '#4f8cff', '#2d67e0', 'B');
-            drawPawnAt(red.x, red.y, '#ff5e67', '#d63d48', 'R');
+            drawPawnAt(curX, curY, '#7fa8f0', '#2f5fae', 'B');
+            drawPawnAt(red.x, red.y, '#f08a7c', '#b23a2f', 'R');
           } else {
-            drawPawnAt(blue.x, blue.y, '#4f8cff', '#2d67e0', 'B');
-            drawPawnAt(curX, curY, '#ff5e67', '#d63d48', 'R');
+            drawPawnAt(blue.x, blue.y, '#7fa8f0', '#2f5fae', 'B');
+            drawPawnAt(curX, curY, '#f08a7c', '#b23a2f', 'R');
           }
         } else {
-          drawPawnAt(blue.x, blue.y, '#4f8cff', '#2d67e0', 'B');
-          drawPawnAt(red.x, red.y, '#ff5e67', '#d63d48', 'R');
+          drawPawnAt(blue.x, blue.y, '#7fa8f0', '#2f5fae', 'B');
+          drawPawnAt(red.x, red.y, '#f08a7c', '#b23a2f', 'R');
         }
       }
 
@@ -1718,9 +1675,9 @@
         const moves = legalMoves(me.x, me.y, opp);
 
         ctx.save();
-        const color = player === 0 ? 'rgba(79,140,255,0.25)' : 'rgba(255,94,103,0.25)';
-        const stroke = player === 0 ? 'rgba(79,140,255,0.6)' : 'rgba(255,94,103,0.6)';
-        const dot = player === 0 ? 'rgba(79,140,255,0.7)' : 'rgba(255,94,103,0.7)';
+        const color = player === 0 ? 'rgba(63,116,201,0.30)' : 'rgba(200,71,60,0.30)';
+        const stroke = player === 0 ? '#2f5fae' : '#b23a2f';
+        const dot = player === 0 ? 'rgba(31,63,122,0.75)' : 'rgba(124,34,25,0.75)';
         for (const m of moves) {
           const r = cellRect(m.x, m.y);
           ctx.fillStyle = color;
@@ -1757,11 +1714,11 @@
         const winnerText = state.endEffect.winner === 0 ? 'Xanh thắng!' : 'Đỏ thắng!';
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 40px system-ui, sans-serif';
+        ctx.font = '700 44px "Oswald", sans-serif';
         ctx.fillText(winnerText, w / 2, h / 2 - 6);
 
         ctx.shadowBlur = 0;
-        ctx.font = '18px system-ui, sans-serif';
+        ctx.font = '600 16px "Be Vietnam Pro", sans-serif';
         ctx.fillStyle = 'rgba(255,255,255,0.82)';
         ctx.fillText('Bấm "Chơi lại" để bắt đầu ván mới', w / 2, h / 2 + 34);
 
@@ -1774,11 +1731,6 @@
         const h = canvas.clientHeight || state.layout.size;
 
         ctx.clearRect(0, 0, w, h);
-        const grad = ctx.createRadialGradient(w * 0.5, h * 0.35, 40, w * 0.5, h * 0.5, Math.max(w, h) * 0.7);
-        grad.addColorStop(0, '#141b33');
-        grad.addColorStop(1, '#080b16');
-        ctx.fillStyle = grad;
-        ctx.fillRect(0, 0, w, h);
 
         drawBoardBase();
         drawEndGameFill();
