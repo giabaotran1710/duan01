@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <script src="../../maintenance.js?v=20261116a" data-game="bidaBtn"></script>
+<script src="../../sfx.js?v=20261122a"></script>
 <script src="../../scene.js" data-game="bidaBtn"></script>
 <script src="../../bgm.js?v=20261114" data-src="../../audio/bida.mp3" data-volume="0.35"></script>
 <script src="../../landscape.js?v=20261115"></script>
@@ -5217,6 +5218,7 @@ currentShot = {
   if(GAME_MODE === "carom") caromBeginShot(side);
 
   // Lực + điểm chạm cơ ⇒ vận tốc và xoáy ban đầu của bi cái
+  if(window.SFX) SFX.play("clack", { pitch: 0.7, vol: 0.3 + clamp(power, 0, 1) * 0.8 });
   strikeCueBall(cueBall, dir, power, shotSpin);
 }
 
@@ -5647,6 +5649,7 @@ function isLeftRightPocketOpeningY(y){
 
 function markRailHit(b){
   if(!currentShot || !shotLocked) return;
+  if(window.SFX){ const v = Math.hypot(b.vx, b.vy); if(v > 1.5) SFX.play("bump", { vol: Math.min(1, 0.15 + v / 45), pitch: 0.75 }); }
 
   currentShot.railHit = true;
 
@@ -5866,6 +5869,7 @@ function handlePocket(b){
 
     // Hoạt cảnh rơi nhận vận tốc lúc lọt lỗ để bi chạy tiếp vào lòng lỗ, không khựng lại
     startPocketSinkAnimation(b, p);
+    if(window.SFX) SFX.play("place", { pitch: 0.65 });
 
     b.active = false;
     stopBall(b);
@@ -5886,6 +5890,10 @@ function handlePocket(b){
   
 function handleCollisions(){
   resolveBallContacts(balls, (a, b) => {
+    if(window.SFX){
+      const rv = Math.hypot(a.vx - b.vx, a.vy - b.vy);
+      if(rv > 1.5) SFX.play("clack", { vol: Math.min(1.2, 0.15 + rv / 40), pitch: 0.95 + Math.random() * 0.1 });
+    }
     // Ghi nhận bi đầu tiên bi cái chạm.
     if(currentShot && !currentShot.firstHit){
       if(a === cueBall && b.num !== 0){
@@ -6150,6 +6158,7 @@ function placeCueBall(){
 }
 
 function endGame(resultType, subText = ""){
+  if(window.SFX && !gameOver) setTimeout(() => SFX.play(resultType === "win" ? "win" : resultType === "lose" ? "lose" : "level"), 300);
   gameOver = true;
 
   stopPlayerShotTimer(false);

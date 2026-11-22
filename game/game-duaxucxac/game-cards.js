@@ -64,6 +64,7 @@ function getItemRarityText(rarity){
 
 function showCardReward(who,item){
   return new Promise(resolve=>{
+    if(window.SFX){ SFX.play("flip"); if(who==="player") setTimeout(()=>SFX.play("pick"),180); }
     const ownerText=who==="player" ? "BẠN NHẬN ĐƯỢC THẺ" : "AI NHẬN ĐƯỢC THẺ";
     const groupText=getItemGroupText(item);
     const rarityText=getItemRarityText(item.rarity);
@@ -257,6 +258,7 @@ function renderInventoryList(who){
 
 function showCardConsumeEffect(who,item){
   return new Promise(resolve=>{
+    if(window.SFX) SFX.play("pop");
     const statTarget=who==="player" ? playerStatCard : aiStatCard;
     const statRect=statTarget.getBoundingClientRect();
 

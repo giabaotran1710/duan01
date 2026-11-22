@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8"/>
 <script src="../maintenance.js?v=20261116a" data-game="codam"></script>
+<script src="../sfx.js?v=20261122a"></script>
 <script src="../fx.js?v=20261112a"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>Cờ đam</title>
@@ -1110,6 +1111,10 @@ function damScreen(r, c) {
   return { x: ov.left + p.x, y: ov.top + p.y };
 }
 function fxDamLand(piece, toR, toC, victimR, victimC, victimPiece) {
+  if (window.SFX) {
+    SFX.play(victimPiece ? 'capture' : 'move', { pitch: piece.color === WHITE ? 1.06 : 0.94 });
+    if (!piece.king && ((piece.color === WHITE && toR === 0) || (piece.color === BLACK && toR === BS - 1))) setTimeout(() => SFX.play('level'), 160);
+  }
   try {
     const q = damScreen(toR, toC), sz = cellSize(), warm = piece.color === WHITE;
     FX.ring(q.x, q.y, warm ? '#f0d080' : '#b0b0b0', sz * .9, 3);
@@ -1302,7 +1307,7 @@ function handleClick(r, c) {
       return;
     }
     const pieceMoves = hasAnyJump ? getJumps(s.board,r,c,cell) : getMoves(s.board,r,c,cell);
-    if (pieceMoves.length>0) { s.selected={r,c}; renderBoard(); return; }
+    if (pieceMoves.length>0) { s.selected={r,c}; if (window.SFX) SFX.play('select'); renderBoard(); return; }
   }
   s.selected = null;
   renderBoard();
@@ -1333,6 +1338,7 @@ async function executeMove(fromR, fromC, move, isJump) {
 }
 
 function fxDamEnd(winner) {
+  if (window.SFX) setTimeout(() => SFX.play(state.screen !== 'ai' || winner === WHITE ? 'win' : 'lose'), 300);
   try {
     const mine = state.screen !== 'ai' || winner === WHITE;
     if (mine) { FX.rain({ n: 80, colors: ['#ffd25a', '#f0d080', '#ffffff', '#c0392b'], shapes: ['circle', 'star'], size: 11 }); FX.burst(innerWidth / 2, innerHeight * .4, { n: 40, colors: ['#ffd25a', '#ffffff', '#c0392b'], shapes: ['star'], speed: 440, gravity: 320, size: 10, life: 1.1 }); }
