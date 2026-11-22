@@ -163,6 +163,7 @@ svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;str
 @media (max-height:700px){.card{flex-basis:76px;height:104px}.hand{min-height:114px}.info{min-height:30px}.castle{padding:4px 10px}}
 @media (prefers-reduced-motion:reduce){*{animation-duration:.01ms !important;transition-duration:.01ms !important}}
 </style>
+<script src="../sfx.js?v=20261122a"></script>
 </head>
 <body>
 <div class="app">
@@ -430,7 +431,7 @@ $('hand').addEventListener('click', e => {
   const id = +b.dataset.card, me = myView();
   if (s.turn !== me || !isHuman(me)) return;
   if (!V.legal(s).some(a => a.id === id)) { const c = s.hand[me].find(x => x.id === id); selUnit = null; sel = null; render(); flash(c ? C[c.k].n + ': ' + whyNot(c) : ''); return; }
-  sel = sel === id ? null : id; selUnit = null; render();
+  sel = sel === id ? null : id; selUnit = null; if (window.SFX && sel) SFX.play('select'); render();
 });
 function whyNot(c) {
   const d = C[c.k], me = myView();
@@ -449,8 +450,10 @@ $('board').addEventListener('click', e => {
   if (sel && lane && s.turn === me) {
     const l = +lane.dataset.lane, c = s.hand[me].find(x => x.id === sel);
     if (c && V.apply(s, { t: C[c.k].t === 'unit' ? 'unit' : 'trick', id: sel, lane: l })) {
+      if (window.SFX) SFX.play('deal');
       sel = null; s.log = []; render(); return;
     }
+    if (window.SFX) SFX.play('bump');
     flash('Làn này không đặt được.'); return;
   }
   if (u) { selUnit = +u.dataset.uid === selUnit ? null : +u.dataset.uid; render(); }
@@ -479,11 +482,12 @@ function setHp(el, delta) {
 async function replay(my) {
   const log = s.log.slice(); s.log = [];
   if (ai) ai.observe(log.filter(e => e.e === 'flip'), 1);
-  bannerEl('Khai chiến!'); await sleep(900);
+  bannerEl('Khai chiến!'); if (window.SFX) SFX.play('whoosh'); await sleep(900);
   const me = myView();
   for (const e of log) {
     if (my !== token) return;
     if (e.e === 'flip') {
+      if (window.SFX) SFX.play('flip');
       const lane = laneEl(e.lane);
       if (lane) {
         const g = $('game').getBoundingClientRect(), r = lane.getBoundingClientRect();
@@ -502,16 +506,19 @@ async function replay(my) {
       const el = unitEl(e.to);
       if (e.dmg > 0) { setHp(el, -e.dmg); floatAt(el, '−' + e.dmg); }
       else floatAt(el, 'Đỡ!', true);
+      if (window.SFX) SFX.play(e.dmg > 0 ? 'hit' : 'bump');
       await sleep(260);
     } else if (e.e === 'castle') {
       castleDisp[e.target] -= e.dmg;
       const cm = e.target === me ? $('cMe') : $('cFoe');
       cm.innerHTML = castleHtml(e.target, e.target !== me);
       cm.classList.remove('shake'); void cm.offsetWidth; cm.classList.add('shake');
+      if (window.SFX) SFX.play('boom');
       floatAt(cm, '−' + e.dmg);
       await sleep(320);
     } else if (e.e === 'die') {
       const el = unitEl(e.uid); if (el) el.classList.add('dying');
+      if (window.SFX) SFX.play('pop', { pitch: 0.7 });
       await sleep(240);
     }
   }
@@ -525,6 +532,7 @@ function showEnd() {
   const w = s.winner, me = mode === 'ai' ? 0 : w;
   const won = mode === 'ai' ? w === 0 : true;
   castleDisp = [s.hp[0], s.hp[1]]; render();
+  if (window.SFX) SFX.play(won ? 'win' : 'lose');
   $('endBody').innerHTML = '<h2>' + (mode === 'ai' ? (won ? 'Bạn thắng!' : 'Máy thắng') : myName(w) + ' thắng!') + '</h2>' +
     '<p>' + s.why + ' · vòng ' + Math.min(s.round, V.MAX_ROUND) + ' · Thành bạn ' + Math.max(0, s.hp[0]) + ' · Thành ' + (mode === 'ai' ? 'máy' : 'người 2') + ' ' + Math.max(0, s.hp[1]) + '</p>' +
     '<div class="menuBox" style="margin:14px auto 0"><button class="big" id="bAgain" style="justify-content:center;align-items:center">Chơi lại</button><button class="big dark" id="bMenu" style="justify-content:center;align-items:center">Về menu</button></div>';
