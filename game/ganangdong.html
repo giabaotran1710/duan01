@@ -2638,7 +2638,101 @@ function playLoseSound() {
                 ctx.restore();
             }
 
+            // Màn dọc: phần đất dưới mặt đường rất cao, nên HUD xuống đó thành ổ rơm + biển điểm cắm trong đất
+            function portraitHud() {
+                return canvasHeight > canvasWidth * 1.25 && canvasHeight - getGroundY() > 230;
+            }
+            function hudPanelRect() {
+                const top = groundY + Math.max(78, (canvasHeight - groundY) * 0.26);
+                const bottom = canvasHeight - 26;
+                const h = Math.min(210, bottom - top), w = Math.min(canvasWidth - 28, 420);
+                return { x: canvasWidth / 2 - w / 2, y: top + (bottom - top - h) * 0.35, w, h };
+            }
+            function drawSoilDetail(ctx) {
+                // rễ cỏ thả xuống từ mặt đất và các lớp đất: cố định theo màn, không trôi
+                const g0 = groundY, H = canvasHeight;
+                ctx.save();
+                const lay = ctx.createLinearGradient(0, g0 + 40, 0, H);
+                lay.addColorStop(0, 'rgba(40,22,8,0)'); lay.addColorStop(0.35, 'rgba(40,22,8,0.18)'); lay.addColorStop(1, 'rgba(25,12,4,0.5)');
+                ctx.fillStyle = lay; ctx.fillRect(0, g0 + 40, canvasWidth, H - g0 - 40);
+                ctx.strokeStyle = 'rgba(70,45,20,0.45)'; ctx.lineWidth = 1.4; ctx.lineCap = 'round';
+                const n = Math.ceil(canvasWidth / 46);
+                for (let i = 0; i < n; i++) {
+                    const x = i * 46 + ((i * 37) % 19), len = 22 + ((i * 53) % 30);
+                    ctx.beginPath(); ctx.moveTo(x, g0 + 14);
+                    ctx.quadraticCurveTo(x + ((i % 2) ? 8 : -8), g0 + 14 + len * 0.6, x + ((i % 3) - 1) * 6, g0 + 14 + len);
+                    ctx.stroke();
+                }
+                ctx.restore();
+            }
+            function drawNest(ctx, x, y, w, h) {
+                ctx.save();
+                ctx.fillStyle = '#7A5426';
+                ctx.beginPath(); ctx.ellipse(x + w / 2, y + h * 0.62, w / 2, h * 0.42, 0, 0, Math.PI * 2); ctx.fill();
+                ctx.strokeStyle = 'rgba(227,189,110,0.85)'; ctx.lineWidth = 1.6; ctx.lineCap = 'round';
+                for (let i = 0; i < 26; i++) {
+                    const a = (i / 26) * Math.PI, sx = x + w / 2 - Math.cos(a) * w * 0.47;
+                    const sy = y + h * 0.62 + Math.sin(a) * h * 0.3;
+                    ctx.beginPath(); ctx.moveTo(sx, sy); ctx.lineTo(sx + (i % 2 ? 10 : -10), sy - 5 + (i % 3) * 2); ctx.stroke();
+                }
+                ctx.restore();
+            }
+            function drawHudPortrait(ctx) {
+                drawSoilDetail(ctx);
+                const R = hudPanelRect();
+                const k = Math.max(0.85, Math.min(1.15, R.w / 360));
+                // hai cọc tre cắm xuống đất giữ biển
+                ctx.save();
+                ctx.fillStyle = UI.bambooDark;
+                [R.x + R.w * 0.18, R.x + R.w * 0.82].forEach(px => {
+                    ctx.fillRect(px - 5, R.y - 22, 10, R.h + 30);
+                    ctx.fillStyle = UI.bamboo; ctx.fillRect(px - 5, R.y - 22, 3, R.h + 30);
+                    ctx.fillStyle = '#7C5A22'; ctx.fillRect(px - 6, R.y - 22 + (R.h + 30) * 0.4, 12, 3);
+                    ctx.fillStyle = UI.bambooDark;
+                });
+                ctx.restore();
+                drawPlank(ctx, R.x, R.y, R.w, R.h, 16 * k);
+                // ổ rơm + trứng (thể lực)
+                const eggs = CONSTANTS.STAMINA_MAX;
+                const egg = Math.min(40 * k, (R.w - 56) / (eggs * 1.22));
+                const nestW = egg * eggs * 1.22 + 28, nestH = egg * 1.55;
+                const nx = canvasWidth / 2 - nestW / 2, ny = R.y + 14 * k;
+                drawNest(ctx, nx, ny, nestW, nestH);
+                for (let i = 0; i < eggs; i++) {
+                    drawEgg(ctx, nx + 14 + egg * 1.22 * (i + 0.5), ny + nestH * 0.46, egg, i < Math.floor(stamina));
+                }
+                // vạch chia + điểm/kỷ lục
+                const ly = ny + nestH + 10 * k;
+                ctx.fillStyle = 'rgba(227,189,110,0.35)';
+                ctx.fillRect(R.x + 18, ly, R.w - 36, 2);
+                const rowH = R.y + R.h - ly;
+                ctx.textAlign = 'left';
+                ctx.fillStyle = UI.inkSoft;
+                ctx.font = `bold ${Math.round(12 * k)}px ${UI.font}`;
+                ctx.fillText('ĐIỂM', R.x + 22, ly + rowH * 0.34);
+                ctx.fillStyle = UI.ink;
+                ctx.font = `bold ${Math.round(Math.min(40 * k, rowH * 0.5))}px ${UI.font}`;
+                ctx.fillText(String(Math.floor(score)), R.x + 22, ly + rowH * 0.78);
+                ctx.textAlign = 'right';
+                ctx.fillStyle = UI.inkSoft;
+                ctx.font = `bold ${Math.round(12 * k)}px ${UI.font}`;
+                ctx.fillText('KỶ LỤC', R.x + R.w - 22, ly + rowH * 0.34);
+                ctx.fillStyle = UI.bamboo;
+                ctx.font = `bold ${Math.round(24 * k)}px ${UI.font}`;
+                ctx.fillText(String(Math.floor(bestScore)), R.x + R.w - 22, ly + rowH * 0.74);
+                if (chicken && (chicken.shieldTimer > 0 || chicken.invincibleTimer > 0)) {
+                    const t = chicken.shieldTimer > 0 ? chicken.shieldTimer : chicken.invincibleTimer;
+                    const label = `Khiên ${t.toFixed(1)}s`;
+                    ctx.font = `bold ${Math.round(13 * k)}px ${UI.font}`;
+                    const tw = ctx.measureText(label).width + 20;
+                    drawPlank(ctx, canvasWidth / 2 - tw / 2, ly + rowH * 0.3, tw, 26 * k, 9 * k);
+                    ctx.textAlign = 'center'; ctx.fillStyle = '#9BE3FF';
+                    ctx.fillText(label, canvasWidth / 2, ly + rowH * 0.3 + 18 * k);
+                }
+            }
+
             function drawHud(ctx) {
+                if (portraitHud()) { drawHudPortrait(ctx); return; }
                 const k = uiScale();
                 const m = 12 * k;
                 // Thể lực: mỗi lần nhảy tốn một quả trứng
@@ -2688,8 +2782,16 @@ function playLoseSound() {
                 ctx.fillText('Chạm hoặc nhấn Space để chạy', canvasWidth / 2, y + h * 0.75);
             }
 
+            // Màn ngang thấp: bảng thua nằm ngang, điểm bên trái, nút Chạy lại bên phải
+            function gameOverWide() { return canvasWidth > canvasHeight * 1.3 && canvasHeight < 520; }
             function gameOverLayout() {
                 const k = uiScale();
+                if (gameOverWide()) {
+                    const pw = Math.min(canvasWidth - 48, 540), ph = Math.min(canvasHeight - 40, 168);
+                    const px = canvasWidth / 2 - pw / 2, py = canvasHeight / 2 - ph / 2;
+                    const bw = Math.min(200, pw * 0.38), bh = 56;
+                    return { k, wide: true, pw, ph, px, py, bx: px + pw - bw - 30, by: py + ph / 2 - bh / 2 + 8, bw, bh };
+                }
                 const pw = Math.min(canvasWidth - 32, 320), ph = 236 * k;
                 const px = canvasWidth / 2 - pw / 2, py = Math.max(12, canvasHeight / 2 - ph / 2 - 10);
                 const bw = pw - 48, bh = Math.max(52, 54 * k);
@@ -2707,6 +2809,22 @@ function playLoseSound() {
                 drawPlank(ctx, L.px, y, L.pw, L.ph, 16 * k);
                 ctx.fillStyle = UI.board;
                 ctx.beginPath(); ctx.roundRect(L.px + 12, y + 12, L.pw - 24, L.ph - 24, 10 * k); ctx.fill();
+                const rec = lastRunNewRecord;
+                if (L.wide) {
+                    const cx = L.px + 30 + (L.bx - L.px - 50) / 2;
+                    ctx.textAlign = 'center';
+                    ctx.fillStyle = UI.redDark;
+                    ctx.font = `bold ${Math.round(26 * k)}px ${UI.font}`;
+                    ctx.fillText('Gà ngã rồi!', cx, y + 44);
+                    ctx.fillStyle = UI.boardInk;
+                    ctx.font = `bold ${Math.round(40 * k)}px ${UI.font}`;
+                    ctx.fillText(String(Math.floor(score)), cx, y + 96);
+                    ctx.font = `bold ${Math.round(14 * k)}px ${UI.font}`;
+                    ctx.fillStyle = rec ? UI.redDark : '#6B4F2D';
+                    ctx.fillText(rec ? 'Kỷ lục mới!' : `Kỷ lục ${Math.floor(bestScore)}`, cx, y + L.ph - 34);
+                    ctx.fillStyle = 'rgba(58,38,20,0.25)';
+                    ctx.fillRect(L.bx - 20, y + 28, 2, L.ph - 56);
+                } else {
                 ctx.textAlign = 'center';
                 ctx.fillStyle = UI.redDark;
                 ctx.font = `bold ${Math.round(28 * k)}px ${UI.font}`;
@@ -2717,9 +2835,9 @@ function playLoseSound() {
                 ctx.font = `bold ${Math.round(34 * k)}px ${UI.font}`;
                 ctx.fillText(String(Math.floor(score)), canvasWidth / 2, y + 118 * k);
                 ctx.font = `${Math.round(14 * k)}px ${UI.font}`;
-                const rec = lastRunNewRecord;
                 ctx.fillStyle = rec ? UI.redDark : '#6B4F2D';
                 ctx.fillText(rec ? 'Kỷ lục mới!' : `Kỷ lục ${Math.floor(bestScore)}`, canvasWidth / 2, y + 140 * k);
+                }
                 // Nút
                 restartButton.x = L.bx; restartButton.y = L.by + slide; restartButton.w = L.bw; restartButton.h = L.bh;
                 const bump = REDUCE_MOTION ? 1 : 1 + Math.sin(t * 5) * 0.025;
