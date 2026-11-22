@@ -2236,6 +2236,12 @@ body:not(.solution-detail-active) .game-stage{
 .sd-controls[hidden],.sd-ctl[hidden]{display:none!important}
 .sd-ctl{pointer-events:auto;border:0;border-radius:12px;padding:10px 16px;font:800 13px/1 Inter,system-ui,sans-serif;background:#e9edf5;color:#172033;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
 .sd-ctl.is-paused{background:#ffb300;color:#172033}
+.sd-ctl.sd-ctl-finish{background:#2f9e5b;color:#fff}
+/* hiệu ứng gõ chữ: con trỏ nhấp nháy ở cuối khối đang gõ, chú giải hiện sau khi gõ xong */
+.sd-typing::after{content:"";display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.14em;background:currentColor;animation:sdCaret .6s steps(1) infinite}
+.sd-typing .sd-legend{opacity:0}
+@keyframes sdCaret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.sd-typing::after{animation:none}}
 .sd-ctl-primary{background:#172033;color:#fff;padding:12px 22px;letter-spacing:.03em}
 .clue-explain.solution-detail-panel{
   padding:10px 12px 11px;
@@ -16132,6 +16138,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
   function finishDetailedSolution(run){
     if(run!==solutionDetailRun||!game)return;
+    sdTypeStop(false);
 
     if(solutionDetailTimer){
       clearTimeout(solutionDetailTimer);
@@ -16208,6 +16215,7 @@ function showDetailedStep(step,pointer,phase='reason'){
     showDetailedStep(step,pointer,'reason');
 
     const REASON_MS=1650;
+    sdTypeIn([clueExplainTitle,clueExplainText],REASON_MS*0.9);   // gõ xong trước khi sang pha kế
     const MARK_MS=470;
     const PAINT_MS=900;
 
@@ -16370,11 +16378,13 @@ function showDetailedStep(step,pointer,phase='reason'){
       box.id='sdControls';
       box.className='sd-controls';
       box.innerHTML='<button type="button" id="sdPauseBtn" class="sd-ctl"></button>'+
-        '<button type="button" id="sdSkipBtn" class="sd-ctl"><i class="fa-solid fa-forward"></i> Bỏ qua</button>'+
+        '<button type="button" id="sdSkipBtn" class="sd-ctl"><i class="fa-solid fa-forward-step"></i> Bỏ qua</button>'+
+        '<button type="button" id="sdFinishBtn" class="sd-ctl sd-ctl-finish"><i class="fa-solid fa-check-double"></i> Hoàn tất</button>'+
         '<button type="button" id="sdNewGameBtn" class="sd-ctl sd-ctl-primary"><i class="fa-solid fa-rotate-right"></i> VÁN MỚI</button>';
       clueExplain.append(box);
       box.querySelector('#sdPauseBtn').addEventListener('click',()=>setDetailPaused(!detailPaused));
-      box.querySelector('#sdSkipBtn').addEventListener('click',skipDetailedSolution);
+      box.querySelector('#sdSkipBtn').addEventListener('click',skipDetailedStep);
+      box.querySelector('#sdFinishBtn').addEventListener('click',skipDetailedSolution);
       box.querySelector('#sdNewGameBtn').addEventListener('click',()=>{
         box.hidden=true;
         clueExplain.classList.remove('show','solution-detail-panel');
@@ -16382,18 +16392,69 @@ function showDetailedStep(step,pointer,phase='reason'){
       });
     }
     box.hidden=mode==='off';
-    const pb=box.querySelector('#sdPauseBtn'), nb=box.querySelector('#sdNewGameBtn'), kb=box.querySelector('#sdSkipBtn');
+    const pb=box.querySelector('#sdPauseBtn'), nb=box.querySelector('#sdNewGameBtn'), kb=box.querySelector('#sdSkipBtn'), fb=box.querySelector('#sdFinishBtn');
     if(pb)pb.hidden=mode!=='running';
     if(kb)kb.hidden=mode!=='running';
+    if(fb)fb.hidden=mode!=='running';
     document.body.classList.toggle('sd-running',mode==='running');
     if(nb)nb.hidden=mode!=='done';
     detailPaused=false;detailPending=null;
     if(mode==='running')setDetailPaused(false);
   }
 
-  // BỎ QUA: apply every remaining step at once and finish.
+  // Gõ chữ: lời giải thích của mỗi bước hiện dần, và luôn gõ xong đúng trong `ms` mili giây
+  // (chữ dài thì gõ nhanh hơn, chữ ngắn thì chậm hơn). Dừng lại khi bấm Tạm dừng.
+  let sdTyper=null;
+  function sdTypeStop(finish){
+    if(!sdTyper)return;
+    const t=sdTyper;sdTyper=null;
+    cancelAnimationFrame(t.raf);
+    if(finish)t.done();else t.drop();
+  }
+  function sdTypeIn(els,ms){
+    sdTypeStop(false);
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const nodes=[];
+    for(const el of els){
+      if(!el)continue;
+      const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;
+      while((n=w.nextNode())){if(n.nodeValue.trim()!==''&&!n.parentElement?.closest('.sd-legend'))nodes.push([n,n.nodeValue]);}
+    }
+    const total=nodes.reduce((a,x)=>a+x[1].length,0);
+    if(!total)return;
+    const host=els.filter(Boolean);
+    nodes.forEach(([n])=>{n.nodeValue='';});
+    host.forEach(el=>el.classList.add('sd-typing'));
+    let acc=0,last=performance.now(),over=false;
+    const paint=k=>{let left=k;for(const [n,t] of nodes){const c=Math.max(0,Math.min(t.length,left));n.nodeValue=t.slice(0,c);left-=t.length;}};
+    const drop=()=>{host.forEach(el=>el.classList.remove('sd-typing'));};
+    const done=()=>{if(over)return;over=true;nodes.forEach(([n,t])=>{n.nodeValue=t;});drop();};
+    const t={raf:0,done,drop};
+    const tick=now=>{
+      const dt=now-last;last=now;
+      if(!detailPaused)acc+=dt;
+      if(acc>=ms){sdTyper=null;done();return;}
+      paint(Math.floor(total*acc/ms));
+      t.raf=requestAnimationFrame(tick);
+    };
+    sdTyper=t;
+    t.raf=requestAnimationFrame(tick);
+  }
+
+  // BỎ QUA: bỏ hiệu ứng gõ của bước này và chuyển sang bước kế tiếp.
+  function skipDetailedStep(){
+    if(!game?.solutionDetailActive||!solutionDetailAuto)return;
+    sdTypeStop(true);
+    if(solutionDetailTimer){clearTimeout(solutionDetailTimer);solutionDetailTimer=null;}
+    detailPending=null;
+    if(detailPaused)setDetailPaused(false);
+    performDetailedAutoStep(solutionDetailRun,Math.max(0,solutionDetailPointer)+1);
+  }
+
+  // HOÀN TẤT: apply every remaining step at once and finish.
   function skipDetailedSolution(){
     if(!game?.solutionDetailActive)return;
+    sdTypeStop(false);
     if(solutionDetailTimer){clearTimeout(solutionDetailTimer);solutionDetailTimer=null;}
     detailPaused=false;detailPending=null;
     const run=solutionDetailRun;
@@ -16428,6 +16489,7 @@ function showDetailedStep(step,pointer,phase='reason'){
   }
 
   function cancelDetailedSolution(){
+    sdTypeStop(false);
     solutionDetailRun++;
     detailControls('off');
     solutionDetailAuto=false;
@@ -19771,8 +19833,26 @@ function cancelNewGameIntro(){
   function detailPanel(head,title,body,mode){
     const el=$('pmInfo');el.classList.add('detail');
     el.innerHTML=`<div class="pm-sd-step">${head}</div>${title?`<div class="pm-sd-title">${title}</div>`:''}${body}<div class="pm-sd-ctl">${
-      mode==='run'?`<button type="button" data-sd="pause">${SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng'}</button><button type="button" data-sd="skip">⏭ Bỏ qua</button>`
+      mode==='run'?`<button type="button" data-sd="pause">${SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng'}</button><button type="button" data-sd="skipstep">⏭ Bỏ qua</button><button type="button" class="primary" data-sd="skip">✔ Hoàn tất</button>`
       :'<button type="button" data-sd="close">Xem bàn</button><button type="button" class="primary" data-sd="new">Ván mới</button>'}</div>`;
+  }
+  // Gõ chữ: phần giải thích của bước hiện dần và gõ xong đúng trong `ms` mili giây (chữ dài gõ nhanh hơn); dừng khi Tạm dừng.
+  let typer=null;
+  function typeStop(finish){if(!typer)return;const t=typer;typer=null;cancelAnimationFrame(t.raf);if(finish)t.done();}
+  function typeIn(root,ms){
+    typeStop(false);
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const nodes=[],w=document.createTreeWalker(root,NodeFilter.SHOW_TEXT);let n;
+    while((n=w.nextNode())){if(n.nodeValue.trim()!==''&&!n.parentElement.closest('.pm-sd-step,.pm-sd-ctl'))nodes.push([n,n.nodeValue]);}
+    const total=nodes.reduce((a,x)=>a+x[1].length,0);if(!total)return;
+    nodes.forEach(([x])=>{x.nodeValue='';});
+    let acc=0,last=performance.now(),over=false;
+    const done=()=>{if(over)return;over=true;nodes.forEach(([x,t])=>{x.nodeValue=t;});};
+    const t={raf:0,done};
+    const tick=now=>{const dt=now-last;last=now;if(!SD.paused)acc+=dt;if(acc>=ms){typer=null;done();return;}
+      let left=Math.floor(total*acc/ms);for(const [x,tx] of nodes){const c=Math.max(0,Math.min(tx.length,left));x.nodeValue=tx.slice(0,c);left-=tx.length;}
+      t.raf=requestAnimationFrame(tick);};
+    typer=t;t.raf=requestAnimationFrame(tick);
   }
   function sched(fn,ms){SD.pending=fn;SD.timer=setTimeout(()=>{SD.timer=null;if(SD.paused)return;SD.pending=null;fn();},ms);}
   function runDetail(){
@@ -19787,20 +19867,27 @@ function cancelNewGameIntro(){
       const st=G.steps[SD.k],u=G.units[st.unit],v=stepView(st);
       render({focus:st.kind==='slot'?[st.slot]:st.at,look:lookCells(u,st.at)});
       detailPanel(`Giải chi tiết · Bước ${SD.k+1}/${total}`,v.title,v.lines.join(''),'run');
-      sched(()=>{
-        if(run!==SD.run)return;
+      const readMs=2100+v.lines.length*350;
+      typeIn($('pmInfo'),readMs*0.9);
+      let placed=false;
+      const place=()=>{
+        if(run!==SD.run||placed)return;
+        placed=true;typeStop(true);
         placeUnit(st.unit,st.at);
         render({focus:st.at,look:[]});
         st.at.forEach(popCell);
         detailPanel(`Giải chi tiết · Bước ${SD.k+1}/${total}`,v.title,v.lines.join(''),'run');
         SD.k++;
-        sched(next,800);
-      },2100+v.lines.length*350);
+      };
+      // Bỏ qua: bỏ hiệu ứng gõ của bước này, đặt clue luôn và sang bước kế tiếp
+      SD.skip=()=>{if(run!==SD.run)return;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;SD.paused=false;typeStop(true);place();next();};
+      sched(()=>{place();sched(next,800);},readMs);
     };
     render();
     next();
   }
   function finishDetail(){
+    typeStop(false);SD.skip=null;
     SD.run++;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;
     G.units.forEach((u,x)=>placeUnit(x,u.at));
     G.detail=false;
@@ -19808,6 +19895,7 @@ function cancelNewGameIntro(){
     detailPanel('Giải chi tiết · Hoàn tất','Mọi clue đã về đúng chỗ','<span class="pm-sd-line">Mỗi bước chỉ dùng suy luận, không đoán. Bấm Ván mới để chơi màn khác.</span>','done');
   }
   function stopDetail(){
+    typeStop(false);SD.skip=null;
     SD.run++;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;SD.paused=false;
     if(G)G.detail=false;
   }
@@ -19817,7 +19905,8 @@ function cancelNewGameIntro(){
       SD.paused=!SD.paused;
       if(!SD.paused&&SD.pending&&!SD.timer){const fn=SD.pending;SD.pending=null;fn();}
       const b=e.target.closest('[data-sd]');if(b)b.textContent=SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng';
-    }else if(a==='skip')finishDetail();
+    }else if(a==='skipstep'){if(SD.skip)SD.skip();}
+    else if(a==='skip')finishDetail();
     else if(a==='new')newBoard();
     else if(a==='close'){render();setInfo('Đáp án đang hiện trên bàn. Bấm <b>Ván mới</b> để chơi màn khác.');}
   });
