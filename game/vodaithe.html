@@ -253,10 +253,12 @@ svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;str
 .gl .seal{width:38px;height:38px}
 .knownRow{display:flex;align-items:center;gap:4px;margin:0 12px 2px;padding:3px 6px;background:rgba(0,0,0,.3);overflow-x:auto;scrollbar-width:none}
 .knownRow[hidden]{display:none}
+.rotHint{display:none}
+@media (orientation:landscape) and (max-height:500px){.rotHint{display:flex;position:fixed;inset:0;z-index:200;align-items:center;justify-content:center;background:var(--wood2);color:var(--gold);font:400 26px/1.2 var(--head);text-align:center;padding:20px}}
 .knownRow .lb{font:700 9px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;margin-right:2px}
 .knownRow .kc{display:inline-flex;align-items:center;gap:3px;font:700 10px/1 var(--body);background:var(--bamboo);color:var(--ink);padding:3px 5px;white-space:nowrap;clip-path:var(--cut)}
-.knownRow .kc.trick{background:var(--lac);color:var(--gold)}
-.knownRow .kc.sp{background:#e8c066}
+.knownRow .kc.k-trick{background:var(--lac);color:var(--gold)}
+.knownRow .kc.k-sp{background:#e8c066}
 .knownRow .kc svg{width:12px;height:12px}
 .castle .stats{grid-template-columns:1.9fr .85fr .7fr .7fr;gap:4px}
 .castle .stat{padding:5px 6px}
@@ -304,6 +306,7 @@ svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;str
     <div class="veil" id="veil"><h2 id="veilT"></h2><p id="veilS"></p><button class="big" id="veilB" style="width:240px;justify-content:center;align-items:center">Sẵn sàng</button></div>
   </section>
 
+  <div class="rotHint" aria-hidden="true">Xoay dọc điện thoại để chơi</div>
   <div class="modal" id="mHelp"><div class="sheet" id="helpBody"></div></div>
   <div class="modal" id="mEnd"><div class="sheet result" id="endBody"></div></div>
 </div>
@@ -397,7 +400,7 @@ function cardText(k) {
 }
 
 let mode = 'ai', level = 1, gen = 'houy', s = null, ai = null, sel = null, busy = false, viewer = 0, token = 0, selUnit = null, castleDisp = [20, 20], shieldDisp = [0, 0], blocksDisp = [0, 0];
-try { const v = +localStorage.getItem('vdt_level'); if (v >= 0 && v <= 3) level = v; } catch (e) {}
+try { const r = localStorage.getItem('vdt_level'); const v = +r; if (r !== null && v >= 0 && v <= 3) level = v; } catch (e) {}
 try { const g = localStorage.getItem('vdt_gen'); if (GEN[g]) gen = g; } catch (e) {}
 
 /* ---------- menu ---------- */
@@ -422,7 +425,7 @@ $('bAi').onclick = () => start('ai');
 $('bPvp').onclick = () => start('pvp');
 $('bHelp').onclick = $('bHelp2').onclick = () => { $('mHelp').classList.add('on'); };
 $('mHelp').addEventListener('click', e => { if (e.target.id === 'mHelp' || e.target.closest('[data-close]')) $('mHelp').classList.remove('on'); });
-$('bBack').onclick = () => { token++; busy = false; show('menu'); };
+$('bBack').onclick = () => { token++; busy = false; document.querySelectorAll('.banner,.float,.spfx,.flip,.blockfx,.shotfx').forEach(x => x.remove()); $('hand').style.visibility = ''; show('menu'); };
 function show(id) { for (const x of document.querySelectorAll('.screen')) x.classList.toggle('on', x.id === id); $('mEnd').classList.remove('on'); }
 
 /* ---------- hướng dẫn ---------- */
@@ -431,7 +434,7 @@ function show(id) { for (const x of document.querySelectorAll('.screen')) x.clas
   const row = k => '<div>' + ic(k) + '<span><b>' + C[k].n + '</b> (' + C[k].c + ')' + (C[k].t === 'unit' ? ' · ' + C[k].a + ' Công / ' + C[k].h + ' Máu' : '') + '. ' + cardText(k) + '</span></div>';
   const owner = k => { for (const g of V.GEN_KEYS) if (GEN[g].sig.indexOf(k) >= 0) return GEN[g].n; return ''; };
   $('helpBody').innerHTML = '<h2>Cách chơi</h2>' +
-    '<p>Phá Thành đối thủ (20 máu) trước. Hết 10 vòng chưa ai thua thì ai còn nhiều máu hơn thắng.</p>' +
+    '<p>Phá Thành đối thủ (20 máu) trước. Hết 10 vòng chưa ai thua thì ai còn nhiều máu hơn thắng; bằng máu thì ai còn nhiều Lính hơn thắng; vẫn bằng thì bên đi sau thắng.</p>' +
     '<h3>Chủ tướng và Tuyệt kỹ</h3>' +
     '<p>Mỗi bên chọn một Chủ tướng. Tướng có 2 loại thẻ riêng trong bộ bài và 4 Tuyệt kỹ. Vào trận bạn có sẵn 1 Tuyệt kỹ. Tuyệt kỹ giá 1 Quân lệnh, dùng ngay trong bất kỳ giai đoạn nào của mình.</p>' +
     V.GEN_KEYS.map(g => '<div class="gl">' + seal(g) + '<span><b>' + GEN[g].n + '</b>: ' + GEN[g].tag + '. Tuyệt kỹ: ' + GEN[g].sp.map(k => '<b>' + C[k].n + '</b> (' + C[k].txt.replace(/\.$/, '') + ')').join('; ') + '.</span></div>').join('') +
@@ -454,6 +457,8 @@ function show(id) { for (const x of document.querySelectorAll('.screen')) x.clas
 /* ---------- bắt đầu ván ---------- */
 function start(m) {
   mode = m; token++;
+  document.querySelectorAll('.banner,.float,.spfx,.flip,.blockfx,.shotfx').forEach(x => x.remove());
+  $('hand').style.visibility = '';
   const others = V.GEN_KEYS.filter(g => g !== gen);
   const foe = others[Math.floor(Math.random() * others.length)];
   s = V.newGame((Date.now() ^ (Math.random() * 1e9)) >>> 0, [gen, foe]);
@@ -473,7 +478,7 @@ const isHuman = p => mode === 'pvp' || p === 0;
 async function turnLoop(newRound) {
   const my = token;
   if (s.winner !== null) { showEnd(); return; }
-  if (newRound || s.phase === 1) await banner('Vòng ' + s.round + '/' + V.MAX_ROUND, my);
+  if (newRound || s.phase === 1) { busy = true; render(); await banner('Vòng ' + s.round + '/' + V.MAX_ROUND, my); busy = false; }
   if (my !== token) return;
   if (isHuman(s.turn)) {
     if (mode === 'pvp') {
@@ -526,7 +531,13 @@ async function endPhase(my) {
   s.log = [];
   V.apply(s, { t: 'end' });
   sel = null; selUnit = null;
-  if (wasWar) { await replay(my); if (my !== token) return; }
+  if (wasWar) {
+    busy = true; render();
+    if (mode === 'pvp') $('hand').style.visibility = 'hidden';
+    await replay(my);
+    $('hand').style.visibility = '';
+    if (my !== token) return;
+  }
   busy = false;
   render();
   await turnLoop(wasWar);
@@ -542,7 +553,7 @@ function render() {
   $('cMe').innerHTML = castleHtml(me);
   const kn = s.hand[foe].filter(c => c.k && s.known[me].indexOf(c.id) >= 0);
   $('kFoe').hidden = !kn.length;
-  $('kFoe').innerHTML = kn.length ? '<span class="lb">Bài đối thủ đã lộ</span>' + kn.map(c => '<span class="kc ' + C[c.k].t + '">' + ic(c.k) + C[c.k].n + '</span>').join('') : '';
+  $('kFoe').innerHTML = kn.length ? '<span class="lb">Bài đối thủ đã lộ</span>' + kn.map(c => '<span class="kc k-' + C[c.k].t + '">' + ic(c.k) + C[c.k].n + '</span>').join('') : '';
   const myTurn = !busy && s.winner === null && s.turn === me && isHuman(me);
   const legal = myTurn ? V.legal(s) : [];
   const canLanes = {};
@@ -803,6 +814,7 @@ async function replay(my) {
       const from = unitEl(e.from), el = unitEl(e.to);
       if (from) pulse(from, e.p === me ? 'lunge-up' : 'lunge-down');
       await sleep(120);
+      if (my !== token) return;
       if (e.dmg > 0) { setHp(el, -e.dmg); floatAt(el, e.deadly ? 'Tất sát!' : '−' + e.dmg); }
       else floatAt(el, 'Đỡ!', true);
       if (window.SFX) SFX.play(e.dmg > 0 ? 'hit' : 'bump');
@@ -811,6 +823,7 @@ async function replay(my) {
       const from = unitEl(e.from);
       if (from) pulse(from, e.target === me ? 'lunge-down' : 'lunge-up');
       await sleep(120);
+      if (my !== token) return;
       const cm = e.target === me ? $('cMe') : $('cFoe');
       if (e.e === 'castle') {
         castleDisp[e.target] -= e.dmg;
