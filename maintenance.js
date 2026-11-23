@@ -418,4 +418,63 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
     else start();
   })();
+  // ---- Tự cập nhật bản mới ----
+  // GitHub Pages cho trình duyệt giữ trang và file cũ tới 10 phút (cache-control: max-age=600), điện thoại còn giữ lâu hơn,
+  // nên bản mới merge xong vẫn không tới người chơi. Cách xử lý: mỗi lần mở trang, hỏi máy chủ (không dùng cache) xem trang
+  // có mới hơn bản đang giữ không. Nếu mới hơn: tải lại bắt buộc trang và các file js/css cùng nguồn rồi mở lại ngay
+  // (lúc vừa mở nên không mất ván nào). Khi đang chơi mà quay lại tab thấy bản mới thì chỉ hiện nút "Tải lại", không tự tải
+  // để khỏi mất ván. Mỗi trang chỉ tự tải lại tối đa 1 lần / 90 giây để không bị lặp.
+  (function () {
+    if (location.protocol === 'file:') return;
+    var base = location.href.split('#')[0].split('?')[0];
+    var loadedAt = Date.parse(document.lastModified) || 0;
+    var t0 = Date.now(), toast = null, checking = false;
+    function serverTime() {
+      return fetch(base + '?_u=' + Date.now(), { method: 'HEAD', cache: 'no-store' }).then(function (r) {
+        return Date.parse(r.headers.get('last-modified') || '') || 0;
+      }).catch(function () { return 0; });
+    }
+    function sameOriginAssets() {
+      var out = [base];
+      var nodes = document.querySelectorAll('script[src],link[rel="stylesheet"][href],link[rel="manifest"][href]');
+      for (var i = 0; i < nodes.length; i++) {
+        var u = nodes[i].src || nodes[i].href;
+        try { if (new URL(u, location.href).origin === location.origin) out.push(u); } catch (e) {}
+      }
+      return out;
+    }
+    function hardReload() {
+      var key = 'au_' + base, last = 0;
+      try { last = +sessionStorage.getItem(key) || 0; sessionStorage.setItem(key, String(Date.now())); } catch (e) {}
+      if (Date.now() - last < 90000) return;
+      var jobs = sameOriginAssets().map(function (u) { return fetch(u, { cache: 'reload' }).catch(function () {}); });
+      var timeout = new Promise(function (res) { nSetTimeout(res, 4000); });
+      Promise.race([Promise.all(jobs), timeout]).then(function () { location.reload(); });
+    }
+    function showToast() {
+      if (toast || !document.body) return;
+      toast = document.createElement('div');
+      toast.setAttribute('role', 'status');
+      toast.style.cssText = 'position:fixed;left:50%;bottom:calc(14px + env(safe-area-inset-bottom));transform:translateX(-50%);z-index:2147483000;display:flex;align-items:center;gap:10px;max-width:92vw;padding:9px 12px 9px 14px;border-radius:12px;background:#1d2a4a;color:#fff;font:600 13px/1.3 system-ui,sans-serif;box-shadow:0 6px 20px rgba(0,0,0,.3)';
+      var s = document.createElement('span'); s.textContent = 'Có bản cập nhật mới';
+      var b = document.createElement('button'); b.type = 'button'; b.textContent = 'Tải lại';
+      b.style.cssText = 'border:0;border-radius:8px;padding:6px 12px;background:#ffd23f;color:#1d2a4a;font:800 13px/1 system-ui,sans-serif;cursor:pointer';
+      b.onclick = function () { try { sessionStorage.removeItem('au_' + base); } catch (e) {} hardReload(); };
+      toast.appendChild(s); toast.appendChild(b); document.body.appendChild(toast);
+    }
+    function check(auto) {
+      if (checking || !loadedAt) return;
+      checking = true;
+      serverTime().then(function (srv) {
+        checking = false;
+        if (!srv || srv <= loadedAt + 1000) return;
+        if (auto && Date.now() - t0 < 6000) hardReload(); else showToast();
+      });
+    }
+    function start() { nSetTimeout(function () { check(true); }, 400); }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', start, { once: true });
+    else start();
+    document.addEventListener('visibilitychange', function () { if (document.visibilityState === 'visible') check(false); });
+    window.addEventListener('pageshow', function (e) { if (e.persisted) check(false); });   // quay lại bằng nút Back (trang lấy từ bộ nhớ)
+  })();
 })();
