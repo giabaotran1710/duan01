@@ -2336,6 +2336,7 @@ btnDrawAccept.addEventListener("click", () => {
   launchConfetti();
   updateUndoButton();
   try { endGame("draw"); } catch (e) {}
+  try { drawLayer(); renderCoach(); sayEnd(); } catch (e) {}
 });
 
 btnDrawReject.addEventListener("click", () => {
@@ -2426,7 +2427,7 @@ const WHY_TIP = {
 const WHY_STRONG = { five: 1, open4: 1, four3: 1, three3: 1, four: 1, three: 1 };
 const C_WINK = 9, C_F4K = 8, C_43K = 7, C_33K = 5;      // lớp ô (trùng với engine)
 
-const coach = { on: false, armed: false, armTimer: 0, gen: 0, hint: null, hintFor: "", hintPending: false, you: null, bot: null, stat: [], hw: null, aw: null, waitAna: -1, ponderKey: "", view: null, viewTimer: 0, animK: -1, animTimer: 0, nextSaid: "", endSaid: false, showPV: false, revealKey: "", hintsUsed: 0, scold: 0, lastScold: false, nudgedKey: "", turnAt: 0, idleTimer: 0, lostSaid: false };
+const coach = { on: false, armed: false, armTimer: 0, gen: 0, hint: null, hintFor: "", hintPending: false, you: null, bot: null, stat: [], hw: null, aw: null, waitAna: -1, ponderKey: "", view: null, viewTimer: 0, animK: -1, animTimer: 0, nextSaid: "", endSaid: false, showPV: false, revealKey: "", hintsUsed: 0, scold: 0, lastScold: false, nudgedKey: "", turnAt: 0, idleTimer: 0, lostSaid: false, lostCycle: 0 };
 const coachBtn = document.getElementById("btnCoach");
 const coachCard = document.getElementById("coachCard");
 const coachLabel = coachBtn.querySelector(".action-label");
@@ -2692,7 +2693,8 @@ function onMovePlaced() {
     setTimeout(() => requestAnalysis(i), 120);      // sau khi AI bắt đầu nghĩ, để máy ít nhân không bị tranh CPU
   } else {
     const prev = coach.hint, pYou = coach.you;
-    const pred = pYou && pYou.same && prev && prev.pv && prev.pv[1];
+    // chỉ so với dự đoán khi bạn đã bấm Gợi ý (đã thấy thầy đoán BOT đáp ở đâu)
+    const pred = pYou && pYou.same && pYou.hintKey && coach.revealKey === pYou.hintKey && prev && prev.pv && prev.pv[1];
     coach.bot = { i, r, c, status: "pending", key: anaKey(i), matched: !!pred && sameCell(pred, [r, c]), diff: !!pred && !sameCell(pred, [r, c]) };
     coach.hint = null; coach.hintFor = ""; coach.hintPending = false;
     if (ensureCoachWorkers()) coach.aw.postMessage({ type: "explain", role: "bot", id: i, gen: coach.gen, key: coach.bot.key, moves: moveHistory.slice(0, i + 1) });
@@ -2703,7 +2705,7 @@ function onMovePlaced() {
 }
 
 // ==================== THẦY NÓI CHUYỆN ====================
-const SAY_ATK = { five: "đủ 5 quân", open4: "tạo đường 4 mở", four3: "tạo thế 4-3", three3: "tạo thế 3-3", four: "tạo đường 4", three: "tạo đường 3 mở", grow3: "nối dài một đường", grow2: "phát triển thêm quân sát quân mình" };
+const SAY_ATK = { five: "đủ 5 quân", open4: "tạo đường 4 mở", four3: "tạo thế 4-3", three3: "tạo thế 3-3", four: "tạo đường 4", three: "tạo đường 3 mở", grow3: "kéo dài thêm một đường", grow2: "phát triển thêm quân sát quân mình" };
 const SAY_DEF = { block5: "chặn đường 4", blockOpen4: "chặn đường 3 mở", block43: "phá thế 4-3", block33: "phá thế 3-3", block4: "chiếm điểm tạo đường 4 của đối thủ", block3: "chiếm điểm tạo đường 3 mở của đối thủ" };
 const CONCEPT = {
   three: "Đường 3 mở là ba quân liền nhau mà hai đầu còn trống. Thêm một quân nữa là thành 4 mở, đối thủ chặn không nổi, nên họ buộc phải đỡ ngay. Có đường 3 mở là bạn đang cầm quyền chủ động.",
@@ -2711,13 +2713,15 @@ const CONCEPT = {
   open4: "Đường 4 mở hở cả hai đầu: chặn một đầu thì bạn đi đầu kia là đủ 5. Gần như thắng chắc.",
   four3: "Thế 4-3 là một nước tạo cùng lúc đường 4 và đường 3 mở. Đối thủ phải chặn đường 4, bạn dùng nước kế biến đường 3 thành 4 mở.",
   three3: "Thế 3-3 là một nước tạo hai đường 3 mở cùng lúc. Đối thủ chỉ chặn được một đường, bạn nối đường còn lại thành 4 mở.",
+  five: "Đủ 5 quân liên tiếp là thắng, không cần nghĩ thêm gì nữa.",
+  block5: "Đối thủ đã có 4 quân, chỉ cần một nước nữa là đủ 5. Không chặn là thua ngay, nên mọi kế hoạch khác đều phải gác lại.",
   block: "Chặn sớm lúc đối thủ mới có đường 3 mở rẻ hơn nhiều so với chặn khi đã thành 4. Nên chặn ở đầu có quân mình hỗ trợ để vừa đỡ vừa phát triển.",
   grow: "Khi chưa ai có thế mạnh, hãy đặt quân sát quân mình để các đường 2 và 3 chồng lên nhau. Quân càng phối hợp được thì sau này càng dễ tạo thế đôi.",
   far: "Quân đặt xa không nối được với quân nào, nên BOT có thêm một lượt tấn công miễn phí. Mỗi nước nên liên quan đến quân đã có trên bàn.",
   opening: "Khai cuộc nên chiếm vùng giữa bàn: càng gần trung tâm thì càng nhiều hướng để phát triển."
 };
 const ANA_LONG = {
-  "lose-edge": "nước này làm mất lợi thế bạn đang có", "allow-attack": "nước này để BOT có thế tấn công thắng", "missed-win": "bạn đang có đường thắng mà lại bỏ lỡ",
+  "lose-edge": "nước này kém hẳn nước tốt nhất, thế cờ của bạn yếu đi", "allow-attack": "nước này để BOT có thế tấn công thắng", "missed-win": "bạn đang có đường thắng mà lại bỏ lỡ",
   "far": "nước này đánh quá xa các quân", "no-block-five": "bạn không chặn đường 4 của BOT", "allow-open-four": "nước này để BOT tạo được đường 4 mở",
   "allow-vcf": "BOT có chuỗi nước 4 liên tiếp để thắng", "allow-vct": "BOT có chuỗi tấn công 3-4 để thắng", "threw-win": "đang thắng mà lại đi nước làm mất thế thắng", "missed-five": "bạn bỏ lỡ nước đủ 5 quân"
 };
@@ -2731,10 +2735,11 @@ function spatialSay(pos, sym) {
     const v = board[r + dr] && board[r + dr][c + dc];
     if (v === sym) own++; else if (v) foe++;
   }
-  if (own && foe) return `nằm giữa quân hai bên, vừa nối ${own} quân của ${sym === human ? "mình" : "BOT"} vừa cản ${foe} quân đối thủ`;
+  if (own && foe) return `đặt quân vào giữa hai bên, vừa nối ${own} quân của ${sym === human ? "mình" : "BOT"} vừa áp sát ${foe} quân đối thủ`;
   if (own) return `nối sát ${own} quân của ${sym === human ? "mình" : "BOT"}, mở rộng thế`;
-  if (foe) return `đặt cạnh ${foe} quân đối thủ để cản đường`;
-  return "đặt gần giữa các quân, giữ thế";
+  if (foe) return `áp sát ${foe} quân đối thủ để hạn chế đường đi của họ`;
+  if (!moveHistory.length || (moveHistory.length === 1 && board[r][c] !== "")) return "mở màn ở vùng giữa bàn";
+  return "đặt quân ở khoảng trống gần các quân, chờ thời";
 }
 function sayWhy(w, pos, sym) {
   if (!w) return "giữ thế cờ";
@@ -2752,6 +2757,8 @@ function sayWhy(w, pos, sym) {
 function conceptFor(w) {
   if (!w) return CONCEPT.grow;
   if (w.plan === "OPENING") return CONCEPT.opening;
+  if (w.atk === "five") return CONCEPT.five;
+  if (w.def === "block5") return CONCEPT.block5;
   if (WHY_STRONG[w.atk] && CONCEPT[w.atk]) return CONCEPT[w.atk];
   if (w.def) return CONCEPT.block;
   return CONCEPT.grow;
@@ -2817,8 +2824,14 @@ const POOLS = {
   ],
   youOpen: [
     "Bạn đi {p}: {act}.", "Nước {p} à. Thầy thấy bạn {act}.", "Ừm, {p}: {act}.", "Hừm, {p}. Nước này {act}.", "Bạn chọn {p}, tức là {act}.",
-    "Thầy nhìn thấy rồi: {p}, {act}.", "{p} nhé. Cũng được: {act}.", "À ha, {p}! Bạn {act}, thầy ghi nhận.", "Nước {p}: {act}. Để xem BOT trả lời ra sao.",
+    "Thầy nhìn thấy rồi: {p}, {act}.", "À ha, {p}! Bạn {act}, thầy ghi nhận.", "Nước {p}: {act}. Để xem BOT trả lời ra sao.",
     "Vậy là {p}. Bạn {act}.", "Bạn đặt quân xuống {p}, {act}."
+  ],
+  youStrong: [
+    "Ồ! {p}: {act}!", "Đẹp! {p}, {act}.", "Hay đấy, {p}: {act}.", "{p}! Bạn {act}, BOT phải toát mồ hôi rồi.", "Ra đòn rồi! {p}, {act}.", "Nước {p} sắc lắm: {act}."
+  ],
+  youDef: [
+    "Bạn đi {p}: {act}.", "{p}, {act}. Phòng thủ chắc đấy.", "Bạn chọn {p}, {act}.", "Thầy thấy bạn {act} ở {p}.", "Nước {p}: {act}, không để BOT dễ dàng."
   ],
   sameSelf: [
     "Giỏi! Bạn tự nghĩ ra đúng nước thầy định gợi ý đấy.", "Trùng ý thầy luôn mà chưa cần gợi ý. Có tố chất đấy!", "Chuẩn không cần chỉnh! Đúng chỗ thầy chọn.",
@@ -2838,8 +2851,8 @@ const POOLS = {
     "Thầy còn chưa đọc xong bàn cờ mà bạn đã đi!", "Nhanh như chớp, nhưng nhanh chưa chắc đúng nhé."
   ],
   redeem: [
-    "Thế mới đúng chứ! Đánh gần quân mới là cờ.", "Cuối cùng cũng chịu đánh vào thế trận. Thầy mừng!", "Đấy, nghiêm túc lên là đi nước đẹp ngay.", "Ừ, vậy là đúng đường rồi. Giữ nhé!",
-    "Thầy tưởng bạn định đánh ra ngoài hành tinh cơ. Nước này thì được đấy."
+    "Thế mới đúng chứ! Đánh vào thế trận mới là chơi cờ.", "Cuối cùng cũng chịu đánh gần quân. Thầy mừng!", "Ít ra lần này quân của bạn đã có việc để làm.", "Ừ, đánh vào chỗ có quân thế này mới đúng hướng.",
+    "Thầy tưởng bạn định đánh ra ngoài hành tinh cơ. Lần này thì đã về lại bàn cờ."
   ],
   scold1: [
     "Ơ, bạn đi đâu thế? Nước {p} xa quân quá, chẳng liên quan gì đến ván cờ!", "Này này, {p} là đâu đấy? Mỗi quân phải góp sức cho thế trận chứ!",
@@ -2852,7 +2865,7 @@ const POOLS = {
   ],
   scold2: [
     "Lại nữa à?! Thầy đã nhắc rồi, đừng đánh xa quân thế!", "Bạn cố tình đúng không? {p} lại xa chẳng liên quan!", "Thầy nói một lần rồi, bạn vẫn đi {p}. Nghe lời thầy chút nào!",
-    "Lần thứ hai rồi đấy! Có định chơi nghiêm túc không?", "Thầy bắt đầu mất kiên nhẫn rồi nhé. Đánh gần quân mình!", "Hai lần liền đánh vu vơ. Thầy ghi sổ đấy!"
+    "Lần thứ hai rồi đấy! Có định chơi nghiêm túc không?", "Thầy bắt đầu mất kiên nhẫn rồi nhé. Đánh gần quân mình!", "Đây là lần thứ hai bạn đánh vu vơ rồi. Thầy ghi sổ đấy!"
   ],
   scold3: [
     "Bạn đang trêu thầy đấy à?! Lại {p}!", "Thầy mất bình tĩnh rồi đấy! Chơi nghiêm túc cho thầy nhờ!", "Cố tình phá thầy hả? Đánh xa thế này thì học làm gì cho mệt!",
@@ -2900,6 +2913,7 @@ const POOLS = {
   ],
   botMatched: ["Đúng như thầy dự đoán!", "Thầy đoán trúng phóc!", "BOT đi đúng kịch bản thầy đọc trước.", "Y hệt thầy nghĩ."],
   botDiff: ["Khác với dự đoán của thầy một chút đấy.", "Ồ, BOT bất ngờ đi khác thầy tính.", "BOT biết giấu bài đấy, không như thầy dự đoán."],
+  nudgeOpen: ["Đầu ván, cứ đánh gần các quân đã có là được.", "Mới vào ván thôi, đặt quân sát trung tâm cho dễ phát triển.", "Khai cuộc chưa có gì nguy hiểm, chọn chỗ có nhiều hướng để nối."],
   nudge: [
     "Tới lượt bạn. Cứ tự nghĩ trước, cần thì ấn 💡 Gợi ý.", "Lượt bạn đó. Quan sát kỹ rồi hãy đánh.", "Thử nghĩ xem BOT đang định làm gì nhé.", "Bàn cờ đang chờ nước của bạn.",
     "Thử tự tìm nước tốt xem nào, thầy tin ở bạn!", "Nhìn xem đường nào của BOT cần chặn, đường nào của bạn nối được."
@@ -2908,12 +2922,13 @@ const POOLS = {
     "Cẩn thận, thầy thấy BOT đang có thứ gì đó đấy. Nhìn thật kỹ!", "Có điều nguy hiểm trên bàn cờ, đừng đi vội!", "BOT đang dựng thế gì đó. Soi kỹ các đường của BOT đi!", "Chậm lại, bàn cờ này không yên ả như bạn nghĩ đâu."
   ],
   nudgeChance: ["Hình như bạn có cơ hội lớn đấy, nhìn kỹ xem!", "Thầy ngửi thấy mùi chiến thắng. Bạn nhìn ra chưa?"],
+  nudgeMomentum: ["Thế của bạn đang có đà đấy, xem tấn công tiếp được không.", "Bạn đang cầm quyền chủ động, đừng để BOT giành lại.", "Đang có thế tốt, nghĩ xem nước nào ép được BOT."],
   idle: [
     "Bạn nghĩ lâu quá rồi đấy. Bí thì ấn 💡 Gợi ý nhé.", "Thầy chờ đến mỏi mắt rồi... Cần gợi ý không?", "Nghĩ kỹ là tốt nhưng đừng để thầy ngủ quên.", "Hay là cần thầy chỉ giúp? Nút 💡 Gợi ý đó.",
     "Tích tắc tích tắc... bàn cờ không tự đi đâu."
   ],
   wait: ["Chờ thầy chút, đang tính...", "Khoan, để thầy nhìn kỹ bàn cờ đã.", "Thầy đang đọc thế cờ, đợi nhé."],
-  hintOpen: ["Được rồi, thầy chỉ cho bạn:", "Hết cách rồi hả? Thôi thầy giúp:", "Ừ, thầy gợi ý nhé:", "Nhìn chỗ này nè:", "Đây, thầy chỉ một nước hay:", "Lần này thầy giúp, lần sau tự nghĩ nhé:"],
+  hintOpen: ["Được rồi, thầy chỉ cho bạn:", "Bí rồi hả? Thôi thầy giúp:", "Ừ, thầy gợi ý nhé:", "Nhìn chỗ này nè:", "Đây, thầy chỉ một nước hay:", "Lần này thầy giúp, lần sau tự nghĩ nhé:"],
   hintReply: ["Nếu vậy, BOT nhiều khả năng đáp ở {r}.", "Thầy đoán BOT sẽ đáp {r}.", "Khi đó BOT hay đi {r}.", "BOT thường trả lời bằng {r}."],
   hintUrgent: [
     "Nguy rồi! BOT sắp đủ 5 quân, bạn bắt buộc phải chặn ở {h}.", "Chặn ngay {h}! BOT chỉ cần thêm một quân là thắng.", "Đừng nghĩ nữa, {h} là nước duy nhất cứu ván này!", "Khẩn cấp! Đỡ ở {h} trước khi quá muộn!"
@@ -2923,11 +2938,16 @@ const POOLS = {
     "Bạn hoàn tác à? Không sao, nhìn lại thế cờ rồi thử nước khác nhé.", "Đi sai nên rút lại hả? Thế mới biết nghĩ lại. Thầy cho phép.", "Hoàn tác thì hoàn tác, nhưng nhớ bài học của nước vừa rồi nhé.",
     "Lại hoàn tác... lần này nghĩ kỹ hơn chút nào.", "Thầy đếm rồi, hoàn tác không phải vô hạn đâu nhé."
   ],
-  lostNudge: [
+  lostNudge: [   // BOT có đường 4 mở hoặc 4-4: từ 2 ô đủ 5 trở lên
     "Thua rồi, đánh đấm gì nữa.", "Đường 4 mở rành rành thế kia, hết cứu rồi.", "Hai đầu đều thủng, bạn chặn đầu nào BOT đi đầu kia. Thua rồi!",
-    "Thầy nhìn mãi không thấy đường sống. Ván này coi như xong.", "Đến thần cờ cũng chịu thua thế này. Bạn nghĩ sao?", "Thôi, đầu hàng cho đỡ mệt. Hay là cứ đi cho BOT khỏi buồn?",
     "Đường 4 mở rồi mà còn ngồi nghĩ gì nữa? Ván này BOT đã thắng.", "Chặn thì chặn, nhưng thầy nói trước: BOT thắng ở đầu còn lại.", "Thôi xong, đóng cửa. Lần sau nhớ chặn đường 3 từ sớm nhé.",
-    "Thầy xin phép khóc một chút. Thua chắc rồi!", "Muốn kéo dài thêm vài nước thì cứ đi, chứ thế cờ này hết thuốc chữa rồi.", "Đường 4 hở hai đầu, không phép màu nào cứu nổi. Chấp nhận đi!"
+    "Đường 4 hở hai đầu, không phép màu nào cứu nổi. Chấp nhận đi!", "BOT có hai chỗ đủ 5, bạn chỉ chặn được một. Thua rồi!"
+  ],
+  lostNudgeForced: [   // thua chắc qua chuỗi tấn công (4-3, chuỗi nước 4...), chưa lộ thành đường 4 mở
+    "Thầy nhìn mãi không thấy đường sống. Ván này coi như xong.", "Đến thần cờ cũng chịu thua thế này. Bạn nghĩ sao?", "Thôi, đầu hàng cho đỡ mệt. Hay là cứ đi cho BOT khỏi buồn?",
+    "Thầy xin phép khóc một chút. Thua chắc rồi!", "Muốn kéo dài thêm vài nước thì cứ đi, chứ thế cờ này hết thuốc chữa rồi.",
+    "BOT có chuỗi thắng ép rồi, chặn chỗ nào cũng không kịp.", "Thầy soi hết các nước rồi: nước nào BOT cũng thắng được. Thua chắc rồi!",
+    "Trông thì còn chỗ chặn, nhưng BOT dồn liên tiếp là bạn hết đường. Ván này mất rồi."
   ],
   lostVerdict: [
     "Thế cờ đã thua, nước nào cũng không cứu được.", "Đi gì cũng thua, chẳng có nước nào gọi là đúng nữa.", "Thầy không chấm điểm nước này: thua rồi thì chấm làm gì.",
@@ -2949,9 +2969,32 @@ const POOLS = {
     "Thầy đoán bạn đang tìm nước cứu... đừng mất công, thua chắc rồi.", "Thầy đợi mãi mà thế này thì nghĩ bao lâu cũng thua thôi."
   ],
 
-  endLoseLost: ["Thầy đã báo thua từ lúc đường 4 mở xuất hiện rồi đấy.", "Thấy chưa, đường 4 mở là không cứu được.", "Thế cờ đã mất từ trước đó mấy nước rồi, nhớ chặn sớm hơn nhé."],
+  endLoseLost: ["Thầy đã báo trước là thế cờ không cứu được rồi mà.", "Thấy chưa, thầy nói thua là thua thật.", "Thế cờ đã mất từ trước đó mấy nước rồi, nhớ chặn sớm hơn nhé."],
+  lostForced: ["Chặn thì vẫn phải chặn, nhưng chỉ kéo dài thêm được một nước thôi.", "Đỡ đúng rồi, có điều thế thua vẫn là thua.", "Chặn kịp đấy, nhưng BOT còn đòn khác chờ sẵn.", "Nước bắt buộc. Đỡ được nước này, chưa đỡ được cả ván."],
+  lostOngoing: ["Vẫn chưa thoát được đâu.", "Cứ đỡ tiếp đi, thầy xem bạn trụ được bao lâu.", "BOT vẫn đang nắm thế thắng.", "Thầy vẫn chưa thấy lối thoát nào."],
+  sameButBad: [
+    "Nước này thầy cũng định đi, nhưng phân tích kỹ thì nó không tốt như thầy tưởng.", "Ơ, chính thầy cũng nghĩ tới nước này, mà soi kỹ lại thì có vấn đề. Thầy cũng phải học thêm!",
+    "Đây là nước thầy định gợi ý, nhưng xem sâu thì chưa ổn. Lỗi này một nửa là của thầy."
+  ],
+  ignoreNow: [
+    "Ơ kìa! BOT có 4 quân rồi mà bạn không chặn?!", "Bạn không thấy đường 4 của BOT à? Nguy to rồi!", "Thôi xong, đường 4 của BOT còn bỏ ngỏ kìa!",
+    "Mắt để đâu thế? BOT chỉ cần một nước nữa thôi!", "Trời đất, 4 quân của BOT nằm sờ sờ ra đó mà!"
+  ],
+  ignoreVerdict: ["Bài học xương máu: thấy 4 là phải chặn trước tiên.", "Thầy chấm: ngớ ngẩn. Đường 4 của đối thủ luôn phải chặn ngay.", "Nhớ kỹ nhé: chưa chặn đường 4 thì đừng nghĩ chuyện khác."],
+  missNow: [
+    "Ủa, bạn có nước thắng ngay mà không đi?!", "Ôi trời, đủ 5 nằm ngay đó mà bạn đi chỗ khác!", "Thầy suýt ngã ghế: bạn bỏ qua nước thắng rồi!", "Khoan đã... có nước thắng mà sao lại đi đây?"
+  ],
+  missVerdict: ["Lần sau trước khi đi, nhìn xem mình có nước đủ 5 không đã nhé.", "Thầy chấm: tiếc đứt ruột. Luôn kiểm tra nước thắng của mình trước tiên."],
+  strayLost: [
+    "Biết thua rồi nên đánh bừa à? Thầy hiểu, nhưng cố đến cùng mới là người chơi cờ.", "Buông xuôi rồi hả? Thua cũng phải thua cho đẹp chứ.", "Thua rồi thì thôi, đánh ra tận {p} làm gì cho buồn thêm."
+  ],
+  strayOk: ["Lạ nhỉ, nước xa thế mà máy chấm lại không tệ. Lần này thầy bỏ qua.", "Nước này tưởng lạc mà hoá ra vẫn ổn. May cho bạn đấy!"],
+  botFive: ["BOT đi {p}, đủ 5 quân. Hết ván!", "{p}: BOT nối đủ 5 rồi. Ván này BOT thắng.", "Và BOT kết thúc ván ở {p}."],
+  urgentNudge: ["Ê, nhìn kỹ các đường của BOT đi, có một đường sắp đủ 5 đấy!", "Cẩn thận! BOT chỉ còn một bước nữa thôi.", "Nước này không được đi bừa đâu, BOT sắp đủ 5 rồi."],
+  retro: ["Nếu là thầy, thầy đã đi {h}.", "Đáng lẽ nên đi {h}.", "Nước đúng ở đây phải là {h}.", "Chỗ cần đi là {h} cơ."],
   endWin: ["Bạn thắng rồi, chúc mừng!", "Thắng rồi! Thầy tự hào về trò.", "Xuất sắc, BOT phải chịu thua rồi!", "Ván này là của bạn. Tuyệt!"],
-  endLose: ["BOT thắng ván này. Đừng nản nhé.", "Thua rồi, nhưng thua để học mà.", "Tiếc quá, BOT nhỉnh hơn một chút.", "Ván này BOT thắng, thầy biết bạn sẽ gỡ lại."],
+  endLose: ["BOT thắng ván này. Đừng nản nhé.", "Thua rồi, nhưng thua để học mà.", "Ván này BOT thắng, thầy biết bạn sẽ gỡ lại.", "Thua ván này rồi. Không sao, mình học từ nó."],
+  endLoseClose: ["Tiếc quá, BOT chỉ nhỉnh hơn một chút.", "Suýt nữa thì được rồi, ván này rất sát.", "Thua sát nút, bạn chơi tốt đấy."],
   endDraw: ["Hoà rồi. Một ván cân tài cân sức!", "Hoà nhé. Cũng là kết quả đáng nể."]
 };
 const poolBag = {}, poolLast = {};
@@ -2983,47 +3026,69 @@ function sayYouMove() {
   const y = coach.you;
   if (!y || y.said || !y.why0) return;
   y.said = true;
-  const w = y.why0, p = posShort(y.r, y.c);
+  const w = y.why0, p = posShort(y.r, y.c), h = y.hint;
+  const th = h && h.threats;
+  const lostBefore = !!(h && isLost(h));
+  if (w.atk === "five") { say("Đủ 5 quân rồi, thắng!"); return; }           // thắng: chỉ một câu, lời kết ván do sayEnd nói
+  // bỏ lỡ nước thắng / không chặn đường 4: nói ngay, quan trọng hơn mọi chuyện khác
+  if (th && th.me.five) { y.toldMiss = true; say(line("missNow")); return; }
+  if (th && th.foe.five && w.def !== "block5" && !lostBefore) { y.toldIgnore = true; say(line("ignoreNow")); return; }
   const g = strayOf(y);
-  if (g.stray && w.atk !== "five") {
-    y.stray = true; coach.scold++; coach.lastScold = true;
+  if (g.stray) {
+    y.stray = true;
+    if (lostBefore) { say(line("strayLost", { p })); return; }          // đã thua nên đánh bừa: không tính là cố tình
+    coach.scold++; coach.lastScold = true;
     const key = coach.scold >= 3 ? "scold3" : coach.scold === 2 ? "scold2" : (g.edge ? "scoldEdge" : "scold1");
     say(line(key, { p }));
     return;
   }
-  let t = w.atk === "five" ? "Đủ 5 quân rồi, thắng!" : line("youOpen", { p, act: sayWhy(w, [y.r, y.c], human) });
+  const strong = w.atk === "open4" || w.atk === "four3" || w.atk === "three3";
+  const defOnly = !!w.def && !WHY_STRONG[w.atk];
+  let t = line(strong ? "youStrong" : defOnly ? "youDef" : "youOpen", { p, act: sayWhy(w, [y.r, y.c], human) });
   if (coach.lastScold) { t += " " + line("redeem"); coach.lastScold = false; }
-  if (y.same) t += " " + line(coach.revealKey === y.hintKey ? "sameUsed" : "sameSelf");
-  else if (y.hint && y.hint.move && !y.hint.lost) t += " " + line("diffHint", { h: posShort(y.hint.move[0], y.hint.move[1]) });
-  if (!y.same && !y.stray && coach.turnAt && Date.now() - coach.turnAt < 1500 && Math.random() < .6) t += " " + line("fast");
+  const forcedSpot = th && th.foe.five;                                    // chỉ có một chỗ chặn: không khen "tự nghĩ ra"
+  if (!lostBefore && !forcedSpot && y.i > 1) {
+    if (y.same) { if (coach.revealKey === y.hintKey) t += " " + line("sameUsed"); else if (Math.random() < .6) t += " " + line("sameSelf"); }
+    else if (h && h.move) t += " " + line("diffHint", { h: posShort(h.move[0], h.move[1]) });
+  }
+  if (!y.same && !lostBefore && !forcedSpot && coach.turnAt && Date.now() - coach.turnAt < 1500 && Math.random() < .6) t += " " + line("fast");
   say(t);
 }
 function sayVerdict() {
   const y = coach.you;
   if (!y || y.status !== "done" || y.verdictSaid) return;
   y.verdictSaid = true;
-  const k = y.kind, tag = `<span class="coach-tag k-${k}">${k === "forced" && y.reason === "lost" ? "Thế đã thua" : ANA_KIND[k].label}</span>`;
-  const hp = y.hint && y.hint.move ? posShort(y.hint.move[0], y.hint.move[1]) : "";
-  let t, extra = "";
+  if (y.reason === "five") return;                                         // nước thắng: lời kết ván đã đủ
+  const k = y.kind, lostNow = k === "forced" && y.reason === "lost";
+  const tag = `<span class="coach-tag k-${k}">${lostNow ? "Thế đã thua" : ANA_KIND[k].label}</span>`;
+  const hp = y.hint && y.hint.move && !(y.hint && isLost(y.hint)) ? posShort(y.hint.move[0], y.hint.move[1]) : "";
   const rs = ANA_LONG[y.reason] || "nước này làm bạn mất thế";
-  if (k === "brilliant") t = line("brilliant");
+  const LOSING = { "allow-vcf": 1, "allow-vct": 1, "allow-open-four": 1, "allow-attack": 1 };
+  let t, extra = "";
+  if (y.stray && (k === "best" || k === "good" || k === "book" || k === "brilliant")) t = line("strayOk");
+  else if (k === "brilliant") t = line("brilliant");
   else if (k === "best") t = line("best");
   else if (k === "book") t = line("book");
-  else if (k === "forced" && y.reason === "lost") { t = line("lostVerdict"); coach.lostSaid = true; }
-  else if (k === "forced") t = line("forced");
+  else if (lostNow) { t = line("lostVerdict"); coach.lostSaid = true; }
+  else if (k === "forced") t = line((y.hint && isLost(y.hint)) || coach.lostSaid ? "lostForced" : "forced");
   else if (k === "good") {
     t = y.same || !hp ? line("goodSame") : line("goodDiff", { h: hp });
     if (!y.same && hp) extra = qr(["better", "Cho tôi xem"], ["why", "Vì sao hay hơn?"]);
   } else {
-    const LOSING = { "allow-vcf": 1, "allow-vct": 1, "allow-open-four": 1, "allow-attack": 1 };
-    if (LOSING[y.reason]) { t = line("threw") + " " + cap1(rs) + "."; coach.lostSaid = true; y.noHint = true; }
+    if (y.same && !LOSING[y.reason] && y.reason !== "no-block-five" && y.reason !== "missed-five") {
+      // bạn đi đúng nước thầy định gợi ý mà phân tích sâu lại chấm sai: thầy nhận phần mình, không bảo "đáng lẽ đi" chính nước đó
+      say(line("sameButBad") + " " + cap1(rs) + ".", tag + qr(["whybad", "Vì sao sai?"]));
+      return;
+    }
+    if (LOSING[y.reason]) { t = line("threw") + " " + cap1(rs) + "."; coach.lostSaid = true; coach.lostCycle = moveHistory.length; y.noHint = true; }
+    else if (y.reason === "no-block-five") t = (y.toldIgnore ? line("ignoreVerdict") : line("ignore") + " " + cap1(rs) + ".");
+    else if (y.reason === "missed-five") t = (y.toldMiss ? line("missVerdict") : line("missWin") + " " + cap1(rs) + ".");
     else if (y.stray || y.reason === "far") t = line("farVerdict");
-    else if (y.reason === "no-block-five" || y.reason === "allow-open-four") t = line("ignore") + " " + cap1(rs) + ".";
-    else if (y.reason === "missed-win" || y.reason === "missed-five" || y.reason === "threw-win") t = line("missWin") + " " + cap1(rs) + ".";
+    else if (y.reason === "missed-win" || y.reason === "threw-win") t = line("missWin") + " " + cap1(rs) + ".";
     else t = line(k === "blunder" ? "blunder" : "mistake") + " " + cap1(rs) + ".";
     if (y.noHint) extra = qr(["refute", "Xem BOT thắng thế nào"], ["whybad", "Vì sao sai?"]);
     else {
-      if (hp && !(y.hint && y.hint.lost)) t += ` Thầy sẽ đi ${hp}.`;
+      if (hp) t += " " + line("retro", { h: hp });                         // nói về nước đã qua: "đáng lẽ", không phải "thầy sẽ"
       extra = qr(["better", "Cho tôi xem"], ["whybad", "Vì sao sai?"]);
     }
   }
@@ -3033,10 +3098,11 @@ function sayBot() {
   const b = coach.bot;
   if (!b || b.said || !b.why) return;
   b.said = true;
+  if (b.why.atk === "five") { say(line("botFive", { p: posShort(b.r, b.c) })); return; }
   let t = line("botOpen", { p: posShort(b.r, b.c), act: sayWhy(b.why, [b.r, b.c], ai) });
   if (b.matched) t += " " + line("botMatched");
   else if (b.diff) t += " " + line("botDiff");
-  if (b.why.atk === "open4") t += " " + line("lostBot");
+  if (b.why.atk === "open4") { t += " " + line("lostBot"); coach.lostSaid = true; coach.lostCycle = moveHistory.length; }
   say(t);
 }
 // thầy không tự gợi ý: chỉ nhắc nhẹ khi tới lượt bạn (có chừng mực), còn gợi ý thật sự chờ bạn bấm nút
@@ -3044,11 +3110,22 @@ function sayTurnNudge() {
   const h = coach.hint;
   if (!coach.on || !h || gameOver || nextSym() !== human || coach.nudgedKey === coach.hintFor) return;
   coach.nudgedKey = coach.hintFor;
-  if (isLost(h)) { coach.lostSaid = true; say(line("lostNudge")); return; }
-  if (Math.random() > .5) return;
   const th = h.threats;
-  if (th.foe.five || th.foe.open3 || th.foe.combo) say(line("nudgeDanger"));
-  else if (th.me.five || th.me.open3) say(line("nudgeChance"));
+  if (isLost(h)) {
+    // vừa báo thua ở nước trước (BOT dựng 4 mở / bạn để BOT thắng ép) thì thôi, khỏi nhắc lại
+    if (coach.lostCycle && moveHistory.length - coach.lostCycle <= 1) return;
+    const first = !coach.lostSaid;
+    coach.lostSaid = true; coach.lostCycle = moveHistory.length;
+    if (first || th.foe.fiveN >= 2) say(line(th.foe.fiveN >= 2 ? "lostNudge" : "lostNudgeForced"));
+    else if (Math.random() < .35) say(line("lostOngoing"));                // đã báo thua rồi: thỉnh thoảng nhắc nhẹ, không lặp mãi
+    return;
+  }
+  if (th.me.five) { if (Math.random() < .5) say(line("nudgeChance")); return; }
+  if (th.foe.five) { if (Math.random() < .7) say(line("urgentNudge")); return; }
+  if (Math.random() > .5) return;
+  if (th.foe.open3 || th.foe.combo) say(line("nudgeDanger"));
+  else if (h.stones <= 2) say(line("nudgeOpen"));
+  else if (th.me.open3) say(line("nudgeMomentum"));
   else say(line("nudge"));
 }
 function sayIdle() {
@@ -3072,9 +3149,9 @@ function sayNext() {
   const hp = posShort(h.move[0], h.move[1]);
   const rp = h.pv[1] ? posShort(h.pv[1][0], h.pv[1][1]) : "";
   let t;
-  if (isLost(h)) t = line("lostHint", { h: hp });
-  else if (h.threats.foe.five) t = line("hintUrgent", { h: hp });
-  else if (h.threats.me.five) t = line("hintWin", { h: hp });
+  if (isLost(h)) { say(line("lostHint")); return; }
+  if (h.threats.me.five) { say(line("hintWin", { h: hp })); return; }
+  if (h.threats.foe.five) t = line("hintUrgent", { h: hp });
   else {
     t = `${observeSay(h.threats, h.stones)} ${line("hintOpen")} đi ${hp}, ${sayWhy(h.why, h.move, human)}.`;
     if (rp) t += " " + line("hintReply", { r: rp });
@@ -3089,26 +3166,33 @@ function sayEnd() {
   const ks = coach.stat.filter(Boolean);
   const bad = ks.filter(k => k === "mistake" || k === "blunder").length;
   let t;
-  if (won && last[2] === human) t = line("endWin") + " " + (bad ? `Có ${bad} nước chưa ổn, nhưng cuối cùng bạn vẫn cản được BOT.` : "Cả ván bạn đi rất chắc tay.");
-  else if (won) t = line("endLose") + " " + (bad ? `Thầy thấy ${bad} nước sai lầm của bạn, xem lại chúng là cách học nhanh nhất.` : "Bạn đi khá chắc, chỉ thiếu một chút thế tấn công.");
+  const youWon = won && last[2] === human;
+  if (youWon) t = line("endWin") + " " + (bad ? `Có ${bad} nước chưa ổn, nhưng cuối cùng bạn vẫn thắng.` : "Cả ván bạn đi rất chắc tay.");
+  else if (won) t = line(!coach.lostSaid && !bad && !coach.scold && !(coach.you && (coach.you.toldIgnore || coach.you.kind === "blunder")) && moveHistory.length >= 30 ? "endLoseClose" : "endLose") + " " + (bad ? `Thầy thấy ${bad} nước sai lầm của bạn, xem lại chúng là cách học nhanh nhất.` : "Bạn đi khá chắc, chỉ thiếu một chút thế tấn công.");
   else t = line("endDraw");
-  if (coach.lostSaid && !(won && last[2] === human)) t += " " + line("endLoseLost");
+  if (coach.lostSaid && won && !youWon) t += " " + line("endLoseLost");
   if (coach.scold >= 2) t += " Và thầy nhắc lần cuối: những nước đánh xa quân ban nãy là tự hại mình đấy.";
-  if (coach.hintsUsed) t += ` Bạn đã dùng gợi ý ${coach.hintsUsed} lần.`; else t += " Cả ván bạn không cần gợi ý nào, giỏi lắm!";
+  if (coach.hintsUsed) t += ` Bạn đã dùng gợi ý ${coach.hintsUsed} lần.`;
+  else t += youWon ? " Cả ván bạn không cần gợi ý nào, giỏi lắm!" : " Lần sau bí thì đừng ngại ấn Gợi ý nhé.";
   say(t + " Ấn Ván mới để học tiếp nhé.");
 }
 function answerQuick(q) {
   const y = coach.you, h = coach.hint;
-  if (q === "refute") { say("Xem BOT thắng thế nào", "", "u"); say("Thầy vẽ lên bàn: ✗ là nước bạn vừa đi, các quân mờ đánh số là chuỗi BOT dùng để thắng ép. Nhìn kỹ rồi lần sau chặn sớm hơn nhé."); showBetter(true); return; }
-  if (q === "better") { say("Cho tôi xem", "", "u"); say("Thầy vẽ lên bàn rồi: ✗ là nước bạn vừa đi, vòng xanh là nước nên đi, các quân mờ đánh số là BOT sẽ đáp trả thế nào."); showBetter(); return; }
+  if (q === "refute") { say("Xem BOT thắng thế nào", "", "u"); say("Thầy vẽ lên bàn: ✗ là nước bạn vừa đi, các quân mờ đánh số là chuỗi BOT dùng để thắng ép. Nhìn kỹ rồi lần sau chặn sớm hơn nhé.", qr(["whybad", "Vì sao sai?"])); showBetter(true); return; }
+  if (q === "better") {
+    say("Cho tôi xem", "", "u");
+    const more = y && (y.kind === "mistake" || y.kind === "blunder") ? qr(["whybad", "Vì sao sai?"]) : (y && y.kind === "good" ? qr(["why", "Vì sao hay hơn?"]) : "");
+    say("Thầy vẽ lên bàn rồi: ✗ là nước bạn vừa đi, vòng xanh là nước nên đi" + (y && y.refute && y.refute.length ? ", các quân mờ đánh số là cách BOT trừng phạt nước vừa rồi." : "."), more);
+    showBetter(); return;
+  }
   if (q === "pv") { const on = coach.showPV; say(on ? "Ẩn diễn biến đi" : "Cho tôi xem diễn biến", "", "u"); say(on ? "Thầy ẩn đi cho bàn cờ gọn lại." : "Thầy chạy thử chuỗi dự kiến cho bạn xem. Quân mờ có số ① là nước thầy gợi ý, ② là BOT đáp, rồi cứ thế luân phiên. Bấm lại nút để ẩn."); playPV(); return; }
   if (q === "whynext" && h) { say("Vì sao đi vậy?", "", "u"); say(conceptFor(h.why)); return; }
   if (q === "why" && y) { say("Vì sao hay hơn?", "", "u"); say(y.hint ? "Nước thầy gợi ý " + sayWhy(y.hint.why, y.hint.move, human) + ". " + conceptFor(y.hint.why) : conceptFor(y.why0)); return; }
   if (q === "whybad" && y) {
     say("Vì sao sai?", "", "u");
     let t = y.reason === "far" ? CONCEPT.far : (ANA_LONG[y.reason] ? ANA_LONG[y.reason].charAt(0).toUpperCase() + ANA_LONG[y.reason].slice(1) + "." : "");
-    if (y.refute && y.refute.length) t += ` Sau nước đó BOT có thể đi ${posShort(y.refute[0][0], y.refute[0][1])} rồi tiếp tục dồn bạn (các quân đỏ mờ trên bàn, bấm "Cho tôi xem").`;
-    say(t || conceptFor(y.why0));
+    if (y.refute && y.refute.length) t += ` Sau nước đó BOT có thể đi ${posShort(y.refute[0][0], y.refute[0][1])} rồi tiếp tục dồn bạn.`;
+    say(t || conceptFor(y.why0), y.noHint ? qr(["refute", "Xem BOT thắng thế nào"]) : qr(["better", "Cho tôi xem"]));
   }
 }
 
@@ -3117,6 +3201,7 @@ function meterHTML(h) {
   const ev = h ? h.eval || 0 : 0;
   const p = Math.round(50 + ev * 46);
   let label = "Cân bằng";
+  if (isLost(h)) return `<div class="ch-meter" title="Cán cân thế trận"><span class="mx c${human}">Bạn</span><div class="bar b${ai}"><i class="b${human}" style="width:4%"></i></div><span class="mx c${ai}">BOT</span><em>BOT thắng chắc</em></div>`;
   if (h && h.threats && h.threats.foe.five) label = "Chặn ngay!";
   else if (h && h.threats && h.threats.me.five) label = "Đi là thắng!";
   else if (ev >= .99) label = "Bạn có đường thắng";
@@ -3192,14 +3277,14 @@ function syncAnalysis() {                       // sau hoàn tác
 function resetAnalysis() {                      // Ván mới / Chơi lại: tắt giảng dạy
   clearTimeout(coach.armTimer); endView();
   coach.gen++; coach.on = false; coach.armed = false;
-  coach.hint = null; coach.hintFor = ""; coach.hintPending = false; coach.you = null; coach.bot = null; coach.stat = []; coach.waitAna = -1; coach.ponderKey = ""; coach.nextSaid = ""; coach.endSaid = false; coach.revealKey = ""; coach.hintsUsed = 0; coach.scold = 0; coach.lastScold = false; coach.nudgedKey = ""; coach.lostSaid = false; clearTimeout(coach.idleTimer);
+  coach.hint = null; coach.hintFor = ""; coach.hintPending = false; coach.you = null; coach.bot = null; coach.stat = []; coach.waitAna = -1; coach.ponderKey = ""; coach.nextSaid = ""; coach.endSaid = false; coach.revealKey = ""; coach.hintsUsed = 0; coach.scold = 0; coach.lastScold = false; coach.nudgedKey = ""; coach.lostSaid = false; coach.lostCycle = 0; clearTimeout(coach.idleTimer);
   for (const k of ["hw", "aw"]) { if (coach[k]) { try { coach[k].terminate(); } catch (e) {} coach[k] = null; } }
   chatClear();
   renderCoach();
 }
 function startCoach() {
   clearTimeout(coach.armTimer);
-  coach.armed = false; coach.on = true; coach.gen++; coach.nextSaid = ""; coach.endSaid = false; coach.revealKey = ""; coach.hintsUsed = 0; coach.scold = 0; coach.lastScold = false; coach.nudgedKey = ""; coach.lostSaid = false;
+  coach.armed = false; coach.on = true; coach.gen++; coach.nextSaid = ""; coach.endSaid = false; coach.revealKey = ""; coach.hintsUsed = 0; coach.scold = 0; coach.lastScold = false; coach.nudgedKey = ""; coach.lostSaid = false; coach.lostCycle = 0;
   if (!ensureCoachWorkers()) { coach.on = false; commentaryDiv.textContent = "Trình duyệt không hỗ trợ chế độ giảng dạy."; renderCoach(); return; }
   commentaryDiv.textContent = "Thầy AI.GiaBao bắt đầu giảng. Muốn tắt thì ấn Ván mới.";
   drawLayer(); renderCoach();
