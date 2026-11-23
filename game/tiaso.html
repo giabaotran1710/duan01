@@ -105,7 +105,22 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   .frame{grid-row:2/7;max-width:min(100%,calc(100dvh - 90px))}
   .hint,.status,.trayH,.tray,.msg{grid-column:2}
 }
-@media (prefers-reduced-motion:reduce){.beamFlow,.tgtOk,.pop,.spin{animation:none}}
+.layer.on .panel{animation:panelIn .26s cubic-bezier(.2,.9,.3,1.25) both}
+.layer.sheet.on .panel{animation-name:sheetIn;animation-timing-function:cubic-bezier(.2,.8,.2,1)}
+@keyframes panelIn{from{opacity:0;transform:translateY(12px) scale(.96)}}
+@keyframes sheetIn{from{transform:translateY(36px)}}
+#win.on .tick{animation:tickPop .45s .12s cubic-bezier(.2,.9,.3,1.25) both}
+#win.on .tick path{stroke-dasharray:1;stroke-dashoffset:1;animation:tickDraw .38s .32s ease-out forwards}
+@keyframes tickPop{from{opacity:0;transform:scale(.5)}}
+@keyframes tickDraw{to{stroke-dashoffset:0}}
+.msg.shake{animation:msgShake .26s}
+@keyframes msgShake{20%{transform:translateX(-6px)}45%{transform:translateX(5px)}70%{transform:translateX(-3px)}}
+.frame{position:relative}
+.frame::after{content:"";position:absolute;inset:0;border-radius:18px;pointer-events:none;opacity:0;box-shadow:0 0 34px 6px rgba(255,201,77,.75)}
+.frame.lit::after{animation:frameLit .9s ease-out}
+@keyframes frameLit{15%{opacity:1}to{opacity:0}}
+@media (prefers-reduced-motion:reduce){.beamFlow,.tgtOk,.pop,.spin,.msg.shake,.layer.on .panel,#win.on .tick,.frame.lit::after{animation:none}
+  #win.on .tick path{animation:none;stroke-dashoffset:0}}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -162,7 +177,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 <div class="layer" id="win" role="dialog" aria-modal="true" aria-labelledby="winH">
   <div class="panel">
     <h2 id="winH">Mọi đích đã sáng!</h2>
-    <div class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5"/></svg></div>
+    <div class="tick" aria-hidden="true"><svg viewBox="0 0 24 24"><path d="m5 12.5 4.5 4.5L19 7.5" pathLength="1"/></svg></div>
     <p id="winWhy"></p>
     <button class="big" id="nextBtn" data-no-scene>Màn tiếp</button>
     <button class="ghost" id="againBtn" data-no-scene>Ở lại màn này</button>
@@ -170,6 +185,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 </div>
 
 <footer class="tbFooter">Version: D20261113160000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
+<script src="../fx.js?v=1"></script>
 <script src="../scores.js?v=20261116a"></script>
 <script src="tiaso-core.js?v=3"></script>
 <script src="tiaso-levels.js?v=3"></script>
@@ -191,6 +207,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
   let lvIdx = Math.min(save.unlocked, LEVELS.length - 1);
   let cur = LEVELS[lvIdx], mode = { kind: 'tut' }, genBusy = false;
   let B = null, place = [], left = {}, sel = null, sim = null, won = false, winTimer = 0, lastPlaced = -1;
+  let okSeen = null, lastMsg = '';   // đích đã sáng ở lần cập nhật trước, câu báo lỗi trước (để chỉ hiệu ứng khi có thay đổi)
 
   function load() {
     try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && s.stars) return s; } catch (e) {}
@@ -373,6 +390,24 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
 
   function used() { return place.filter(Boolean).length; }
 
+  // toạ độ màn hình của tâm một ô trên bàn (cho hiệu ứng nằm ngoài SVG)
+  function cellPoint(i) {
+    const r = svg.getBoundingClientRect(), vb = svg.viewBox.baseVal;
+    if (!vb || !vb.width) return null;
+    return { x: r.left + ((i % B.W) + .5 - vb.x) / vb.width * r.width, y: r.top + (((i / B.W) | 0) + .5 - vb.y) / vb.height * r.height };
+  }
+  function lightTarget(i, big) {
+    if (!window.FX) return;
+    const p = cellPoint(i); if (!p) return;
+    FX.ring(p.x, p.y, '#74e08a', big ? 64 : 46, 4);
+    if (big) FX.burst(p.x, p.y, { n: 10, colors: ['#74e08a', '#ffd77a', '#fff6d8'], speed: 200, gravity: 260, size: 5, life: .7, shape: 'circle' });
+  }
+  function celebrate() {
+    const f = document.querySelector('.frame');
+    if (f) { f.classList.remove('lit'); void f.offsetWidth; f.classList.add('lit'); }
+    Object.keys(sim.tg).forEach((k, n) => setTimeout(() => { if (won) lightTarget(+k, true); }, n * 90));
+  }
+
   function update() {
     sim = C.simulate(B, place);
     render(); renderTray();
@@ -388,10 +423,16 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     } else if (sim.deaths.some(d => d.why === 'gate')) m.textContent = 'Có tia bị cổng chặn: sai chẵn lẻ.';
     else if (sim.deaths.some(d => d.why === 'op')) m.textContent = 'Có tia bị tắt: chia không hết hoặc ra số âm.';
     else m.textContent = sel ? 'Chạm ô trống trên bàn để đặt ' + C.label(sel) + '.' : '';
+    if (m.classList.contains('err') && m.textContent !== lastMsg) { m.classList.remove('shake'); void m.offsetWidth; m.classList.add('shake'); }
+    lastMsg = m.classList.contains('err') ? m.textContent : '';
+    const okNow = new Set(Object.keys(sim.tg).filter(k => sim.tg[k].st === 'ok'));
+    if (okSeen && !sim.win) okNow.forEach(k => { if (!okSeen.has(k)) lightTarget(+k, false); });
+    okSeen = okNow;
     if (!sim.win) { won = false; clearTimeout(winTimer); }
     else if (!won) {
       won = true;
       sfx.ok();
+      celebrate();
       winTimer = setTimeout(onWin, 700);
     }
   }
@@ -423,7 +464,7 @@ header h1 small{display:block;font:500 12px var(--body);color:var(--muted)}
     B = C.parse(lv);
     place = new Array(B.cells.length);
     left = {}; lv.tray.forEach(t => { left[t] = (left[t] || 0) + 1; });
-    sel = Object.keys(left)[0]; won = false; clearTimeout(winTimer);
+    sel = Object.keys(left)[0]; won = false; clearTimeout(winTimer); okSeen = null; lastMsg = '';
     $('lvTitle').innerHTML = `Tia số<small>${title}</small>`;
     $('hint').textContent = hint;
     $('parTxt').textContent = lv.par;

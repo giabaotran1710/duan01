@@ -84,12 +84,18 @@ const SNAP = () => ({
   const srv = await serve();
   const base = 'http://127.0.0.1:' + srv.address().port + '/';
   const browser = await chromium.launch();
-  const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, reducedMotion: o.reduced ? 'reduce' : 'no-preference' });
+  // Giả lập điện thoại thật (một số game chặn máy tính) và người chơi đã đặt tên (nếu không, hộp "Chọn tên người chơi" che game).
+  const ctx = await browser.newContext({ viewport: { width: w, height: h }, isMobile: true, hasTouch: true, reducedMotion: o.reduced ? 'reduce' : 'no-preference',
+    userAgent: 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1' });
   await ctx.route(url => !url.href.startsWith(base), r => r.abort());   // không gọi mạng ngoài (Firebase, phông chữ)
   const page = await ctx.newPage();
   const errs = new Set();
   page.on('pageerror', e => errs.add(String(e.message).slice(0, 140)));
   await page.addInitScript(INIT);
+  await page.addInitScript(() => {
+    try { localStorage.setItem('player_name', 'tester01'); localStorage.setItem('lb_name_asked', '1'); localStorage.setItem('lb_name_claimed', 'tester01'); } catch (e) {}
+    window.SCORE_FIREBASE_URL = 'http://127.0.0.1:9';
+  });
   await page.goto(base + o.file, { waitUntil: 'load', timeout: 20000 });
   await page.waitForTimeout(800);
   if (o.cpu > 1) { const cdp = await ctx.newCDPSession(page); await cdp.send('Emulation.setCPUThrottlingRate', { rate: o.cpu }); }
