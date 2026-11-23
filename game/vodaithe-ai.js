@@ -95,9 +95,9 @@
       const d = CARDS[k]; u.k = k; u.a = d.a; u.hp = d.h; u.mh = d.h; u.sz = d.sz;
     }
     for (const c of w.hand[o]) if (!c.k) c.k = pull(poolO, listO);
-    const trickO = poolO.filter(k => CARDS[k].t === 'trick');
     for (const t of w.traps[o]) {
-      t.k = trickO.length ? trickO.pop() : 'nghibinh';
+      const j = poolO.findIndex(k => CARDS[k].t === 'trick');
+      t.k = j >= 0 ? poolO.splice(j, 1)[0] : 'nghibinh';
       t.lane = mem && mem.lanes ? pickLane(mem.lanes, r) : Math.floor(rnd(r) * LANES);
     }
     for (const c of w.deck[o]) c.k = pull(poolO, listO);

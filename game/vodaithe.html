@@ -251,6 +251,13 @@ svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;str
 .trl svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:2.2;stroke-linecap:round;stroke-linejoin:round}
 .gl{display:grid;grid-template-columns:40px 1fr;gap:8px;align-items:center;padding:6px 0;border-top:1px solid rgba(255,255,255,.07)}
 .gl .seal{width:38px;height:38px}
+.knownRow{display:flex;align-items:center;gap:4px;margin:0 12px 2px;padding:3px 6px;background:rgba(0,0,0,.3);overflow-x:auto;scrollbar-width:none}
+.knownRow[hidden]{display:none}
+.knownRow .lb{font:700 9px/1 var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.06em;white-space:nowrap;margin-right:2px}
+.knownRow .kc{display:inline-flex;align-items:center;gap:3px;font:700 10px/1 var(--body);background:var(--bamboo);color:var(--ink);padding:3px 5px;white-space:nowrap;clip-path:var(--cut)}
+.knownRow .kc.trick{background:var(--lac);color:var(--gold)}
+.knownRow .kc.sp{background:#e8c066}
+.knownRow .kc svg{width:12px;height:12px}
 .castle .stats{grid-template-columns:1.9fr .85fr .7fr .7fr;gap:4px}
 .castle .stat{padding:5px 6px}
 @media (max-height:700px){
@@ -289,6 +296,7 @@ svg.ic{width:100%;height:100%;fill:none;stroke:currentColor;stroke-width:1.7;str
     </div>
     <div class="pills" id="pills"></div>
     <div class="castle foe" id="cFoe"></div>
+    <div class="knownRow" id="kFoe" hidden></div>
     <div class="board" id="board"></div>
     <div class="castle me" id="cMe"></div>
     <div class="bar"><div class="info" id="info"></div><button class="go" id="bGo">Xong</button></div>
@@ -388,7 +396,7 @@ function cardText(k) {
   return (tr.length ? tr.join(' · ') + '. ' : '') + (d.txt || '');
 }
 
-let mode = 'ai', level = 1, gen = 'houy', s = null, ai = null, sel = null, busy = false, viewer = 0, token = 0, selUnit = null, castleDisp = [20, 20], shieldDisp = [0, 0];
+let mode = 'ai', level = 1, gen = 'houy', s = null, ai = null, sel = null, busy = false, viewer = 0, token = 0, selUnit = null, castleDisp = [20, 20], shieldDisp = [0, 0], blocksDisp = [0, 0];
 try { const v = +localStorage.getItem('vdt_level'); if (v >= 0 && v <= 3) level = v; } catch (e) {}
 try { const g = localStorage.getItem('vdt_gen'); if (GEN[g]) gen = g; } catch (e) {}
 
@@ -451,7 +459,7 @@ function start(m) {
   s = V.newGame((Date.now() ^ (Math.random() * 1e9)) >>> 0, [gen, foe]);
   ai = m === 'ai' ? AI.create(level) : null;
   viewer = 0; sel = null; selUnit = null; busy = false;
-  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice();
+  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice(); blocksDisp = s.blocks.slice();
   show('game'); $('veil').classList.remove('on');
   render();
   turnLoop(true);
@@ -491,7 +499,8 @@ async function act(a, my) {
   const n0 = s.log.length;
   if (!V.apply(s, a)) return false;
   const fresh = s.log.splice(n0);
-  if (a.t === 'sp') { render(); await playSp(fresh, my); }
+  if (a.t === 'sp') await playSp(fresh, my);
+  else if (a.t === 'unit') { const sc = fresh.find(e => e.e === 'scout'); if (sc && sc.p === viewer) { render(); floatAt($('kFoe'), 'Lộ: ' + C[sc.k].n, true); } }
   return true;
 }
 async function aiTurn(my) {
@@ -504,6 +513,7 @@ async function aiTurn(my) {
     if (my !== token) return;
     if (a.t === 'end') break;
     await act(a, my);
+    if (my !== token) return;
     render();
     if (window.SFX) SFX.play(a.t === 'unit' ? 'place' : 'deal');
     await sleep(600);
@@ -530,6 +540,9 @@ function render() {
   $('pills').innerHTML = PHASES.map((n, i) => '<div class="pill ' + (i + 1 === s.phase ? 'cur' : i + 1 < s.phase ? 'done' : '') + '">' + (i + 1) + '. ' + n + '</div>').join('');
   $('cFoe').innerHTML = castleHtml(foe);
   $('cMe').innerHTML = castleHtml(me);
+  const kn = s.hand[foe].filter(c => c.k && s.known[me].indexOf(c.id) >= 0);
+  $('kFoe').hidden = !kn.length;
+  $('kFoe').innerHTML = kn.length ? '<span class="lb">Bài đối thủ đã lộ</span>' + kn.map(c => '<span class="kc ' + C[c.k].t + '">' + ic(c.k) + C[c.k].n + '</span>').join('') : '';
   const myTurn = !busy && s.winner === null && s.turn === me && isHuman(me);
   const legal = myTurn ? V.legal(s) : [];
   const canLanes = {};
@@ -572,7 +585,7 @@ function cardHtml(c, me, legal) {
 function castleHtml(p) {
   const hp = Math.max(0, castleDisp[p]);
   const isAtk = s.atk === p;
-  const sh = shieldDisp[p], left = V.BLOCKS_MAX - s.blocks[p];
+  const sh = shieldDisp[p], left = V.BLOCKS_MAX - blocksDisp[p];
   let pips = '';
   for (let i = 0; i < V.SHIELD_FULL - 1; i++) pips += '<i class="' + (left > 0 && i < sh ? 'on' : '') + '"></i>';
   return seal(s.gen[p]) + '<div class="body"><div class="cTop"><span class="cName">' + genName(p) + ' · ' + myName(p) + '</span><span class="role ' + (isAtk ? '' : 'def') + '">' + (isAtk ? 'TẤN CÔNG' : 'PHÒNG THỦ') + '</span></div>' +
@@ -668,7 +681,8 @@ $('board').addEventListener('click', async e => {
       const d = C[c.k];
       const a = { t: d.t, id: sel, lane: d.t === 'sp' && d.need === 'global' ? -1 : l };
       busy = true;
-      const ok = await act(a, token);
+      const my = token, ok = await act(a, my);
+      if (my !== token) return;
       busy = false;
       if (ok) {
         if (window.SFX && d.t !== 'sp') SFX.play(d.t === 'unit' ? 'place' : 'deal');
@@ -723,8 +737,9 @@ async function playSp(log, my) {
   else if (e.k === 'songdu' && e.to >= 0) floatAt(laneEl(e.to), 'Bị đẩy tới', false);
   else if (el && e.k !== 'baybinh' && e.k !== 'dola') floatAt(el, C[e.k].n, true);
   for (const d of log) if (d.e === 'die') { const u = unitEl(d.uid); if (u) u.classList.add('dying'); }
-  castleDisp = [s.hp[0], s.hp[1]];
+  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice(); blocksDisp = s.blocks.slice();
   await sleep(500);
+  if (my !== token) return;
   render();
 }
 function shotFx(fromEl, toEl) {
@@ -755,7 +770,7 @@ async function replay(my) {
     if (e.e === 'reveal') {
       const el = unitEl(e.uid);
       if (el && el.classList.contains('hidden')) {
-        el.classList.remove('hidden'); el.innerHTML = '<span class="em">' + ic(e.k) + '</span>' + badges(traitsOfCard(e.k)) + '<span class="nm">' + C[e.k].n + '</span><span class="st"><span class="a">⚔' + C[e.k].a + '</span><span class="h">♥' + C[e.k].h + '</span></span>';
+        el.classList.remove('hidden'); el.innerHTML = '<span class="em">' + ic(e.k) + '</span>' + badges(traitsOfCard(e.k)) + '<span class="nm">' + C[e.k].n + '</span><span class="st"><span class="a">⚔' + (e.a != null ? e.a : C[e.k].a) + '</span><span class="h">♥' + (e.hp != null ? e.hp : C[e.k].h) + '</span></span>';
         pulse(el, 'reveal'); if (window.SFX) SFX.play('flip'); await sleep(450);
       }
     } else if (e.e === 'heal') {
@@ -807,7 +822,8 @@ async function replay(my) {
       } else {
         shieldDisp[e.target] = 0;
         cm.innerHTML = castleHtml(e.target);
-        blockFx(e.target, e.target === me || mode === 'pvp' ? e.sp : null);
+        blocksDisp[e.target]++;
+        blockFx(e.target, e.target === me ? e.sp : null);
         if (window.SFX) SFX.play('gate');
         await sleep(500);
       }
@@ -820,7 +836,7 @@ async function replay(my) {
   }
   lit(-1);
   await sleep(350);
-  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice();
+  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice(); blocksDisp = s.blocks.slice();
   s.log = [];
 }
 
@@ -828,7 +844,7 @@ async function replay(my) {
 function showEnd() {
   const w = s.winner;
   const won = mode === 'ai' ? w === 0 : true;
-  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice(); render();
+  castleDisp = [s.hp[0], s.hp[1]]; shieldDisp = s.shield.slice(); blocksDisp = s.blocks.slice(); render();
   if (window.SFX) SFX.play(won ? 'win' : 'lose');
   $('endBody').innerHTML = '<div style="display:flex;justify-content:center;margin-bottom:8px">' + seal(s.gen[w]).replace('class="seal"', 'class="seal" style="--gc:' + GEN[s.gen[w]].col + ';width:72px;height:72px"') + '</div>' +
     '<h2>' + (mode === 'ai' ? (won ? 'Bạn thắng!' : 'Máy thắng') : myName(w) + ' thắng!') + '</h2>' +

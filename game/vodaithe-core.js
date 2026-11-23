@@ -57,7 +57,7 @@
     trongtran: { t: 'unit', n: 'Trống trận', c: 2, a: 0, h: 3, sz: 1, tr: { aura: 1 }, txt: '' },
     thuyenchien: { t: 'unit', n: 'Thuyền chiến', c: 4, a: 3, h: 3, sz: 1, tr: { thuy: 1, ban: 2 }, txt: '' },
     linhlan:   { t: 'unit', n: 'Lính lặn',   c: 3, a: 2, h: 2, sz: 1, tr: { thuy: 1, an: 1 }, txt: '' },
-    thichkhach:{ t: 'unit', n: 'Thích khách', c: 2, a: 1, h: 2, sz: 1, tr: { an: 1, tatsat: 1 }, txt: '' },
+    thichkhach:{ t: 'unit', n: 'Thích khách', c: 2, a: 1, h: 2, sz: 1, tr: { an: 1, tatsat: 1, tia: 1 }, txt: '' },
     quany:     { t: 'unit', n: 'Quân y',     c: 3, a: 1, h: 3, sz: 1, tr: { heal: 1 }, txt: '' },
     xechan:    { t: 'unit', n: 'Xe chắn',    c: 3, a: 1, h: 7, sz: 1, tr: { giap: 1 }, txt: '' },
     // --- Mưu (đặt úp, lật khi Khai chiến) ---
@@ -77,7 +77,7 @@
     cuonghoa:  { t: 'sp', n: 'Cuồng hoá', c: 1, need: 'own', txt: 'Lính đầu tiên của mình ở làn +1 Công và có Cuồng nộ mãi mãi.' },
     songdu:    { t: 'sp', n: 'Sóng dữ',   c: 1, need: 'foe', txt: 'Đẩy Lính địch đầu tiên ở làn sang làn khác còn chỗ.' },
     suonggia:  { t: 'sp', n: 'Sương giá', c: 1, need: 'foe', txt: 'Đóng băng Lính địch đầu tiên ở làn: vòng này nó không đánh.' },
-    thuytrieu: { t: 'sp', n: 'Thủy triều', c: 1, need: 'own', txt: 'Lính đầu tiên của mình ở làn +2 Công +2 Máu mãi mãi.' },
+    thuytrieu: { t: 'sp', n: 'Thủy triều', c: 1, need: 'own', txt: 'Lính đầu tiên của mình ở làn +2 Công +2 Máu mãi mãi và có Thủy.' },
     nhanchim:  { t: 'sp', n: 'Nhấn chìm', c: 1, need: 'foeBien', txt: 'Hạ ngay Lính địch đầu tiên ở làn Biển.' },
     baybinh:   { t: 'sp', n: 'Bày binh',  c: 1, need: 'global', txt: 'Rút 2 lá.' },
     dola:      { t: 'sp', n: 'Dò la',     c: 1, need: 'global', txt: 'Lộ toàn bộ tay bài đối thủ và rút 1 lá.' },
@@ -198,12 +198,20 @@
     const d = CARDS[k];
     switch (d.need) {
       case 'own': return !!firstOwn(s, l, p);
-      case 'foe': return !!firstFoe(s, l, p);
+      case 'foe': { const f = firstFoe(s, l, p); return !!f && (k !== 'songdu' || canShove(s, f, l)); }
       case 'foeBien': return l === BIEN && !!firstFoe(s, l, p);
       case 'room': return l !== BIEN && used(s.lanes[l][p]) + 1 <= SLOTS;
       case 'any': return true;
       default: return false;
     }
+  }
+
+  function canShove(s, u, from) {
+    for (let k = 0; k < LANES; k++) {
+      if (k === from || (!laneOk(u.k, k) && !has(u, 'thuy'))) continue;
+      if (used(s.lanes[k][u.owner]) + u.sz <= SLOTS) return true;
+    }
+    return false;
   }
 
   // Danh sách hành động hợp lệ của bên đang đến lượt.
@@ -231,6 +239,7 @@
         }
       } else if (d.t === 'sp') {
         if (d.need === 'global') {
+          if (c.k === 'tuongkhien' && (s.blocks[p] >= BLOCKS_MAX || s.shield[p] >= SHIELD_FULL - 1)) continue;
           const key = c.k + ':g';
           if (!seen[key]) { seen[key] = 1; out.push({ t: 'sp', id: c.id, k: c.k, lane: -1 }); }
           continue;
@@ -403,9 +412,11 @@
     const d = Math.max(0, dmg - armor(foe));
     const was = foe.hp;
     if (d > 0 && has(u, 'tatsat')) foe.hp = 0; else foe.hp -= d;
-    s.log.push({ e: 'hit', lane: l, from: u.id, to: foe.id, dmg: was - Math.max(0, foe.hp), p: u.owner, deadly: d > 0 && has(u, 'tatsat') ? 1 : 0 });
-    if (has(u, 'xuyen')) castleHit(s, other(u.owner), dmg, u, l, pend);
-    if (has(u, 'cuong') && was > 0 && foe.hp <= 0) castleHit(s, other(u.owner), dmg, u, l, pend);
+    if (was > 0) s.log.push({ e: 'hit', lane: l, from: u.id, to: foe.id, dmg: was - Math.max(0, foe.hp), p: u.owner, deadly: d > 0 && has(u, 'tatsat') ? 1 : 0 });
+    // Đòn phụ vào Thành theo cùng luật với đòn thẳng: bên phòng thủ chỉ gây nửa Công.
+    const cdmg = u.owner === s.atk ? dmg : Math.floor(dmg / 2);
+    if (has(u, 'xuyen')) castleHit(s, other(u.owner), cdmg, u, l, pend);
+    if (has(u, 'cuong') && was > 0 && foe.hp <= 0) castleHit(s, other(u.owner), cdmg, u, l, pend);
   }
 
   function resolveLane(s, l, pend) {
@@ -413,10 +424,8 @@
     for (const side of [0, 1]) for (const u of s.lanes[l][side]) {
       const n = tr(u.k, 'ban');
       if (!n || u.frz || u.hp <= 0) continue;
-      const foes = s.lanes[l][other(side)].filter(x => x.hp > 0);
-      if (!foes.length) continue;
-      const slot = slotOf(s.lanes[l][side], u);
-      const foe = foeAt(s.lanes[l][other(side)], slot) || foes[0];
+      const foe = foeAt(s.lanes[l][other(side)], slotOf(s.lanes[l][side], u), u.sz);
+      if (!foe || foe.hp <= 0) continue;
       const d = Math.max(0, n - armor(foe));
       foe.hp -= d;
       s.log.push({ e: 'shot', lane: l, from: u.id, to: foe.id, dmg: d, p: side });
@@ -471,7 +480,7 @@
     const a = s.atk, d = other(a);
     // 0. Lính Ẩn lộ diện; Quân y hồi máu cho Lính cùng làn.
     for (let l = 0; l < LANES; l++) for (const side of [d, a]) for (const u of s.lanes[l][side]) {
-      if (u.hid) { u.hid = 0; s.log.push({ e: 'reveal', uid: u.id, k: u.k, lane: l, p: side }); }
+      if (u.hid) { u.hid = 0; s.log.push({ e: 'reveal', uid: u.id, k: u.k, lane: l, p: side, a: atkOf(s, u, l), hp: u.hp }); }
     }
     for (let l = 0; l < LANES; l++) for (const side of [d, a]) for (const u of s.lanes[l][side]) {
       if (!has(u, 'heal')) continue;
@@ -525,9 +534,10 @@
     v.traps[o] = v.traps[o].map(t => ({ id: t.id, k: null, lane: -1 }));
     v.sp[o] = v.sp[o].map(() => null);
     v.sp[p] = v.sp[p].map(() => null);
-    for (let l = 0; l < LANES; l++) v.lanes[l][o] = v.lanes[l][o].map(u => u.hid ? { id: u.id, k: null, owner: o, hp: 0, mh: 0, a: 0, sz: 1, bonus: 0, tok: 0, x: {}, tmp: {}, frz: 0, hid: 1 } : u);
+    for (let l = 0; l < LANES; l++) v.lanes[l][o] = v.lanes[l][o].map(u => u.hid ? { id: u.id, k: null, owner: o, hp: 1, mh: 1, a: 0, sz: 1, bonus: 0, tok: 0, x: {}, tmp: {}, frz: 0, hid: 1 } : u);
     v.known[o] = [];
     v.log = [];
+    v.seed = (s.seed ^ 0x5bd1e995) | 0;   // không để bản nháp của AI đoán trước lá sẽ rút
     return v;
   }
 
