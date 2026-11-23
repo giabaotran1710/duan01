@@ -15,12 +15,16 @@
 
   function weight(st, a, r) {
     const p = st.turn, o = 1 - p, d = CARDS[a.k];
-    const mine = st.lanes[a.lane][p], theirs = st.lanes[a.lane][o];
+    const mine = a.lane >= 0 ? st.lanes[a.lane][p] : [], theirs = a.lane >= 0 ? st.lanes[a.lane][o] : [];
     let w = 0.4 + rnd(r) * 1.6;
     if (a.t === 'unit') {
       if (p === st.atk) w *= 1 + (V.SLOTS - V.used(theirs)) * 0.8;
-      else w *= 1 + theirs.reduce((n, u) => n + V.atkOf(st, u), 0) * 0.5 + (theirs.length ? 1 : 0);
+      else w *= 1 + theirs.reduce((n, u) => n + V.atkOf(st, u, a.lane), 0) * 0.5 + (theirs.length ? 1 : 0);
       w *= 0.6 + (d.a * 1.2 + d.h * 0.8) / (d.c + 1);
+      if (a.lane === V.NUI && d.tr && d.tr.xa) w *= 1.6;
+      if (a.lane === V.BIEN) w *= 1.3;   // Biển ít người tranh: Lính Thủy nên ra đó
+    } else if (a.t === 'sp') {
+      w *= 1.1 + (mine.length + theirs.length) * 0.3;
     } else {
       w *= 0.8 * (1 + mine.length * 0.5 + theirs.length * 0.5);
       if (a.k === 'nghibinh') w *= 0.35;
@@ -45,14 +49,14 @@
 
   function fieldValue(st, p) {
     let v = 0;
-    for (let l = 0; l < LANES; l++) for (const u of st.lanes[l][p]) v += (u.a * 1.5 + u.hp) * (u.sz === 2 ? 0.9 : 1);
+    for (let l = 0; l < LANES; l++) for (const u of st.lanes[l][p]) v += (V.atkOf(st, u, l) * 1.5 + u.hp + V.armor(u) * 1.5) * (u.sz === 2 ? 0.9 : 1);
     return v;
   }
   function score(st, me) {
     const o = 1 - me;
     if (st.winner === me) return 1e4;
     if (st.winner === o) return -1e4;
-    return (st.hp[me] - st.hp[o]) * 10 + fieldValue(st, me) - fieldValue(st, o) + (st.hand[me].length - st.hand[o].length) * 0.5 + (st.orders[me] - st.orders[o]) * 0.8;
+    return (st.hp[me] - st.hp[o]) * 10 + fieldValue(st, me) - fieldValue(st, o) + (st.hand[me].length - st.hand[o].length) * 0.5 + (st.orders[me] - st.orders[o]) * 0.8 + (st.shield[me] - st.shield[o]) * 1.5;
   }
 
   function finishRound(st, r, lazy) {
@@ -66,35 +70,54 @@
   // Dựng một thế giới khả dĩ: điền các lá bị che của đối thủ (và thứ tự chồng bài của mình) từ các lá chưa lộ.
   function determinize(view, me, r, mem) {
     const w = V.clone(view), o = 1 - me;
-    const pool = (visibleKinds) => {
+    const pool = (visibleKinds, list) => {
       const cnt = {};
-      for (const k of V.DECK_LIST) cnt[k] = (cnt[k] || 0) + 1;
+      for (const k of list) cnt[k] = (cnt[k] || 0) + 1;
       for (const k of visibleKinds) if (cnt[k] > 0) cnt[k]--;
       const a = [];
       for (const k in cnt) for (let i = 0; i < cnt[k]; i++) a.push(k);
       return V.shuffle(r, a);
     };
-    const pull = a => a.length ? a.pop() : V.DECK_LIST[Math.floor(rnd(r) * V.DECK_LIST.length)];
+    const listO = w.list[o], listM = w.list[me];
+    const pull = (a, list) => a.length ? a.pop() : list[Math.floor(rnd(r) * list.length)];
     // Đối thủ: lá đã thấy = mộ + Lính trên sân (không tính quân phụ) + lá đã lộ trên tay.
     const seenO = [];
-    for (const c of w.disc[o]) seenO.push(c.k);
-    for (let l = 0; l < LANES; l++) for (const u of w.lanes[l][o]) if (!u.tok) seenO.push(u.k);
-    for (const c of w.hand[o]) if (c.k) seenO.push(c.k);
-    const poolO = pool(seenO);
-    for (const c of w.hand[o]) if (!c.k) c.k = pull(poolO);
+    for (const c of w.disc[o]) if (CARDS[c.k] && CARDS[c.k].t !== 'sp') seenO.push(c.k);
+    for (let l = 0; l < LANES; l++) for (const u of w.lanes[l][o]) if (!u.tok && u.k) seenO.push(u.k);
+    for (const c of w.hand[o]) if (c.k && CARDS[c.k].t !== 'sp') seenO.push(c.k);
+    const poolO = pool(seenO, listO);
+    // Lính Ẩn của đối thủ: đoán từ các lá Ẩn còn lại trong bộ của họ.
+    const hidKinds = listO.filter(k => CARDS[k].t === 'unit' && CARDS[k].tr && CARDS[k].tr.an);
+    for (let l = 0; l < LANES; l++) for (const u of w.lanes[l][o]) if (u.hid && !u.k) {
+      let k = null;
+      const j = poolO.findIndex(x => hidKinds.indexOf(x) >= 0);
+      if (j >= 0) k = poolO.splice(j, 1)[0]; else k = hidKinds.length ? hidKinds[Math.floor(rnd(r) * hidKinds.length)] : 'danbinh';
+      const d = CARDS[k]; u.k = k; u.a = d.a; u.hp = d.h; u.mh = d.h; u.sz = d.sz;
+    }
+    for (const c of w.hand[o]) if (!c.k) c.k = pull(poolO, listO);
+    const trickO = poolO.filter(k => CARDS[k].t === 'trick');
     for (const t of w.traps[o]) {
-      t.k = pull(poolO);
+      t.k = trickO.length ? trickO.pop() : 'nghibinh';
       t.lane = mem && mem.lanes ? pickLane(mem.lanes, r) : Math.floor(rnd(r) * LANES);
     }
-    for (const c of w.deck[o]) c.k = pull(poolO);
+    for (const c of w.deck[o]) c.k = pull(poolO, listO);
     // Mình: chồng bài thật không biết, chỉ biết các lá chưa ra.
     const seenM = [];
     for (const c of w.disc[me]) seenM.push(c.k);
     for (const c of w.hand[me]) seenM.push(c.k);
     for (const t of w.traps[me]) seenM.push(t.k);
     for (let l = 0; l < LANES; l++) for (const u of w.lanes[l][me]) if (!u.tok) seenM.push(u.k);
-    const poolM = pool(seenM);
-    for (const c of w.deck[me]) c.k = pull(poolM);
+    const poolM = pool(seenM, listM);
+    for (const c of w.deck[me]) c.k = pull(poolM, listM);
+    // Tuyệt kỹ còn lại (thứ tự chưa biết): lấy từ danh sách của tướng trừ các lá đã thấy.
+    for (const p of [me, o]) {
+      const all = V.GENERALS[w.gen[p]].sp.slice();
+      const seen = [];
+      for (const c of w.hand[p]) if (c.k && CARDS[c.k].t === 'sp') seen.push(c.k);
+      for (const c of w.disc[p]) if (CARDS[c.k] && CARDS[c.k].t === 'sp') seen.push(c.k);
+      const left = V.shuffle(r, all.filter(k => seen.indexOf(k) < 0));
+      w.sp[p] = w.sp[p].map((x, i) => left[i] || all[0]);
+    }
     return w;
   }
   function pickLane(counts, r) {
