@@ -478,6 +478,8 @@ canvas.addEventListener("pointerup",releasePointer);
 canvas.addEventListener("pointercancel",releasePointer);
 
 let player, camera, police, rocks, particles, explosions;
+// Chống chạy vòng tại chỗ: lưu vết đường đi để nhận ra tàu cứ quay vòng
+let trail = [], trailTimer = 0, loopPressure = 0;
 let gameOver = false;
 let deviceBlocked = false;
 let startTime = 0;
@@ -571,8 +573,13 @@ function init(){
     turnSpeed:0.114,
 steerVelocity:0,
 avoidAssist:0,
-radius:18
+radius:18,
+    turnHold:0,     // số frame đang bẻ lái liên tục cùng một phía
+    turnSign:0
   };
+  trail = [];
+  trailTimer = 0;
+  loopPressure = 0;
 
   camera = {x:0,y:0};
 
@@ -699,6 +706,30 @@ function loop(t){
     danger: Math.max(0, Math.min(1, danger))
   };
 }
+
+// Nhận ra tàu cứ quay vòng quanh một chỗ: quãng đường đi được trong 6 giây rất dài
+// nhưng khoảng cách thực sự rời khỏi điểm cũ lại rất ngắn.
+// Khi đó cảnh sát đông hơn, sinh ra gần hơn, không bị xoá khi lỡ lướt ra khỏi màn hình
+// và đá xuất hiện sát quanh tàu.
+function updateLoopPressure(dt){
+  trailTimer -= dt;
+  if(trailTimer <= 0){
+    trailTimer = 30;                 // 0,5 giây một điểm
+    trail.push({x:player.x, y:player.y});
+    if(trail.length > 13) trail.shift();
+  }
+  let target = 0;
+  if(trail.length >= 9){
+    let path = 0;
+    for(let i = 1; i < trail.length; i++){
+      path += Math.hypot(trail[i].x - trail[i-1].x, trail[i].y - trail[i-1].y);
+    }
+    const net = Math.hypot(trail[trail.length-1].x - trail[0].x, trail[trail.length-1].y - trail[0].y);
+    if(path > 400 && net < path * 0.14) target = 1;
+  }
+  loopPressure += (target - loopPressure) * Math.min(1, 0.025 * dt);
+}
+
 function update(dt,t){
   waveOffset += 0.03 * dt;
 
@@ -717,6 +748,23 @@ const normalSpeed =
 
 // Sát mõm đá thì giảm tốc nhẹ để kịp né
 player.speed = normalSpeed * (1 - avoid.danger * 0.22);
+
+// Bẻ lái một phía quá lâu thì tàu nghiêng, chịu lực cản và chậm dần
+// (không thể ôm một vòng tròn nhỏ mãi để câu giờ)
+{
+  const sv = player.steerVelocity;
+  const sign = sv > 0.55 ? 1 : (sv < -0.55 ? -1 : 0);
+  if(sign !== 0 && sign === player.turnSign){
+    player.turnHold += dt;
+  }else if(sign !== 0){
+    player.turnSign = sign;
+    player.turnHold = dt;
+  }else{
+    player.turnHold = Math.max(0, player.turnHold - dt * 1.5);
+  }
+  const fatigue = Math.max(0, Math.min(1, (player.turnHold - 75) / 150));
+  player.speed *= 1 - 0.4 * fatigue;
+}
 
   let inputTurn = 0;
 
@@ -752,6 +800,7 @@ player.angle += player.steerVelocity * player.turnSpeed * dt;
   camera.x = player.x - W/2;
   camera.y = player.y - H/2;
 
+  updateLoopPressure(dt);
   spawnObjects(dt);
 updatePolice(dt);
 checkPoliceRockCollision();
@@ -837,7 +886,7 @@ function spawnObjects(dt){
     rockTimer = Math.max(
   currentMode.rockTimerMin,
   currentMode.rockTimerStart - difficulty * (currentMode.rockTimerStart - currentMode.rockTimerMin)
-);
+) * (1 - 0.5 * loopPressure);
   }
 
   // 2 giây đầu an toàn, chưa spawn police
@@ -850,7 +899,7 @@ function spawnObjects(dt){
   // Cuối game: 5 chiếc
   const maxPolice = Math.floor(
   currentMode.minPolice + difficulty * (currentMode.maxPolice - currentMode.minPolice)
-);
+) + Math.round(loopPressure * 2);
 
   if(police.length >= maxPolice){
     return;
@@ -869,7 +918,7 @@ function spawnObjects(dt){
   maxPolice,
   Math.floor(
     currentMode.needPoliceStart + difficulty * (currentMode.needPoliceEnd - currentMode.needPoliceStart)
-  )
+  ) + Math.round(loopPressure * 2)
 );
 
   if(nearPolice.length < needPolice && policeTimer <= 0){
@@ -881,7 +930,7 @@ function spawnObjects(dt){
     policeTimer = Math.max(
   currentMode.policeTimerMin,
   currentMode.policeTimerStart - difficulty * (currentMode.policeTimerStart - currentMode.policeTimerMin)
-);
+) * (1 - 0.5 * loopPressure);
   }
 }
   
@@ -891,7 +940,8 @@ function spawnPolice(){
 
   const frontChance =
     currentMode.frontChanceStart +
-    difficulty * (currentMode.frontChanceEnd - currentMode.frontChanceStart);
+    difficulty * (currentMode.frontChanceEnd - currentMode.frontChanceStart) +
+    loopPressure * 0.6;
 
   // Vẫn ưu tiên chặn phía trước, nhưng sẽ sinh ngoài màn hình
   if(Math.random() < frontChance){
@@ -919,7 +969,7 @@ function spawnPolice(){
   );
 
   // Police luôn xuất hiện ngoài màn hình thêm một đoạn
-  const outsideMargin = 220 + Math.random() * 180;
+  const outsideMargin = (220 + Math.random() * 180) * (1 - 0.6 * loopPressure);
 
   const dist = distToScreenEdge + outsideMargin;
 
@@ -979,8 +1029,11 @@ function createRockCracks(baseRadius){
 }
 
 function spawnRock(){
-  const dist = Math.max(W,H) * 0.65;
-  const a = Math.random() * Math.PI * 2;
+  const dist = Math.max(W,H) * (0.65 - 0.3 * loopPressure);
+  // Khi chạy vòng: đá rơi vào phía trước mũi tàu thay vì rải đều quanh xa
+  const a = loopPressure > 0.3
+    ? player.angle + (Math.random() - 0.5) * 1.6
+    : Math.random() * Math.PI * 2;
 
   const baseRadius = 26 + Math.random() * 26;
 
@@ -1015,9 +1068,12 @@ function updatePolice(dt){
     let diff = target - p.angle;
     diff = Math.atan2(Math.sin(diff),Math.cos(diff));
 
-    p.angle += diff * 0.045 * dt;
-    p.x += Math.cos(p.angle) * p.speed * dt;
-    p.y += Math.sin(p.angle) * p.speed * dt;
+    // Khi tàu cứ quay vòng, cảnh sát bẻ lái gắt hơn và nhích nhanh hơn để khép vòng vây
+    // (nếu không họ sẽ vòng quanh tàu ở một khoảng cách cố định mãi mãi)
+    p.angle += diff * (0.045 + 0.13 * loopPressure) * dt;
+    const chase = 1 + 0.18 * loopPressure;
+    p.x += Math.cos(p.angle) * p.speed * chase * dt;
+    p.y += Math.sin(p.angle) * p.speed * chase * dt;
 
     const screenX = sx(p.x);
     const screenY = sy(p.y);
@@ -1031,7 +1087,8 @@ function updatePolice(dt){
       screenY < H + margin;
 
     // Nếu police đã từng xuất hiện rồi mà đi khuất → đánh dấu xóa
-    if(p.seen && !onScreen){
+    // Khi tàu đang quay vòng, cảnh sát lướt ra ngoài màn hình vẫn bám theo, chỉ xoá khi ở rất xa
+    if(p.seen && !onScreen && (loopPressure < 0.3 || Math.hypot(dx, dy) > Math.max(W, H) * 1.3)){
       p.remove = true;
     }
 
