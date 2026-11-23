@@ -14,7 +14,7 @@ Mục tiêu: một yêu cầu về game đi qua đúng các bước cần thiế
 | Game mới hoặc làm lại lớn | Đủ 11 bước | `game-analysis` → `game-design` → `thiet-ke-giao-dien` → `game-motion` → code → 4 subagent → báo cáo |
 | Thêm tính năng gameplay | Phân tích → Thiết kế → Code → Test | `game-analysis` (rút gọn), `game-design`, `gameplay-tester` |
 | Đổi giao diện / logo / bố cục | UI → Code → Kiểm tra hình | `thiet-ke-giao-dien` hoặc `ui-ux-pro-max`, `visual-reviewer` |
-| Thêm hoạt ảnh / hiệu ứng | Motion → Code → Hiệu năng | `game-motion`, `performance-auditor` |
+| Thêm hoạt ảnh / hiệu ứng | Motion → Code → Hiệu năng | `game-motion` (bản đặc tả), `animation-studio` và skill con `anim-*` (làm bằng code, kiểm bằng `anim-qa`), `performance-auditor` |
 | Sửa lỗi | Tái hiện → Nguyên nhân gốc → Sửa → Hồi quy | `awesome-bug-fix`, `gameplay-tester` |
 | Tối ưu code | Kiểm code → Refactor → Test | `code-auditor`, `awesome-code-standards` |
 | Kiểm tra toàn diện | QA → kiểm độc lập → báo cáo | cả 4 subagent |
