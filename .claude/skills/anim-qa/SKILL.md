@@ -13,11 +13,13 @@ Hoạt ảnh "chạy không báo lỗi" chưa phải là xong. Cần số đo v�
 node .claude/skills/anim-qa/scripts/motion-probe.js game/tiaso.html --seconds 8 --cpu 4
 node .claude/skills/anim-qa/scripts/motion-probe.js game/tiaso.html --reduced --shots 0,500,1500
 ```
-Script tự mở máy chủ tĩnh ở gốc repo, mở game ở khung điện thoại (390×844), bọc `requestAnimationFrame` để ghi khoảng giữa các khung, và in: số khung, trung bình, p95, % khung > 20 ms, số khung > 50 ms, số canvas và phần tử `animate` đang chạy, heap đầu/cuối. Tuỳ chọn: `--cpu N` (làm chậm CPU N lần), `--reduced` (giả lập giảm chuyển động), `--shots a,b,c` (chụp ảnh ở các mốc ms vào thư mục `--out`, mặc định thư mục tạm), `--click "<selector>"` (bấm vào nút bắt đầu trước khi đo), `--eval "<js>"` (chạy một đoạn để vào trạng thái cần đo, ví dụ đặt thẳng `state.t`).
+Script tự mở máy chủ tĩnh ở gốc repo, mở game ở khung điện thoại (390×844, UA iPhone vì một số game chặn máy tính), đặt sẵn tên người chơi (không thì hộp "Chọn tên người chơi" che game), chặn mọi mạng ngoài, bọc `requestAnimationFrame` để ghi khoảng giữa các khung, và in: số khung, trung bình, p95, % khung > 20 ms, số khung > 50 ms, số canvas và phần tử `animate` đang chạy, heap đầu/cuối. Tuỳ chọn: `--cpu N` (làm chậm CPU N lần), `--reduced` (giả lập giảm chuyển động), `--shots a,b,c` (chụp ảnh ở các mốc ms vào thư mục `--out`, mặc định thư mục tạm), `--click "<selector>"` (bấm vào nút bắt đầu trước khi đo), `--eval "<js>"` (chạy một đoạn để vào trạng thái cần đo, ví dụ đặt thẳng `state.t`).
 
 Đọc số: trình duyệt headless không có GPU thật, nên số tuyệt đối thường cao hơn máy thật. So sánh trước và sau khi sửa, và so có `--cpu 4` để thấy chỗ yếu trên máy yếu.
 
 Mục tiêu: p95 < 20 ms (bình thường), p95 < 33 ms với `--cpu 4`. Quá ngưỡng thì giao `performance-auditor` tìm điểm nóng.
+
+Muốn tự viết kịch bản chơi bằng Playwright (bấm nút thật, thử thắng/thua) thì làm đúng ba điều trên: UA điện thoại, `addInitScript` đặt `localStorage` `player_name`, `lb_name_asked='1'`, `lb_name_claimed` và `window.SCORE_FIREBASE_URL='http://127.0.0.1:9'`, chặn route ngoài. Biến `const` ở mức cao nhất của script game (như `S` trong `vetcatvohinh`) đọc được bằng `page.evaluate(() => S.phase)`.
 
 ## 2. Giảm chuyển động
 
