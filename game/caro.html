@@ -2417,7 +2417,7 @@ const WHY_TIP = {
 const WHY_STRONG = { five: 1, open4: 1, four3: 1, three3: 1, four: 1, three: 1 };
 const C_WINK = 9, C_F4K = 8, C_43K = 7, C_33K = 5;      // lớp ô (trùng với engine)
 
-const coach = { on: false, armed: false, armTimer: 0, gen: 0, hint: null, hintFor: "", hintPending: false, you: null, bot: null, stat: [], hw: null, aw: null, waitAna: -1, ponderKey: "", view: null, viewTimer: 0, animK: -1, animTimer: 0, nextSaid: "", endSaid: false };
+const coach = { on: false, armed: false, armTimer: 0, gen: 0, hint: null, hintFor: "", hintPending: false, you: null, bot: null, stat: [], hw: null, aw: null, waitAna: -1, ponderKey: "", view: null, viewTimer: 0, animK: -1, animTimer: 0, nextSaid: "", endSaid: false, showPV: false };
 const coachBtn = document.getElementById("btnCoach");
 const coachCard = document.getElementById("coachCard");
 const coachLabel = coachBtn.querySelector(".action-label");
@@ -2540,8 +2540,8 @@ function drawLayer() {
   if (gameOver) return;
   const h = coach.hint;
   if (!h || nextSym() !== human) {
-    // BOT đang nghĩ: giữ lại vòng dự kiến nếu bạn đã đi đúng gợi ý
-    if (coach.you && coach.you.same && coach.you.hint && coach.you.hint.pv && coach.you.hint.pv[1]) {
+    // BOT đang nghĩ: chỉ giữ lại vòng dự kiến nếu bạn đã chọn xem diễn biến
+    if (coach.showPV && coach.you && coach.you.same && coach.you.hint && coach.you.hint.pv && coach.you.hint.pv[1]) {
       const [r, c, s] = coach.you.hint.pv[1];
       if (board[r][c] === "") ghost(svg, r, c, s, 2, { cls: "pred" });
     }
@@ -2557,7 +2557,8 @@ function drawLayer() {
     if (busy.has(r * SIZE + c) || board[r][c] !== "") continue;
     svgEl("circle", { cx: c + .5, cy: r + .5, r: k === C_WINK ? .18 : .12, class: "kp me" }, svg);
   }
-  // 4) chuỗi diễn biến dự kiến
+  // 4) mặc định chỉ khoanh nước gợi ý; chuỗi diễn biến chỉ hiện khi người chơi bấm xem
+  if (!coach.showPV) { ghost(svg, h.move[0], h.move[1], human, null, { ring: true, cls: "first" }); return; }
   const pv = h.pv || [[h.move[0], h.move[1], human]];
   const upto = coach.animK >= 0 ? coach.animK : pv.length;
   pv.forEach(([r, c, s], k) => {
@@ -2569,11 +2570,14 @@ function playPV() {
   const h = coach.hint;
   if (!h || !h.pv) return;
   clearTimeout(coach.animTimer);
+  if (coach.showPV) { coach.showPV = false; coach.animK = -1; drawLayer(); renderCoach(); return; }   // bấm lần nữa để ẩn
+  coach.showPV = true;
   const reduce = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  renderCoach();
   if (reduce) { coach.animK = -1; drawLayer(); return; }
   coach.animK = 0; drawLayer();
   const step = () => {
-    if (coach.hint !== h) { coach.animK = -1; return; }
+    if (coach.hint !== h || !coach.showPV) { coach.animK = -1; return; }
     coach.animK++;
     if (coach.animK > h.pv.length) { coach.animK = -1; drawLayer(); return; }
     drawLayer();
@@ -2591,7 +2595,7 @@ function showBetter() {
   if (y.hint && y.hint.move) scrollToCell(cells[y.hint.move[0]][y.hint.move[1]]);
   coach.viewTimer = setTimeout(() => { coach.view = null; drawLayer(); renderCoach(); }, 5200);
 }
-function endView() { clearTimeout(coach.viewTimer); coach.view = null; clearTimeout(coach.animTimer); coach.animK = -1; }
+function endView() { clearTimeout(coach.viewTimer); coach.view = null; clearTimeout(coach.animTimer); coach.animK = -1; coach.showPV = false; }
 
 // ---- yêu cầu gợi ý (thầy nghĩ trong lúc bạn nghĩ) ----
 function requestHint() {
@@ -2869,7 +2873,7 @@ function sayEnd() {
 function answerQuick(q) {
   const y = coach.you, h = coach.hint;
   if (q === "better") { say("Cho tôi xem", "", "u"); say("Thầy vẽ lên bàn rồi: ✗ là nước bạn vừa đi, vòng xanh là nước nên đi, các quân mờ đánh số là BOT sẽ đáp trả thế nào."); showBetter(); return; }
-  if (q === "pv") { say("Cho tôi xem diễn biến", "", "u"); say("Thầy chạy thử chuỗi dự kiến cho bạn xem. Quân mờ có số ① là nước thầy gợi ý, ② là BOT đáp, rồi cứ thế luân phiên."); playPV(); return; }
+  if (q === "pv") { const on = coach.showPV; say(on ? "Ẩn diễn biến đi" : "Cho tôi xem diễn biến", "", "u"); say(on ? "Thầy ẩn đi cho bàn cờ gọn lại." : "Thầy chạy thử chuỗi dự kiến cho bạn xem. Quân mờ có số ① là nước thầy gợi ý, ② là BOT đáp, rồi cứ thế luân phiên. Bấm lại nút để ẩn."); playPV(); return; }
   if (q === "whynext" && h) { say("Vì sao đi vậy?", "", "u"); say(conceptFor(h.why)); return; }
   if (q === "why" && y) { say("Vì sao hay hơn?", "", "u"); say(y.hint ? "Nước thầy gợi ý " + sayWhy(y.hint.why, y.hint.move, human) + ". " + conceptFor(y.hint.why) : conceptFor(y.why0)); return; }
   if (q === "whybad" && y) {
@@ -2925,9 +2929,9 @@ function renderCoach() {
       if (h.threats.foe.five) top += `<div class="ch-alert">BOT sắp đủ 5 · chặn ngay</div>`;
       else if (h.threats.me.five) top += `<div class="ch-alert win">Bạn đi là thắng</div>`;
       top += `<div class="ch-row"><i class="ch-n star">①</i>${goBtn(h.move)}<span class="ch-body">${chips(whyLabels(h.why), "hint")}` +
-        (h.pv && h.pv.length > 1 ? `<button type="button" class="ch-act" data-act="pv">▶ Diễn biến ${h.pv.length} nước</button>` : (coach.hintPending ? `<span class="ch-chip pending">đang tính diễn biến…</span>` : "")) + `</span></div>`;
+        (h.pv && h.pv.length > 1 ? `<button type="button" class="ch-act${coach.showPV ? " on" : ""}" data-act="pv">${coach.showPV ? "✕ Ẩn diễn biến" : "▶ Diễn biến " + h.pv.length + " nước"}</button>` : (coach.hintPending ? `<span class="ch-chip pending">đang tính diễn biến…</span>` : "")) + `</span></div>`;
     }
-    leg = `<div class="ch-legend"><span><i class="lg-ring"></i>gợi ý</span><span><i class="lg-num">2</i>diễn biến</span><span><i class="lg-line"></i>đường 3-4</span><span><i class="dot foe c${ai}"></i>nguy hiểm</span><span><i class="dot me"></i>cơ hội</span></div>`;
+    leg = `<div class="ch-legend"><span><i class="lg-ring"></i>gợi ý</span>${coach.showPV ? `<span><i class="lg-num">2</i>diễn biến</span>` : ""}<span><i class="lg-line"></i>đường 3-4</span><span><i class="dot foe c${ai}"></i>nguy hiểm</span><span><i class="dot me"></i>cơ hội</span></div>`;
   }
   document.getElementById("chTop").innerHTML = top;
   document.getElementById("chLegend").innerHTML = leg;
