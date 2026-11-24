@@ -125,7 +125,6 @@
 2|su|Nhà Trần ba lần đánh thắng quân xâm lược nào?|Quân Nguyên – Mông|Quân Tống|Quân Minh|Quân Xiêm
 2|su|Năm 1911, Nguyễn Tất Thành ra đi tìm đường cứu nước từ bến cảng nào?|Bến Nhà Rồng|Cảng Hải Phòng|Cảng Đà Nẵng|Cảng Quy Nhơn
 2|su|Quê nội của Chủ tịch Hồ Chí Minh ở tỉnh nào?|Nghệ An|Hà Tĩnh|Thanh Hóa|Quảng Ninh
-2|su|Chủ tịch Hồ Chí Minh sinh năm nào?|1890|1900|1911|1885
 2|su|Ngày thành lập Đảng Cộng sản Việt Nam là ngày nào?|3/2/1930|2/9/1945|19/5/1890|22/12/1944
 2|su|Ngày thành lập Quân đội nhân dân Việt Nam là ngày nào?|22/12/1944|19/8/1945|2/9/1945|3/2/1930
 2|su|Vị vua cuối cùng của triều Nguyễn là ai?|Bảo Đại|Khải Định|Duy Tân|Hàm Nghi

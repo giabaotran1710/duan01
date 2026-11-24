@@ -2,9 +2,23 @@
 <html lang="vi">
 <head>
 <meta charset="UTF-8">
-<script src="../maintenance.js?v=20261116a" data-game="phagach"></script>
+<script src="../maintenance.js?v=20261123a" data-game="phagach"></script>
+<script src="../sfx.js?v=20261122b"></script>
 <script src="../scene.js" data-game="phagach"></script>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<script>
+/* Điện thoại hiển thị tràn màn hình (trang nằm dưới thanh trạng thái) mà trình duyệt không báo safe-area: chừa sẵn chỗ cho HUD */
+(function () {
+  function fit() {
+    try {
+      var coarse = window.matchMedia && matchMedia('(pointer:coarse)').matches;
+      var lost = (screen.height || 0) - window.innerHeight;
+      document.documentElement.style.setProperty('--sb-min', coarse && lost >= 0 && lost < 110 ? '34px' : '0px');
+    } catch (e) {}
+  }
+  fit(); window.addEventListener('resize', fit); window.addEventListener('orientationchange', fit);
+})();
+</script>
 <title>Phá gạch</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Saira+Stencil+One&family=Saira+Condensed:wght@700;800&family=Be+Vietnam+Pro:wght@500;600;700&display=swap">
 <style>
@@ -178,7 +192,9 @@ html,body{background:#3b3f44;font-family:'Be Vietnam Pro',system-ui,sans-serif}
 #app{background:
   repeating-linear-gradient(90deg,transparent 0 79px,rgba(0,0,0,.12) 79px 81px),
   linear-gradient(180deg,#5d6267,#44484d)}
-#topbar{height:62px;padding:calc(6px + env(safe-area-inset-top)) 8px 0;gap:6px}
+/* Vùng đè của thanh trạng thái: dùng giá trị hệ thống nếu có; một số trình duyệt Android vẽ trang dưới thanh trạng thái mà không báo (đặt --sb-min ở script đầu trang) */
+:root{--sb-min:0px;--sbt:max(env(safe-area-inset-top),var(--sb-min))}
+#topbar{height:calc(62px + var(--sbt));padding:calc(6px + var(--sbt)) 8px 0;gap:6px}
 .hud{flex:1;min-width:0;position:relative;padding:6px 6px 5px;border-radius:4px;font-size:0;line-height:1;
   background:linear-gradient(180deg,#3a4046,#2a2f34);border:2px solid #1a1d20;
   box-shadow:inset 0 1px 0 rgba(255,255,255,.14),0 3px 0 rgba(0,0,0,.35)}
@@ -189,7 +205,7 @@ html,body{background:#3b3f44;font-family:'Be Vietnam Pro',system-ui,sans-serif}
 .hud.score b{color:var(--hazard)}
 .hud.power b{color:#ffb38a}
 .hud.time b{color:#e6edf3}
-#wrap{top:calc(62px + env(safe-area-inset-top));padding:4px 6px 8px}
+#wrap{top:calc(62px + var(--sbt));padding:4px 6px 8px}
 #game{border-radius:6px;border:3px solid #1d2023;background:#6d7176;
   box-shadow:0 0 0 3px #f5b800,0 0 0 6px #1d2023,0 14px 30px rgba(0,0,0,.45)}
 #wrap{padding:8px 10px 12px}
@@ -753,6 +769,7 @@ state.slowDownUntil = 0;
 
   function nextWave() {
     state.wave++;
+    if(window.SFX) SFX.play('level');
     state.brickHpScale *= 1.05;
 
     buildWave();
@@ -1313,6 +1330,7 @@ function updateBrickSlide(now) {
           paddle.y -
           b.r -
           0.5;
+        if(window.SFX) SFX.play('bump', { pitch: 1.2 });
 
         const hit =
           (
@@ -1422,6 +1440,7 @@ function updateBrickSlide(now) {
         );
 
         brick.hitFlash = 1;
+        if(window.SFX) SFX.play(brick.hp <= 0 ? 'pop' : 'tap', { pitch: brick.hp <= 0 ? 0.9 + Math.min(state.combo, 10) * 0.04 : 0.8 });
 
         burst(
           b.x,
@@ -1593,6 +1612,7 @@ function updateBrickSlide(now) {
         ) <= b.r + item.r
       ){
         state.ballPower++;
+        if(window.SFX) SFX.play('coin');
 
         item.collected = true;
         item.active = false;
@@ -1724,6 +1744,7 @@ function updateBrickSlide(now) {
 }
   function gameOver(){
     state.gameOver = true;
+    if(window.SFX) SFX.play('lose');
     if(window.Scores) Scores.submit('phagach', Math.floor(state.score));
     state.running = false;
     document.getElementById('goScore').textContent = Math.floor(state.score);

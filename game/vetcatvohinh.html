@@ -1,6 +1,6 @@
 <!DOCTYPE html>
 <html lang="vi"><head><meta charset="utf-8">
-<script src="../maintenance.js?v=20261116a" data-game="vetcatvohinh"></script>
+<script src="../maintenance.js?v=20261123a" data-game="vetcatvohinh"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#070a14"><title>Vết cắt vô hình</title>
 <style>
@@ -48,6 +48,22 @@ h2{margin:0;font-family:Georgia,serif;font-size:32px}
 #block{z-index:100;background:#070a14}
 .ph{width:44px;height:78px;border:4px solid var(--cy);border-radius:10px;animation:rot 2s ease-in-out infinite}
 @keyframes rot{0%,20%{transform:rotate(90deg)}70%,100%{transform:rotate(0)}}
+/* Hoạt ảnh phản hồi: điểm nảy, viền đỏ khi chạm, màn hình vào lần lượt, kỷ lục nảy. Tất cả tắt khi bật "giảm chuyển động". */
+#sc{display:inline-block;transform-origin:right center}
+#sc.bump{animation:scBump .26s cubic-bezier(.2,.9,.3,1.25)}
+@keyframes scBump{40%{transform:scale(1.3);color:#3ddc97}}
+#hitflash{position:absolute;inset:0;pointer-events:none;opacity:0;background:radial-gradient(120% 90% at 50% 50%,transparent 48%,rgba(255,77,109,.5))}
+#hitflash.on{animation:hitFlash .32s ease-out}
+@keyframes hitFlash{from{opacity:1}}
+#menu.show>*,#pause.show>*,#over.show>*{animation:rise .38s cubic-bezier(.2,.8,.2,1) both}
+#menu.show>:nth-child(2),#pause.show>:nth-child(2),#over.show>:nth-child(2){animation-delay:.06s}
+#menu.show>:nth-child(3),#pause.show>:nth-child(3),#over.show>:nth-child(3){animation-delay:.12s}
+#menu.show>:nth-child(4),#over.show>:nth-child(4){animation-delay:.18s}
+#over.show>:nth-child(5){animation-delay:.24s}
+@keyframes rise{from{opacity:0;transform:translateY(14px)}}
+#over.show>.new.pop{animation:newPop .5s .45s cubic-bezier(.2,.9,.3,1.25) both}
+@keyframes newPop{from{opacity:0;transform:scale(.5)}}
+@media (prefers-reduced-motion:reduce){#sc.bump,#hitflash.on,#menu.show>*,#pause.show>*,#over.show>*,#over.show>.new.pop{animation:none}}
 </style><link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head><body>
 <div id="app">
@@ -58,7 +74,7 @@ h2{margin:0;font-family:Georgia,serif;font-size:32px}
   <div id="score"><span id="sc">0</span></div>
   <button class="ib" id="bSnd" aria-label="Âm thanh"><svg viewBox="0 0 24 24"><path d="M4 9v6h4l5 4V5L8 9z"/><path id="wv" d="M16 8.5a5 5 0 0 1 0 7M18.5 6a8.5 8.5 0 0 1 0 12" fill="none" stroke="#eef1ff" stroke-width="2" stroke-linecap="round"/></svg></button>
  </header>
- <main id="board"><canvas id="cv"></canvas></main>
+ <main id="board"><canvas id="cv"></canvas><div id="hitflash" aria-hidden="true"></div></main>
  <footer id="foot"><div id="hint"></div><div id="bar"><i></i></div></footer>
 </div>
 <section id="menu" class="screen show">
@@ -70,6 +86,7 @@ h2{margin:0;font-family:Georgia,serif;font-size:32px}
 <section id="pause" class="screen"><h2>Tạm dừng</h2><div class="stack"><button class="btn" id="bRes">TIẾP TỤC</button><button class="btn g" id="bMenu">VỀ MENU</button></div></section>
 <section id="over" class="screen"><h2>Hết mạng</h2><div class="new" id="oN">KỶ LỤC MỚI</div><div><div class="best">Điểm</div><div class="big" id="oS">0</div></div><div class="best">Đạt tới màn <b id="oL">1</b></div><div class="best" id="oB"></div><div class="stack"><button class="btn" id="bAgain">CHƠI LẠI</button><button class="btn g" id="bMenu2">VỀ MENU</button></div></section>
 <section id="block" class="screen show"><div class="ph" id="ph"></div><h2 id="bt"></h2><p class="tag" id="bd"></p></section>
+<script src="../fx.js?v=1"></script>
 <script src="../scores.js?v=20261116a"></script>
 <script>
 'use strict';
@@ -161,12 +178,14 @@ function genLevel(n){const want=Math.min(n,MAX_CUTS);let best=null;
  return best}
 /* ---- state ---- */
 const S={frames:[],frameDur:1,phase:'menu',paused:false,level:1,lives:C.LIVES,score:0,streak:0,t:0,cuts:[],shape:null,showDur:3,result:null,drag:null,moved:false,retry:false,shake:0,parts:[],floats:[]};
+const RM=window.matchMedia?matchMedia('(prefers-reduced-motion: reduce)'):{matches:false};
+function restart(el,cls){el.classList.remove(cls);void el.offsetWidth;el.classList.add(cls)}
 const hint=$('hint'),HEART='<svg viewBox="0 0 24 24"><path d="M12 21s-8-5.2-8-11a4.6 4.6 0 0 1 8-3 4.6 4.6 0 0 1 8 3c0 5.8-8 11-8 11z"/></svg>';
 const HINTS={intro:'Chuẩn bị…',show:'Ghi nhớ vị trí các vết cắt',hide:'Vết cắt biến mất…',place:'Kéo mảnh vào chỗ an toàn rồi thả tay',reveal:''};
 let blocked=true;
 const ov=(id,on)=>$(id).classList.toggle('show',on),playing=()=>['intro','show','hide','place','reveal'].includes(S.phase);
 function setPhase(p){S.phase=p;S.t=0;hint.textContent=HINTS[p]||'';$('bar').style.visibility=p==='place'?'visible':'hidden';S.left=0;$('bar').firstElementChild.style.transform='scaleX(1)'}
-function syncHUD(lost){$('hearts').innerHTML=Array.from({length:C.LIVES},(_,i)=>`<span class="h${i>=S.lives?' x':''}${lost&&i===S.lives?' pop':''}">${HEART}</span>`).join('');$('lv').textContent=S.level;$('sc').textContent=S.score}
+function syncHUD(lost){$('hearts').innerHTML=Array.from({length:C.LIVES},(_,i)=>`<span class="h${i>=S.lives?' x':''}${lost&&i===S.lives?' pop':''}">${HEART}</span>`).join('');$('lv').textContent=S.level;const sc=$('sc');if(S.score>+sc.textContent&&!RM.matches)restart(sc,'bump');sc.textContent=S.score}
 function setupLevel(){const L=genLevel(S.level);S.cuts=L.cuts;S.shape=L.shape;
  // chia đều vết cắt cho các khung; phần dư dồn vào các khung đầu (vd 33 vết / 4 khung → 9, 8, 8, 8)
  const order=S.cuts.slice().sort(()=>Math.random()-.5),nf=Math.max(1,Math.min(framesFor(S.level),order.length)),base=Math.floor(order.length/nf),extra=order.length%nf;
@@ -176,11 +195,11 @@ function startGame(){Object.assign(S,{level:1,lives:C.LIVES,score:0,streak:0,pau
 function saveBest(){St.d.best=Math.max(St.d.best,S.level);St.d.bs=Math.max(St.d.bs,S.score);St.save()}
 function goMenu(){if(playing()){St.d.best=Math.max(St.d.best,S.level);St.save()}S.paused=false;S.drag=null;S.phase='menu';S.cuts=[];S.shape=null;S.result=null;ov('pause',false);ov('over',false);ov('menu',true);$('mB').textContent=St.d.best?`Kỷ lục: màn ${St.d.best} · ${St.d.bs} điểm`:'';hint.textContent='';$('bar').style.visibility='hidden'}
 function setPaused(v){if(v&&!playing())return;S.paused=v;S.drag=null;ov('pause',v)}
-function gameOver(){S.phase='over';const nb=S.level>St.d.best;saveBest();if(window.Scores)Scores.submit('vetcatvohinh',S.score);$('oS').textContent=S.score;$('oL').textContent=S.level;$('oB').textContent=`Kỷ lục: màn ${St.d.best} · ${St.d.bs} điểm`;$('oN').style.display=nb?'block':'none';ov('over',true);hint.textContent='';Sfx.play('over')}
+function gameOver(){S.phase='over';const nb=S.level>St.d.best;saveBest();if(window.Scores)Scores.submit('vetcatvohinh',S.score);$('oS').textContent=S.score;if(window.FX&&S.score>0)FX.count($('oS'),0,S.score,800);$('oL').textContent=S.level;$('oB').textContent=`Kỷ lục: màn ${St.d.best} · ${St.d.bs} điểm`;$('oN').style.display=nb?'block':'none';$('oN').classList.remove('pop');if(nb&&!RM.matches){restart($('oN'),'pop');setTimeout(()=>{if(S.phase==='over'&&window.FX){const r=$('oN').getBoundingClientRect();FX.burst(r.left+r.width/2,r.top+r.height/2,{n:18,colors:['#ffd166','#fff3b0','#8dfcff'],speed:240,gravity:300,size:5,life:.9,shapes:['star','circle']})}},550)}ov('over',true);hint.textContent='';Sfx.play('over')}
 function commit(){const s=S.shape,R=evalCuts(wpoly(s),S.cuts,0);S.cuts.forEach((c,i)=>c.hit=R.hits.includes(i));R.fx=false;R.ti=(S.cuts.length-1)*.12+.4;S.result=R;setPhase('reveal');S.cuts.forEach((_,i)=>Sfx.sw(i*.12))}
-function burst(x,y,col,n,sp){for(let i=0;i<n;i++){if(S.parts.length>=240)S.parts.shift();const a=rr(0,TAU),v=rr(sp*.3,sp),l=rr(.5,1);S.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:l,max:l,col,sz:rr(2,5)})}}
+function burst(x,y,col,n,sp){if(RM.matches)return;for(let i=0;i<n;i++){if(S.parts.length>=240)S.parts.shift();const a=rr(0,TAU),v=rr(sp*.3,sp),l=rr(.5,1);S.parts.push({x,y,vx:Math.cos(a)*v,vy:Math.sin(a)*v,life:l,max:l,col,sz:rr(2,5)})}}
 function impact(){const R=S.result,s=S.shape;R.fx=true;R.ft=S.t;
- if(R.hit){S.lives--;S.streak=0;S.shake=14;burst(s.x,s.y,'#ff4d6d',30,260);S.floats.push({x:s.x,y:s.y-s.r-16,txt:'CHẠM!',col:'#ff4d6d',t:0});hint.textContent='Chạm vết cắt! Mất 1 mạng';Sfx.play('hit');try{navigator.vibrate(120)}catch(e){}syncHUD(true)}
+ if(R.hit){S.lives--;S.streak=0;S.shake=RM.matches?0:14;if(!RM.matches)restart($('hitflash'),'on');burst(s.x,s.y,'#ff4d6d',30,260);S.floats.push({x:s.x,y:s.y-s.r-16,txt:'CHẠM!',col:'#ff4d6d',t:0});hint.textContent='Chạm vết cắt! Mất 1 mạng';Sfx.play('hit');try{navigator.vibrate(120)}catch(e){}syncHUD(true)}
  else{let g=100+20*(S.level-1)+10*Math.min(S.streak,10);S.streak++;const near=R.gap<=C.NEAR;if(near)g+=50;S.score+=g;burst(s.x,s.y,'#3ddc97',28,240);
   S.floats.push({x:s.x,y:s.y-s.r-16,txt:'+'+g,col:'#3ddc97',t:0});if(near)S.floats.push({x:s.x,y:s.y+s.r+22,txt:'SÁT VÁCH!',col:'#ffd166',t:0});
   hint.textContent=near?'Sát vách! Thưởng thêm 50':'An toàn!';Sfx.play('ok');syncHUD()}}

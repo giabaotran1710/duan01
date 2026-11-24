@@ -52,6 +52,8 @@
     xuyentuong: ['iris', '#10222a', '#b98a52', '#ffd54f'],
     kelacdoan: ['iris', '#1b1238', '#7a3d8f', '#ffb547'],
     giomua: ['iris', '#2c2140', '#d8382f', '#ffcf5a'],
+    toanhoc: ['iris', '#dff3ff', '#8b5cf6', '#ec4899'],
+    hainam: ['iris', '#1f3324', '#6e9a45', '#e8902a'],
     thongthai: ['blinds', '#0d2320', '#1c3b4f', '#f4c04e'],
     demsao: ['iris', '#020617', '#312e81', '#fde68a'],
     bongnay: ['iris', '#7c2d12', '#ea580c', '#fed7aa'],

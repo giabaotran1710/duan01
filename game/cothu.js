@@ -319,6 +319,7 @@ function buildInitialPieces() {
 
 function processMove(piece, move) {
   const defender = pieceAt(move.x, move.y);
+  if (window.SFX) SFX.play(defender && (move.capture || move.swap) ? (move.swap ? 'whoosh' : 'capture') : 'move', { pitch: piece.side === 'blue' ? 1.08 : 0.94 });
 
   // Rắn: hoán đổi vị trí với thú khác (đồng minh hoặc đối phương) thay vì ăn quân
   if (move.swap && defender) {
@@ -849,6 +850,10 @@ lastRedMove = null;
   }
   let lastWinnerText = '';
   function render() {
+    if (window.SFX) {
+      if (state.winner && !render.sfxDone) { render.sfxDone = true; setTimeout(() => SFX.play(state.winner === HUMAN_SIDE ? 'win' : 'lose'), 250); }
+      else if (!state.winner) render.sfxDone = false;
+    }
     cellMap.clear();
     grassMap.clear();
     turnValue.textContent = state.turn === 'blue' ? 'XANH' : 'ĐỎ';
@@ -962,6 +967,7 @@ lastRedMove = null;
             }
             state.selectedId = clickedPiece.id;
             state.legal = legalMoves(clickedPiece);
+            if (window.SFX) SFX.play('select');
             setStatus(`Đã chọn ${pieceDefs[clickedPiece.type].name}. Chạm ô sáng để đi.`);
             render();
         } else {
@@ -1005,6 +1011,7 @@ lastRedMove = null;
     // Tìm nước đi hợp lệ
     const move = state.legal.find(m => m.x === x && m.y === y);
     if (!move) {
+        if (window.SFX) SFX.play('bump');
         setStatus('Nước đi không hợp lệ.');
         return;
     }

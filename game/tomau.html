@@ -2,7 +2,7 @@
 <html lang="vi">
 <head>
 <meta charset="utf-8">
-<script src="../maintenance.js?v=20261116a" data-game="colorSweeper"></script>
+<script src="../maintenance.js?v=20261123a" data-game="colorSweeper"></script>
 <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#ffffff" color-scheme="light">
 <title>Color Sweeper</title>
@@ -211,6 +211,12 @@ select{margin-left:auto;color:#263148;background:#ffffff;border:1px solid rgba(2
   display:block;
   animation:clueExplainOverlayIn .46s cubic-bezier(.16,.9,.22,1.04) both;
 }
+/* Mở màn khác (Nghiên cứu, Chế độ, Cách chơi, Đảo ngược) khi bảng giải thích đang hiện:
+   bảng hạ xuống khỏi màn hình; đóng màn đó thì bảng trồi lên lại. */
+.clue-explain.show.sd-tucked{animation:clueExplainTuck .28s cubic-bezier(.5,0,.75,0) both}
+.clue-explain.show.sd-tucked .sd-controls{pointer-events:none}
+@keyframes clueExplainTuck{0%{opacity:1;transform:translate(-50%,0)}100%{opacity:0;transform:translate(-50%,calc(100% + 24px))}}
+@media(prefers-reduced-motion:reduce){.clue-explain.show.sd-tucked{animation:none;visibility:hidden}}
 @keyframes clueExplainOverlayIn{
   0%{opacity:0;transform:translate(-50%,26px) scale(.965);filter:blur(1.5px)}
   58%{opacity:1;transform:translate(-50%,-3px) scale(1.008);filter:blur(0)}
@@ -2236,6 +2242,12 @@ body:not(.solution-detail-active) .game-stage{
 .sd-controls[hidden],.sd-ctl[hidden]{display:none!important}
 .sd-ctl{pointer-events:auto;border:0;border-radius:12px;padding:10px 16px;font:800 13px/1 Inter,system-ui,sans-serif;background:#e9edf5;color:#172033;cursor:pointer;display:inline-flex;gap:7px;align-items:center}
 .sd-ctl.is-paused{background:#ffb300;color:#172033}
+.sd-ctl.sd-ctl-finish{background:#2f9e5b;color:#fff}
+/* hiệu ứng gõ chữ: con trỏ nhấp nháy ở cuối khối đang gõ, chú giải hiện sau khi gõ xong */
+.sd-typing::after{content:"";display:inline-block;width:2px;height:1em;margin-left:2px;vertical-align:-.14em;background:currentColor;animation:sdCaret .6s steps(1) infinite}
+.sd-typing .sd-legend{opacity:0}
+@keyframes sdCaret{50%{opacity:0}}
+@media(prefers-reduced-motion:reduce){.sd-typing::after{animation:none}}
 .sd-ctl-primary{background:#172033;color:#fff;padding:12px 22px;letter-spacing:.03em}
 .clue-explain.solution-detail-panel{
   padding:10px 12px 11px;
@@ -16132,6 +16144,7 @@ function showDetailedStep(step,pointer,phase='reason'){
 
   function finishDetailedSolution(run){
     if(run!==solutionDetailRun||!game)return;
+    sdTypeStop(false);
 
     if(solutionDetailTimer){
       clearTimeout(solutionDetailTimer);
@@ -16208,6 +16221,7 @@ function showDetailedStep(step,pointer,phase='reason'){
     showDetailedStep(step,pointer,'reason');
 
     const REASON_MS=1650;
+    sdTypeIn([clueExplainTitle,clueExplainText],REASON_MS*0.9);   // gõ xong trước khi sang pha kế
     const MARK_MS=470;
     const PAINT_MS=900;
 
@@ -16370,11 +16384,13 @@ function showDetailedStep(step,pointer,phase='reason'){
       box.id='sdControls';
       box.className='sd-controls';
       box.innerHTML='<button type="button" id="sdPauseBtn" class="sd-ctl"></button>'+
-        '<button type="button" id="sdSkipBtn" class="sd-ctl"><i class="fa-solid fa-forward"></i> Bỏ qua</button>'+
+        '<button type="button" id="sdSkipBtn" class="sd-ctl"><i class="fa-solid fa-forward-step"></i> Bỏ qua</button>'+
+        '<button type="button" id="sdFinishBtn" class="sd-ctl sd-ctl-finish"><i class="fa-solid fa-check-double"></i> Hoàn tất</button>'+
         '<button type="button" id="sdNewGameBtn" class="sd-ctl sd-ctl-primary"><i class="fa-solid fa-rotate-right"></i> VÁN MỚI</button>';
       clueExplain.append(box);
       box.querySelector('#sdPauseBtn').addEventListener('click',()=>setDetailPaused(!detailPaused));
-      box.querySelector('#sdSkipBtn').addEventListener('click',skipDetailedSolution);
+      box.querySelector('#sdSkipBtn').addEventListener('click',skipDetailedStep);
+      box.querySelector('#sdFinishBtn').addEventListener('click',skipDetailedSolution);
       box.querySelector('#sdNewGameBtn').addEventListener('click',()=>{
         box.hidden=true;
         clueExplain.classList.remove('show','solution-detail-panel');
@@ -16382,18 +16398,89 @@ function showDetailedStep(step,pointer,phase='reason'){
       });
     }
     box.hidden=mode==='off';
-    const pb=box.querySelector('#sdPauseBtn'), nb=box.querySelector('#sdNewGameBtn'), kb=box.querySelector('#sdSkipBtn');
+    const pb=box.querySelector('#sdPauseBtn'), nb=box.querySelector('#sdNewGameBtn'), kb=box.querySelector('#sdSkipBtn'), fb=box.querySelector('#sdFinishBtn');
     if(pb)pb.hidden=mode!=='running';
     if(kb)kb.hidden=mode!=='running';
+    if(fb)fb.hidden=mode!=='running';
     document.body.classList.toggle('sd-running',mode==='running');
     if(nb)nb.hidden=mode!=='done';
     detailPaused=false;detailPending=null;
     if(mode==='running')setDetailPaused(false);
   }
 
-  // BỎ QUA: apply every remaining step at once and finish.
+  // Bảng giải thích (kể cả bảng VÁN MỚI khi Giải chi tiết đã xong) nằm cố định ở đáy màn hình.
+  // Khi có màn khác che lên thì hạ bảng xuống, đóng màn đó thì cho bảng trồi lên lại.
+  (function tuckExplainUnderOverlays(){
+    if(!clueExplain||!window.MutationObserver)return;
+    const covered=()=>!!document.querySelector('.overlay.show')||(()=>{const pm=document.getElementById('pmScreen');return !!pm&&!pm.hidden;})();
+    let was=false;
+    const sync=()=>{
+      const c=covered();
+      if(c===was)return;was=c;
+      clueExplain.classList.toggle('sd-tucked',c);
+    };
+    const mo=new MutationObserver(sync);
+    const watch=()=>{
+      document.querySelectorAll('.overlay').forEach(el=>mo.observe(el,{attributes:true,attributeFilter:['class','style']}));
+      const pm=document.getElementById('pmScreen');if(pm)mo.observe(pm,{attributes:true,attributeFilter:['hidden']});
+      sync();
+    };
+    if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',watch,{once:true});else watch();
+  })();
+
+  // Gõ chữ: lời giải thích của mỗi bước hiện dần, và luôn gõ xong đúng trong `ms` mili giây
+  // (chữ dài thì gõ nhanh hơn, chữ ngắn thì chậm hơn). Dừng lại khi bấm Tạm dừng.
+  let sdTyper=null;
+  function sdTypeStop(finish){
+    if(!sdTyper)return;
+    const t=sdTyper;sdTyper=null;
+    cancelAnimationFrame(t.raf);
+    if(finish)t.done();else t.drop();
+  }
+  function sdTypeIn(els,ms){
+    sdTypeStop(false);
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    const nodes=[];
+    for(const el of els){
+      if(!el)continue;
+      const w=document.createTreeWalker(el,NodeFilter.SHOW_TEXT);let n;
+      while((n=w.nextNode())){if(n.nodeValue.trim()!==''&&!n.parentElement?.closest('.sd-legend'))nodes.push([n,n.nodeValue]);}
+    }
+    const total=nodes.reduce((a,x)=>a+x[1].length,0);
+    if(!total)return;
+    const host=els.filter(Boolean);
+    nodes.forEach(([n])=>{n.nodeValue='';});
+    host.forEach(el=>el.classList.add('sd-typing'));
+    let acc=0,last=performance.now(),over=false;
+    const paint=k=>{let left=k;for(const [n,t] of nodes){const c=Math.max(0,Math.min(t.length,left));n.nodeValue=t.slice(0,c);left-=t.length;}};
+    const drop=()=>{host.forEach(el=>el.classList.remove('sd-typing'));};
+    const done=()=>{if(over)return;over=true;nodes.forEach(([n,t])=>{n.nodeValue=t;});drop();};
+    const t={raf:0,done,drop};
+    const tick=now=>{
+      const dt=now-last;last=now;
+      if(!detailPaused)acc+=dt;
+      if(acc>=ms){sdTyper=null;done();return;}
+      paint(Math.floor(total*acc/ms));
+      t.raf=requestAnimationFrame(tick);
+    };
+    sdTyper=t;
+    t.raf=requestAnimationFrame(tick);
+  }
+
+  // BỎ QUA: bỏ hiệu ứng gõ của bước này và chuyển sang bước kế tiếp.
+  function skipDetailedStep(){
+    if(!game?.solutionDetailActive||!solutionDetailAuto)return;
+    sdTypeStop(true);
+    if(solutionDetailTimer){clearTimeout(solutionDetailTimer);solutionDetailTimer=null;}
+    detailPending=null;
+    if(detailPaused)setDetailPaused(false);
+    performDetailedAutoStep(solutionDetailRun,Math.max(0,solutionDetailPointer)+1);
+  }
+
+  // HOÀN TẤT: apply every remaining step at once and finish.
   function skipDetailedSolution(){
     if(!game?.solutionDetailActive)return;
+    sdTypeStop(false);
     if(solutionDetailTimer){clearTimeout(solutionDetailTimer);solutionDetailTimer=null;}
     detailPaused=false;detailPending=null;
     const run=solutionDetailRun;
@@ -16428,6 +16515,7 @@ function showDetailedStep(step,pointer,phase='reason'){
   }
 
   function cancelDetailedSolution(){
+    sdTypeStop(false);
     solutionDetailRun++;
     detailControls('off');
     solutionDetailAuto=false;
@@ -18884,17 +18972,37 @@ function cancelNewGameIntro(){
 @keyframes pmInfo{0%{transform:translateY(4px);opacity:.4}100%{transform:none;opacity:1}}
 .pm-sd-step{font:900 11px/1 Inter,system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase;color:#287eea;margin-bottom:5px}
 .pm-sd-title{font:900 14px/1.3 Inter,system-ui,sans-serif;color:#172033;margin-bottom:4px}
-.pm-sd-line{display:block}
-.pm-sd-line+.pm-sd-line{margin-top:2px}
-.pm-sd-cut{color:#8a5a00}
-.pm-sd-concl{color:#172033;font-weight:800;margin-top:3px}
+.pm-sd-line{display:flex;align-items:flex-start;gap:7px}
+.pm-sd-line+.pm-sd-line{margin-top:4px}
+.pm-sd-line>span:last-child{flex:1;min-width:0;line-height:1.75}
+.pm-ic{flex:none;width:20px;height:20px;margin-top:2px;border-radius:6px;display:grid;place-items:center;font:900 12px/1 Inter,system-ui,sans-serif;background:#eef2f8;color:#4a5468}
+.pm-sd-rule .pm-ic{background:#e8f0fe;color:#287eea}
+.pm-sd-cut{color:#8a5a00}.pm-sd-cut .pm-ic{background:#fff3d6;color:#a86b00}
+.pm-sd-concl{color:#172033;font-weight:800}.pm-sd-concl .pm-ic{background:#2e9d57;color:#fff}
+.pm-sd-title .pm-mini{vertical-align:middle}
+.pm-arrow{color:#287eea;font-weight:900;margin:0 2px}
+.pm-chip{display:inline-flex;align-items:center;gap:4px;height:22px;padding:0 7px;margin:0 4px 3px 0;border-radius:7px;background:#eef2f8;color:#172033;font:800 11.5px/1 Inter,system-ui,sans-serif;vertical-align:middle;white-space:nowrap}
+.pm-chip i{font-style:normal;color:#c62828;font-weight:900}
+.pm-chip.no{background:#fdeceb}
+.pm-chip.cut{background:#f3f4f7;color:#8a94a8;text-decoration:line-through}
+.pm-chip.ok{background:#2e9d57;color:#fff}
+.pm-chip.more{background:transparent;color:#8a94a8}
+.pm-k{font:800 10.5px/1 Inter,system-ui,sans-serif;color:#8a94a8;margin-right:5px;vertical-align:middle;text-transform:uppercase;letter-spacing:.04em}
+.pm-chip .pm-mini{--sc:.36;vertical-align:0;margin:0}
+.pm-dot{display:inline-block;width:11px;height:11px;border-radius:3px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.18);vertical-align:-1px;margin:0 1px}
 .pm-sd-ctl{display:flex;gap:6px;margin-top:8px}
 .pm-sd-ctl button{flex:1;height:34px;border-radius:10px;background:#eef2f8;color:#172033;font:800 12.5px/1 Inter,system-ui,sans-serif;cursor:pointer}
 .pm-sd-ctl button.primary{background:#287eea;color:#fff}
 /* clue nhỏ trong chữ và trong khay: cũng là .cell.clue thật */
-.pm-mini{display:inline-block;vertical-align:-6px;width:22px;height:22px;margin:0 1px}
-.pm-mini .cell{border-radius:6px}
-.pm-tray-card .pm-tray{display:flex;flex-wrap:wrap;gap:7px;justify-content:center;padding:9px;background:#e7eaf2;border-radius:16px;min-height:62px}
+/* clue nhỏ: dựng ở cỡ 56px như trên bàn rồi thu nhỏ, để số, mũi tên, dấu ≠ giữ đúng tỉ lệ và không đè nhau */
+.pm-mini{--sc:.5;display:inline-block;position:relative;vertical-align:-7px;width:calc(56px*var(--sc));height:calc(56px*var(--sc));margin:0 2px;flex:none}
+.pm-mini .cell{position:absolute;left:0;top:0;width:56px;height:56px;min-width:56px;border-radius:12px;transform:scale(var(--sc));transform-origin:0 0;pointer-events:none;box-shadow:none}
+.pm-tray-card .pm-tray{display:grid;grid-template-columns:repeat(var(--cols,6),46px);grid-auto-rows:46px;gap:7px;justify-content:center;padding:9px;background:#e7eaf2;border-radius:16px;min-height:62px;box-sizing:border-box}
+.pm-tray.sizing{overflow:hidden;transition:height .32s cubic-bezier(.3,.7,.3,1)}
+/* khay hết clue: thu khay lại rồi ẩn hẳn */
+.pm-tray-card{transition:opacity .3s ease,transform .3s ease}
+.pm-tray-card.empty{opacity:0;transform:translateY(10px) scale(.96);pointer-events:none}
+.pm-tray-card.gone{display:none}
 .pm-tw{position:relative;width:46px;height:46px;cursor:pointer;transition:transform .18s cubic-bezier(.34,1.56,.64,1),opacity .2s ease}
 .pm-tw .cell{border-radius:10px;cursor:pointer}
 .pm-tw.in{animation:pmTileIn .45s cubic-bezier(.34,1.56,.64,1) both;animation-delay:var(--d,0ms)}
@@ -18930,7 +19038,7 @@ function cancelNewGameIntro(){
 .pm-card p{margin:0 0 14px;font-size:13.5px;line-height:1.5;color:#4a5468}
 .pm-card ul{text-align:left;margin:0 0 14px;padding-left:4px;list-style:none;font-size:12.5px;line-height:1.45;color:#4a5468}
 .pm-card li{display:flex;gap:9px;align-items:center;margin-bottom:7px}
-.pm-card li .pm-mini{width:34px;height:34px;flex:none}
+.pm-card li .pm-mini{--sc:.62;flex:none}
 .pm-card .pm-row{display:flex;gap:8px}
 .pm-card .pm-row button{flex:1;height:42px;border-radius:13px;font:800 14px/1 Inter,system-ui,sans-serif;cursor:pointer}
 .pm-rules-card{max-height:86vh;overflow-y:auto}
@@ -19412,6 +19520,7 @@ function cancelNewGameIntro(){
   }
   const mini=t=>`<span class="pm-mini">${clueBtn(t).outerHTML.replace('<button','<span').replace(/<\/button>$/,'</span>')}</span>`;
   const KIND_NAME={b:'Cơ bản',s:'Chính nó',d:'Chỉ hướng',k:'Quân mã',B:'Quân tượng',f:'Vòng xa',i:'Số phản',e:'Cạnh',c:'Combo',p:'Polyomino',u:'Tổng màu',y:'Đối xứng',n:'Nhật nguyệt',m:'Hình mẫu'};
+  const KIND_ICON=t=>({b:'◫',s:'◼',d:DIRS[t.dir]?.[2]||'→',k:'♞',B:'✕',f:'◰',i:'≠',e:'▭',c:'━',p:'▞',u:'Σ',y:'⇄',n:'☀',m:'▦'})[t.type]||'•';
   const RULE_NAME={self:'Chính nó',direction:'Chỉ hướng',knight:'Quân mã',bishop:'Quân tượng',far:'Vòng xa',inv:'Số phản',edge:'Cạnh',combo:'Combo',poly:'Polyomino',sum:'Tổng màu',symmetry:'Đối xứng',sunmoon:'Nhật nguyệt',pattern:'Hình mẫu',deceit:'Lừa đảo'};
   const SIDE_NAME={t:'trên',r:'phải',b:'dưới',l:'trái'};
   function meaning(t){
@@ -19602,17 +19711,73 @@ function cancelNewGameIntro(){
     B.replaceChildren(frag);
     renderTray();
   }
-  function renderTray(){
-    const T=$('pmTray'),frag=document.createDocumentFragment();
+  // Khay tự xếp gọn: mỗi clue giữ chỗ cố định trong lưới; hàng hoặc cột nào đã dùng hết thì rút đi,
+  // còn ít clue (vừa một hàng) thì gom hết thành một hàng, hết sạch thì thu khay lại.
+  let trayHideT=0;
+  function trayCols(T){
+    const w=T.clientWidth||T.parentElement?.clientWidth||330;
+    return Math.max(1,Math.floor((w-18+7)/53));
+  }
+  function trayLayout(T){
+    const N=G.tiles.length,C=Math.min(trayCols(T),Math.max(1,N)),R=Math.ceil(N/C);
+    const pos=G.tiles.map((f,x)=>{
+      const r=Math.floor(x/C),inLast=r===R-1?N-(R-1)*C:C;
+      return [r,x%C+Math.floor((C-inLast)/2)];       // hàng cuối lẻ: căn giữa như trước
+    });
+    const left=G.tiles.map((f,x)=>x).filter(x=>G.tiles[x].at<0);
+    if(!left.length)return {cols:0,items:[]};
+    if(left.length<=C)return {cols:left.length,items:left.map((x,k)=>[x,0,k])};
+    const rowsLive=[...new Set(left.map(x=>pos[x][0]))].sort((a,b)=>a-b);
+    const colsLive=[...new Set(left.map(x=>pos[x][1]))].sort((a,b)=>a-b);
+    const items=[];
     G.tiles.forEach((f,x)=>{
+      const [r,c]=pos[x],rr=rowsLive.indexOf(r),cc=colsLive.indexOf(c);
+      if(rr>=0&&cc>=0)items.push([x,rr,cc]);
+    });
+    return {cols:colsLive.length,items};
+  }
+  function renderTray(){
+    const T=$('pmTray'),card=T.closest('.pm-tray-card');
+    const calm=matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const before=new Map();
+    if(!calm)T.querySelectorAll('.pm-tw').forEach(w=>before.set(w.dataset.t,w.getBoundingClientRect()));
+    const h0=T.getBoundingClientRect().height;
+    const L=trayLayout(T),frag=document.createDocumentFragment();
+    L.items.forEach(([x,r,c])=>{
+      const f=G.tiles[x];
       const w=document.createElement('div');
       w.className=`pm-tw${f.at>=0?' used':''}${x===sel?' sel':''}`;w.dataset.t=x;
+      w.style.gridRow=r+1;w.style.gridColumn=c+1;
       const b=clueBtn(f.t);
       b.setAttribute('aria-label',`Clue ${KIND_NAME[f.t.type]}${f.t.col>=0?' màu '+cname(f.t.col):' không màu'}`);
       if(f.at>=0)b.disabled=true;
       w.append(b);frag.append(w);
     });
+    T.style.setProperty('--cols',Math.max(1,L.cols));
     T.replaceChildren(frag);
+    // khay rỗng: mờ dần rồi ẩn; có clue trở lại (Gỡ hết, ván mới): hiện lại
+    clearTimeout(trayHideT);
+    if(!L.items.length){
+      if(card&&!card.classList.contains('gone')){card.classList.add('empty');trayHideT=setTimeout(()=>card.classList.add('gone'),calm?0:320);}
+      return;
+    }
+    if(card&&(card.classList.contains('empty')||card.classList.contains('gone'))){card.classList.remove('gone');void card.offsetWidth;card.classList.remove('empty');}
+    if(calm)return;
+    // FLIP: clue trượt từ chỗ cũ sang chỗ mới, khay co lại mượt
+    T.querySelectorAll('.pm-tw').forEach(w=>{
+      const a=before.get(w.dataset.t);if(!a)return;
+      const b=w.getBoundingClientRect(),dx=a.left-b.left,dy=a.top-b.top;
+      if(Math.abs(dx)<1&&Math.abs(dy)<1)return;
+      w.style.transition='none';w.style.transform=`translate(${dx}px,${dy}px)`;
+      requestAnimationFrame(()=>{w.style.transition='transform .34s cubic-bezier(.3,.7,.3,1)';w.style.transform='';
+        setTimeout(()=>{w.style.transition='';},360);});
+    });
+    const h1=T.getBoundingClientRect().height;
+    if(h0>0&&Math.abs(h1-h0)>1){
+      T.classList.remove('sizing');T.style.height=h0+'px';void T.offsetWidth;
+      T.classList.add('sizing');T.style.height=h1+'px';
+      setTimeout(()=>{T.classList.remove('sizing');T.style.height='';},340);
+    }
   }
   function colorNote(t){
     return t.col>=0?`Clue màu ${cname(t.col)}: chỉ đặt lên ô ${cname(t.col)}.`:'Clue không màu: đặt lên ô màu nào cũng được.';
@@ -19731,48 +19896,117 @@ function cancelNewGameIntro(){
   }
 
   // ---------- Giải chi tiết ----------
+  // Giải chi tiết (đảo ngược): viết gọn bằng chip toạ độ và ký hiệu thay vì câu dài.
+  //   ✓ ô chọn · ✗ ô không hợp (kèm màu hoặc số đếm được) · ⊘ ô hợp nhưng đã bị loại ở bước thử
+  const chip=(i,cls='',extra='')=>`<span class="pm-chip${cls?' '+cls:''}">${coord(i)}${extra}</span>`;
+  const dot=c=>`<span class="pm-dot" style="background:${colors[c].hex}"></span>`;
+  function chipList(arr,max=7){const more=arr.length-max;return arr.slice(0,max).join('')+(more>0?`<span class="pm-chip more">+${more}</span>`:'');}
+  function brief(t){
+    const v=`<b>${shownNum(t.val)}</b>`;
+    switch(t.type){
+      case 'b':return `8 ô quanh: ${v} ô cùng màu`;
+      case 's':return `9 ô (tính cả nó): ${v} ô cùng màu`;
+      case 'd':return `hướng ${DIRS[t.dir][2]} tới mép: ${v} ô cùng màu`;
+      case 'k':return 'ô mã nhảy tới: đúng <b>1</b> ô cùng màu';
+      case 'B':return `4 đường chéo: ${v} ô cùng màu`;
+      case 'f':return `vòng cách 2 ô: ${v} ô cùng màu`;
+      case 'i':return `8 ô quanh: ${v} ô <b>khác</b> màu`;
+      case 'e':return `cạnh ${t.sides.map(x=>SIDE_NAME[x]).join(', ')}: ${v} ô cùng màu`;
+      case 'c':return `khối ${t.axis==='h'?'ngang':'dọc'} dài ${v} ô`;
+      case 'p':return 'khối cùng màu đúng hình này';
+      case 'u':return `màu của ô có ${v} ô trên bàn`;
+      case 'y':return 'hai mũi tên chỉ vào nhau, giữa đối xứng';
+      case 'n':return '☀ ☾ kề nhau, khác màu, hai khối bằng nhau';
+      case 'm':return 'khác màu, khung 3×3 cùng hình';
+    }
+    return '';
+  }
+  // Ô trống không nhận được clue t: sai màu → chấm màu của ô; sai số → số mà ô đó cho ra.
+  function missLabel(t,i){
+    const {sol,n}=G;
+    if(t.col>=0&&sol[i]!==t.col)return dot(sol[i]);
+    const v=valueAt(t,i,sol,n);
+    let lab;
+    switch(t.type){
+      case 'k':lab=region(t,i,n).filter(j=>sol[j]===sol[i]).length;break;
+      case 'p':lab=v===null?'—':'≠hình';break;
+      case 'c':lab=v===null?1:v;break;
+      default:lab=v===null?'—':shownNum(v);
+    }
+    return `<i>${lab}</i>`;
+  }
+  const missChip=(t,i)=>chip(i,'no',missLabel(t,i));
+  const line=(icon,html,cls='')=>`<span class="pm-sd-line${cls?' '+cls:''}"><span class="pm-ic">${icon}</span><span>${html}</span></span>`;
   function stepView(st){
     const u=G.units[st.unit],lines=[];
-    for(const c of st.cuts){
-      const cu=G.units[c.unit],what=cu.tiles.length===1?`${mini(cu.tiles[0])} ở ${coord(c.at[0])}`:`cặp ${mini(cu.tiles[0])}${mini(cu.tiles[1])} ở ${coord(c.at[0])}, ${coord(c.at[1])}`;
-      const res=c.why.unit!==undefined?`${G.units[c.why.unit].tiles.map(mini).join('')} không còn chỗ`:`ô ${coord(c.why.slot)} không clue nào đặt được`;
-      lines.push(`<span class="pm-sd-line pm-sd-cut">Thử ${what}: khi đó ${res}. Loại.</span>`);
-    }
     const tl=u.tiles.map(mini).join('');
     let title='';
     const free=G.slots.filter(s=>tileAt(s)<0);
     if(st.kind==='only'){
       if(u.tiles.length===1){
         const t=u.tiles[0],cp=st.copies||1;
-        title=cp>1?`${cp} clue ${tl} chỉ có đúng ${cp} chỗ`:`${tl} chỉ còn một chỗ`;
-        lines.push(`<span class="pm-sd-line">${KIND_NAME[t.type]}: ô đặt clue ${meaning(t)}</span>`);
-        const others=free.filter(s=>s!==st.at[0]&&singleFits(t,s,G.sol,G.n)).slice(0,8).map(s=>`${coord(s)} ${shortWhy(t,s)}`);
-        const ok=free.filter(s=>!singleFits(t,s,G.sol,G.n));
-        if(ok.length>cp)lines.push(`<span class="pm-sd-line">Ô hợp nhưng đã bị loại ở trên: ${ok.filter(s=>s!==st.at[0]).map(coord).join(', ')}.</span>`);
-        if(others.length)lines.push(`<span class="pm-sd-line">Ô trống khác không hợp: ${others.join(' · ')}${free.length-ok.length>8?' …':'.'}</span>`);
+        title=`${cp>1?cp+'× ':''}${tl} <span class="pm-arrow">→</span> ${cp>1?`${cp} chỗ`:'1 chỗ'}`;
+        lines.push(line(KIND_ICON(t),brief(t),'pm-sd-rule'));
+        const bad=free.filter(s=>!st.at.includes(s)&&singleFits(t,s,G.sol,G.n));
+        const cut=free.filter(s=>!st.at.includes(s)&&!singleFits(t,s,G.sol,G.n));
+        if(bad.length)lines.push(line('✗','<span class="pm-k">không hợp</span>'+chipList(bad.map(s=>missChip(t,s)))));
+        if(cut.length)lines.push(line('⊘','<span class="pm-k">đã loại</span>'+chipList(cut.map(s=>chip(s,'cut'))),'pm-sd-cut'));
       }else{
-        title=`Cặp ${tl} chỉ ghép được một cách`;
-        lines.push(`<span class="pm-sd-line">${KIND_NAME[u.type]}: ${meaning(u.tiles[0])}</span>`);
+        title=`${tl} <span class="pm-arrow">→</span> 1 cách`;
+        lines.push(line(KIND_ICON(u.tiles[0]),brief(u.tiles[0]),'pm-sd-rule'));
         const [a,b]=st.at,{sol,n}=G;
-        if(u.type==='n')lines.push(`<span class="pm-sd-line">Khối chứa ${coord(a)} có ${block(a,sol,n).length} ô, khối chứa ${coord(b)} cũng ${block(b,sol,n).length} ô.</span>`);
-        if(u.type==='y'){const seg=lookCells(u,st.at);lines.push(`<span class="pm-sd-line">Ở giữa: ${seg.map(j=>cname(sol[j])).join(', ')}, đọc xuôi hay ngược đều giống nhau.</span>`);}
-        if(u.type==='m')lines.push(`<span class="pm-sd-line">Khung 3×3 quanh ${coord(a)} (${cname(sol[a])}) và quanh ${coord(b)} (${cname(sol[b])}) có cùng hình.</span>`);
+        if(u.type==='n')lines.push(line('=',`${chip(a)} ${block(a,sol,n).length} ô · ${chip(b)} ${block(b,sol,n).length} ô`));
+        if(u.type==='y'){const seg=lookCells(u,st.at);lines.push(line('⇄',seg.map(j=>dot(sol[j])).join('')));}
+        if(u.type==='m')lines.push(line('▦',`${chip(a)} ${dot(sol[a])} ≅ ${chip(b)} ${dot(sol[b])}`));
       }
     }else{
-      title=`Ô ${coord(st.slot)} chỉ nhận một loại clue`;
+      title=`${chip(st.slot)} <span class="pm-arrow">→</span> chỉ ${tl}`;
       const seen=new Set();
       const rest=G.units.map((v,x)=>x).filter(x=>G.units[x].tiles.length===1&&G.tiles.some(f=>f.unit===x&&f.at<0)&&sigOf(G.units[x])!==sigOf(u)).filter(x=>{const k=sigOf(G.units[x]);if(seen.has(k))return false;seen.add(k);return true;});
-      const why=rest.slice(0,8).map(x=>{const t=G.units[x].tiles[0];return `${mini(t)} ${singleFits(t,st.slot,G.sol,G.n)?shortWhy(t,st.slot):'cần ở chỗ khác'}`;});
-      if(why.length)lines.push(`<span class="pm-sd-line">Các clue khác: ${why.join(' · ')}${rest.length>8?' …':'.'}</span>`);
+      const why=rest.map(x=>{const t=G.units[x].tiles[0];return singleFits(t,st.slot,G.sol,G.n)?`<span class="pm-chip no">${mini(t)}${missLabel(t,st.slot)}</span>`:`<span class="pm-chip cut">${mini(t)}</span>`;});
+      if(why.length)lines.push(line('✗','<span class="pm-k">clue khác</span>'+chipList(why,6)));
     }
-    lines.push(`<span class="pm-sd-line pm-sd-concl">Vậy đặt ${u.tiles.map((t,k)=>`${mini(t)} vào ${coord(st.at[k])}`).join(', ')}.</span>`);
+    for(const c of st.cuts){
+      const cu=G.units[c.unit];
+      const what=`${cu.tiles.map(mini).join('')} ${c.at.map(i=>chip(i)).join('')}`;
+      const res=c.why.unit!==undefined?`${G.units[c.why.unit].tiles.map(mini).join('')} hết chỗ`:`${chip(c.why.slot)} không nhận được clue`;
+      lines.push(line('⊘',`thử ${what} → ${res}`,'pm-sd-cut'));
+    }
+    lines.push(line('✓',`${u.tiles.map((t,k)=>`${mini(t)} ${chip(st.at[k],'ok')}`).join(' ')}`,'pm-sd-concl'));
     return {title,lines};
   }
   function detailPanel(head,title,body,mode){
     const el=$('pmInfo');el.classList.add('detail');
     el.innerHTML=`<div class="pm-sd-step">${head}</div>${title?`<div class="pm-sd-title">${title}</div>`:''}${body}<div class="pm-sd-ctl">${
-      mode==='run'?`<button type="button" data-sd="pause">${SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng'}</button><button type="button" data-sd="skip">⏭ Bỏ qua</button>`
+      mode==='run'?`<button type="button" data-sd="pause">${SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng'}</button><button type="button" data-sd="skipstep">⏭ Bỏ qua</button><button type="button" class="primary" data-sd="skip">✔ Hoàn tất</button>`
       :'<button type="button" data-sd="close">Xem bàn</button><button type="button" class="primary" data-sd="new">Ván mới</button>'}</div>`;
+  }
+  // Gõ chữ: phần giải thích của bước hiện dần và gõ xong đúng trong `ms` mili giây (chữ dài gõ nhanh hơn); dừng khi Tạm dừng.
+  let typer=null;
+  function typeStop(finish){if(!typer)return;const t=typer;typer=null;cancelAnimationFrame(t.raf);if(finish)t.done();}
+  function typeIn(root,ms){
+    typeStop(false);
+    if(window.matchMedia&&matchMedia('(prefers-reduced-motion: reduce)').matches)return;
+    // Chữ gõ từng ký tự; chip, ký hiệu và clue nhỏ hiện nguyên khối khi tới lượt.
+    const ATOM='.pm-mini,.pm-chip,.pm-dot,.pm-ic',toks=[];
+    (function walk(el){
+      for(const c of el.childNodes){
+        if(c.nodeType===3){if(c.nodeValue.trim()!=='')toks.push({n:c,t:c.nodeValue,w:c.nodeValue.length});}
+        else if(c.nodeType===1){
+          if(c.matches('.pm-sd-step,.pm-sd-ctl'))continue;
+          if(c.matches(ATOM))toks.push({e:c,w:3});else walk(c);
+        }
+      }
+    })(root);
+    const total=toks.reduce((a,x)=>a+x.w,0);if(!total)return;
+    toks.forEach(k=>{if(k.n)k.n.nodeValue='';else k.e.style.visibility='hidden';});
+    let acc=0,last=performance.now(),over=false;
+    const show=lim=>{let left=lim;for(const k of toks){if(k.n){const c=Math.max(0,Math.min(k.t.length,left));k.n.nodeValue=k.t.slice(0,c);}else k.e.style.visibility=left>0?'':'hidden';left-=k.w;}};
+    const done=()=>{if(over)return;over=true;toks.forEach(k=>{if(k.n)k.n.nodeValue=k.t;else k.e.style.visibility='';});};
+    const t={raf:0,done};
+    const tick=now=>{const dt=now-last;last=now;if(!SD.paused)acc+=dt;if(acc>=ms){typer=null;done();return;}
+      show(Math.floor(total*acc/ms));t.raf=requestAnimationFrame(tick);};
+    typer=t;t.raf=requestAnimationFrame(tick);
   }
   function sched(fn,ms){SD.pending=fn;SD.timer=setTimeout(()=>{SD.timer=null;if(SD.paused)return;SD.pending=null;fn();},ms);}
   function runDetail(){
@@ -19787,20 +20021,27 @@ function cancelNewGameIntro(){
       const st=G.steps[SD.k],u=G.units[st.unit],v=stepView(st);
       render({focus:st.kind==='slot'?[st.slot]:st.at,look:lookCells(u,st.at)});
       detailPanel(`Giải chi tiết · Bước ${SD.k+1}/${total}`,v.title,v.lines.join(''),'run');
-      sched(()=>{
-        if(run!==SD.run)return;
+      const readMs=2100+v.lines.length*350;
+      typeIn($('pmInfo'),readMs*0.9);
+      let placed=false;
+      const place=()=>{
+        if(run!==SD.run||placed)return;
+        placed=true;typeStop(true);
         placeUnit(st.unit,st.at);
         render({focus:st.at,look:[]});
         st.at.forEach(popCell);
         detailPanel(`Giải chi tiết · Bước ${SD.k+1}/${total}`,v.title,v.lines.join(''),'run');
         SD.k++;
-        sched(next,800);
-      },2100+v.lines.length*350);
+      };
+      // Bỏ qua: bỏ hiệu ứng gõ của bước này, đặt clue luôn và sang bước kế tiếp
+      SD.skip=()=>{if(run!==SD.run)return;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;SD.paused=false;typeStop(true);place();next();};
+      sched(()=>{place();sched(next,800);},readMs);
     };
     render();
     next();
   }
   function finishDetail(){
+    typeStop(false);SD.skip=null;
     SD.run++;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;
     G.units.forEach((u,x)=>placeUnit(x,u.at));
     G.detail=false;
@@ -19808,6 +20049,7 @@ function cancelNewGameIntro(){
     detailPanel('Giải chi tiết · Hoàn tất','Mọi clue đã về đúng chỗ','<span class="pm-sd-line">Mỗi bước chỉ dùng suy luận, không đoán. Bấm Ván mới để chơi màn khác.</span>','done');
   }
   function stopDetail(){
+    typeStop(false);SD.skip=null;
     SD.run++;clearTimeout(SD.timer);SD.timer=null;SD.pending=null;SD.paused=false;
     if(G)G.detail=false;
   }
@@ -19817,7 +20059,8 @@ function cancelNewGameIntro(){
       SD.paused=!SD.paused;
       if(!SD.paused&&SD.pending&&!SD.timer){const fn=SD.pending;SD.pending=null;fn();}
       const b=e.target.closest('[data-sd]');if(b)b.textContent=SD.paused?'▶ Tiếp tục':'❚❚ Tạm dừng';
-    }else if(a==='skip')finishDetail();
+    }else if(a==='skipstep'){if(SD.skip)SD.skip();}
+    else if(a==='skip')finishDetail();
     else if(a==='new')newBoard();
     else if(a==='close'){render();setInfo('Đáp án đang hiện trên bàn. Bấm <b>Ván mới</b> để chơi màn khác.');}
   });
