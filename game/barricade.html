@@ -45,10 +45,12 @@
     .app {
       width: 100%; height: 100%;
       display: grid;
-      grid-template-columns: minmax(0, 1fr);
-      grid-template-rows: auto auto var(--bsz, 60vw) auto auto auto;
+      /* dọc: bàn cờ ngay dưới tên game, hai bên ngồi chung một băng ghế đấu bên dưới bàn */
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+      grid-template-rows: auto var(--bsz, 60vw) auto auto auto;
       align-content: center;
-      grid-template-areas: "brand" "blue" "board" "red" "ctrl" "msg";
+      grid-template-areas: "brand brand" "board board" "blue red" "ctrl ctrl" "msg msg";
+      column-gap: 0;
       row-gap: 8px;
       padding: calc(10px + env(safe-area-inset-top)) 12px calc(22px + env(safe-area-inset-bottom));
       justify-items: center;
@@ -161,6 +163,23 @@
     .mode-box .ai-btn { color: #fff; background: linear-gradient(180deg, #4f83d8, var(--blue-dk)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 0 #12264a, 0 8px 14px rgba(0,0,0,.35); }
     .mode-box .pvp-btn { color: #fff; background: linear-gradient(180deg, #d65a4e, var(--red-dk)); box-shadow: inset 0 1px 0 rgba(255,255,255,.3), 0 4px 0 #4a120c, 0 8px 14px rgba(0,0,0,.35); }
 
+    /* băng ghế đấu (màn dọc): hai nửa ghép sát nhau, mỗi nửa xếp dọc: quân, tên, đống ván */
+    @media (orientation: portrait) {
+      .tray { grid-template-columns: auto 1fr; grid-template-rows: auto auto; gap: 6px 8px; padding: 12px 12px 10px; width: 100%; }
+      .tray .rack { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
+      .tray .cnt { grid-column: 2; grid-row: 1; justify-self: end; align-self: start; }
+      .tray .who { grid-column: 1; grid-row: 1; }
+      .tray .goal { white-space: normal; line-height: 1.25; }
+      .tray.blue { justify-self: end; border-radius: 12px 0 0 12px; }
+      .tray.red { justify-self: start; border-radius: 0 12px 12px 0; }
+      .tray.red { grid-template-columns: 1fr auto; }
+      .tray.red .who { grid-column: 2; flex-direction: row-reverse; text-align: right; }
+      .tray.red .cnt { grid-column: 1; justify-self: start; }
+      .tray.red .rack { justify-content: flex-end; }
+      body[data-turn="0"] .tray.blue, body[data-turn="1"] .tray.red { transform: none; z-index: 2; }
+      .tray .badge { top: auto; bottom: -10px; z-index: 3; }
+      .tray.blue::after { content: ''; position: absolute; right: -1px; top: 10px; bottom: 10px; width: 2px; background: rgba(0,0,0,.45); box-shadow: 1px 0 0 rgba(255,255,255,.15); z-index: 1; }
+    }
     @media (max-height: 700px) and (orientation: portrait) { .help { display: none; } }
 
     /* màn ngang: bàn ở giữa, khay Xanh bên trái, khay Đỏ bên phải */
@@ -399,13 +418,17 @@
         } else {
           // dọc: khay hai bên ôm sát bàn, phần dư chia đều trên/dưới màn
           const app = wrap.parentElement, cs = getComputedStyle(app);
-          let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom), rows = 0;
+          // cộng chiều cao từng hàng lưới (hai khay chung một hàng nên tính theo hàng, không theo phần tử)
+          let used = parseFloat(cs.paddingTop) + parseFloat(cs.paddingBottom);
+          const rowH = new Map();
           for (const el of app.children) {
             if (el === wrap || el.id === 'modeOverlay' || el.classList.contains('sr') || el.tagName === 'FOOTER') continue;
             if (!el.offsetHeight) continue;
-            used += el.offsetHeight; rows++;
+            const key = el.classList.contains('tray') ? 'tray' : el;
+            rowH.set(key, Math.max(rowH.get(key) || 0, el.offsetHeight));
           }
-          used += rows * (parseFloat(cs.rowGap) || 0);
+          for (const h of rowH.values()) used += h;
+          used += rowH.size * (parseFloat(cs.rowGap) || 0);
           size = Math.min(wrap.clientWidth, window.innerHeight - used, 640);
         }
         size = Math.max(200, Math.floor(size));
