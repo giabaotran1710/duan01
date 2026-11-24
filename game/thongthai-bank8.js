@@ -113,7 +113,7 @@ window.TT_ADD(`
 3|dia|Đảo Phục Sinh (Chile) nổi tiếng với điều gì?|Những tượng đá đầu người khổng lồ Moai|Những kim tự tháp bậc thang|Những vòng tròn đá cổ|Những đền thờ trên vách núi
 3|dia|Bãi đá cổ Stonehenge nằm ở quốc gia nào?|Anh|Ireland|Pháp|Na Uy
 3|su|Lăng Taj Mahal ở Ấn Độ được xây dựng để tưởng nhớ ai?|Người vợ của hoàng đế|Mẹ của hoàng đế|Một vị thánh Hồi giáo|Vị vua sáng lập triều đại
-3|dia|Kênh đào Panama nối liền hai đại dương nào?|Thái Bình Dương và Đại Tây Dương|Thái Bình Dương và Ấn Độ Dương|Đại Tây Dương và Ấn Độ Dương|Bắc Băng Dương và Đại Tây Dương
+3|dia|Kênh đào Panama nối liền hai đại dương lớn nào trên thế giới?|Thái Bình Dương và Đại Tây Dương|Thái Bình Dương và Ấn Độ Dương|Đại Tây Dương và Ấn Độ Dương|Bắc Băng Dương và Đại Tây Dương
 2|su|Con tàu Titanic chìm năm 1912 sau khi va chạm với vật gì?|Tảng băng trôi|Đá ngầm|Một con tàu khác|Một con cá voi
 3|kh|Sinh vật đầu tiên bay vào quỹ đạo Trái Đất (năm 1957) là con vật nào?|Chú chó Laika|Chú khỉ Albert|Cô mèo Félicette|Chú tinh tinh Ham
 3|su|Ai là người Việt Nam đầu tiên bay vào vũ trụ?|Phạm Tuân|Nguyễn Văn Cốc|Bùi Thanh Liêm|Trần Đại Nghĩa
