@@ -67,6 +67,7 @@
     { id: 'giomua', name: 'Gió mùa', fmt: v => v + ' ước nguyện' },
     { id: 'toanhoc', name: 'Trò chơi toán học', fmt: v => v + ' điểm' },
     { id: 'hainam', name: 'Hái nấm', fmt: v => 'ngày ' + v },
+    { id: 'phitieu', name: 'Phi tiêu trăng rằm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
     { id: 'thongthai', name: 'Thông thái trắc nghiệm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
