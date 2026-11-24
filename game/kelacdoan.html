@@ -103,7 +103,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       <li>Chạm nhầm thì đoàn chạy vụt đi mất, không được chọn lại. Chạm nhầm hay để đoàn đi hết đều mất 1 tim. Chỉ có 3 tim, mất là không hồi lại.</li>
       <li>Không tính là lạc đoàn: cao thấp, màu da, đèn lắc nhanh chậm hay sáng tối khác nhau.</li>
       <li>Càng về sau đoàn càng đông, đi nhanh hơn, xếp nhiều hàng, và chỗ khác càng nhỏ.</li>
-      <li><b>Hai chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 khoảng cách giữa các bạn lúc rộng lúc hẹp), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu.</li>
+      <li><b>Hai chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu.</li>
       <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của hai chế độ tính riêng.</li>
     </ul>
     <button class="big" id="helpClose" data-no-scene>Chơi</button>
@@ -279,18 +279,61 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const gh = shoeH + Math.max(45, c.hueD) * (dh < 0 ? -1 : 1), gl = shoeL + dl;
       odd.shoe = hsl(gh, shoeS, gl); odd.shoeD = hsl(gh, shoeS - 8, gl - 14);
     }
-    // chế độ Khó: đoàn thưa hơn một chút, và từ đoàn 5 khoảng cách giữa các cột lúc rộng lúc hẹp (không quá xa)
     const R = c.rows, N = c.size, cols = Math.ceil(N / R), sp = hard ? 185 : 160;
-    const colX = [0];
-    for (let i = 1; i < cols; i++) colX.push(colX[i - 1] + (hard && n >= 5 ? sp * rnd(.8, 1.3) : sp));
-    const oddCol = rint(Math.min(cols - 1, Math.floor(cols * .3)), cols - 1);
-    // mắt nhắm là chi tiết nhỏ trên mặt: hàng sau bị đầu, mũ, lồng đèn của hàng trước che mất,
-    // nên kẻ lạc nhắm mắt luôn đi ở hàng đầu
-    const oddRow = kind === 'mat' ? 0 : rint(0, Math.min(R, N - oddCol * R) - 1);
+    // chế độ Khó: đoàn thưa hơn thường. Từ đoàn 5 các bạn đi thành cụm 2 đến 4 bạn sát nhau (cách 125 đến 145),
+    // giữa các cụm chừa khoảng trống (200 đến 280); từ đoàn 13 mỗi hàng một dãy riêng nên không còn thẳng cột.
+    const cluster = hard && n >= 5;
+    const rowSeq = (m, off) => {
+      const ps = [off]; let inCl = 0, size = pick([2, 3, 3, 4]);
+      for (let j = 1; j < m; j++) {
+        inCl++;
+        if (inCl >= size) { ps.push(ps[j - 1] + rnd(200, 280)); inCl = 0; size = pick([2, 3, 3, 4]); }
+        else ps.push(ps[j - 1] + rnd(125, 145));
+      }
+      return ps;
+    };
+    const jMin = Math.min(cols - 1, Math.floor(cols * .3));
+    let rowPos = null, colX = null, oddIdx = -1;
+    if (cluster) {
+      rowPos = [];
+      for (let r = 0; r < R; r++) rowPos.push(rowSeq(Math.floor((N - 1 - r) / R) + 1, r ? rnd(30, 110) : 0));
+      // kẻ lạc phải công bằng: một bên trống từ 135 trở lên, và không đứng ngay sau bạn ở hàng trước (chạm sẽ trúng nhầm bạn đó).
+      // Mắt nhắm là chi tiết nhỏ nên luôn đi ở hàng đầu. Chọn hàng ngẫu nhiên đều rồi mới chọn bạn trong hàng.
+      const byRow = rowPos.map(() => []);
+      const okAt = (i, strict) => {
+        const r = i % R, j = Math.floor(i / R), ps = rowPos[r], x = ps[j];
+        if (j < jMin) return false;
+        if (kind === 'mat' && r !== 0) return false;
+        if (!strict) return true;
+        const gl = j > 0 ? x - ps[j - 1] : 1e9, gr = j < ps.length - 1 ? ps[j + 1] - x : 1e9;
+        if (Math.max(gl, gr) < 135) return false;
+        for (let q = 0; q < r; q++) for (const xf of rowPos[q]) if (Math.abs(xf - x) < 65) return false;
+        return true;
+      };
+      for (let i = 0; i < N; i++) if (okAt(i, true)) byRow[i % R].push(i);
+      const rowsOk = byRow.map((a, r) => a.length ? r : -1).filter(r => r >= 0);
+      if (rowsOk.length) oddIdx = pick(byRow[pick(rowsOk)]);
+      else {
+        // hiếm: không có chỗ nào đủ rộng, chọn một chỗ rồi dãn khoảng cách phía sau để đủ 135
+        const any = []; for (let i = 0; i < N; i++) if (okAt(i, false)) any.push(i);
+        oddIdx = pick(any.length ? any : [N - 1]);
+        const r = oddIdx % R, j = Math.floor(oddIdx / R), ps = rowPos[r];
+        const gl = j > 0 ? ps[j] - ps[j - 1] : 1e9, gr = j < ps.length - 1 ? ps[j + 1] - ps[j] : 1e9;
+        if (Math.max(gl, gr) < 135 && j < ps.length - 1) for (let k = j + 1; k < ps.length; k++) ps[k] += 135 - gr;
+      }
+    } else {
+      colX = [0];
+      for (let i = 1; i < cols; i++) colX.push(colX[i - 1] + sp);
+      const oddCol = rint(jMin, cols - 1);
+      // mắt nhắm là chi tiết nhỏ trên mặt: hàng sau bị đầu, mũ, lồng đèn của hàng trước che mất,
+      // nên kẻ lạc nhắm mắt luôn đi ở hàng đầu
+      const oddRow = kind === 'mat' ? 0 : rint(0, Math.min(R, N - oddCol * R) - 1);
+      oddIdx = oddCol * R + oddRow;
+    }
     const kids = [];
     for (let i = 0; i < N; i++) {
       const col = Math.floor(i / R), row = i % R;
-      const isOdd = col === oddCol && row === oddRow;
+      const isOdd = i === oddIdx;
       const lk = JSON.parse(JSON.stringify(isOdd ? odd : base));
       if (c.vary) { lk.hs = rnd(.88, 1.1); lk.skin = pick(SKINS); }
       if (free) freeLook(lk, free, hats);
@@ -299,9 +342,10 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
         if (Math.random() < .35) { lk.swK = pick([rnd(.45, .7), rnd(1.5, 2)]); lk.swO = rnd(0, TAU); }
         if (Math.random() < .35) lk.glow = pick([rnd(.15, .4), rnd(1.6, 2)]);
       }
-      kids.push({ col, row, dx: -(colX[col] + row * sp / R + rnd(-6, 6)), look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
+      const dx = cluster ? -rowPos[row][col] : -(colX[col] + row * sp / R + rnd(-6, 6));
+      kids.push({ col, row, dx, look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
     }
-    const L = colX[cols - 1] + sp;
+    const L = (cluster ? Math.max(...rowPos.map(ps => ps[ps.length - 1])) : colX[cols - 1]) + sp;
     return { n, kind, free, hard: !!hard, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
   }
   const cadence = sp => clamp(sp / 260, 1.05, 2.1);
