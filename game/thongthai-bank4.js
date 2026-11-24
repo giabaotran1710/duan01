@@ -148,7 +148,7 @@ window.TT_ADD(`
 4|kh|Sao Diêm Vương bị xếp lại thành hành tinh lùn vào năm nào?|2006|2000|1999|2012
 4|kh|Thiên hà xoắn ốc lớn nằm gần dải Ngân Hà nhất là thiên hà nào?|Andromeda (Tiên Nữ)|Thiên hà Xoáy Nước|Thiên hà Mũ Rộng Vành|Thiên hà Con Nòng Nọc
 4|kh|Kính viễn vọng không gian James Webb được phóng vào năm nào?|2021|2018|2016|2023
-4|sv|Gregor Mendel phát hiện các quy luật di truyền qua thí nghiệm trên loài cây nào?|Đậu Hà Lan|Ngô|Lúa mì|Cà chua
+4|sv|Các quy luật di truyền trong sinh học của Gregor Mendel gắn liền với loài nào sau đây?|Đậu Hà Lan|Ruồi giấm|Ếch|Tảo lam
 4|sv|Theo hệ nhóm máu ABO, nhóm máu nào có thể truyền hồng cầu cho cả bốn nhóm?|Nhóm O|Nhóm AB|Nhóm A|Nhóm B
 4|sv|Ai đặt ra hệ thống gọi tên khoa học hai phần (danh pháp hai phần) cho sinh vật?|Carl Linnaeus|Charles Darwin|Gregor Mendel|Jean-Baptiste Lamarck
 4|sv|Loại bazơ nitơ nào chỉ có trong ARN mà không có trong ADN?|Uraxin|Timin|Ađênin|Guanin
