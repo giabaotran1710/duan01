@@ -1,5 +1,7 @@
 /* Hiệu ứng âm thanh ngắn dùng chung cho các game, tổng hợp bằng Web Audio (không cần tệp âm thanh).
- * Tiếng thật (CC0 của Kenney.nl và OpenGameArt) gói trong audio/sfx/sfx.mp3 (~200 KB, tải sau lần chạm đầu); xem audio/sfx/NGUON.txt.
+ * Mỗi game có bộ tiếng thật riêng (CC0, OpenGameArt) chọn theo chủ đề của game: audio/sfx/<game>.mp3 + <game>.json
+ *   nạp bằng <script src="../sfx.js" data-bank="caro"></script>; danh sách chọn ở tools/sfx/banks.py, nguồn ở audio/sfx/NGUON.txt.
+ * Tên âm không có trong bộ riêng (hoặc game không khai data-bank) thì dùng bộ chung audio/sfx/sfx.mp3 (~200 KB, chỉ tải khi cần).
  * Chưa tải xong hoặc tải lỗi thì dùng âm tổng hợp bằng Web Audio bên dưới.
  * Nạp: <script src="../sfx.js"></script>  rồi gọi SFX.play('ok'), SFX.play('win'), SFX.play('tap', { pitch: 1.2, vol: 0.6 }) ...
  * Âm có sẵn: tap, select, place, move, capture, ok, bad, win, lose, pick, coin, hit, bump, jump, pop,
@@ -13,6 +15,9 @@
   'use strict';
   if (window.SFX) return;
   var me = document.currentScript, SPRITE_URL = me && me.src ? new URL('audio/sfx/sfx.mp3?v=1', me.src).href : null;
+  var BANK = me && me.getAttribute('data-bank'), BANK_V = '20261125a';
+  var BANK_URL = BANK && me.src && /^[a-z0-9-]+$/.test(BANK) ? new URL('audio/sfx/' + BANK, me.src).href : null;
+  var bankBuf = null, bankIdx = null, bankLoading = false;
   var IDX = {"tap":[[0.0,0.035],[0.185,0.012],[0.346,0.022]],"select":[[0.518,0.04],[0.709,0.04],[0.899,0.202]],"place":[[1.251,0.108],[1.509,0.15],[1.809,0.208]],"move":[[2.167,0.1],[2.418,0.101],[2.669,0.129]],"capture":[[2.948,0.126],[3.224,0.227],[3.601,0.217]],"ok":[[3.967,0.29],[4.407,0.322]],"bad":[[4.879,0.104],[5.134,0.139],[5.423,0.192]],"win":[[5.765,0.827],[6.742,0.827]],"lose":[[7.719,0.827],[8.696,0.711]],"level":[[9.558,0.365],[10.073,0.365],[10.588,0.366]],"pick":[[11.104,0.092],[11.346,0.117]],"coin":[[11.613,0.355],[12.119,0.345],[12.614,0.343]],"hit":[[13.107,0.136],[13.392,0.1],[13.643,0.208]],"bump":[[14.0,0.195],[14.345,0.24],[14.735,0.199]],"jump":[[15.084,0.34],[15.574,0.355]],"pop":[[16.079,0.3],[16.529,0.3],[16.979,0.3]],"flip":[[17.429,0.147],[17.725,0.3],[18.175,0.3]],"deal":[[18.625,0.193],[18.968,0.245],[19.363,0.3]],"whoosh":[[19.813,0.4],[20.363,0.336],[20.849,0.4]],"tick":[[21.399,0.029],[21.578,0.02],[21.748,0.055]],"boom":[[21.953,0.9],[23.003,0.664]],"dice":[[23.817,0.487],[24.454,0.226],[24.831,0.505]],"warn":[[25.486,0.4],[26.036,0.4]],"undo":[[26.586,0.075],[26.811,0.077]],"clack":[[27.037,0.181],[27.368,0.2]],"shoot":[[27.718,0.236],[28.104,0.244]]};
   var LEVEL = { tap: .55, tick: .45, select: .6, undo: .55, clack: .8, win: .7, lose: .7, level: .7, boom: .85, hit: .8, capture: .8, dice: .8, place: .75, move: .7, bump: .8 };
   var sprite = null, spriteLoading = false, bus = null, lastVar = {};
@@ -43,25 +48,41 @@
     unlocked = true;
     var c = ctx();
     if (c && c.state === 'suspended' && !document.hidden) { try { c.resume(); } catch (e) {} }
-    loadSprite();
+    if (BANK_URL) loadBank(); else loadSprite();
+  }
+  function decode(b) {
+    return new Promise(function (ok, no) { var p = ac.decodeAudioData(b, ok, no); if (p && p.then) p.then(ok, no); });
+  }
+  /* bộ tiếng riêng của game: bảng cắt .json + tệp .mp3, tải song song */
+  function loadBank() {
+    if (bankBuf || bankLoading || !ac || !BANK_URL) return;
+    bankLoading = true;
+    var q = '?v=' + BANK_V;
+    Promise.all([
+      fetch(BANK_URL + '.json' + q).then(function (r) { if (!r.ok) throw new Error('bank ' + r.status); return r.json(); }),
+      fetch(BANK_URL + '.mp3' + q).then(function (r) { if (!r.ok) throw new Error('bank ' + r.status); return r.arrayBuffer(); }).then(decode)
+    ]).then(function (v) { bankIdx = v[0]; bankBuf = v[1]; bankLoading = false; })
+      .catch(function () { BANK_URL = null; bankLoading = false; loadSprite(); });
   }
   function loadSprite() {
     if (sprite || spriteLoading || !ac || !SPRITE_URL) return;
     spriteLoading = true;
     fetch(SPRITE_URL).then(function (r) { if (!r.ok) throw new Error('sfx ' + r.status); return r.arrayBuffer(); })
-      .then(function (b) { return new Promise(function (ok, no) { var p = ac.decodeAudioData(b, ok, no); if (p && p.then) p.then(ok, no); }); })
+      .then(decode)
       .then(function (buf) { sprite = buf; spriteLoading = false; })
       .catch(function () { spriteLoading = false; });
   }
   /* phát một lát trong tệp âm thanh thật; false nếu chưa có để dùng âm tổng hợp */
   function playSample(name, pitch, vol) {
-    var list = IDX[name];
-    if (!sprite || !list || !bus) return false;
+    var buf = sprite, list = IDX[name];
+    if (bankIdx && bankIdx[name]) { buf = bankBuf; list = bankIdx[name]; }
+    else if (!sprite && !bankLoading) loadSprite(); // tên này game riêng không có: tải bộ chung để lần sau dùng
+    if (!buf || !list || !bus) return false;
     var k = Math.floor(Math.random() * list.length);
     if (list.length > 1 && k === lastVar[name]) k = (k + 1) % list.length;
     lastVar[name] = k;
     var seg = list[k], t = ac.currentTime, s = ac.createBufferSource(), g = ac.createGain();
-    s.buffer = sprite; s.playbackRate.value = pitch;
+    s.buffer = buf; s.playbackRate.value = pitch;
     g.gain.value = (LEVEL[name] || 0.7) * vol;
     s.connect(g); g.connect(bus);
     live++;
@@ -146,7 +167,7 @@
     if (off || !unlocked) return;
     if (gateFn) { try { if (!gateFn()) return; } catch (e) {} }
     var c = ctx();
-    if (!c || (!V[name] && !IDX[name]) || document.hidden) return;
+    if (!c || (!V[name] && !IDX[name] && !(bankIdx && bankIdx[name])) || document.hidden) return;
     if (c.state === 'suspended') { try { c.resume(); } catch (e) {} }
     var now = (window.performance && performance.now()) || Date.now();
     if (lastAt[name] && now - lastAt[name] < 40) return;
