@@ -346,7 +346,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       kids.push({ col, row, dx, look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
     }
     const L = (cluster ? Math.max(...rowPos.map(ps => ps[ps.length - 1])) : colX[cols - 1]) + sp;
-    return { n, kind, free, hard: !!hard, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
+    return { n, kind, free, hard: !!hard, rtl: Math.random() < .5, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
   }
   const cadence = sp => clamp(sp / 260, 1.05, 2.1);
 
@@ -618,6 +618,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     return [hsl(lk.shirt, 68, lk.shL), hsl(lk.shirt, 60, lk.shL - 16)];
   }
   // thân: quần đùi/váy + áo theo kiểu đồ của đoàn
+  let flipNow = 1; // 1 hoặc -1: đoàn đang bị lật ngang hay không (chữ số trên áo vẫn đọc đúng chiều)
   function drawBody(c, lk, bob, a) {
     const o = lk.outfit || 'dong', h = lk.shirt, L = lk.shL;
     const shirt = hsl(h, 68, L), shirtD = hsl(h, 60, L - 16), trim = hsl(h, 80, Math.min(88, L + 30)), sash = hsl(h + 160, 75, 56);
@@ -655,7 +656,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.beginPath(); c.moveTo(-6, -100 + bob); c.quadraticCurveTo(4, -92 + bob, 16, -100 + bob); c.lineWidth = 4.5; c.strokeStyle = trim; c.stroke();
       c.beginPath(); c.arc(-8, -80 + bob, 11, 0, TAU); fs(c, WH, 2);
       c.fillStyle = shirtD; c.font = '800 16px "Baloo 2",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.save(); c.translate(-8, -79 + bob); if (lk.dir < 0) c.scale(-1, 1); c.fillText(String(lk.num || 7), 0, 0); c.restore();
+      c.save(); c.translate(-8, -79 + bob); if (lk.dir * flipNow < 0) c.scale(-1, 1); c.fillText(String(lk.num || 7), 0, 0); c.restore();
       c.textAlign = 'start'; c.textBaseline = 'alphabetic';
     } else if (o === 'baba') {
       // áo bà ba: dài qua hông, nẹp khuy giữa, túi
@@ -716,7 +717,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   // một bạn trong đoàn: (x,y) là chân, s là cỡ, ph là pha bước (1 = hai bước), tm là thời gian
   function drawKid(c, k, x, y, s, ph, tm, extra) {
     const lk = k.look, sc = s * (lk.hs || 1), kp = k.col || 0;
-    c.save(); c.translate(x, y); c.scale(sc * lk.dir, sc);
+    const fl = extra && extra.flip ? -1 : 1; flipNow = fl;
+    c.save(); c.translate(x, y); c.scale(sc * lk.dir * fl, sc);
     c.lineCap = 'round'; c.lineJoin = 'round';
     const amp = lk.amp || 1, a = Math.sin(ph * TAU) * .5 * amp;
     const bob = -(1 - Math.abs(Math.sin(ph * TAU))) * 5 * amp * amp + (extra && extra.hop ? -extra.hop : 0);
@@ -920,7 +922,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function kidPos(k) {
     const R = ROWS[k.row];
-    return { x: P.head + k.dx, y: R.y, s: R.s };
+    return { x: P.rtl ? W - (P.head + k.dx) : P.head + k.dx, y: R.y, s: R.s };
   }
   function kidPhase(k) { return P.t * cadence(P.speed) * (k.look.tempo || 1) + k.look.off; }
 
@@ -1016,7 +1018,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
         if (p.x < -120 || p.x > W + 120) continue;
         const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
         const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
-        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop) });
+        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rtl });
         if (k.tried) {
           const s = p.s; c.strokeStyle = '#ff5b5b'; c.lineWidth = 7 * s; c.lineCap = 'round';
           const cx = p.x, cy = p.y - 210 * s;
