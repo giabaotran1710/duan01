@@ -167,9 +167,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 .lockmsg{grid-column:1/-1;font-size:20px;color:#7a5a34;padding:4px}
 
 /* bản đồ */
-#map .px{width:min(440px,100%);max-height:100%;padding:12px;display:flex;flex-direction:column}
+#map .px{width:min(440px,100%);max-height:100%;padding:12px;display:flex;flex-direction:column;overflow-y:auto}
 #map h3{margin:0 0 6px;font-weight:400;font-size:30px}
-#map .wrap{position:relative;flex:1;min-height:0;aspect-ratio:3/4;max-height:calc(100vh - 160px);margin:0 auto;width:100%;box-shadow:0 0 0 3px var(--ink)}
+#map .wrap{position:relative;flex:none;aspect-ratio:3/5;margin:0 auto;width:100%;box-shadow:0 0 0 3px var(--ink)}
 #map .wrap canvas{width:100%;height:100%;image-rendering:pixelated;display:block}
 .node{position:absolute;transform:translate(-50%,-50%);padding:1px 7px 3px;font-size:18px;white-space:nowrap;background:var(--paper);box-shadow:0 0 0 2px var(--ink),0 4px 0 0 rgba(0,0,0,.35)}
 .node.here{background:var(--gold)}
@@ -189,6 +189,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 <button class="hud px dark" id="clock" data-no-scene aria-label="Chờ thêm một giờ">
   <div class="row"><canvas id="slotIc" width="11" height="7"></canvas><span class="t" id="clockT">06:00</span></div>
   <div class="row s"><span id="clockS">Bình minh · Nắng</span><canvas id="wxIc" width="10" height="7" style="width:20px;height:14px"></canvas></div>
+  <div class="row s"><span id="clockN">Nước vừa</span><canvas id="tideIc" width="9" height="7" style="width:18px;height:14px"></canvas></div>
   <div class="wait">Chạm: chờ 1 giờ</div>
 </button>
 <button class="hud px dark" id="snd" data-no-scene aria-label="Tắt tiếng"><canvas id="sndIc" width="8" height="7"></canvas></button>
@@ -244,7 +245,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   <div class="px" role="dialog" aria-labelledby="mapTitle">
     <button class="x" id="mapX" data-no-scene aria-label="Đóng">×</button>
     <h3 id="mapTitle">Bản đồ vùng câu</h3>
-    <div class="wrap" id="mapWrap"><canvas id="mapCv" width="90" height="120"></canvas></div>
+    <div class="wrap" id="mapWrap"><canvas id="mapCv" width="90" height="150"></canvas></div>
     <div class="foot"><span id="mapNote"></span><a href="../">Trang chủ</a></div>
   </div>
 </div>
@@ -274,8 +275,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 <footer class="tbFooter">Version: D20261125120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261116a"></script>
 <script src="../sfx.js?v=20261125a" data-bank="cauca"></script>
-<script src="cauca-data.js?v=2"></script>
-<script src="cauca-art.js?v=4"></script>
+<script src="cauca-data.js?v=3"></script>
+<script src="cauca-art.js?v=5"></script>
 <script>
 (function () {
   'use strict';
@@ -361,7 +362,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   function ambMix() {
     if (!amb.ac) return;
     var t = amb.ac.currentTime, wx = G.wx, rain = wx === 'mua' ? .32 : wx === 'giong' ? .5 : 0;
-    amb.w.gain.setTargetAtTime(G.reg === 'bien' ? .3 : .2, t, .8);
+    amb.w.gain.setTargetAtTime(/^(bien|ran|vinh|sau)$/.test(G.reg) ? .3 : G.reg === 'suoi' ? .34 : .2, t, .8);
     amb.r.gain.setTargetAtTime(rain, t, 1.2);
     amb.master.gain.setTargetAtTime(snd && !document.hidden ? 1 : 0, t, .15);
   }
@@ -385,6 +386,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 
   function hour() { return (S.min / 60) % 24; }
   function curWx() { return G.wxOverride || CC.weatherAt(S.min, G.reg); }
+  function curTide() { return G.tideOverride || CC.tideAt(S.min, G.reg); }
 
   function resize() {
     var W = innerWidth, H = innerHeight;
@@ -416,7 +418,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     CA.setEnv(e);
     skyCv = CA.sky(LW, HY + 1, e); bodyPos = skyCv.body;
     sceneCv = CA.scenery(G.reg, LW, LH, HY, FY, e);
-    fisherCv = CA.fisher(G.reg === 'bien' ? '#3a5a8a' : G.reg === 'nui' ? '#5a3a5a' : '#7a4a34');
+    fisherCv = CA.fisher({ bien: '#3a5a8a', nui: '#5a3a5a', suoi: '#4a6a3a', ran: '#c8502a', vinh: '#2a6a7a', sau: '#e0a030', cuasong: '#6a4a8a' }[G.reg] || '#7a4a34');
     var n = G.wx === 'nang' ? 2 : G.wx === 'suong' ? 3 : G.wx === 'may' ? 5 : 6;
     clouds = [];
     for (var i = 0; i < n; i++) clouds.push({ cv: CA.cloud(i % 3, LW > 200 ? 1.2 : .9, e), seed: CC.hash(i, 9) , y: HY * (.08 + CC.hash(i, 3) * .45), v: 1.2 + CC.hash(i, 5) * 1.6 });
@@ -434,11 +436,13 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     var h = hour(), hh = Math.floor(h), mm = Math.floor((h - hh) * 60 / 10) * 10;
     var t = (hh < 10 ? '0' : '') + hh + ':' + (mm < 10 ? '0' : '') + mm, slot = CC.SLOTS.filter(function (s) { return s.id === G.slot; })[0];
     var wxN = G.wx === 'nang' && G.env && G.env.night ? CC.WEATHER.nang.night : CC.WEATHER[G.wx].name;
-    var key = t + G.slot + G.wx;
+    var key = t + G.slot + G.wx + G.tide;
     if (key === lastHud) return;
     lastHud = key;
     $('clockT').textContent = t;
     $('clockS').textContent = slot.name + ' · ' + wxN;
+    $('clockN').textContent = (CC.dayOf(G.slot) === 'ngay' ? 'Ban ngày' : 'Ban đêm') + ' · ' + CC.TIDES[G.tide || 'vua'].name;
+    drawIcon('tideIc', G.tide || 'vua', 2);
     drawIcon('slotIc', G.slot, 3);
     drawIcon('wxIc', G.wx === 'nang' && G.env && G.env.night ? 'dem' : G.wx, 2);
   }
@@ -519,7 +523,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     G.state = 'wait';
     ripple(b.x, b.y, 1); splash(b.x, b.y, 5);
     sfx('splash', { vol: .8 });
-    G.pick = CC.pick(G.reg, G.slot, G.wx, S.found, null, G.usedBait);
+    G.pick = CC.pick(G.reg, G.slot, G.wx, S.found, null, G.usedBait, G.tide);
     G.size = CC.roll(G.pick, null, G.usedBait);
     var wait = rand(2.2, 6.2);
     if (G.slot === 'binhminh' || G.slot === 'hoanghon') wait *= .8; // cá ăn mạnh lúc chạng vạng
@@ -657,7 +661,11 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       S.min += add; G.ff.left -= add;
       if (G.ff.left <= 0) { G.ff = null; $('clock').classList.remove('ff'); G.state = 'idle'; showHint(true); save(); }
     } else if (running) S.min += dt * MIN_PER_SEC;
-    var slot = CC.slotOf(hour()), wx = curWx();
+    var slot = CC.slotOf(hour()), wx = curWx(), tide = curTide();
+    if (tide !== G.tide) {
+      if (G.tide && G.state !== 'title' && !G.ff && tide !== 'vua') toast(tide === 'cuong' ? 'Triều cường lên, nước dâng cao' : 'Nước rút, mặt nước nông dần');
+      G.tide = tide;
+    }
     if (slot !== G.slot || wx !== G.wx) {
       var wxChanged = wx !== G.wx && G.state !== 'title';
       G.slot = slot; G.wx = wx;
@@ -673,7 +681,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       b.x = b.sx + (b.tx - b.sx) * p; b.y = b.sy + (b.ty - b.sy) * p - Math.sin(p * Math.PI) * (LH * .12);
       if (p >= 1) land();
     } else if (G.state === 'wait') {
-      if (G.reg === 'song') G.bob.x = Math.max(6, G.bob.x - dt * .8);
+      if (G.reg === 'song' || G.reg === 'suoi') G.bob.x = Math.max(6, G.bob.x - dt * (G.reg === 'suoi' ? 1.4 : .8));
       while (G.nibbles.length && G.t >= G.nibbles[0]) { G.nibbles.shift(); G.bob.nib = G.t; G.nibbled = true; ripple(G.bob.x, G.bob.y, 1); sfx('pop', { vol: .5, pitch: rand(.9, 1.2) }); }
       if (G.t >= G.biteAt) hook();
     } else if (G.state === 'hook') {
@@ -737,7 +745,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       var y = HY + 2 + Math.floor(CC.hash(i, 1) * (FY - HY - 4)), d = (y - HY) / (FY - HY);
       var len = 1 + Math.round(d * 4 * CC.hash(i, 2)), ph = CC.hash(i, 4) * 6.28, on = Math.sin(t * 1.6 + ph);
       if (on < .1) continue;
-      var x = (CC.hash(i, 3) * LW + (G.reg === 'song' ? -t * 3 * (0.3 + d) : Math.sin(t * .5 + ph) * 2)) % LW;
+      var x = (CC.hash(i, 3) * LW + (G.reg === 'song' || G.reg === 'suoi' ? -t * 3 * (0.3 + d) : Math.sin(t * .5 + ph) * 2)) % LW;
       if (x < 0) x += LW;
       px(x, y, len, 1, on > .7 ? lite : dim);
     }
@@ -1032,10 +1040,12 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       var conds = [];
       if (e.t) e.t.forEach(function (x) { conds.push(['slot', x]); });
       if (e.w) e.w.forEach(function (x) { conds.push(['wx', x]); });
+      if (e.d) conds.push(['day', e.d]);
+      if (e.n) conds.push(['tide', e.n]);
       if (!conds.length) { var sp = document.createElement('span'); sp.textContent = 'Lúc nào cũng có'; meta.appendChild(sp); }
       conds.forEach(function (q) {
-        var ic = CA.icon(q[1]), cc = document.createElement('canvas'); cc.width = ic.width; cc.height = ic.height; cc.getContext('2d').drawImage(ic, 0, 0);
-        var lab = q[0] === 'slot' ? CC.SLOTS.filter(function (s) { return s.id === q[1]; })[0].name : CC.WEATHER[q[1]].name;
+        var ic = CA.icon(q[0] === 'day' ? (q[1] === 'ngay' ? 'ngay' : 'bandem') : q[1]), cc = document.createElement('canvas'); cc.width = ic.width; cc.height = ic.height; cc.getContext('2d').drawImage(ic, 0, 0);
+        var lab = q[0] === 'slot' ? CC.SLOTS.filter(function (s) { return s.id === q[1]; })[0].name : q[0] === 'day' ? CC.DAYNIGHT[q[1]].name : q[0] === 'tide' ? CC.TIDES[q[1]].name : CC.WEATHER[q[1]].name;
         cc.title = lab; cc.setAttribute('aria-label', lab);
         var sp2 = document.createElement('span'); sp2.textContent = lab;
         meta.appendChild(cc); meta.appendChild(sp2);
@@ -1057,23 +1067,42 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   }
 
   // bản đồ
-  var NODES = { nui: [50, 11], ao: [22, 33], song: [56, 44], dam: [76, 62], rung: [28, 76], bien: [64, 91] };
+  // toạ độ theo ô của bản đồ 90 x 150
+  var MAPW = 90, MAPH = 150;
+  var NODES = { nui: [52, 9], suoi: [18, 15], ao: [22, 35], song: [60, 38], dam: [74, 54], rung: [22, 60], cuasong: [58, 70], bien: [40, 92], ran: [74, 104], vinh: [20, 118], sau: [56, 136] };
   function drawMap() {
-    var c = $('mapCv'), w = 90, h = 120, P = CA.painter(w, h, false);
+    var c = $('mapCv'), w = MAPW, h = MAPH, P = CA.painter(w, h, false), x = P.c;
     P.rect(0, 0, w, h, '#7aa858');
     var R = CA.rnd(42);
-    for (var i = 0; i < 140; i++) P.rect(R() * w, R() * h, 1, 1, i % 2 ? '#6a9a4a' : '#8ab868');
-    P.poly([0, 0, 90, 0, 90, 16, 70, 22, 58, 14, 45, 24, 30, 15, 15, 22, 0, 14], '#8a8a96');
-    P.poly([10, 18, 20, 4, 30, 15], '#a8a8b2'); P.poly([40, 22, 52, 2, 64, 18], '#a8a8b2'); P.poly([66, 20, 78, 6, 88, 16], '#a8a8b2');
-    P.ell(50, 14, 10, 5, '#4f92c8');
-    P.stroke('#4f92c8', 4); var x = P.c; x.beginPath(); x.moveTo(50, 16); x.bezierCurveTo(40, 34, 70, 40, 55, 58); x.bezierCurveTo(44, 72, 70, 88, 62, 104); x.stroke();
-    P.ell(22, 36, 7, 5, '#5f9ac0'); P.stroke('#5f9ac0', 2); x.beginPath(); x.moveTo(28, 37); x.lineTo(46, 38); x.stroke();
-    P.ell(74, 64, 9, 6, '#5a9a8a'); for (var l = 0; l < 7; l++) P.rect(68 + R() * 12, 60 + R() * 8, 2, 1, '#3f7a3a');
-    P.poly([0, 100, 20, 96, 40, 102, 60, 98, 90, 100, 90, 120, 0, 120], '#3f86c0');
-    P.poly([0, 106, 30, 103, 60, 107, 90, 104, 90, 120, 0, 120], '#2f6fa8');
-    for (var m = 0; m < 9; m++) { var mx = 16 + R() * 26, my = 74 + R() * 14; P.ell(mx, my, 3, 2, '#2f5a30'); }
-    for (var tr = 0; tr < 14; tr++) { var tx = R() * w, ty = 24 + R() * 66; P.poly([tx, ty, tx + 2, ty - 4, tx + 4, ty], '#3f6a34'); }
-    P.rect(60, 112, 6, 2, '#8a5a30'); P.poly([62, 112, 63, 108, 65, 112], '#f4f0e8');
+    for (var i = 0; i < 170; i++) P.rect(R() * w, R() * 72, 1, 1, i % 2 ? '#6a9a4a' : '#8ab868');
+    // núi phía bắc
+    P.poly([0, 0, 90, 0, 90, 18, 72, 24, 60, 16, 46, 26, 30, 18, 14, 26, 0, 20], '#8a8a96');
+    P.poly([2, 22, 12, 4, 24, 20], '#a8a8b2'); P.poly([40, 22, 52, 2, 64, 18], '#a8a8b2'); P.poly([66, 20, 78, 6, 88, 16], '#a8a8b2');
+    P.poly([10, 6, 12, 4, 14, 6], '#f4f4f8'); P.poly([50, 4, 52, 2, 54, 4], '#f4f4f8');
+    P.ell(52, 14, 9, 4, '#4f92c8');
+    // suối thác
+    P.stroke('#6ab8d8', 2); x.beginPath(); x.moveTo(18, 8); x.lineTo(18, 22); x.quadraticCurveTo(20, 30, 24, 34); x.stroke();
+    P.rect(17, 10, 3, 6, '#e8f6fa');
+    // sông chính chảy ra cửa
+    P.stroke('#4f92c8', 4); x.beginPath(); x.moveTo(52, 16); x.bezierCurveTo(42, 30, 70, 36, 60, 48); x.bezierCurveTo(52, 58, 62, 64, 58, 74); x.stroke();
+    P.ell(22, 37, 7, 5, '#5f9ac0'); P.stroke('#5f9ac0', 2); x.beginPath(); x.moveTo(28, 38); x.lineTo(46, 38); x.stroke();
+    P.ell(74, 56, 9, 6, '#5a9a8a'); for (var l = 0; l < 7; l++) P.rect(68 + R() * 12, 52 + R() * 8, 2, 1, '#3f7a3a');
+    for (var tr = 0; tr < 14; tr++) { var tx = R() * w, ty = 28 + R() * 36; P.poly([tx, ty, tx + 2, ty - 4, tx + 4, ty], '#3f6a34'); }
+    // bờ biển, rừng ngập mặn
+    P.poly([0, 70, 20, 66, 40, 72, 56, 74, 70, 70, 90, 72, 90, 150, 0, 150], '#3f86c0');
+    P.poly([0, 98, 30, 94, 60, 100, 90, 96, 90, 150, 0, 150], '#2f6fa8');
+    P.poly([0, 126, 30, 122, 60, 128, 90, 124, 90, 150, 0, 150], '#1f4f86');
+    P.poly([20, 132, 50, 128, 80, 134, 90, 132, 90, 150, 12, 150], '#163a6a');
+    for (var m = 0; m < 12; m++) { var mx = 6 + R() * 30, my = 60 + R() * 10; P.ell(mx, my, 3, 2, '#2f5a30'); }
+    P.ell(58, 74, 6, 3, '#8a9a7a');
+    // rạn san hô
+    P.ell(74, 104, 11, 6, '#5ac8d0'); for (var k = 0; k < 9; k++) P.rect(66 + R() * 16, 101 + R() * 6, 2, 1, k % 2 ? '#f07a8a' : '#f0c050');
+    P.ell(78, 100, 4, 2, '#f4e8c0'); P.rect(78, 96, 1, 4, '#6a4a2c'); P.ell(78, 96, 3, 1.5, '#3f7a3a');
+    // vịnh đá vôi
+    for (var v = 0; v < 6; v++) { var vx = 8 + v * 5 + R() * 3, vy = 122 + (v % 2) * 4, vh = 6 + R() * 5; P.rect(vx, vy - vh, 3, vh, '#6a7a7a'); P.rect(vx, vy - vh, 3, 2, '#4a7a4a'); }
+    // thuyền và phao ngoài khơi
+    P.rect(36, 96, 6, 2, '#8a5a30'); P.poly([38, 96, 39, 92, 41, 96], '#f4f0e8');
+    P.rect(62, 140, 2, 3, '#e8502a');
     var cvs = P.done(), xx = c.getContext('2d'); xx.clearRect(0, 0, w, h); xx.drawImage(cvs, 0, 0);
   }
   function openMap() {
@@ -1083,10 +1112,10 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     CC.REGIONS.forEach(function (r) {
       var b = document.createElement('button'), ok = unlocked(r), c = regionCount(r.id), pos = NODES[r.id];
       b.className = 'node' + (r.id === G.reg ? ' here' : '') + (ok ? '' : ' lock'); b.setAttribute('data-no-scene', '');
-      b.style.left = pos[0] + '%'; b.style.top = pos[1] + '%';
+      b.style.left = (pos[0] / MAPW * 100) + '%'; b.style.top = (pos[1] / MAPH * 100) + '%';
       b.innerHTML = '<span></span><small></small>';
       b.firstChild.textContent = r.name;
-      b.lastChild.textContent = ok ? (r.water === 'man' ? 'Nước mặn · ' : 'Nước ngọt · ') + c[0] + '/' + c[1] : 'Cần ' + r.need + ' loài';
+      b.lastChild.textContent = ok ? ({ man: 'Nước mặn · ', lo: 'Nước lợ · ', ngot: 'Nước ngọt · ' }[r.water]) + c[0] + '/' + c[1] : 'Cần ' + r.need + ' loài';
       b.addEventListener('click', function () { goRegion(r); });
       wrap.appendChild(b);
     });
@@ -1099,7 +1128,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     if (r.id !== G.reg) {
       if (G.state === 'wait' || G.state === 'cast') reelIn(true);
       G.reg = S.reg = r.id; save();
-      G.wx = curWx(); cacheKey = ''; G.ripples = []; G.splash = [];
+      G.wx = curWx(); G.tide = curTide(); cacheKey = ''; G.ripples = []; G.splash = [];
       hudStatic(); ambMix();
     }
     closeOv();
@@ -1280,7 +1309,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   function titleStat() {
     $('titleStat').textContent = nFound() ? 'Sổ tay: ' + nFound() + '/' + CC.ALL.length + ' · ' + money(S.coins) + ' xu' : 'Sổ tay đang trống, đi câu thôi!';
   }
-  G.slot = CC.slotOf(hour()); G.wx = curWx();
+  G.slot = CC.slotOf(hour()); G.wx = curWx(); G.tide = curTide();
   resize(); hudStatic(); titleStat(); showHud(false); showHint(false);
   openId = 'title'; G.overlay = true;
   addEventListener('resize', function () { resize(); });
@@ -1292,7 +1321,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     G: G, S: S, save: save,
     setTime: function (h) { S.min = Math.floor(S.min / 1440) * 1440 + h * 60; },
     setWx: function (w) { G.wxOverride = w || null; },
-    region: function (id) { G.reg = S.reg = id; G.wx = curWx(); cacheKey = ''; hudStatic(); },
+    setTide: function (t) { G.tideOverride = t || null; },
+    region: function (id) { G.reg = S.reg = id; G.wx = curWx(); G.tide = curTide(); cacheKey = ''; hudStatic(); },
     bite: function (id, cm) {
       if (!G.bob) { G.bob = { x: LW * .45, y: HY + (FY - HY) * .5, tx: LW * .45, ty: HY + (FY - HY) * .5 }; }
       G.state = 'wait'; G.pick = CC.byId[id]; G.size = CC.roll(G.pick); if (cm) { G.size.cm = cm; G.size.kg = G.pick.k * cm * cm * cm * 1e-5; }
