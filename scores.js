@@ -64,6 +64,7 @@
     { id: 'xuyentuong', name: 'Vật thể xuyên tường', fmt: v => v + ' tường' },
     { id: 'kelacdoan', name: 'Kẻ lạc đoàn (thường)', fmt: v => v + ' đoàn' },
     { id: 'kelacdoankho', name: 'Kẻ lạc đoàn (khó)', fmt: v => v + ' đoàn' },
+    { id: 'kelacdoansieu', name: 'Kẻ lạc đoàn (siêu khó)', fmt: v => v + ' đoàn' },
     { id: 'giomua', name: 'Gió mùa', fmt: v => v + ' ước nguyện' },
     { id: 'toanhoc', name: 'Trò chơi toán học', fmt: v => v + ' điểm' },
     { id: 'hainam', name: 'Hái nấm', fmt: v => 'ngày ' + v },

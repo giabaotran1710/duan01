@@ -58,11 +58,13 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .big{width:100%;min-height:50px;border:0;border-radius:16px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#2a1505;font-weight:800;font-size:16px;margin-top:8px;box-shadow:0 4px 0 #a8461d}
 .big:active{transform:translateY(2px);box-shadow:0 2px 0 #a8461d}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}
+.modes.three{grid-template-columns:1fr 1fr 1fr}
 .mode{border:2px solid var(--line);background:rgba(255,255,255,.05);border-radius:16px;padding:10px 6px;min-height:62px;font-weight:700}
 .mode b{display:block;font:800 18px var(--disp)}
 .mode small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .mode[aria-pressed=true]{border-color:var(--gold);background:rgba(255,209,102,.14)}
 .mode[data-mode=kho][aria-pressed=true]{border-color:var(--bad);background:rgba(255,107,91,.14)}
+.mode[data-mode=sieu][aria-pressed=true]{border-color:#ff4f9a;background:rgba(255,79,154,.16)}
 .hud .modeTag{color:#ff8a7a}
 .ghost{width:100%;min-height:44px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;margin-top:8px}
 .rules{text-align:left;padding-left:20px;margin:8px 0;color:#ddd3f5;font-size:14px}
@@ -103,8 +105,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       <li>Chạm nhầm thì đoàn chạy vụt đi mất, không được chọn lại. Chạm nhầm hay để đoàn đi hết đều mất 1 tim. Chỉ có 3 tim, mất là không hồi lại.</li>
       <li>Không tính là lạc đoàn: cao thấp, màu da khi cả đoàn đã lẫn nhiều màu da, đèn lắc nhanh chậm hay sáng tối khác nhau.</li>
       <li>Càng về sau đoàn càng đông, đi nhanh hơn, xếp nhiều hàng, và chỗ khác càng nhỏ.</li>
-      <li><b>Hai chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu.</li>
-      <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của hai chế độ tính riêng.</li>
+      <li><b>Ba chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu. Siêu khó thì giống Khó nhưng đi hai hàng ngay từ đoàn đầu, mọi chỗ khác và đèn nhiễu có sẵn, có lúc hai hàng đi ngược chiều nhau, và tốc độ nhanh nhất thấp hơn một chút.</li>
+      <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của từng chế độ tính riêng.</li>
     </ul>
     <button class="big" id="helpClose" data-no-scene>Chơi</button>
   </div>
@@ -114,9 +116,10 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     <h2 id="overH">Hết lượt</h2>
     <div class="bigNum" id="overNum">0</div>
     <p id="overWhy"></p>
-    <div class="modes" role="group" aria-label="Chế độ chơi">
+    <div class="modes three" role="group" aria-label="Chế độ chơi">
       <button class="mode" id="modeThuong" data-mode="thuong" type="button" aria-pressed="true" data-no-scene><b>Thường</b><small id="bestThuong"></small></button>
       <button class="mode" id="modeKho" data-mode="kho" type="button" aria-pressed="false" data-no-scene><b>Khó</b><small id="bestKho"></small></button>
+      <button class="mode" id="modeSieu" data-mode="sieu" type="button" aria-pressed="false" data-no-scene><b>Siêu khó</b><small id="bestSieu"></small></button>
     </div>
     <button class="big" id="againBtn" data-no-scene>Chơi lại</button>
   </div>
@@ -199,7 +202,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     [13, 'Đoàn đi hai hàng'],
     [25, 'Đoàn đi ba hàng'],
   ];
-  function cfgAt(n, hard) {
+  const STEPS_SIEU = [
+    [0, 'Siêu khó: hai hàng, có lúc đi ngược chiều nhau'],
+    [25, 'Đoàn đi ba hàng'],
+  ];
+  function cfgAt(n, hard, sieu) {
     let kinds = ['ao', 'mu'];
     if (n >= 2) kinds.push('do');
     if (n >= 3) kinds.push('khongMu', 'khongDo', 'da');
@@ -210,19 +217,19 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     if (n >= 9) kinds.push('hoaVan', 'toc');
     if (n >= 10) kinds.push('ngoanh');
     if (hard) kinds = KINDS_ALL.concat('da');
-    // từ đoàn 13 màu da trộn ngẫu nhiên và không tính, nên bỏ kiểu khác màu da
-    if (n >= 13) kinds = kinds.filter(k => k !== 'da');
+    // từ đoàn 13 (Siêu khó: ngay từ đầu) màu da trộn ngẫu nhiên và không tính, nên bỏ kiểu khác màu da
+    if (n >= 13 || sieu) kinds = kinds.filter(k => k !== 'da');
     return {
       kinds,
       freeP: hard && n >= 10 ? .33 : 0,
       size: Math.min(24, 5 + n),
-      rows: hard ? (n < 13 ? 1 : n < 25 ? 2 : 3) : (n < 10 ? 1 : n < 20 ? 2 : 3),
-      T: Math.max(6.5, 14 - n * .375),
+      rows: sieu ? (n < 25 ? 2 : 3) : hard ? (n < 13 ? 1 : n < 25 ? 2 : 3) : (n < 10 ? 1 : n < 20 ? 2 : 3),
+      T: Math.max(sieu ? 7.4 : 6.5, 14 - n * .375),
       hueD: Math.max(18, 130 - n * 7),
       skinD: hard ? Math.max(16, 24 - n) : Math.max(16, 36 - n * 2),
       nhip: n < 8 ? 1.75 : n < 12 ? 1.5 : 1.25,
-      vary: n >= 13,
-      decoy: n >= 14,
+      vary: sieu || n >= 13,
+      decoy: sieu || n >= 14,
     };
   }
 
@@ -238,8 +245,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     else if (free === 'shoes') { const h = rint(0, 359); lk.shoe = hsl(h, rint(45, 75), rint(38, 56)); lk.shoeD = hsl(h, 45, 26); }
     else if (free === 'item') lk.item = Math.random() < .15 ? { t: 'none', h: 0 } : { t: pick(ITEMS), h: rint(0, 359) };
   }
-  function makeParade(n, hard) {
-    const c = cfgAt(n, hard);
+  function makeParade(n, hard, sieu) {
+    const c = cfgAt(n, hard, sieu);
     const free = c.freeP && Math.random() < c.freeP ? pick(FREES) : null;
     const g = Math.random() < .5 ? 1 : 0, hats = g ? HATS_NU : HATS;
     const base = {
@@ -360,7 +367,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       kids.push({ col, row, dx, look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
     }
     const L = (cluster ? Math.max(...rowPos.map(ps => ps[ps.length - 1])) : colX[cols - 1]) + sp;
-    return { n, kind, free, hard: !!hard, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
+    const rtl = Math.random() < (hard ? .7 : .5);
+    // Siêu khó: một nửa số đoàn có hàng xen kẽ đi ngược chiều (hàng trước và hàng sau, hàng giữa ngược với hai hàng kia)
+    const opp = !!sieu && R >= 2 && Math.random() < .5;
+    const rowRtl = [0, 1, 2].map(r => (opp && r % 2 ? !rtl : rtl));
+    return { n, kind, free, hard: !!hard, sieu: !!sieu, opp, rtl, rowRtl, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
   }
   const cadence = sp => clamp(sp / 260, 1.05, 2.1);
 
@@ -404,6 +415,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     c.beginPath(); c.arc(fx, fy, 6, 0, TAU); fs(c, skin, 2);
     c.beginPath(); c.arc(fx + 3.5, fy - 3, 2.6, 0, TAU); fs(c, skin, 1.6);
     return [fx, fy];
+  }
+  // Siêu khó: đồ cầm (đèn lồng, ngôi sao) tự phát sáng nên vẽ sau lớp tối; ghi lại phép biến đổi để vẽ bù
+  function putItem(c, lk, hx, hy, tm, ph, extra, back) {
+    if (extra && extra.defer) extra.defer.push({ m: c.getTransform(), lk, hx, hy, tm, ph, back });
+    else drawItem(c, lk, hx, hy, tm, ph);
   }
   // vẽ đồ cầm; (hx,hy) là vị trí bàn tay
   function drawItem(c, lk, hx, hy, tm, ph) {
@@ -487,10 +503,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.strokeStyle = 'rgba(255,255,255,.18)'; c.lineWidth = 2; c.beginPath(); c.moveTo(hx - 34, hy - 16); c.quadraticCurveTo(hx - 44, hy + 4, hx - 40, hy + 26); c.stroke();
       c.beginPath(); c.ellipse(hx - 27, hy - 16, 5, 8, -.5, 0, TAU); fs(c, rib, 1.8);
     } else if (t === 'bui') {
-      c.beginPath(); c.arc(hx - 22, hy - 22, 14, 0, TAU); fs(c, hair);
-      c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = 2; c.beginPath(); c.arc(hx - 22, hy - 22, 8, Math.PI, Math.PI * 1.8); c.stroke();
-      line(c, hx - 40, hy - 12, hx - 8, hy - 34, 2.6, '#c08a4a');
-      c.beginPath(); c.arc(hx - 9, hy - 33, 4, 0, TAU); fs(c, rib, 1.4);
+      // búi thấp, nhô hẳn ra sau gáy để mũ không che mất (trước đây nằm trên đỉnh đầu, đội mũ vào trông như tóc ngắn)
+      c.beginPath(); c.moveTo(hx - 18, hy - 8); c.quadraticCurveTo(hx - 40, hy - 6, hx - 40, hy + 14); c.quadraticCurveTo(hx - 30, hy + 20, hx - 16, hy + 10); c.closePath(); fs(c, hair);
+      c.beginPath(); c.arc(hx - 40, hy + 2, 15, 0, TAU); fs(c, hair);
+      c.strokeStyle = 'rgba(255,255,255,.2)'; c.lineWidth = 2; c.beginPath(); c.arc(hx - 40, hy + 2, 9, Math.PI * .9, Math.PI * 1.7); c.stroke();
+      c.beginPath(); c.ellipse(hx - 28, hy + 1, 5, 9, -.3, 0, TAU); fs(c, rib, 1.6);
     } else {
       c.beginPath(); c.moveTo(hx + 8, hy - 28);
       c.quadraticCurveTo(hx - 40, hy - 34, hx - 36, hy + 16);
@@ -632,6 +649,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     return [hsl(lk.shirt, 68, lk.shL), hsl(lk.shirt, 60, lk.shL - 16)];
   }
   // thân: quần đùi/váy + áo theo kiểu đồ của đoàn
+  let flipNow = 1; // 1 hoặc -1: đoàn đang bị lật ngang hay không (chữ số trên áo vẫn đọc đúng chiều)
   function drawBody(c, lk, bob, a) {
     const o = lk.outfit || 'dong', h = lk.shirt, L = lk.shL;
     const shirt = hsl(h, 68, L), shirtD = hsl(h, 60, L - 16), trim = hsl(h, 80, Math.min(88, L + 30)), sash = hsl(h + 160, 75, 56);
@@ -669,7 +687,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.beginPath(); c.moveTo(-6, -100 + bob); c.quadraticCurveTo(4, -92 + bob, 16, -100 + bob); c.lineWidth = 4.5; c.strokeStyle = trim; c.stroke();
       c.beginPath(); c.arc(-8, -80 + bob, 11, 0, TAU); fs(c, WH, 2);
       c.fillStyle = shirtD; c.font = '800 16px "Baloo 2",sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.save(); c.translate(-8, -79 + bob); if (lk.dir < 0) c.scale(-1, 1); c.fillText(String(lk.num || 7), 0, 0); c.restore();
+      c.save(); c.translate(-8, -79 + bob); if (lk.dir * flipNow < 0) c.scale(-1, 1); c.fillText(String(lk.num || 7), 0, 0); c.restore();
       c.textAlign = 'start'; c.textBaseline = 'alphabetic';
     } else if (o === 'baba') {
       // áo bà ba: dài qua hông, nẹp khuy giữa, túi
@@ -730,7 +748,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   // một bạn trong đoàn: (x,y) là chân, s là cỡ, ph là pha bước (1 = hai bước), tm là thời gian
   function drawKid(c, k, x, y, s, ph, tm, extra) {
     const lk = k.look, sc = s * (lk.hs || 1), kp = k.col || 0;
-    c.save(); c.translate(x, y); c.scale(sc * lk.dir, sc);
+    const fl = extra && extra.flip ? -1 : 1; flipNow = fl;
+    c.save(); c.translate(x, y); c.scale(sc * lk.dir * fl, sc);
     c.lineCap = 'round'; c.lineJoin = 'round';
     const amp = lk.amp || 1, a = Math.sin(ph * TAU) * .5 * amp;
     const bob = -(1 - Math.abs(Math.sin(ph * TAU))) * 5 * amp * amp + (extra && extra.hop ? -extra.hop : 0);
@@ -755,7 +774,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.fillStyle = 'rgba(255,255,255,.25)'; c.beginPath(); c.ellipse(6, -2, 5, 2, 0, 0, TAU); c.fill();
       c.restore();
     };
-    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); drawItem(c, lk, -16, hy, tm, kp); }
+    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); putItem(c, lk, -16, hy, tm, kp, extra, true); }
     leg(-4, -a, pc, false);
     if (!backHand) arm(c, -6, shY, -6 + Math.sin(-a * .9) * 22, shY + 32, shirtD, hsl(25, 40, 60), 1);
     leg(6, a, pc, true);
@@ -788,7 +807,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
         seg(c, px, py, px + 22, py + 6 + beat * 6, 2.8, '#c08a4a');
         c.beginPath(); c.arc(px + 22, py + 6 + beat * 6, 3.4, 0, TAU); fs(c, '#e04e6a', 1.4);
       } else {
-        drawItem(c, lk, 20, hy, tm, kp);
+        putItem(c, lk, 20, hy, tm, kp, extra);
         arm(c, 4, shY, 20, hy + 4, shirt, lk.skin, 1);
       }
     } else {
@@ -809,9 +828,13 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     c.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 70; i++) { c.beginPath(); c.arc(r() * W, r() * 300, r() * 1.6 + .4, 0, TAU); c.fill(); }
     // trăng rằm
     const mx = W * .78, my = 120;
-    g = c.createRadialGradient(mx, my, 30, mx, my, 170); g.addColorStop(0, 'rgba(255,230,160,.35)'); g.addColorStop(1, 'rgba(255,230,160,0)'); c.fillStyle = g; c.fillRect(mx - 170, my - 170, 340, 340);
-    c.fillStyle = '#ffe9b0'; c.beginPath(); c.arc(mx, my, 56, 0, TAU); c.fill();
-    c.fillStyle = 'rgba(214,180,110,.35)'; for (const [dx, dy, rr] of [[-18, -12, 12], [14, 10, 16], [10, -22, 7], [-20, 22, 8]]) { c.beginPath(); c.arc(mx + dx, my + dy, rr, 0, TAU); c.fill(); }
+    const moon = () => {
+      const g = c.createRadialGradient(mx, my, 30, mx, my, 170); g.addColorStop(0, 'rgba(255,230,160,.35)'); g.addColorStop(1, 'rgba(255,230,160,0)'); c.fillStyle = g; c.fillRect(mx - 170, my - 170, 340, 340);
+      c.fillStyle = '#ffe9b0'; c.beginPath(); c.arc(mx, my, 56, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(214,180,110,.35)'; for (const [dx, dy, rr] of [[-18, -12, 12], [14, 10, 16], [10, -22, 7], [-20, 22, 8]]) { c.beginPath(); c.arc(mx + dx, my + dy, rr, 0, TAU); c.fill(); }
+    };
+    moon();
+    const wins = [];
     // dãy nhà phố xa
     let x = -20;
     while (x < W + 40) {
@@ -821,7 +844,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.fillStyle = '#4a2140'; c.beginPath(); c.moveTo(x - 10, top + 6); c.lineTo(x + w / 2, top - 28 - r() * 14); c.lineTo(x + w + 10, top + 6); c.closePath(); c.fill();
       // cửa sổ sáng
       for (let wy = top + 30; wy < 560; wy += 50) for (let wx = x + 16; wx < x + w - 24; wx += 34) {
-        if (r() < .6) { c.fillStyle = r() < .7 ? 'rgba(255,196,110,.75)' : 'rgba(255,150,90,.6)'; c.fillRect(wx, wy, 16, 22); }
+        if (r() < .6) { const fc = r() < .7 ? 'rgba(255,196,110,.75)' : 'rgba(255,150,90,.6)'; c.fillStyle = fc; c.fillRect(wx, wy, 16, 22); wins.push([wx, wy, fc]); }
         else { c.fillStyle = 'rgba(10,5,25,.5)'; c.fillRect(wx, wy, 16, 22); }
       }
       x += w + 4;
@@ -832,6 +855,12 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     g = c.createLinearGradient(0, 636, 0, H); g.addColorStop(0, '#4b3346'); g.addColorStop(1, '#2d1d2e'); c.fillStyle = g; c.fillRect(0, 636, W, H - 636);
     c.strokeStyle = 'rgba(255,255,255,.05)'; c.lineWidth = 2;
     for (let yy = 660; yy < H; yy += 34 + (yy - 660) * .15) { c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke(); }
+    // Siêu khó: phố tối hơn, những thứ không có đèn đều tối theo; chỉ cửa sổ, trăng và đèn lồng còn sáng
+    if (sieu()) {
+      c.fillStyle = 'rgba(5,3,16,.55)'; c.fillRect(0, 0, W, H);
+      moon();
+      for (const [wx, wy, fc] of wins) { c.fillStyle = fc; c.fillRect(wx, wy, 16, 22); }
+    }
     // ánh đèn hắt xuống đường
     for (let lx = 140; lx < W; lx += 420) { g = c.createRadialGradient(lx, 760, 10, lx, 760, 260); g.addColorStop(0, 'rgba(255,170,80,.12)'); g.addColorStop(1, 'rgba(255,170,80,0)'); c.fillStyle = g; c.fillRect(lx - 260, 600, 520, 300); }
     // dây đèn lồng
@@ -851,16 +880,18 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 
   // ================= LƯU =================
   let save = (function () { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && typeof s.best === 'number') return s; } catch (e) {} return { best: 0, seenHelp: false }; })();
-  // hai chế độ: 'thuong' và 'kho'; kỷ lục và bảng xếp hạng tính riêng
-  let mode = save.mode === 'kho' ? 'kho' : 'thuong';
-  const hard = () => mode === 'kho';
-  const bestOf = m => (m === 'kho' ? save.bestKho : save.best) || 0;
+  // ba chế độ: 'thuong', 'kho' và 'sieu'; kỷ lục và bảng xếp hạng tính riêng
+  let mode = save.mode === 'kho' || save.mode === 'sieu' ? save.mode : 'thuong';
+  const hard = () => mode === 'kho' || mode === 'sieu';
+  const sieu = () => mode === 'sieu';
+  const bestOf = m => (m === 'sieu' ? save.bestSieu : m === 'kho' ? save.bestKho : save.best) || 0;
   function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
   function submitScore() {
     try {
       if (!window.Scores) return;
       if (save.best > 0) Scores.submit('kelacdoan', save.best);
       if (save.bestKho > 0) Scores.submit('kelacdoankho', save.bestKho);
+      if (save.bestSieu > 0) Scores.submit('kelacdoansieu', save.bestSieu);
     } catch (e) {}
   }
 
@@ -903,9 +934,9 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
 
   function newParade() {
-    P = makeParade(caught, hard());
+    P = makeParade(caught, hard(), sieu());
     st = 'walk'; stT = 0; card = null;
-    const s = (hard() ? STEPS_KHO : STEPS).find(x => x[0] === caught);
+    const s = (sieu() ? STEPS_SIEU : hard() ? STEPS_KHO : STEPS).find(x => x[0] === caught);
     if (P.free) tip((caught === 10 ? 'Mới: ' : '') + 'Đoàn tự do: mỗi bạn một kiểu ' + FREE_NAME[P.free]);
     else if (s) tip('Mới: ' + s[1]);
     updHud();
@@ -934,7 +965,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function kidPos(k) {
     const R = ROWS[k.row];
-    return { x: P.head + k.dx, y: R.y, s: R.s };
+    return { x: P.rowRtl[k.row] ? W - (P.head + k.dx) : P.head + k.dx, y: R.y, s: R.s };
   }
   function kidPhase(k) { return P.t * cadence(P.speed) * (k.look.tempo || 1) + k.look.off; }
 
@@ -960,7 +991,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const p = kidPos(k);
       for (let i = 0; i < 36; i++) parts.push({ x: p.x, y: p.y - 100 * p.s, vx: rnd(-420, 420), vy: rnd(-650, -200), life: rnd(.7, 1.2), t: 0, col: pick(['#ffd166', '#ff7a45', '#6fe08f', '#7fd8ff', '#ff6bb5']) });
       sfx.good();
-      if (caught > bestOf(mode)) { if (hard()) save.bestKho = caught; else save.best = caught; store(); submitScore(); }
+      if (caught > bestOf(mode)) { if (sieu()) save.bestSieu = caught; else if (hard()) save.bestKho = caught; else save.best = caught; store(); submitScore(); }
       toast(pick(['Bắt được!', 'Tinh mắt!', 'Chuẩn!']), 'good', WHY[P.kind]);
       updHud();
     } else {
@@ -973,7 +1004,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function openCard(win) {
     st = 'card'; stT = 0;
-    card = { win, kind: P.kind, free: P.free, normal: { look: P.base, col: 0 }, odd: { look: P.odd, col: 1 } };
+    card = { win, kind: P.kind, free: P.free, rtl: !!P.rowRtl[(P.kids.find(k => k.odd) || { row: 0 }).row], normal: { look: P.base, col: 0 }, odd: { look: P.odd, col: 1 } };
   }
   function nextAfterCard() {
     if (lives <= 0) { showOver(); return; }
@@ -1017,6 +1048,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       if (stT > (card.win ? 2.2 : 3.2)) nextAfterCard();
     }
   }
+  let kcv = null;
   function draw() {
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -1024,13 +1056,39 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const sx = shake > 0 ? Math.sin(tm * 90) * 10 * shake : 0;
     c.setTransform(scale, 0, 0, scale, sx * scale, 0);
     if (P && !hidden()) {
-      for (let r = 2; r >= 0; r--) for (let i = P.kids.length - 1; i >= 0; i--) {
-        const k = P.kids[i]; if (k.row !== r) continue;
-        const p = kidPos(k);
-        if (p.x < -120 || p.x > W + 120) continue;
-        const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
-        const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
-        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop) });
+      // Siêu khó: từng hàng vẽ lên lớp riêng rồi phủ tối, đồ cầm phát sáng vẽ đè lên ngay sau hàng đó
+      // (làm theo từng hàng để cán đèn của hàng sau không xuyên qua người hàng trước)
+      const dark = sieu();
+      let kc = c;
+      if (dark) {
+        kcv = kcv || document.createElement('canvas');
+        if (kcv.width !== cv.width || kcv.height !== cv.height) { kcv.width = cv.width; kcv.height = cv.height; }
+        kc = kcv.getContext('2d');
+      }
+      const marks = [];
+      for (let r = 2; r >= 0; r--) {
+        let defer = null;
+        if (dark) { kc.setTransform(1, 0, 0, 1, 0, 0); kc.clearRect(0, 0, kcv.width, kcv.height); kc.setTransform(scale, 0, 0, scale, sx * scale, 0); defer = []; }
+        for (let i = P.kids.length - 1; i >= 0; i--) {
+          const k = P.kids[i]; if (k.row !== r) continue;
+          const p = kidPos(k);
+          if (p.x < -120 || p.x > W + 120) continue;
+          const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
+          const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
+          drawKid(kc, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row], defer });
+          marks.push([k, p]);
+        }
+        if (defer) {
+          kc.setTransform(1, 0, 0, 1, 0, 0); kc.globalCompositeOperation = 'source-atop';
+          kc.fillStyle = 'rgba(8,5,26,.4)'; kc.fillRect(0, 0, kcv.width, kcv.height); kc.globalCompositeOperation = 'source-over';
+          // đồ cầm bằng tay kia nằm sau người: vẽ trước lớp các bạn để thân che lên; đồ cầm tay trước vẽ đè lên sau
+          const putD = d => { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); };
+          for (const d of defer) if (d.back) putD(d);
+          c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(kcv, 0, 0); c.restore();
+          for (const d of defer) if (!d.back) putD(d);
+        }
+      }
+      for (const [k, p] of marks) {
         if (k.tried) {
           const s = p.s; c.strokeStyle = '#ff5b5b'; c.lineWidth = 7 * s; c.lineCap = 'round';
           const cx = p.x, cy = p.y - 210 * s;
@@ -1060,8 +1118,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const pn = card.normal.look, po = card.odd.look;
     rr(c, x + 70, y + 146, 270, 330, 24); c.fillStyle = 'rgba(255,255,255,.05)'; c.fill();
     rr(c, x + w - 340, y + 146, 270, 330, 24); c.fillStyle = 'rgba(255,209,102,.1)'; c.fill();
-    drawKid(c, card.normal, x + 196, y + 430, 1.25, ph * (pn.tempo || 1) + pn.off, tm, {});
-    drawKid(c, card.odd, x + w - 214, y + 430, 1.25, ph * (po.tempo || 1) + po.off, tm, {});
+    drawKid(c, card.normal, x + 196, y + 430, 1.25, ph * (pn.tempo || 1) + pn.off, tm, { flip: card.rtl });
+    drawKid(c, card.odd, x + w - 214, y + 430, 1.25, ph * (po.tempo || 1) + po.off, tm, { flip: card.rtl });
     c.font = '700 26px "Be Vietnam Pro",sans-serif'; c.fillStyle = '#b4a8d6'; c.fillText('Cả đoàn', x + 205, y + 512);
     c.fillStyle = '#ffd166'; c.fillText('Kẻ lạc đoàn', x + w - 205, y + 512);
     c.font = '600 20px "Be Vietnam Pro",sans-serif'; c.fillStyle = 'rgba(255,255,255,.5)';
@@ -1073,7 +1131,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   function updHud() {
     $('hearts').innerHTML = [0, 1, 2].map(i => `<i class="${i < lives ? 'on' : ''}">♥</i>`).join('');
     $('count').textContent = 'Đoàn ' + caught + (bestOf(mode) ? ' · KL ' + bestOf(mode) : '');
-    $('modeTag').hidden = !hard();
+    $('modeTag').hidden = !hard(); $('modeTag').textContent = sieu() ? 'Siêu khó' : 'Khó';
   }
   let toastT = 0, tipT = 0;
   function toast(txt, cls, small) {
@@ -1091,20 +1149,22 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   let overFirst = true;
   function refreshModes() {
     $('modeThuong').setAttribute('aria-pressed', String(!hard()));
-    $('modeKho').setAttribute('aria-pressed', String(hard()));
+    $('modeKho').setAttribute('aria-pressed', String(mode === 'kho'));
+    $('modeSieu').setAttribute('aria-pressed', String(sieu()));
     $('bestThuong').textContent = 'Kỷ lục ' + bestOf('thuong');
     $('bestKho').textContent = 'Kỷ lục ' + bestOf('kho');
-    $('modeTag').hidden = !hard();
+    $('bestSieu').textContent = 'Kỷ lục ' + bestOf('sieu');
+    $('modeTag').hidden = !hard(); $('modeTag').textContent = sieu() ? 'Siêu khó' : 'Khó';
   }
   function setMode(m) {
-    mode = m === 'kho' ? 'kho' : 'thuong'; save.mode = mode; store();
-    refreshModes();
+    mode = m === 'kho' || m === 'sieu' ? m : 'thuong'; save.mode = mode; store();
+    refreshModes(); drawBg(scale);
     if (overFirst) $('overNum').textContent = bestOf(mode);
     updHud();
   }
   function showOver(first) {
     paused = true; st = 'idle'; overFirst = !!first;
-    const name = hard() ? 'Khó' : 'Thường';
+    const name = sieu() ? 'Siêu khó' : hard() ? 'Khó' : 'Thường';
     $('overH').textContent = first ? 'Kẻ lạc đoàn' : 'Hết lượt';
     $('overNum').textContent = first ? bestOf(mode) : caught;
     $('overWhy').innerHTML = first ? 'Kỷ lục của bạn (số đoàn bắt được kẻ lạc). Chọn chế độ rồi bấm Bắt đầu.'
@@ -1122,6 +1182,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   $('pauseMenu').onclick = () => { closeAll(); showOver(true); };
   $('modeThuong').onclick = () => setMode('thuong');
   $('modeKho').onclick = () => setMode('kho');
+  $('modeSieu').onclick = () => setMode('sieu');
   $('helpBtn').onclick = () => { if (st === 'idle') { closeAll(); layer('help', true); } else pauseGame('help'); };
   $('helpClose').onclick = () => { save.seenHelp = true; store(); resize(); if (st === 'idle') { closeAll(); showOver(true); } else resumeGame(); };
   $('resumeBtn').onclick = resumeGame;
