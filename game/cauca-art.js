@@ -814,28 +814,42 @@
   };
   /* Vẽ bể cá: w x h (thấp), fish = [{e, cm, x, y, vx}], on = {decoId: true}, t: giây */
   var DECO_POS = { soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
-  CA.tank = function (c, w, h, fish, on, t) {
+  /* Lớp tĩnh của bể (nước, cát, đồ trang trí): chỉ vẽ lại khi bộ trang trí đổi */
+  function tankStatic(w, h, on) {
+    var cv = canvas(w, h), c = cv.getContext('2d'), lamp = on.den;
     c.imageSmoothingEnabled = false;
-    var lamp = on.den, top = lamp ? '#7ad0f0' : '#4f9ac0', bot = lamp ? '#2f6f9a' : '#1f4f72';
-    var im = c.createImageData(w, h); gradient(im, w, 0, h, top, bot, 6); c.putImageData(im, 0, 0);
-    if (lamp) { c.fillStyle = 'rgba(255,250,200,.10)'; for (var r = 0; r < 4; r++) { var rx = (r * 37 + Math.sin(t * .4 + r) * 6) % w; c.beginPath(); c.moveTo(rx, 0); c.lineTo(rx + 8, 0); c.lineTo(rx + 22, h); c.lineTo(rx + 12, h); c.fill(); } }
+    var im = c.createImageData(w, h); gradient(im, w, 0, h, lamp ? '#7ad0f0' : '#4f9ac0', lamp ? '#2f6f9a' : '#1f4f72', 6); c.putImageData(im, 0, 0);
     var sand = on.cat ? ['#f0e8d0', '#d8ccae'] : ['#c8a870', '#a8885a'], sy = h - 9;
     c.fillStyle = sand[0]; c.fillRect(0, sy, w, 9);
     c.fillStyle = sand[1]; for (var x = 0; x < w; x += 3) c.fillRect(x + (x % 2), sy + 3 + (x * 7) % 5, 1, 1);
     Object.keys(DECO_POS).forEach(function (id) {
-      if (!on[id]) return;
+      if (!on[id] || id === 'suc') return;
       var d = CA.deco(id), dx = Math.round(DECO_POS[id] * w - d.width / 2), dy = sy - d.height + 3;
       if (id === 'rong') { c.drawImage(d, dx, dy); c.drawImage(d, Math.round(.9 * w - 7), dy + 4); }
       else c.drawImage(d, Math.max(0, Math.min(w - d.width, dx)), dy);
     });
+    if (on.suc) c.drawImage(CA.deco('suc'), Math.max(0, Math.min(w - CA.deco('suc').width, Math.round(DECO_POS.suc * w - CA.deco('suc').width / 2))), sy - CA.deco('suc').height + 3);
     if (on.den) c.drawImage(CA.deco('den'), Math.round(w / 2 - 7), 0);
+    c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(2, 2, 1, h - 14); c.fillRect(4, 2, 1, 6);
+    return cv;
+  }
+  var tankStaticKey = '', tankStaticCv = null;
+  /* Vẽ bể cá: toàn bộ khung được dựng trong một lần rồi chép lên canvas thật.
+     fish = [{e, cm, rx, ry, face}], on = {decoId: true}, t: giây */
+  CA.tank = function (c, w, h, fish, on, t) {
+    c.imageSmoothingEnabled = false;
+    var key = w + 'x' + h + ':' + Object.keys(on).filter(function (k) { return on[k]; }).sort().join(',');
+    if (key !== tankStaticKey || !tankStaticCv) { tankStaticCv = tankStatic(w, h, on); tankStaticKey = key; }
+    var sy = h - 9;
+    c.drawImage(tankStaticCv, 0, 0);
+    if (on.den) { c.fillStyle = 'rgba(255,250,200,.10)'; for (var r = 0; r < 4; r++) { var rx = Math.round((r * 37 + Math.sin(t * .4 + r) * 6) % w); c.beginPath(); c.moveTo(rx, 0); c.lineTo(rx + 8, 0); c.lineTo(rx + 22, h); c.lineTo(rx + 12, h); c.fill(); } }
     if (on.suc) { c.fillStyle = 'rgba(230,248,255,.8)'; for (var b = 0; b < 8; b++) { var by = (sy - 6) - ((t * 14 + b * 9) % (sy - 4)); c.fillRect(Math.round(.94 * w + Math.sin(t * 3 + b) * 1.5), Math.round(by), 1 + (b % 2), 1 + (b % 2)); } }
     fish.forEach(function (f) {
       var s = CA.sprite(f.e), tw = Math.round(Math.max(9, Math.min(w * .32, 5 + Math.log(f.cm + 2) * 5))), sc = tw / s.width, th = Math.max(2, Math.round(s.height * sc));
-      c.save(); c.translate(Math.round(f.x), Math.round(f.y + Math.sin(t * 1.2 + f.ph) * 1)); if ((f.face || f.vx) < 0) c.scale(-1, 1);
+      var fx = f.rx != null ? f.rx : Math.round(f.x), fy = f.ry != null ? f.ry : Math.round(f.y);
+      c.save(); c.translate(fx, fy); if ((f.face || f.vx) < 0) c.scale(-1, 1);
       c.drawImage(s, Math.round(-tw / 2), Math.round(-th / 2), tw, th); c.restore();
     });
-    c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(2, 2, 1, h - 14); c.fillRect(4, 2, 1, 6);
   };
 
   window.CA = CA;
