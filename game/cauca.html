@@ -275,7 +275,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 <script src="../scores.js?v=20261116a"></script>
 <script src="../sfx.js?v=20261125a" data-bank="cauca"></script>
 <script src="cauca-data.js?v=2"></script>
-<script src="cauca-art.js?v=3"></script>
+<script src="cauca-art.js?v=4"></script>
 <script>
 (function () {
   'use strict';
@@ -646,7 +646,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   function frame(now) {
     var dt = Math.min(.05, (now - last) / 1000); last = now;
     if (!document.hidden) step(dt);
-    draw();
+    if (openId !== 'tank') draw();
     requestAnimationFrame(frame);
   }
   function step(dt) {
@@ -1195,30 +1195,57 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       return { id: f.id, e: CC.byId[f.id], cm: f.cm, x: 20 + Math.random() * (w - 40), y: 12 + Math.random() * (h - 32), dir: Math.random() < .5 ? -1 : 1, sp: 5 + Math.random() * 6, turn: 4 + Math.random() * 7, vx: 0, face: 0, ph: Math.random() * 6 };
     });
   }
-  function tankLoop(now) {
-    if (openId !== 'tank') { tankRaf = 0; return; }
-    var c = $('tankCv'), x = c.getContext('2d'), w = c.width, h = c.height, t = now / 1000, dt = Math.min(.05, t - (tankLoop.t || t));
-    tankLoop.t = t;
-    tankFish.forEach(function (f) {
-      f.turn -= dt;
-      if (f.turn <= 0) { f.dir = -f.dir; f.turn = 5 + Math.random() * 9; }
-      if (f.x < 22) f.dir = 1; else if (f.x > w - 22) f.dir = -1;
-      if (!f.face) { f.vx = f.dir * f.sp; f.face = f.dir; }
-      f.vx += (f.dir * f.sp - f.vx) * Math.min(1, dt * 2.5);
-      if (f.vx * f.face < -f.sp * .25) f.face = f.vx < 0 ? -1 : 1;
-      if (!reduce) f.x += f.vx * dt;
-      f.x = Math.max(12, Math.min(w - 12, f.x));
-      f.y += Math.sin(t * .7 + f.ph) * dt * 2;
-      f.y = Math.max(10, Math.min(h - 20, f.y));
-    });
-    var on = {}; for (var k in S.decoOn) if (S.decoOn[k] && S.decos[k]) on[k] = 1;
+  var tankCtx = null, tankLast = 0, tankAcc = 0;
+  function tankCtx2d() {
+    var c = $('tankCv');
+    if (!tankCtx || tankCtx.canvas !== c) tankCtx = c.getContext('2d', { willReadFrequently: true });
+    return tankCtx;
+  }
+  function tankStep(f, dt, t, w, h) {
+    f.turn -= dt;
+    if (f.turn <= 0) { f.dir = -f.dir; f.turn = 5 + Math.random() * 9; }
+    if (f.x < 22) f.dir = 1; else if (f.x > w - 22) f.dir = -1;
+    if (!f.face) { f.vx = f.dir * f.sp; f.face = f.dir; }
+    f.vx += (f.dir * f.sp - f.vx) * Math.min(1, dt * 2.5);
+    if (f.vx * f.face < -f.sp * .25) f.face = f.vx < 0 ? -1 : 1;
+    if (!reduce) f.x += f.vx * dt;
+    f.x = Math.max(12, Math.min(w - 12, f.x));
+    f.y += Math.sin(t * .7 + f.ph) * dt * 3;
+    f.y = Math.max(10, Math.min(h - 20, f.y));
+    // làm tròn có trễ: cá chỉ nhích 1 điểm ảnh khi đã lệch rõ, không nhảy qua lại giữa 2 hàng
+    if (f.rx == null || Math.abs(f.x - f.rx) > .8) f.rx = Math.round(f.x);
+    if (f.ry == null || Math.abs(f.y - f.ry) > .8) f.ry = Math.round(f.y);
+  }
+  function tankDraw() {
+    var c = $('tankCv'), x = tankCtx2d(), w = c.width, h = c.height, t = performance.now() / 1000;
+    var on = {}; for (var k in S.decoOn) if (S.decoOn[k] && S.decos[k]) on[k] = true;
     CA.tank(x, w, h, tankFish, on, reduce ? 0 : t);
+  }
+  function tankLoop(now) {
+    tankRaf = 0;
+    if (openId !== 'tank') return;
+    tankRaf = requestAnimationFrame(tankLoop);   // luôn đặt lịch trước, lỗi một khung không làm đứng bể
+    var dt = Math.min(.05, (now - (tankLast || now)) / 1000); tankLast = now;
+    tankAcc += dt;
+    if (tankAcc < 1 / 30 - .004) return;               // 30 khung/giây là đủ cho pixel art, nhẹ máy hơn
+    dt = tankAcc; tankAcc = 0;
+    try {
+      var c = $('tankCv'), w = c.width, h = c.height;
+      tankFish.forEach(function (f) { tankStep(f, dt, now / 1000, w, h); });
+      tankDraw();
+    } catch (e) { if (window.console) console.error(e); }
+  }
+  function tankStart() {
+    if (tankRaf) cancelAnimationFrame(tankRaf);
+    tankLast = 0; tankAcc = 0;
     tankRaf = requestAnimationFrame(tankLoop);
   }
+  document.addEventListener('visibilitychange', function () { if (!document.hidden && openId === 'tank') { tankStart(); } });
   function renderTank() {
     var c = $('tankCv'), wide = innerWidth > innerHeight;
     c.width = 160; c.height = wide ? 64 : 90;
     tankSync();
+    try { tankDraw(); } catch (e) { }
     $('tankInfo').textContent = 'Đang trưng bày ' + S.tank.length + '/' + S.slots + ' con · Xu: ' + money(S.coins);
     var deco = $('tankDeco'); deco.innerHTML = '';
     CC.DECOS.forEach(function (d) {
@@ -1244,7 +1271,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   $('tankBtn').addEventListener('click', function () {
     if (G.state === 'bite' || G.state === 'hook' || G.state === 'reel') return;
     sfx('splash', { vol: .4 }); openOv('tank'); renderTank();
-    if (!tankRaf) tankRaf = requestAnimationFrame(tankLoop);
+    tankStart();
   });
   $('tankX').addEventListener('click', function () { closeOv(); });
   $('tank').addEventListener('pointerdown', function (ev) { if (ev.target === $('tank')) closeOv(); });
