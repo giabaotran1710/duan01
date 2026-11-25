@@ -275,7 +275,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 <script src="../scores.js?v=20261116a"></script>
 <script src="../sfx.js?v=20261125a" data-bank="cauca"></script>
 <script src="cauca-data.js?v=2"></script>
-<script src="cauca-art.js?v=2"></script>
+<script src="cauca-art.js?v=3"></script>
 <script>
 (function () {
   'use strict';
@@ -1192,7 +1192,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     tankFish = S.tank.map(function (f, i) {
       var old = tankFish[i];
       if (old && old.id === f.id && old.cm === f.cm) return old;
-      return { id: f.id, e: CC.byId[f.id], cm: f.cm, x: 20 + Math.random() * (w - 40), y: 12 + Math.random() * (h - 32), vx: (Math.random() < .5 ? -1 : 1) * (5 + Math.random() * 6), ph: Math.random() * 6 };
+      return { id: f.id, e: CC.byId[f.id], cm: f.cm, x: 20 + Math.random() * (w - 40), y: 12 + Math.random() * (h - 32), dir: Math.random() < .5 ? -1 : 1, sp: 5 + Math.random() * 6, turn: 4 + Math.random() * 7, vx: 0, face: 0, ph: Math.random() * 6 };
     });
   }
   function tankLoop(now) {
@@ -1200,10 +1200,14 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     var c = $('tankCv'), x = c.getContext('2d'), w = c.width, h = c.height, t = now / 1000, dt = Math.min(.05, t - (tankLoop.t || t));
     tankLoop.t = t;
     tankFish.forEach(function (f) {
+      f.turn -= dt;
+      if (f.turn <= 0) { f.dir = -f.dir; f.turn = 5 + Math.random() * 9; }
+      if (f.x < 22) f.dir = 1; else if (f.x > w - 22) f.dir = -1;
+      if (!f.face) { f.vx = f.dir * f.sp; f.face = f.dir; }
+      f.vx += (f.dir * f.sp - f.vx) * Math.min(1, dt * 2.5);
+      if (f.vx * f.face < -f.sp * .25) f.face = f.vx < 0 ? -1 : 1;
       if (!reduce) f.x += f.vx * dt;
-      if (f.x < 12) { f.x = 12; f.vx = Math.abs(f.vx); }
-      if (f.x > w - 12) { f.x = w - 12; f.vx = -Math.abs(f.vx); }
-      if (Math.random() < dt * .3) f.vx = -f.vx;
+      f.x = Math.max(12, Math.min(w - 12, f.x));
       f.y += Math.sin(t * .7 + f.ph) * dt * 2;
       f.y = Math.max(10, Math.min(h - 20, f.y));
     });
