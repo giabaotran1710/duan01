@@ -403,8 +403,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     return [fx, fy];
   }
   // Siêu khó: đồ cầm (đèn lồng, ngôi sao) tự phát sáng nên vẽ sau lớp tối; ghi lại phép biến đổi để vẽ bù
-  function putItem(c, lk, hx, hy, tm, ph, extra) {
-    if (extra && extra.defer) extra.defer.push({ m: c.getTransform(), lk, hx, hy, tm, ph });
+  function putItem(c, lk, hx, hy, tm, ph, extra, back) {
+    if (extra && extra.defer) extra.defer.push({ m: c.getTransform(), lk, hx, hy, tm, ph, back });
     else drawItem(c, lk, hx, hy, tm, ph);
   }
   // vẽ đồ cầm; (hx,hy) là vị trí bàn tay
@@ -760,7 +760,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.fillStyle = 'rgba(255,255,255,.25)'; c.beginPath(); c.ellipse(6, -2, 5, 2, 0, 0, TAU); c.fill();
       c.restore();
     };
-    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); putItem(c, lk, -16, hy, tm, kp, extra); }
+    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); putItem(c, lk, -16, hy, tm, kp, extra, true); }
     leg(-4, -a, pc, false);
     if (!backHand) arm(c, -6, shY, -6 + Math.sin(-a * .9) * 22, shY + 32, shirtD, hsl(25, 40, 60), 1);
     leg(6, a, pc, true);
@@ -1063,8 +1063,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       if (defer) {
         kc.setTransform(1, 0, 0, 1, 0, 0); kc.globalCompositeOperation = 'source-atop';
         kc.fillStyle = 'rgba(8,5,26,.4)'; kc.fillRect(0, 0, kcv.width, kcv.height); kc.globalCompositeOperation = 'source-over';
+        // đồ cầm bằng tay kia nằm sau người: vẽ trước lớp các bạn để thân che lên; đồ cầm tay trước vẽ đè lên sau
+        const putD = d => { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); };
+        for (const d of defer) if (d.back) putD(d);
         c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(kcv, 0, 0); c.restore();
-        for (const d of defer) { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); }
+        for (const d of defer) if (!d.back) putD(d);
       }
       for (const [k, p] of marks) {
         if (k.tried) {
