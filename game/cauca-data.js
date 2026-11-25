@@ -122,6 +122,10 @@
     F('kiem', 'Cá kiếm', 'bien', 'hiemco', ['hoanghon'], ['giong'], [120, 400], 0.65, { s: 'fish', h: .17, c: ['#2a3f5a', '#c8d4dc', '#22344a'], tail: 'moon', dor: 'sail', snout: 'bill' }, 'Lao lên giữa sóng giông lúc hoàng hôn.')
   ];
 
+  /* Một số loài vùng cũ cũng có ở vùng mở sau. */
+  var ALSO = {"rodong": ["dam"], "chep": ["song", "dam", "nui"], "tre": ["song", "dam"], "rophi": ["song", "dam"], "loc": ["dam"], "me": ["song", "nui"], "bong": ["rung"], "lang": ["nui"], "tomcang": ["dam"], "luon": ["dam"], "sac": ["nui"], "doi": ["bien"], "chem": ["bien"], "cua": ["bien"], "dia": ["bien"]};
+  SPECIES.forEach(function (e) { e.also = ALSO[e.id] || []; });
+
   /* Rác và vật phẩm: reg là danh sách vùng có thể vớt được, rare = ít gặp. */
   function J(id, name, reg, a, rare, note) { return { id: id, name: name, reg: reg, r: 'rac', a: a, rare: !!rare, note: note || '' }; }
   var JUNK = [
@@ -184,19 +188,21 @@
   /* các sinh vật/rác có thể cắn câu ở vùng này, lúc này */
   function eligible(regionId, slot, wx) {
     var out = [];
-    SPECIES.forEach(function (e) { if (e.reg === regionId && condOk(e, slot, wx)) out.push(e); });
+    SPECIES.forEach(function (e) { if ((e.reg === regionId || e.also.indexOf(regionId) >= 0) && condOk(e, slot, wx)) out.push(e); });
     JUNK.forEach(function (e) { if (e.reg.indexOf(regionId) >= 0) out.push(e); });
     return out;
   }
   /* Chọn con cắn câu. found: sổ đã có (loài chưa có được ưu tiên nhẹ). rnd: hàm ngẫu nhiên. */
-  function pick(regionId, slot, wx, found, rnd) {
+  function pick(regionId, slot, wx, found, rnd, bait) {
     rnd = rnd || Math.random;
+    var B = BAITS[bait] || BAITS.giun;
     var list = eligible(regionId, slot, wx), tot = 0, ws = [];
     var nJunk = 0; list.forEach(function (e) { if (e.r === 'rac') nJunk++; });
     list.forEach(function (e) {
       var w;
       if (e.r === 'rac') w = (e.rare ? 0.35 : 1) * 15 / Math.max(1, nJunk) * 0.1 * 10; // rác chiếm khoảng 12-15% số lần cắn
-      else w = RARITY[e.r].w;
+      else w = RARITY[e.r].w * (e.r === 'thuong' ? 1 : B.rare);
+      if (e.r === 'rac') w *= B.junk;
       if (found && !found[e.id]) w *= e.r === 'rac' ? 1.2 : 1.5;
       ws.push(w); tot += w;
     });
@@ -205,10 +211,11 @@
     return list[list.length - 1];
   }
   /* Kích cỡ một con: phần lớn nhỏ, thỉnh thoảng (4%) gặp con cỡ lớn. Trả về { cm, kg, q (0..1 vị trí trong khoảng) } */
-  function roll(e, rnd) {
+  function roll(e, rnd, bait) {
     rnd = rnd || Math.random;
+    var B = BAITS[bait] || BAITS.giun;
     if (e.r === 'rac') return { cm: 0, kg: 0, q: 0 };
-    var q = rnd() < 0.04 ? 0.85 + rnd() * 0.15 : Math.pow(rnd(), 1.6);
+    var q = rnd() < 0.04 * B.size ? 0.85 + rnd() * 0.15 : Math.pow(rnd(), 1.6 / B.size);
     var cm = e.cm[0] + (e.cm[1] - e.cm[0]) * q;
     cm = cm < 10 ? Math.round(cm * 10) / 10 : Math.round(cm);
     var kg = e.k * cm * cm * cm * 1e-5;
@@ -224,6 +231,30 @@
   }
   /* Bề rộng điểm vàng (độ): cá càng hiếm điểm vàng càng bé. */
   function zoneOf(e) { return RARITY[e.r].zone; }
+  /* Mồi câu: size làm cá to hơn, rare tăng cơ hội loài hiếm, junk bớt rác. pack: số mồi mỗi gói. */
+  var BAITS = {
+    giun: { name: 'Giun đất', size: 1, rare: 1, junk: 1, price: 0, pack: 0, desc: 'Mồi thường, dùng mãi không hết.' },
+    tom: { name: 'Mồi tôm', size: 1.7, rare: 1, junk: .7, price: 60, pack: 10, desc: 'Cá to cắn nhiều hơn.' },
+    cam: { name: 'Cám thơm', size: 1, rare: 2, junk: .6, price: 100, pack: 10, desc: 'Dễ gặp loài hiếm và hiếm có hơn.' },
+    vang: { name: 'Mồi vàng', size: 2, rare: 2.8, junk: .3, price: 260, pack: 5, desc: 'Vừa cá to vừa cá hiếm.' }
+  };
+  /* Giá bán (xu): theo độ hiếm, cỡ của loài và cỡ của con này. */
+  var BASE = { thuong: 6, hiem: 26, hiemco: 110, rac: 1 };
+  function price(e, cm) {
+    if (e.r === 'rac') return 1;
+    var q = Math.max(0, Math.min(1, (cm - e.cm[0]) / Math.max(1, e.cm[1] - e.cm[0])));
+    var cls = Math.max(.7, Math.min(2.4, 1 + Math.log(e.cm[1] / 20) / 2.2));
+    return Math.max(1, Math.round(BASE[e.r] * cls * (.6 + 1.4 * q)));
+  }
+  /* Đồ trang trí bể cá */
+  var DECOS = [
+    { id: 'soi', name: 'Đá cuội', price: 30 }, { id: 'rong', name: 'Rong xanh', price: 40 }, { id: 'cat', name: 'Cát trắng', price: 60 },
+    { id: 'suc', name: 'Máy sục khí', price: 80 }, { id: 'sanho', name: 'San hô', price: 120 }, { id: 'den', name: 'Đèn bể', price: 150 },
+    { id: 'ruong', name: 'Rương báu', price: 260 }, { id: 'laudai', name: 'Lâu đài', price: 300 }, { id: 'tuong', name: 'Tượng cá chép', price: 400 },
+    { id: 'thuyen', name: 'Thuyền đắm', price: 500 }
+  ];
+  var TANK = { start: 3, max: 15, cost: function (slots) { return Math.round(80 * Math.pow(1.25, slots - 3) / 10) * 10; } };
+  var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drink: { name: 'Nước tăng lực', gain: 30, price: 90, cap: 120 } };
   function points(found) {
     var p = 0;
     for (var id in found) if (byId[id]) p += RARITY[byId[id].r].pts;
@@ -231,5 +262,6 @@
   }
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
+    BAITS: BAITS, DECOS: DECOS, TANK: TANK, ENERGY: ENERGY, price: price,
     slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);
