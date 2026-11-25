@@ -58,11 +58,13 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 .big{width:100%;min-height:50px;border:0;border-radius:16px;background:linear-gradient(135deg,var(--acc),var(--acc2));color:#2a1505;font-weight:800;font-size:16px;margin-top:8px;box-shadow:0 4px 0 #a8461d}
 .big:active{transform:translateY(2px);box-shadow:0 2px 0 #a8461d}
 .modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:12px 0 2px}
+.modes.three{grid-template-columns:1fr 1fr 1fr}
 .mode{border:2px solid var(--line);background:rgba(255,255,255,.05);border-radius:16px;padding:10px 6px;min-height:62px;font-weight:700}
 .mode b{display:block;font:800 18px var(--disp)}
 .mode small{display:block;color:var(--muted);font-size:12px;margin-top:2px}
 .mode[aria-pressed=true]{border-color:var(--gold);background:rgba(255,209,102,.14)}
 .mode[data-mode=kho][aria-pressed=true]{border-color:var(--bad);background:rgba(255,107,91,.14)}
+.mode[data-mode=sieu][aria-pressed=true]{border-color:#ff4f9a;background:rgba(255,79,154,.16)}
 .hud .modeTag{color:#ff8a7a}
 .ghost{width:100%;min-height:44px;border:0;border-radius:16px;background:rgba(255,255,255,.08);font-weight:700;margin-top:8px}
 .rules{text-align:left;padding-left:20px;margin:8px 0;color:#ddd3f5;font-size:14px}
@@ -103,8 +105,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       <li>Chạm nhầm thì đoàn chạy vụt đi mất, không được chọn lại. Chạm nhầm hay để đoàn đi hết đều mất 1 tim. Chỉ có 3 tim, mất là không hồi lại.</li>
       <li>Không tính là lạc đoàn: cao thấp, màu da, đèn lắc nhanh chậm hay sáng tối khác nhau.</li>
       <li>Càng về sau đoàn càng đông, đi nhanh hơn, xếp nhiều hàng, và chỗ khác càng nhỏ.</li>
-      <li><b>Hai chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu.</li>
-      <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của hai chế độ tính riêng.</li>
+      <li><b>Ba chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu. Siêu khó thì giống Khó nhưng đi hai hàng ngay từ đoàn đầu, mọi chỗ khác và đèn nhiễu có sẵn, có lúc hai hàng đi ngược chiều nhau, và tốc độ nhanh nhất thấp hơn một chút.</li>
+      <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của từng chế độ tính riêng.</li>
     </ul>
     <button class="big" id="helpClose" data-no-scene>Chơi</button>
   </div>
@@ -114,9 +116,10 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     <h2 id="overH">Hết lượt</h2>
     <div class="bigNum" id="overNum">0</div>
     <p id="overWhy"></p>
-    <div class="modes" role="group" aria-label="Chế độ chơi">
+    <div class="modes three" role="group" aria-label="Chế độ chơi">
       <button class="mode" id="modeThuong" data-mode="thuong" type="button" aria-pressed="true" data-no-scene><b>Thường</b><small id="bestThuong"></small></button>
       <button class="mode" id="modeKho" data-mode="kho" type="button" aria-pressed="false" data-no-scene><b>Khó</b><small id="bestKho"></small></button>
+      <button class="mode" id="modeSieu" data-mode="sieu" type="button" aria-pressed="false" data-no-scene><b>Siêu khó</b><small id="bestSieu"></small></button>
     </div>
     <button class="big" id="againBtn" data-no-scene>Chơi lại</button>
   </div>
@@ -197,7 +200,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     [13, 'Đoàn đi hai hàng'],
     [25, 'Đoàn đi ba hàng'],
   ];
-  function cfgAt(n, hard) {
+  const STEPS_SIEU = [
+    [0, 'Siêu khó: hai hàng, có lúc đi ngược chiều nhau'],
+    [25, 'Đoàn đi ba hàng'],
+  ];
+  function cfgAt(n, hard, sieu) {
     let kinds = ['ao', 'mu'];
     if (n >= 2) kinds.push('do');
     if (n >= 3) kinds.push('khongMu', 'khongDo');
@@ -212,12 +219,12 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       kinds,
       freeP: hard && n >= 10 ? .33 : 0,
       size: Math.min(24, 5 + n),
-      rows: hard ? (n < 13 ? 1 : n < 25 ? 2 : 3) : (n < 10 ? 1 : n < 20 ? 2 : 3),
-      T: Math.max(6.5, 14 - n * .375),
+      rows: sieu ? (n < 25 ? 2 : 3) : hard ? (n < 13 ? 1 : n < 25 ? 2 : 3) : (n < 10 ? 1 : n < 20 ? 2 : 3),
+      T: Math.max(sieu ? 7.4 : 6.5, 14 - n * .375),
       hueD: Math.max(18, 130 - n * 7),
       nhip: n < 8 ? 1.75 : n < 12 ? 1.5 : 1.25,
-      vary: n >= 13,
-      decoy: n >= 14,
+      vary: sieu || n >= 13,
+      decoy: sieu || n >= 14,
     };
   }
 
@@ -233,8 +240,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     else if (free === 'shoes') { const h = rint(0, 359); lk.shoe = hsl(h, rint(45, 75), rint(38, 56)); lk.shoeD = hsl(h, 45, 26); }
     else if (free === 'item') lk.item = Math.random() < .15 ? { t: 'none', h: 0 } : { t: pick(ITEMS), h: rint(0, 359) };
   }
-  function makeParade(n, hard) {
-    const c = cfgAt(n, hard);
+  function makeParade(n, hard, sieu) {
+    const c = cfgAt(n, hard, sieu);
     const free = c.freeP && Math.random() < c.freeP ? pick(FREES) : null;
     const g = Math.random() < .5 ? 1 : 0, hats = g ? HATS_NU : HATS;
     const base = {
@@ -346,7 +353,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       kids.push({ col, row, dx, look: lk, odd: isOdd, tried: 0, blinkAt: rnd(1, 5), hop: 0 });
     }
     const L = (cluster ? Math.max(...rowPos.map(ps => ps[ps.length - 1])) : colX[cols - 1]) + sp;
-    return { n, kind, free, hard: !!hard, rtl: Math.random() < (hard ? .7 : .5), base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
+    const rtl = Math.random() < (hard ? .7 : .5);
+    // Siêu khó: một nửa số đoàn có hàng xen kẽ đi ngược chiều (hàng trước và hàng sau, hàng giữa ngược với hai hàng kia)
+    const opp = !!sieu && R >= 2 && Math.random() < .5;
+    const rowRtl = [0, 1, 2].map(r => (opp && r % 2 ? !rtl : rtl));
+    return { n, kind, free, hard: !!hard, sieu: !!sieu, opp, rtl, rowRtl, base, odd, kids, L, T: c.T, head: -70, speed: (W + 160 + L) / c.T, t: 0, beatPrev: 0 };
   }
   const cadence = sp => clamp(sp / 260, 1.05, 2.1);
 
@@ -840,16 +851,18 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
 
   // ================= LƯU =================
   let save = (function () { try { const s = JSON.parse(localStorage.getItem(SAVE)); if (s && typeof s.best === 'number') return s; } catch (e) {} return { best: 0, seenHelp: false }; })();
-  // hai chế độ: 'thuong' và 'kho'; kỷ lục và bảng xếp hạng tính riêng
-  let mode = save.mode === 'kho' ? 'kho' : 'thuong';
-  const hard = () => mode === 'kho';
-  const bestOf = m => (m === 'kho' ? save.bestKho : save.best) || 0;
+  // ba chế độ: 'thuong', 'kho' và 'sieu'; kỷ lục và bảng xếp hạng tính riêng
+  let mode = save.mode === 'kho' || save.mode === 'sieu' ? save.mode : 'thuong';
+  const hard = () => mode === 'kho' || mode === 'sieu';
+  const sieu = () => mode === 'sieu';
+  const bestOf = m => (m === 'sieu' ? save.bestSieu : m === 'kho' ? save.bestKho : save.best) || 0;
   function store() { try { localStorage.setItem(SAVE, JSON.stringify(save)); } catch (e) {} }
   function submitScore() {
     try {
       if (!window.Scores) return;
       if (save.best > 0) Scores.submit('kelacdoan', save.best);
       if (save.bestKho > 0) Scores.submit('kelacdoankho', save.bestKho);
+      if (save.bestSieu > 0) Scores.submit('kelacdoansieu', save.bestSieu);
     } catch (e) {}
   }
 
@@ -892,9 +905,9 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
 
   function newParade() {
-    P = makeParade(caught, hard());
+    P = makeParade(caught, hard(), sieu());
     st = 'walk'; stT = 0; card = null;
-    const s = (hard() ? STEPS_KHO : STEPS).find(x => x[0] === caught);
+    const s = (sieu() ? STEPS_SIEU : hard() ? STEPS_KHO : STEPS).find(x => x[0] === caught);
     if (P.free) tip((caught === 10 ? 'Mới: ' : '') + 'Đoàn tự do: mỗi bạn một kiểu ' + FREE_NAME[P.free]);
     else if (s) tip('Mới: ' + s[1]);
     updHud();
@@ -923,7 +936,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function kidPos(k) {
     const R = ROWS[k.row];
-    return { x: P.rtl ? W - (P.head + k.dx) : P.head + k.dx, y: R.y, s: R.s };
+    return { x: P.rowRtl[k.row] ? W - (P.head + k.dx) : P.head + k.dx, y: R.y, s: R.s };
   }
   function kidPhase(k) { return P.t * cadence(P.speed) * (k.look.tempo || 1) + k.look.off; }
 
@@ -949,7 +962,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const p = kidPos(k);
       for (let i = 0; i < 36; i++) parts.push({ x: p.x, y: p.y - 100 * p.s, vx: rnd(-420, 420), vy: rnd(-650, -200), life: rnd(.7, 1.2), t: 0, col: pick(['#ffd166', '#ff7a45', '#6fe08f', '#7fd8ff', '#ff6bb5']) });
       sfx.good();
-      if (caught > bestOf(mode)) { if (hard()) save.bestKho = caught; else save.best = caught; store(); submitScore(); }
+      if (caught > bestOf(mode)) { if (sieu()) save.bestSieu = caught; else if (hard()) save.bestKho = caught; else save.best = caught; store(); submitScore(); }
       toast(pick(['Bắt được!', 'Tinh mắt!', 'Chuẩn!']), 'good', WHY[P.kind]);
       updHud();
     } else {
@@ -962,7 +975,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function openCard(win) {
     st = 'card'; stT = 0;
-    card = { win, kind: P.kind, free: P.free, rtl: !!P.rtl, normal: { look: P.base, col: 0 }, odd: { look: P.odd, col: 1 } };
+    card = { win, kind: P.kind, free: P.free, rtl: !!P.rowRtl[(P.kids.find(k => k.odd) || { row: 0 }).row], normal: { look: P.base, col: 0 }, odd: { look: P.odd, col: 1 } };
   }
   function nextAfterCard() {
     if (lives <= 0) { showOver(); return; }
@@ -1019,7 +1032,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
         if (p.x < -120 || p.x > W + 120) continue;
         const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
         const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
-        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rtl });
+        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row] });
         if (k.tried) {
           const s = p.s; c.strokeStyle = '#ff5b5b'; c.lineWidth = 7 * s; c.lineCap = 'round';
           const cx = p.x, cy = p.y - 210 * s;
@@ -1062,7 +1075,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   function updHud() {
     $('hearts').innerHTML = [0, 1, 2].map(i => `<i class="${i < lives ? 'on' : ''}">♥</i>`).join('');
     $('count').textContent = 'Đoàn ' + caught + (bestOf(mode) ? ' · KL ' + bestOf(mode) : '');
-    $('modeTag').hidden = !hard();
+    $('modeTag').hidden = !hard(); $('modeTag').textContent = sieu() ? 'Siêu khó' : 'Khó';
   }
   let toastT = 0, tipT = 0;
   function toast(txt, cls, small) {
@@ -1080,20 +1093,22 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   let overFirst = true;
   function refreshModes() {
     $('modeThuong').setAttribute('aria-pressed', String(!hard()));
-    $('modeKho').setAttribute('aria-pressed', String(hard()));
+    $('modeKho').setAttribute('aria-pressed', String(mode === 'kho'));
+    $('modeSieu').setAttribute('aria-pressed', String(sieu()));
     $('bestThuong').textContent = 'Kỷ lục ' + bestOf('thuong');
     $('bestKho').textContent = 'Kỷ lục ' + bestOf('kho');
-    $('modeTag').hidden = !hard();
+    $('bestSieu').textContent = 'Kỷ lục ' + bestOf('sieu');
+    $('modeTag').hidden = !hard(); $('modeTag').textContent = sieu() ? 'Siêu khó' : 'Khó';
   }
   function setMode(m) {
-    mode = m === 'kho' ? 'kho' : 'thuong'; save.mode = mode; store();
+    mode = m === 'kho' || m === 'sieu' ? m : 'thuong'; save.mode = mode; store();
     refreshModes();
     if (overFirst) $('overNum').textContent = bestOf(mode);
     updHud();
   }
   function showOver(first) {
     paused = true; st = 'idle'; overFirst = !!first;
-    const name = hard() ? 'Khó' : 'Thường';
+    const name = sieu() ? 'Siêu khó' : hard() ? 'Khó' : 'Thường';
     $('overH').textContent = first ? 'Kẻ lạc đoàn' : 'Hết lượt';
     $('overNum').textContent = first ? bestOf(mode) : caught;
     $('overWhy').innerHTML = first ? 'Kỷ lục của bạn (số đoàn bắt được kẻ lạc). Chọn chế độ rồi bấm Bắt đầu.'
@@ -1111,6 +1126,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   $('pauseMenu').onclick = () => { closeAll(); showOver(true); };
   $('modeThuong').onclick = () => setMode('thuong');
   $('modeKho').onclick = () => setMode('kho');
+  $('modeSieu').onclick = () => setMode('sieu');
   $('helpBtn').onclick = () => { if (st === 'idle') { closeAll(); layer('help', true); } else pauseGame('help'); };
   $('helpClose').onclick = () => { save.seenHelp = true; store(); resize(); if (st === 'idle') { closeAll(); showOver(true); } else resumeGame(); };
   $('resumeBtn').onclick = resumeGame;
