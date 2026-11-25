@@ -770,5 +770,73 @@
     iconCache[name] = cv; return cv;
   };
 
+
+  // ---------- bể cá: đồ trang trí, vật phẩm cửa hàng ----------
+  var decoCache = {};
+  CA.deco = function (id) {
+    if (decoCache[id]) return decoCache[id];
+    var P, c;
+    switch (id) {
+      case 'soi': P = painter(22, 9, false); P.ell(5, 6, 5, 3, '#8a8a8a'); P.ell(13, 6, 4, 3, '#a8a49a'); P.ell(18, 7, 3.5, 2, '#6f6c66'); P.ell(9, 4, 3, 2, '#c8c2b4'); break;
+      case 'rong': P = painter(14, 30, false); c = P.c;
+        for (var i = 0; i < 4; i++) { P.stroke(i % 2 ? '#3f8a3a' : '#5aa848', 2); c.beginPath(); c.moveTo(3 + i * 2.5, 30); c.bezierCurveTo(i * 3 - 2, 20, 6 + i * 2, 12, 2 + i * 3, 2 + i * 3); c.stroke(); }
+        break;
+      case 'suc': P = painter(10, 10, false); P.rect(1, 4, 8, 6, '#6a7078'); P.rect(2, 5, 6, 2, '#8a929a'); P.rect(4, 0, 2, 4, '#a8b0b8'); break;
+      case 'sanho': P = painter(24, 24, false); c = P.c;
+        [[12, 24, 12, 4], [12, 16, 4, 6], [12, 14, 20, 5], [6, 10, 2, 2], [18, 9, 22, 1]].forEach(function (b, k) { P.stroke(k % 2 ? '#f07a8a' : '#e85a6a', 3); c.beginPath(); c.moveTo(b[0], b[1]); c.lineTo(b[2], b[3]); c.stroke(); });
+        P.ell(12, 4, 2, 2, '#ffa0b0'); P.ell(20, 5, 2, 2, '#ffa0b0'); P.ell(4, 6, 2, 2, '#ffa0b0'); break;
+      case 'den': P = painter(14, 8, false); P.rect(0, 0, 14, 3, '#3a3e48'); P.rect(2, 3, 10, 2, '#fff2a8'); break;
+      case 'ruong': P = painter(20, 14, false); P.rect(1, 5, 18, 9, '#8a5a2a'); P.poly([1, 6, 3, 1, 17, 1, 19, 6], '#a86a32'); P.rect(1, 5, 18, 1, '#5a3a1a'); P.rect(8, 6, 4, 4, '#ffd23f'); P.rect(3, 2, 2, 2, '#ffd23f'); P.rect(14, 2, 3, 2, '#ffe880'); P.rect(1, 9, 18, 1, '#5a3a1a'); break;
+      case 'laudai': P = painter(30, 30, false);
+        P.rect(4, 12, 22, 18, '#9aa0a8'); P.rect(0, 6, 8, 24, '#b0b6be'); P.rect(22, 6, 8, 24, '#b0b6be');
+        for (var t = 0; t < 4; t++) { P.rect(t * 2, 4, 1, 2, '#b0b6be'); P.rect(22 + t * 2, 4, 1, 2, '#b0b6be'); }
+        P.rect(12, 20, 6, 10, '#3a3a48'); P.ell(15, 20, 3, 3, '#3a3a48'); P.rect(3, 12, 2, 3, '#3a3a48'); P.rect(25, 12, 2, 3, '#3a3a48'); P.poly([0, 6, 4, 0, 8, 6], '#c8382f'); P.poly([22, 6, 26, 0, 30, 6], '#c8382f'); break;
+      case 'tuong': P = painter(26, 30, false); P.rect(6, 22, 14, 8, '#8a8070'); P.rect(4, 20, 18, 3, '#a8a090'); break;
+      case 'thuyen': P = painter(38, 18, false); c = P.c; c.translate(19, 9); c.rotate(-.18); c.translate(-19, -9);
+        P.poly([2, 8, 36, 8, 31, 16, 7, 16], '#6a4a2a'); P.rect(6, 10, 26, 1, '#4a3018'); P.rect(18, 0, 2, 8, '#5a3a1a'); P.poly([20, 1, 28, 6, 20, 7], '#c8c0a8'); P.rect(12, 12, 2, 2, '#2a3a4a'); P.rect(22, 12, 3, 2, '#2a3a4a'); break;
+      default: P = painter(4, 4, false); P.rect(0, 0, 4, 4, '#888');
+    }
+    var cv = P.done(OUT);
+    if (id === 'tuong') { var x = cv.getContext('2d'), f = CA.sprite(window.CC.byId.chepvang); x.save(); x.translate(13, 12); x.rotate(-.9); x.drawImage(f, -f.width * .22, -f.height * .22, f.width * .44, f.height * .44); x.restore(); }
+    decoCache[id] = cv; return cv;
+  };
+  var itemCache = {};
+  CA.item = function (id) {
+    if (itemCache[id]) return itemCache[id];
+    var P = painter(16, 16, false), c = P.c;
+    if (id === 'giun') { P.stroke('#e88a8a', 2.4); c.beginPath(); c.moveTo(2, 11); c.bezierCurveTo(5, 4, 9, 15, 14, 6); c.stroke(); }
+    else if (id === 'tom') { for (var i = 0; i < 4; i++) P.ell(4 + i * 2.6, 9 - Math.sin(i / 3 * 2.4) * 3, 2.4, 2.2, i % 2 ? '#f08a4a' : '#f8a868'); P.poly([2, 8, 0, 5, 1, 11], '#e06a2a'); P.line(13, 5, 15, 1, '#c86a3a'); }
+    else if (id === 'cam') { P.rect(3, 6, 10, 8, '#c8a060'); P.rect(3, 6, 10, 2, '#a88040'); for (var k = 0; k < 6; k++) P.rect(4 + (k % 3) * 3, 2 + Math.floor(k / 3) * 2, 2, 2, '#8a5a2a'); }
+    else if (id === 'vang') { P.ell(8, 9, 5, 5, '#e8b83a'); P.ell(7, 8, 3, 3, '#ffe880'); P.line(8, 4, 8, 1, '#c8c8c8'); P.rect(12, 2, 1, 1, '#fff6c0'); P.rect(3, 4, 1, 1, '#fff6c0'); }
+    else if (id === 'drink') { P.rect(4, 2, 8, 13, '#2fa85a'); P.rect(4, 2, 8, 2, '#c8c8c8'); P.poly([9, 5, 6, 9, 8, 9, 7, 13, 10, 8, 8, 8], '#ffd23f'); }
+    else if (id === 'slot') { P.rect(1, 3, 14, 11, '#7ab8d8'); P.rect(1, 11, 14, 3, '#e8d8a8'); P.rect(1, 3, 14, 1, '#c8e8f8'); P.rect(6, 6, 4, 2, '#f08a3a'); P.rect(5, 6, 1, 2, '#f08a3a'); }
+    var cv = P.done(OUT); itemCache[id] = cv; return cv;
+  };
+  /* Vẽ bể cá: w x h (thấp), fish = [{e, cm, x, y, vx}], on = {decoId: true}, t: giây */
+  var DECO_POS = { soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
+  CA.tank = function (c, w, h, fish, on, t) {
+    c.imageSmoothingEnabled = false;
+    var lamp = on.den, top = lamp ? '#7ad0f0' : '#4f9ac0', bot = lamp ? '#2f6f9a' : '#1f4f72';
+    var im = c.createImageData(w, h); gradient(im, w, 0, h, top, bot, 6); c.putImageData(im, 0, 0);
+    if (lamp) { c.fillStyle = 'rgba(255,250,200,.10)'; for (var r = 0; r < 4; r++) { var rx = (r * 37 + Math.sin(t * .4 + r) * 6) % w; c.beginPath(); c.moveTo(rx, 0); c.lineTo(rx + 8, 0); c.lineTo(rx + 22, h); c.lineTo(rx + 12, h); c.fill(); } }
+    var sand = on.cat ? ['#f0e8d0', '#d8ccae'] : ['#c8a870', '#a8885a'], sy = h - 9;
+    c.fillStyle = sand[0]; c.fillRect(0, sy, w, 9);
+    c.fillStyle = sand[1]; for (var x = 0; x < w; x += 3) c.fillRect(x + (x % 2), sy + 3 + (x * 7) % 5, 1, 1);
+    Object.keys(DECO_POS).forEach(function (id) {
+      if (!on[id]) return;
+      var d = CA.deco(id), dx = Math.round(DECO_POS[id] * w - d.width / 2), dy = sy - d.height + 3;
+      if (id === 'rong') { c.drawImage(d, dx, dy); c.drawImage(d, Math.round(.9 * w - 7), dy + 4); }
+      else c.drawImage(d, Math.max(0, Math.min(w - d.width, dx)), dy);
+    });
+    if (on.den) c.drawImage(CA.deco('den'), Math.round(w / 2 - 7), 0);
+    if (on.suc) { c.fillStyle = 'rgba(230,248,255,.8)'; for (var b = 0; b < 8; b++) { var by = (sy - 6) - ((t * 14 + b * 9) % (sy - 4)); c.fillRect(Math.round(.94 * w + Math.sin(t * 3 + b) * 1.5), Math.round(by), 1 + (b % 2), 1 + (b % 2)); } }
+    fish.forEach(function (f) {
+      var s = CA.sprite(f.e), tw = Math.round(Math.max(9, Math.min(w * .32, 5 + Math.log(f.cm + 2) * 5))), sc = tw / s.width, th = Math.max(2, Math.round(s.height * sc));
+      c.save(); c.translate(Math.round(f.x), Math.round(f.y + Math.sin(t * 2 + f.ph) * 1)); if (f.vx < 0) c.scale(-1, 1);
+      c.drawImage(s, Math.round(-tw / 2), Math.round(-th / 2), tw, th); c.restore();
+    });
+    c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(2, 2, 1, h - 14); c.fillRect(4, 2, 1, 6);
+  };
+
   window.CA = CA;
 })();
