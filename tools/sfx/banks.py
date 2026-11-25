@@ -24,6 +24,7 @@ CARD = 'x2/Cardsounds/cockatrice/'
 PEN  = 'x/pencil/ogg/'
 BOOK = 'x/book_flips_-_starninjas/book_flip.'
 LOOSE= 'x2/loose/'
+FSH  = 'x/fisheefects/'
 R5   = 'x/512/The Essential Retro Video Game Sound Effects Collection [512 sounds] By Juhani Junkala/'
 G5   = R5 + 'General Sounds/'
 
@@ -245,5 +246,20 @@ BANKS = {
     'undo':  [WM+'wood_misc_08.ogg'],
     'ok':    [UI+'confirmation_001.ogg'],
     'bad':   [UI+'error_005.ogg'],
+  },
+  # Câu cá: vung cần, mồi rơi tõm xuống nước, phao bị kéo, cá quẫy lên khỏi mặt nước, nhạc steel drum
+  'cauca': {
+    'whoosh': [(SW+'3.wav', {'db': -4}), (SW+'7.wav', {'db': -4})],
+    'splash': [(WAT+'splash_09.ogg', {'len': .4}), (WAT+'splash_10.ogg', {'len': .35})],
+    'pop':    [(WAT+'bubble_02.ogg', {'len': .35, 'db': -4}), (FSH+'bloop.wav', {'len': .4, 'db': -4})],
+    'hit':    [(WAT+'splash_08.ogg', {'len': .55})],
+    'tick':   [(FSH+'reel.wav', {'off': .2, 'len': .45, 'db': -6})],
+    'ok':     [(WAT+'splash_06.ogg', {'len': .45}), (WAT+'splash_14.ogg', {'len': .5})],
+    'bad':    [(FSH+'uhoh.wav', {'len': 1.0, 'db': -3})],
+    'pick':   [WM+'metal_hit_02.ogg', R80+'item_wood_01.ogg'],
+    'flip':   [RPG+'bookFlip1.ogg', RPG+'bookFlip2.ogg'],
+    'select': [(UI+'click_002.ogg', {'db': -3})],
+    'move':   [RPG+'cloth2.ogg'],
+    'coin':   [jw('STEEL09')], 'level': [jw('STEEL07')], 'win': [jw('STEEL01')],
   },
 }
