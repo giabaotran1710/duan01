@@ -1684,8 +1684,24 @@
             const b = document.getElementById(id);
             return b ? b.outerHTML : '';
         }
-        function diffHTML(diff) {
-            if (diff === 'chill') return '<span class="h-chill" aria-label="Thư giãn"><i></i>' + Array.from('Thư giãn').map((c, k) => '<b aria-hidden="true" style="--k:' + k + '">' + (c === ' ' ? '&nbsp;' : c) + '</b>').join('') + '</span>';
+        // Năng lượng Câu cá đọc từ bản lưu của game: 60 tối đa, hồi 1 mỗi 5 phút kể cả khi tắt game
+        function caucaEnergy() {
+            let en = 60, max = 60;
+            try {
+                const s = JSON.parse(localStorage.getItem('cauca_v1') || 'null');
+                if (s && typeof s.en === 'number') {
+                    en = Math.max(0, Math.floor(s.en));
+                    const t = +s.enT || 0, now = Date.now();
+                    if (en < max && t && now > t) en = Math.min(max, en + Math.floor((now - t) / 300000));
+                }
+            } catch (e) { }
+            return { v: en + '/' + max, low: en < 10 };
+        }
+        const BOLT_SVG = '<svg viewBox="0 0 8 8" shape-rendering="crispEdges" aria-hidden="true"><path fill="#ffd23f" d="M4 0h3v1H4zM3 1h3v1H3zM2 2h3v1H2zM1 3h6v1H1zM3 4h3v1H3zM3 5h2v1H3zM2 6h2v1H2zM2 7h1v1H2z"/></svg>';
+        function diffHTML(diff, id) {
+            const chill = '<span class="h-chill" aria-label="Thư giãn"><i></i>' + Array.from('Thư giãn').map((c, k) => '<b aria-hidden="true" style="--k:' + k + '">' + (c === ' ' ? '&nbsp;' : c) + '</b>').join('') + '</span>';
+            if (diff === 'chill' && id === 'cauca') return '<span class="h-swap">' + chill + (() => { const e = caucaEnergy(); return '<span class="h-en' + (e.low ? ' low' : '') + '" title="Năng lượng câu cá">' + BOLT_SVG + '<b>' + e.v + '</b></span></span>'; })();
+            if (diff === 'chill') return chill;
             const d = parseInt(diff, 10) || 0;
             if (d < 1 || d > 5) return '';
             const col = ['', 'blue', 'green', 'yellow', 'orange', 'red'][d];
@@ -1702,7 +1718,7 @@
                 : NEW_IDS.includes(g.id) ? '<b class="h-badge new">NEW</b>' : '';
             const sub = off ? '<span class="h-sub">Đang bảo trì</span>'
                 : soon ? '<span class="h-sub">' + g.status + '</span>'
-                : diffHTML(g.diff);
+                : diffHTML(g.diff, g.id);
             return '<div class="h-tile' + (hot ? ' is-hot' : '') + (off ? ' is-off' : '') + (soon ? ' is-soon' : '') + '" role="button" tabindex="' + (off || soon ? -1 : 0) +
                 '" data-id="' + g.id + '" aria-label="' + g.name + '">' +
                 '<span class="h-ico">' + iconHTML(g.id) + badge + '</span>' +
@@ -1730,6 +1746,7 @@
             }
             feed.innerHTML = html;
         }
+        setInterval(() => { const e = caucaEnergy(); document.querySelectorAll('.h-en').forEach(el => { el.classList.toggle('low', e.low); const b = el.querySelector('b'); if (b.textContent !== e.v) b.textContent = e.v; }); }, 20000);
 
         // ========== CHIP LỌC THỂ LOẠI ==========
         chipBar.innerHTML = '<button class="h-chip active" data-genre="all">Tất cả</button>' +
