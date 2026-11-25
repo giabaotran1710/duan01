@@ -210,7 +210,7 @@
     N('bop', 'Cá bớp', 'bien', 'CUONG', [50, 150], 1.0, { s: 'fish', h: .2, c: ['#3a3a3a', '#d8d4c8', '#2a2a2a'], tail: 'fork', dor: 'low', band: '#f4f0e8', snout: 'blunt' }, 'Triều cường đẩy cá bớp vào gần bờ.'),
     N('mucnang', 'Mực nang', 'bien', 'NONG', [15, 40], 1.6, { s: 'squid', c: ['#a8846a', '#f0dcc8', '#7a5a44'], stout: 1 }, 'Nước nông là vào bãi đá đẻ trứng.'),
     N('mapden', 'Cá mập vây đen', 'bien', 'DEM', [80, 180], 0.9, { s: 'shark', c: ['#7a8890', '#eceeee', '#1f2228'] }, 'Đêm đến mới vào gần bãi cạn.'),
-    N('ruabien', 'Rùa xanh', 'bien', 'DEM CUONG', [60, 120], 2.4, { s: 'turtle', c: ['#4a6a4a', '#d8d0a0', '#3a5a3a'], glow: 1 }, 'Theo triều cường lên bãi đẻ trứng giữa đêm. Thả lại về biển nhé.')
+    N('ruabien', 'Rùa xanh', 'bien', 'DEM CUONG', [60, 120], 2.4, { s: 'turtle', c: ['#4a6a4a', '#d8d0a0', '#3a5a3a'], glow: 1, sea: 1 }, 'Theo triều cường lên bãi đẻ trứng giữa đêm. Thả lại về biển nhé.')
   ];
   MORE = MORE.concat([
     // ---------- SUỐI THÁC ----------
@@ -273,7 +273,7 @@
     N('nhum', 'Nhum biển', 'ran', 'suong', [5, 12], 3.0, { s: 'urchin', c: ['#3a2a4a', '#6a4a7a', '#2a1a3a'] }, 'Lăn ra khỏi khe đá khi biển phủ sương.'),
     N('lich', 'Cá lịch', 'ran', 'mua', [40, 150], 0.3, { s: 'eel', c: ['#8a8a3a', '#e8e0a0', '#6a6a2a'], spots: 1, fin: 1, moray: 1 }, 'Thò đầu ra khỏi hốc đá khi mưa.'),
     N('banggu', 'Cá bàng chài đầu gù', 'ran', 'NGAY CUONG', [60, 200], 2.0, { s: 'fish', h: .42, c: ['#3a9a8a', '#a8e0d0', '#2a7a6a'], tail: 'round', dor: 'long', anal: 1, pat: 'wavy', pc: 'rgba(20,60,60,.4)', snout: 'lips', hump: 1, glow: 1 }, 'Gã khổng lồ của rạn, chỉ ra khi nước lớn giữa ban ngày.'),
-    N('doimoi', 'Rùa đồi mồi', 'ran', 'trua nang', [50, 100], 2.6, { s: 'turtle', c: ['#8a5a2a', '#e8c890', '#5a3a1a'], shell: 1, glow: 1 }, 'Nổi lên thở dưới nắng trưa. Thả lại về biển nhé.'),
+    N('doimoi', 'Rùa đồi mồi', 'ran', 'trua nang', [50, 100], 2.6, { s: 'turtle', c: ['#8a5a2a', '#e8c890', '#5a3a1a'], shell: 1, glow: 1, sea: 1 }, 'Nổi lên thở dưới nắng trưa. Thả lại về biển nhé.'),
     N('manta', 'Cá đuối manta', 'ran', 'hoanghon nang', [200, 500], 0.4, { s: 'ray', c: ['#2a2e3a', '#f0f0ec', '#1e2028'], manta: 1, glow: 1 }, 'Lướt qua rạn như cánh diều lúc hoàng hôn.'),
 
     // ---------- VỊNH ĐÁ VÔI ----------
