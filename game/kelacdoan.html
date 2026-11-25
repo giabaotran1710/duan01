@@ -1042,32 +1042,37 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const sx = shake > 0 ? Math.sin(tm * 90) * 10 * shake : 0;
     c.setTransform(scale, 0, 0, scale, sx * scale, 0);
     if (P && !hidden()) {
-      // Siêu khó: các bạn vẽ lên lớp riêng rồi phủ tối, đồ cầm phát sáng vẽ đè lên sau
-      let kc = c, defer = null;
-      if (sieu()) {
+      // Siêu khó: từng hàng vẽ lên lớp riêng rồi phủ tối, đồ cầm phát sáng vẽ đè lên ngay sau hàng đó
+      // (làm theo từng hàng để cán đèn của hàng sau không xuyên qua người hàng trước)
+      const dark = sieu();
+      let kc = c;
+      if (dark) {
         kcv = kcv || document.createElement('canvas');
         if (kcv.width !== cv.width || kcv.height !== cv.height) { kcv.width = cv.width; kcv.height = cv.height; }
-        kc = kcv.getContext('2d'); kc.setTransform(1, 0, 0, 1, 0, 0); kc.clearRect(0, 0, kcv.width, kcv.height);
-        kc.setTransform(scale, 0, 0, scale, sx * scale, 0); defer = [];
+        kc = kcv.getContext('2d');
       }
       const marks = [];
-      for (let r = 2; r >= 0; r--) for (let i = P.kids.length - 1; i >= 0; i--) {
-        const k = P.kids[i]; if (k.row !== r) continue;
-        const p = kidPos(k);
-        if (p.x < -120 || p.x > W + 120) continue;
-        const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
-        const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
-        drawKid(kc, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row], defer });
-        marks.push([k, p]);
-      }
-      if (defer) {
-        kc.setTransform(1, 0, 0, 1, 0, 0); kc.globalCompositeOperation = 'source-atop';
-        kc.fillStyle = 'rgba(8,5,26,.4)'; kc.fillRect(0, 0, kcv.width, kcv.height); kc.globalCompositeOperation = 'source-over';
-        // đồ cầm bằng tay kia nằm sau người: vẽ trước lớp các bạn để thân che lên; đồ cầm tay trước vẽ đè lên sau
-        const putD = d => { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); };
-        for (const d of defer) if (d.back) putD(d);
-        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(kcv, 0, 0); c.restore();
-        for (const d of defer) if (!d.back) putD(d);
+      for (let r = 2; r >= 0; r--) {
+        let defer = null;
+        if (dark) { kc.setTransform(1, 0, 0, 1, 0, 0); kc.clearRect(0, 0, kcv.width, kcv.height); kc.setTransform(scale, 0, 0, scale, sx * scale, 0); defer = []; }
+        for (let i = P.kids.length - 1; i >= 0; i--) {
+          const k = P.kids[i]; if (k.row !== r) continue;
+          const p = kidPos(k);
+          if (p.x < -120 || p.x > W + 120) continue;
+          const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
+          const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
+          drawKid(kc, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row], defer });
+          marks.push([k, p]);
+        }
+        if (defer) {
+          kc.setTransform(1, 0, 0, 1, 0, 0); kc.globalCompositeOperation = 'source-atop';
+          kc.fillStyle = 'rgba(8,5,26,.4)'; kc.fillRect(0, 0, kcv.width, kcv.height); kc.globalCompositeOperation = 'source-over';
+          // đồ cầm bằng tay kia nằm sau người: vẽ trước lớp các bạn để thân che lên; đồ cầm tay trước vẽ đè lên sau
+          const putD = d => { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); };
+          for (const d of defer) if (d.back) putD(d);
+          c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(kcv, 0, 0); c.restore();
+          for (const d of defer) if (!d.back) putD(d);
+        }
       }
       for (const [k, p] of marks) {
         if (k.tried) {
