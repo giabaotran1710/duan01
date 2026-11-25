@@ -67,8 +67,9 @@
   // ---------- họa sĩ: vẽ path rồi nắn pixel ----------
   function canvas(w, h) { var c = document.createElement('canvas'); c.width = Math.max(1, w | 0); c.height = Math.max(1, h | 0); return c; }
   CA.canvas = canvas;
-  function painter(w, h, tint) {
-    var cv = canvas(w, h), c = cv.getContext('2d'), pal = [];
+  function painter(w, h, tint, k) {
+    var cv = canvas(w * (k || 1), h * (k || 1)), c = cv.getContext('2d'), pal = [];
+    if (k) c.scale(k, k);
     function col(x) { var k = tint === false ? hex(x) : T(x); pal.push(k); return css([k[0], k[1], k[2], 1]); }
     return {
       cv: cv, c: c, col: col, w: w, h: h,
@@ -78,7 +79,10 @@
       ell: function (x, y, rx, ry, k) { c.fillStyle = col(k); c.beginPath(); c.ellipse(x, y, Math.max(.5, rx), Math.max(.5, ry), 0, 0, 7); c.fill(); },
       poly: function (pts, k) { c.fillStyle = col(k); c.beginPath(); c.moveTo(pts[0], pts[1]); for (var i = 2; i < pts.length; i += 2) c.lineTo(pts[i], pts[i + 1]); c.closePath(); c.fill(); },
       line: function (x1, y1, x2, y2, k) { bres(c, x1, y1, x2, y2, col(k)); },
-      done: function (outline) { return quant(cv, pal, outline); }
+      done: function (outline) {
+        if (!k) return quant(cv, pal, outline);
+        c.setTransform(1, 0, 0, 1, 0, 0); quant(cv, pal, null); volume(cv); quant(cv, [], outline); c.setTransform(k, 0, 0, k, 0, 0); return cv;
+      }
     };
   }
   CA.painter = painter;
@@ -95,6 +99,27 @@
     }
   }
   CA.bres = bres;
+  /* đổ khối: mỗi mảng màu sáng ở mép trên, tối dần xuống dưới, có hoà điểm */
+  function volume(cv) {
+    var w = cv.width, h = cv.height, c = cv.getContext('2d'), im = c.getImageData(0, 0, w, h), d = im.data, n = w * h;
+    var top = new Int16Array(n), bot = new Int16Array(n), lft = new Int16Array(n), rgt = new Int16Array(n), x, y, i, j;
+    for (x = 0; x < w; x++) { y = 0; while (y < h) { if (!d[(y * w + x) * 4 + 3]) { y++; continue; } j = y; while (j < h && d[(j * w + x) * 4 + 3]) j++; for (i = y; i < j; i++) { top[i * w + x] = y; bot[i * w + x] = j - 1; } y = j; } }
+    for (y = 0; y < h; y++) { x = 0; while (x < w) { if (!d[(y * w + x) * 4 + 3]) { x++; continue; } j = x; while (j < w && d[(y * w + j) * 4 + 3]) j++; for (i = x; i < j; i++) { lft[y * w + i] = x; rgt[y * w + i] = j - 1; } x = j; } }
+    var src = new Uint8ClampedArray(d);
+    for (y = 0; y < h; y++) for (x = 0; x < w; x++) {
+      var q = y * w + x, o = q * 4; if (!src[o + 3]) continue;
+      var sv = bot[q] - top[q], sh = rgt[q] - lft[q]; if (sv < 5 || sh < 5) continue;
+      var v = (y - top[q]) / sv, u = (x - lft[q]) / sh, b = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * .16;
+      var t = v * .8 + (1 - u) * .2 + b, f = 0;
+      if (t < .2) f = .2; else if (t > .82) f = -.3; else if (t > .62) f = -.15;
+      if (y === bot[q] || y === bot[q] - 1 && sv > 10) f = Math.min(f, -.3);
+      if (!f) continue;
+      var r = src[o], g = src[o + 1], bb = src[o + 2];
+      if (f > 0) { d[o] = r + (255 - r) * f * .9; d[o + 1] = g + (248 - g) * f * .9; d[o + 2] = bb + (220 - bb) * f * .9; }
+      else { var m = -f; d[o] = r + (22 - r) * m; d[o + 1] = g + (26 - g) * m; d[o + 2] = bb + (52 - bb) * m; }
+    }
+    c.putImageData(im, 0, 0);
+  }
   /* kéo mỗi điểm về màu gần nhất trong bảng, alpha 0/255; outline: thêm viền 1 px */
   function quant(cv, pal, outline) {
     var c = cv.getContext('2d'), w = cv.width, h = cv.height, im = c.getImageData(0, 0, w, h), d = im.data, n = w * h;
@@ -741,240 +766,500 @@
     if (x1 < 0) return c;
     var o = canvas(x1 - x0 + 3, y1 - y0 + 3); o.getContext('2d').drawImage(c, x0 - 1, y0 - 1, o.width, o.height, 0, 0, o.width, o.height); return o;
   }
+  var SK = 2; // các hình đặc biệt vẽ gấp đôi, nét mảnh 1 px cho chi tiết
+  function fx(cv, fn) { var c = cv.getContext('2d'); c.save(); c.setTransform(1, 0, 0, 1, 0, 0); fn(c); c.restore(); return cv; }
+  function eyeS(cv, x, y, r, iris, slit) {
+    return fx(cv, function (c) {
+      var X = Math.round(x * SK), Y = Math.round(y * SK), R = Math.max(1.5, r * SK);
+      c.fillStyle = OUT; c.beginPath(); c.arc(X + .5, Y + .5, R + 1, 0, 7); c.fill();
+      c.fillStyle = css(iris || '#e8d27a'); c.beginPath(); c.arc(X + .5, Y + .5, R, 0, 7); c.fill();
+      c.fillStyle = OUT; c.beginPath();
+      if (slit) c.ellipse(X + .5, Y + .5, Math.max(1, R * .75), Math.max(.6, R * .28), 0, 0, 7); else c.arc(X + .5, Y + .5, Math.max(1, R * .55), 0, 7);
+      c.fill();
+      c.fillStyle = '#ffffff'; c.fillRect(X - Math.floor(R * .45), Y - Math.floor(R * .45), 1, 1);
+    });
+  }
+  function lineS(cv, x1, y1, x2, y2, col) { return fx(cv, function (c) { bres(c, x1 * SK, y1 * SK, x2 * SK, y2 * SK, css(col)); }); }
+  function dotS(cv, x, y, col, n) { return fx(cv, function (c) { c.fillStyle = css(col); c.fillRect(Math.round(x * SK), Math.round(y * SK), n || 1, n || 1); }); }
+  /* chỉ vẽ lên chỗ đã có hình (nét gân, vạch đốt) */
+  function inkS(cv, pts, col) {
+    return fx(cv, function (c) {
+      var w = cv.width, h = cv.height, d = c.getImageData(0, 0, w, h).data; c.fillStyle = css(col);
+      for (var i = 0; i < pts.length; i += 2) { var x = Math.round(pts[i] * SK), y = Math.round(pts[i + 1] * SK); if (x >= 0 && y >= 0 && x < w && y < h && d[(y * w + x) * 4 + 3]) c.fillRect(x, y, 1, 1); }
+    });
+  }
+  function segPts(x1, y1, x2, y2) { var n = Math.ceil(Math.max(Math.abs(x2 - x1), Math.abs(y2 - y1)) * SK), o = []; for (var i = 0; i <= n; i++) o.push(x1 + (x2 - x1) * i / n, y1 + (y2 - y1) * i / n); return o; }
+  function arcPts(cx, cy, rx, ry, a0, a1) { var o = [], n = Math.ceil(Math.max(rx, ry) * SK * Math.abs(a1 - a0)) + 2; for (var i = 0; i <= n; i++) { var t = a0 + (a1 - a0) * i / n; o.push(cx + Math.cos(t) * rx, cy + Math.sin(t) * ry); } return o; }
+  function curve(P, col, lw, pts) {
+    var c = P.c; P.stroke(col, lw); c.lineCap = 'round'; c.lineJoin = 'round'; c.beginPath(); c.moveTo(pts[0], pts[1]);
+    for (var i = 2; i + 3 < pts.length; i += 4) c.quadraticCurveTo(pts[i], pts[i + 1], pts[i + 2], pts[i + 3]);
+    c.stroke();
+  }
+  function blob(P, pts, col) { // đường cong khép kín qua các điểm (trung điểm)
+    var c = P.c, n = pts.length / 2; c.fillStyle = P.col(col); c.beginPath();
+    function m(i) { i = (i + n) % n; return [pts[i * 2], pts[i * 2 + 1]]; }
+    var s = m(0), e = m(n - 1); c.moveTo((s[0] + e[0]) / 2, (s[1] + e[1]) / 2);
+    for (var i = 0; i < n; i++) { var p = m(i), q = m(i + 1); c.quadraticCurveTo(p[0], p[1], (p[0] + q[0]) / 2, (p[1] + q[1]) / 2); }
+    c.closePath(); c.fill();
+  }
   function eel(a, L) {
-    var th = Math.max(3, L * (a.short ? .1 : .075)), W = Math.ceil(L + 4), H = Math.ceil(th * 3.4 + 4), P = painter(W, H, false), c = P.c, cy = H / 2;
-    function path() { c.beginPath(); for (var i = 0; i <= 30; i++) { var x = 2 + L * i / 30, y = cy + Math.sin(i / 30 * Math.PI * 2.2) * th * .9; i ? c.lineTo(x, y) : c.moveTo(x, y); } }
-    c.lineCap = 'round';
-    if (a.fin) { c.save(); if (a.crest) c.translate(0, -1.5); path(); c.strokeStyle = P.col(a.c[2]); c.lineWidth = th + 3; c.stroke(); c.restore(); }
-    path(); c.strokeStyle = P.col(a.c[0]); c.lineWidth = th; c.stroke();
-    c.save(); c.translate(0, th * .28); path(); c.strokeStyle = P.col(a.c[1]); c.lineWidth = th * .4; c.stroke(); c.restore();
-    var R = rnd(L * 7);
-    if (a.spots) for (var s = 0; s < L * .4; s++) { var t = R(), x = 2 + L * t; P.rect(x, cy + Math.sin(t * Math.PI * 2.2) * th * .9 - th * .3, 1, 1, shade(a.c[0], -.35)); }
-    var cv = P.done(OUT), cx = cv.getContext('2d'), hx = Math.round(2 + L * .97), hy = Math.round(cy + Math.sin(.97 * Math.PI * 2.2) * th * .9 - th * .2);
-    cx.fillStyle = '#f8f8f0'; cx.fillRect(hx - 2, hy - 1, 2, 2); cx.fillStyle = OUT; cx.fillRect(hx - 1, hy - 1, 1, 1);
+    var th = Math.max(3, L * (a.short ? .12 : a.moray ? .1 : .075)) * (a.worm ? 1.15 : 1), A = th * .9;
+    if (a.gulper) th = L * .05;
+    var padH = a.gulper ? 9 : a.crest ? 6 : 2, W = Math.ceil(L + 6), H = Math.ceil(th * 3.4 + 4 + padH * 2), P = painter(W, H, false, SK), c = P.c, cy = H / 2 + (a.crest ? 2 : 0);
+    var N = 48, C = [];
+    for (var i = 0; i <= N; i++) {
+      var t = i / N, x = 2 + L * t, y = cy + Math.sin(t * Math.PI * 2.2) * A, dy = Math.cos(t * Math.PI * 2.2) * A * Math.PI * 2.2 / L, nl = Math.sqrt(1 + dy * dy);
+      var w = th * (a.worm ? Math.min(1, .55 + Math.sin(t * Math.PI) * .7) : Math.min(1, .2 + t * 4.5) * (t > .93 ? 1 - (t - .93) * 3 : 1));
+      C.push({ x: x, y: y, nx: -dy / nl, ny: 1 / nl, w: w });
+    }
+    function side(k, off, t0, t1) { var o = []; C.forEach(function (p, i) { var t = i / N; if (t < t0 || t > t1) return; o.push(p.x + p.nx * (p.w / 2 * k + off), p.y + p.ny * (p.w / 2 * k + off)); }); return o; }
+    function band(k1, k2, o1, o2, t0, t1, col) { var top = side(k1, o1, t0, t1), bt = side(k2, o2, t0, t1), pts = top.slice(); for (var i = bt.length - 2; i >= 0; i -= 2) pts.push(bt[i], bt[i + 1]); P.poly(pts, col); }
+    var finC = a.crest ? '#e84a3a' : a.c[2];
+    if (a.fin || a.moray) { band(-1, -1, -th * (a.crest ? .7 : .45), 0, .1, .9, finC); band(1, 1, 0, th * .38, .1, .55, finC); }
+    if (!a.worm && !a.fin) band(-1, 1, -th * .2, th * .2, 0, .14, a.c[2]);
+    band(-1, 1, 0, 0, 0, 1, a.c[0]);
+    band(.15, 1, 0, 0, .04, .98, a.c[1]);
+    band(-1, -.35, 0, 0, .04, .98, shade(a.c[0], -.12));
+    var h = C[N], hp = C[Math.round(N * .95)];
+    if (a.moray) P.ell(hp.x, hp.y, th * .62, th * .62, a.c[0]);
+    if (a.gulper) { P.poly([h.x - 10, h.y - 2, h.x + 3, h.y - 8, h.x + 3, h.y + 2], shade(a.c[0], .1)); P.poly([h.x - 10, h.y - 1, h.x + 3, h.y + 1, h.x + 2, h.y + 9], a.c[1]); P.poly([h.x - 6, h.y - 1, h.x + 2, h.y - 4, h.x + 2, h.y + 6], '#5a2a3a'); }
+    if (a.crest) { for (var r = 0; r < 4; r++) curve(P, '#e84a3a', .9, [h.x - 3 - r * 1.5, h.y - th * .5, h.x - 6 - r * 3, h.y - th - 4, h.x - 9 - r * 4, h.y - th - 5 + r]); }
+    if (a.frill) for (var f = 0; f < 5; f++) { var g = C[Math.round(N * (.8 - f * .025))]; P.ell(g.x, g.y + th * .1, .8, th * .55, '#c87a7a'); }
+    var R = rnd(L * 7), spots = [];
+    if (a.spots) for (var s = 0; s < L * (a.moray ? .9 : .5); s++) { var p = C[1 + Math.floor(R() * (N - 4))], q = (R() - .5) * p.w * .7; P.ell(p.x + p.nx * q, p.y + p.ny * q - p.w * .1, a.moray ? 1 : .6, a.moray ? .9 : .5, shade(a.c[0], a.moray ? -.45 : -.3)); }
+    var cv = P.done(OUT);
+    if (a.worm) {
+      for (var k = 2; k < N - 1; k += 2) { var p2 = C[k]; inkS(cv, segPts(p2.x - p2.nx * p2.w * .5, p2.y - p2.ny * p2.w * .5, p2.x + p2.nx * p2.w * .5, p2.y + p2.ny * p2.w * .5), shade(a.c[0], -.25)); }
+      for (var tt = 0; tt < 5; tt++) lineS(cv, h.x - 1, h.y - 1 + tt * .6, h.x + 2.5, h.y - 3 + tt * 1.5, shade(a.c[2], -.1));
+      return cv;
+    }
+    var ln = []; C.forEach(function (p, i) { if (i > 4 && i < N - 4 && i % 2 === 0) ln.push(p.x - p.nx * p.w * .05, p.y - p.ny * p.w * .05); }); inkS(cv, ln, shade(a.c[1], -.1));
+    var gi = C[Math.round(N * .9)]; inkS(cv, segPts(gi.x - gi.nx * gi.w * .35, gi.y - gi.ny * gi.w * .35, gi.x + gi.nx * gi.w * .3, gi.y + gi.ny * gi.w * .3), shade(a.c[0], -.4));
+    var ey = C[Math.round(N * .965)];
+    inkS(cv, segPts(h.x - th * (a.moray ? .9 : .5), h.y + h.w * .12, h.x + 1, h.y + h.w * .05), OUT);
+    if (a.moray || a.c[0] === '#c8ccd4') for (var tf = 0; tf < 3; tf++) dotS(cv, h.x - th * .3 - tf * 1.2, h.y + h.w * .22, '#f8f8f0');
+    eyeS(cv, ey.x - ey.nx * ey.w * .18, ey.y - ey.ny * ey.w * .18, Math.max(.9, th * (a.gulper ? .3 : .17)), a.c[0] === '#1e1e24' ? '#8ad8ff' : '#e8c86a');
     return cv;
   }
   var SPECIAL = {
-    frog: function (a, L) {
-      var W = 30, H = 22, P = painter(W, H, false);
-      P.ell(9, 17, 7, 3, a.c[2]); P.ell(21, 17, 7, 3, a.c[2]);
-      P.ell(15, 13, 10, 7, a.c[0]); P.ell(15, 16, 7, 3.5, a.c[1]);
-      P.ell(10, 7, 3.2, 3, a.c[0]); P.ell(20, 7, 3.2, 3, a.c[0]);
-      P.rect(6, 19, 5, 2, a.c[2]); P.rect(19, 19, 5, 2, a.c[2]);
-      P.rect(11, 11, 2, 2, shade(a.c[0], -.3)); P.rect(18, 12, 2, 2, shade(a.c[0], -.3));
-      var cv = P.done(OUT), c = cv.getContext('2d');
-      c.fillStyle = '#f8f0a8'; c.fillRect(9, 6, 2, 2); c.fillRect(19, 6, 2, 2); c.fillStyle = OUT; c.fillRect(10, 6, 1, 2); c.fillRect(20, 6, 1, 2);
-      c.fillRect(11, 15, 8, 1);
+    frog: function (a) {
+      var W = 38, H = 30, P = painter(W, H, false, SK), c = P.c, dk = shade(a.c[0], -.3);
+      // chân sau gập, màng chân
+      [[-1, 1], [1, -1]].forEach(function (s) {
+        var sx = s[0] < 0 ? 9 : 29;
+        P.ell(sx, 22, 6, 3.4, a.c[2]); P.ell(19 + s[0] * 3, 25, 6, 2.2, a.c[2]);
+        P.poly([19 + s[0] * 7, 25, 19 + s[0] * 12, 27, 19 + s[0] * 13, 29, 19 + s[0] * 9, 28], shade(a.c[2], .1));
+        P.ell(19 + s[0] * 10, 9, 2.4, 1.4, a.c[2]); P.poly([19 + s[0] * 10, 9, 19 + s[0] * 13, 7, 19 + s[0] * 13, 10], shade(a.c[2], .1));
+      });
+      P.ell(19, 16, 11, 8.5, a.c[0]); P.ell(19, 10, 8, 5.5, a.c[0]);
+      P.ell(19, 19.5, 7, 3.6, shade(a.c[0], -.08));
+      P.ell(13.5, 7, 3.4, 3.2, a.c[0]); P.ell(24.5, 7, 3.4, 3.2, a.c[0]);
+      P.ell(13.5, 16, 1.2, 5, shade(a.c[0], -.12)); P.ell(24.5, 16, 1.2, 5, shade(a.c[0], -.12));
+      var R = rnd(17); for (var s2 = 0; s2 < (a.warts ? 30 : 12); s2++) P.ell(11 + R() * 16, 9 + R() * 13, a.warts ? .9 : .7, a.warts ? .9 : .6, a.warts ? shade(a.c[0], .25) : dk);
+      var cv = P.done(OUT);
+      inkS(cv, arcPts(19, 9, 6, 3, .3, 2.84), OUT);
+      eyeS(cv, 13.5, 6.4, 1.8, '#e8c040'); eyeS(cv, 24.5, 6.4, 1.8, '#e8c040');
+      dotS(cv, 11.5, 11, shade(a.c[0], -.35), 3); dotS(cv, 26, 11, shade(a.c[0], -.35), 3);
       return cv;
     },
-    shrimp: function (a, L) {
-      var W = 46, H = 26, P = painter(W, H, false), c = P.c;
-      for (var i = 0; i < 6; i++) { var t = i / 5, x = 8 + t * 24, y = 15 - Math.sin(t * 2.4) * 6; P.ell(x, y, 4.2 - t * .3, 4 - Math.abs(t - .5) * 2, i % 2 ? a.c[0] : shade(a.c[0], .12)); }
-      P.poly([7, 14, 1, 9, 3, 15, 1, 21], a.c[2]);
-      P.ell(35, 9, 5, 3.5, a.c[0]);
-      if (a.mantis) { P.poly([36, 12, 40, 18, 38, 19, 34, 14], a.c[2]); for (var s = 0; s < 6; s++) P.rect(10 + s * 4, 12, 1, 6, shade(a.c[0], -.3)); }
-      if (a.claw) { P.stroke(a.c[2], 1.4); c.beginPath(); c.moveTo(34, 12); c.quadraticCurveTo(40, 18, 44, 16); c.stroke(); P.ell(43, 15, 2.4, 1.4, a.c[2]); }
-      for (var l = 0; l < 4; l++) P.line(14 + l * 5, 18, 13 + l * 5, 22, a.c[1]);
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      bres(cx, 38, 7, 45, 1, '#c8b8a0'); bres(cx, 37, 7, 42, 0, '#c8b8a0');
-      cx.fillStyle = OUT; cx.fillRect(37, 7, 2, 2);
+    shrimp: function (a) {
+      var lob = a.lobster, man = a.mantis, W = lob ? 62 : 56, H = 32, P = painter(W, H, false, SK), c = P.c;
+      var body = a.c[0], lite = a.c[1], acc = a.c[2], dk = shade(body, -.3), segs = man ? 8 : 6, arch = man ? 1.5 : lob ? 3 : 6;
+      var x0 = 11, x1 = man ? 40 : 36, spine = [];
+      for (var i = 0; i <= segs; i++) { var t = i / segs; spine.push([x0 + (x1 - x0) * t, 18 - Math.sin(t * 2.6) * arch]); }
+      // râu dài vắt ra sau
+      var hx = x1 + (lob ? 12 : 9), hy = spine[segs][1] - 1;
+      // đuôi quạt
+      var tx = spine[0][0], ty = spine[0][1];
+      P.poly([tx, ty - 1, tx - 9, ty - 7, tx - 10, ty - 3, tx - 7, ty], acc);
+      P.poly([tx, ty + 1, tx - 9, ty + 7, tx - 10, ty + 3, tx - 7, ty], acc);
+      P.poly([tx + 1, ty - 1.5, tx - 8, ty - 1, tx - 9, ty + 1, tx + 1, ty + 1.5], shade(acc, .15));
+      // chân bơi dưới bụng
+      for (var l = 1; l < segs; l++) { var sp = spine[l]; P.poly([sp[0] - 1, sp[1] + 3, sp[0] - 2.5, sp[1] + 7.5, sp[0] - .8, sp[1] + 7.5, sp[0] + 1, sp[1] + 3], shade(lite, -.12)); }
+      // các đốt bụng
+      for (var k = 0; k < segs; k++) {
+        var p = spine[k], q = spine[k + 1], mx = (p[0] + q[0]) / 2, my = (p[1] + q[1]) / 2, r = (man ? 2.9 : 4.4) + k * (man ? .05 : .15);
+        P.ell(mx, my, (q[0] - p[0]) * .72, r, k % 2 ? body : shade(body, .06));
+        P.ell(mx, my + r * .55, (q[0] - p[0]) * .6, r * .4, lite);
+        if (a.bands) P.ell(mx + (q[0] - p[0]) * .3, my - r * .2, 1, r * .85, '#2a2a30');
+      }
+      // giáp đầu ngực
+      var cx0 = x1 - 1, cyy = spine[segs][1];
+      if (man) { P.poly([cx0, cyy - 3.5, hx - 4, cyy - 3, hx - 1, cyy - 1, hx - 4, cyy + 3, cx0, cyy + 3.5], body); P.ell(cx0 + 2, cyy + 1.5, 4, 2, lite); }
+      else {
+        blob(P, [cx0 - 1, cyy - 4.5, cx0 + 6, cyy - (lob ? 7 : 6), hx - 1, cyy - 3.5, hx + 1, cyy - .5, hx - 2, cyy + 3.5, cx0 + 4, cyy + 5.5, cx0 - 1, cyy + 4.8], body);
+        P.ell(cx0 + 5, cyy + 2.6, 5.5, 2.4, lite);
+        P.poly([hx - 1, cyy - 2.8, hx + 9, cyy - 4.5, hx + 1, cyy - 1.2], shade(body, .1));
+      }
+      if (lob) { var R0 = rnd(3); for (var s = 0; s < 18; s++) P.ell(cx0 + R0() * 12, cyy - 4 + R0() * 5, .6, .6, shade(lite, .2)); }
+      // càng
+      if (a.claw) { curve(P, acc, 1.6, [hx - 3, cyy + 3, hx + 4, cyy + 7, hx + 10, cyy + 6]); P.ell(hx + 12, cyy + 5.5, 3.2, 1.5, acc); P.poly([hx + 14, cyy + 4.6, hx + 18, cyy + 3.8, hx + 14.5, cyy + 5.4], acc); P.poly([hx + 14, cyy + 6.2, hx + 17.5, cyy + 7, hx + 14, cyy + 6.8], shade(acc, -.15)); }
+      if (man) { curve(P, acc, 1.6, [hx - 3, cyy + 2, hx - 1, cyy + 7, hx + 3, cyy + 6]); P.ell(hx + 2, cyy + 6, 2.4, 1.2, acc); P.ell(hx - 2.5, cyy - 4.5, 1.5, 1.5, acc); P.ell(hx - 4.5, cyy - 4.5, 1.5, 1.5, acc); }
+      var cv = P.done(OUT), ldk = shade(lite, -.35);
+      // chân bò có khớp
+      for (var g = 0; g < 5; g++) { var gx = cx0 + 1 + g * 2.3, gy = cyy + 4.5; lineS(cv, gx, gy, gx + 1.2, gy + 3.5, lob ? (g % 2 ? acc : body) : ldk); lineS(cv, gx + 1.2, gy + 3.5, gx + .2, gy + 6, lob ? acc : ldk); }
+      // vạch đốt
+      for (var k2 = 1; k2 < segs; k2++) { var sp2 = spine[k2], r2 = (man ? 2.9 : 4.4) + k2 * .15; inkS(cv, segPts(sp2[0] + .5, sp2[1] - r2, sp2[0] - .3, sp2[1] + r2 * .7), dk); }
+      if (!man) inkS(cv, arcPts(cx0 + 6, cyy + 1, 6, 4, -2.6, -.6), dk);
+      // râu
+      fx(cv, function (cc) {
+        cc.strokeStyle = css(lob ? acc : shade(lite, -.25)); cc.lineWidth = lob ? 2 : 1; cc.beginPath(); cc.moveTo(hx * SK, (cyy - 2) * SK); cc.quadraticCurveTo((hx + 6) * SK, (cyy - 14) * SK, (x0 - 2) * SK, 2 * SK); cc.stroke();
+        cc.lineWidth = 1; cc.beginPath(); cc.moveTo(hx * SK, (cyy - 1) * SK); cc.quadraticCurveTo((hx + 10) * SK, (cyy - 10) * SK, (x0 + 10) * SK, 1 * SK); cc.stroke();
+        cc.strokeStyle = css(shade(lite, -.2)); cc.beginPath(); cc.moveTo((hx + 1) * SK, (cyy - 1) * SK); cc.lineTo((hx + 7) * SK, (cyy - 5) * SK); cc.stroke();
+      });
+      if (man) { eyeS(cv, hx - 2.5, cyy - 4.5, 1.2, '#4ad0e8'); eyeS(cv, hx - 4.5, cyy - 4.5, 1.2, '#4ad0e8'); }
+      else { lineS(cv, hx - 2, cyy - 2, hx - 1, cyy - 3.6, OUT); eyeS(cv, hx - .8, cyy - 3.8, 1.1, '#2a2a30'); }
       return cv;
     },
     crab: function (a) {
-      var W = 36, H = 24, P = painter(W, H, false);
-      for (var i = 0; i < 3; i++) { P.line(10 - i * 2, 14 + i * 2, a.long ? 0 : 3 - i, a.long ? 23 : 20 + i, a.c[2]); P.line(26 + i * 2, 14 + i * 2, a.long ? 35 : 33 + i, a.long ? 23 : 20 + i, a.c[2]); }
-      P.ell(6, 7, 4, 3, a.c[0]); P.ell(30, 7, 4, 3, a.c[0]);
-      P.poly([6, 7, 9, 3, 10, 6], a.c[1]); P.poly([30, 7, 27, 3, 26, 6], a.c[1]);
-      P.ell(18, 14, 11, 6.5, a.c[0]); P.ell(18, 16, 8, 3, a.c[1]);
-      var cv = P.done(OUT), c = cv.getContext('2d');
-      c.fillStyle = OUT; c.fillRect(15, 8, 1, 2); c.fillRect(21, 8, 1, 2);
+      var lg = a.long, W = lg ? 60 : 50, H = lg ? 46 : 36, P = painter(W, H, false, SK), cx = W / 2, cy = lg ? 22 : 19, rx = lg ? 8 : a.dots ? 13 : 11, ry = lg ? 7.5 : 7.5;
+      var leg = a.c[2], dk = shade(a.c[0], -.3);
+      // chân: 4 đôi, mỗi chân 2 đốt
+      for (var s = -1; s <= 1; s += 2) for (var i = 0; i < 4; i++) {
+        var bx = cx + s * rx * .75, by = cy + 1 + i * 1.6, kx = cx + s * (rx + (lg ? 9 : 5) + i * .5), ky = by - (lg ? 6 : 3) + i * 2.6, fx2 = cx + s * (rx + (lg ? 18 : 8) + i * (lg ? 1 : .2)), fy = ky + (lg ? 16 : 7) - i * (lg ? 1 : .2);
+        curve(P, leg, lg ? 1.4 : 2, [bx, by, (bx + kx) / 2, (by + ky) / 2, kx, ky]);
+        curve(P, shade(leg, .1), lg ? 1.1 : 1.6, [kx, ky, (kx + fx2) / 2, (ky + fy) / 2 - 1, fx2, fy]);
+        if (a.dots && i === 3) P.ell(fx2 - s, fy - 1, 2.2, 1.4, shade(leg, .15));
+      }
+      // càng
+      for (var s2 = -1; s2 <= 1; s2 += 2) {
+        var ax = cx + s2 * (rx * .6), ay = cy - ry * .6, pxx = cx + s2 * (rx + (a.dots ? 5 : 2)), pyy = cy - ry - (lg ? 3 : 4);
+        curve(P, a.c[0], 2.2, [ax, ay, ax + s2 * 4, ay - 2, pxx, pyy + 2]);
+        P.ell(pxx, pyy, a.dots ? 4.5 : 3.8, 2.7, a.c[0]);
+        P.poly([pxx - s2 * 1, pyy - 2, pxx - s2 * 3.5, pyy - 6, pxx - s2 * 2, pyy - 1.5], shade(a.c[0], -.1));
+        P.poly([pxx - s2 * 3, pyy - .5, pxx - s2 * 6, pyy - 4.5, pxx - s2 * 4, pyy - 4.8, pxx - s2 * 4, pyy], shade(a.c[1], -.05));
+      }
+      // mai
+      var shell = [];
+      for (var k = 0; k < 16; k++) { var t = Math.PI + k / 16 * Math.PI * 2, rr = a.dots && (k === 0 || k === 8) ? 1.35 : 1, wav = k > 8 && k < 16 && !lg ? .92 : 1; shell.push(cx + Math.cos(t) * rx * rr, cy + Math.sin(t) * ry * wav * (k < 8 ? 1.05 : .95)); }
+      blob(P, shell, a.c[0]);
+      P.ell(cx, cy + ry * .35, rx * .7, ry * .45, shade(a.c[0], -.06));
+      P.ell(cx - rx * .3, cy - ry * .4, rx * .35, ry * .25, shade(a.c[0], .15));
+      if (a.dots) { var R = rnd(4); for (var d = 0; d < 26; d++) P.ell(cx - rx * .8 + R() * rx * 1.6, cy - ry * .7 + R() * ry * 1.2, .55, .55, a.c[1]); }
+      // gai mép trước
+      for (var tq = 0; tq < 5; tq++) { var an = Math.PI * (1.1 + tq * .11); P.poly([cx + Math.cos(an) * rx * .98, cy + Math.sin(an) * ry, cx + Math.cos(an + .08) * rx * 1.13, cy + Math.sin(an + .08) * ry * 1.12, cx + Math.cos(an + .16) * rx * .98, cy + Math.sin(an + .16) * ry], a.c[0]); var an2 = Math.PI * 2 - (an - Math.PI); P.poly([cx + Math.cos(an2) * rx * .98, cy + Math.sin(an2) * ry, cx + Math.cos(an2 - .08) * rx * 1.13, cy + Math.sin(an2 - .08) * ry * 1.12, cx + Math.cos(an2 - .16) * rx * .98, cy + Math.sin(an2 - .16) * ry], a.c[0]); }
+      if (lg) { var R2 = rnd(8); for (var sp = 0; sp < 10; sp++) P.ell(cx - rx * .7 + R2() * rx * 1.4, cy - ry * .6 + R2() * ry, .7, .7, shade(a.c[0], .3)); }
+      var cv = P.done(OUT);
+      // rãnh trên mai (hình chữ H)
+      inkS(cv, arcPts(cx, cy + ry * .4, rx * .45, ry * .55, -2.7, -.44), dk);
+      inkS(cv, segPts(cx, cy - ry * .1, cx, cy + ry * .5), dk);
+      // mắt trên cuống
+      lineS(cv, cx - 2.5, cy - ry + .5, cx - 3, cy - ry - 1.5, leg); lineS(cv, cx + 2.5, cy - ry + .5, cx + 3, cy - ry - 1.5, leg);
+      eyeS(cv, cx - 3, cy - ry - 1.8, .9, '#2a2a2a'); eyeS(cv, cx + 3, cy - ry - 1.8, .9, '#2a2a2a');
       return cv;
     },
     turtle: function (a) {
-      var W = 40, H = 26, P = painter(W, H, false);
-      P.ell(9, 8, 4, 2.5, a.c[2]); P.ell(29, 8, 4, 2.5, a.c[2]); P.ell(9, 20, 4, 2.5, a.c[2]); P.ell(29, 20, 4, 2.5, a.c[2]);
-      P.ell(34, 14, 4, 3, a.c[1]); P.poly([4, 14, 1, 12, 1, 16], a.c[2]);
-      P.ell(19, 14, 13, 9, a.c[0]); P.ell(19, 14, 9, 6, shade(a.c[0], .12));
-      [[15, 11], [23, 11], [19, 15], [14, 17], [24, 17]].forEach(function (p) { P.rect(p[0] - 1, p[1] - 1, 3, 2, shade(a.c[0], -.25)); });
-      var cv = P.done(OUT), c = cv.getContext('2d'); c.fillStyle = OUT; c.fillRect(35, 13, 1, 1);
+      var W = 54, H = 38, P = painter(W, H, false, SK), cx = 25, cy = 19, rx = 15, ry = 11, sea = a.sea, fl = a.c[2], sk = shade(a.c[1], -.15);
+      // chân / vây
+      if (sea) {
+        blob(P, [cx + 5, cy - 8, cx + 2, cy - 15, cx - 4, cy - 18.5, cx + 4, cy - 15.5, cx + 12, cy - 8], sk); blob(P, [cx + 5, cy + 8, cx + 2, cy + 15, cx - 4, cy + 18.5, cx + 4, cy + 15.5, cx + 12, cy + 8], sk);
+        P.poly([cx - 10, cy - 7, cx - 15, cy - 12, cx - 13, cy - 6], sk); P.poly([cx - 10, cy + 7, cx - 15, cy + 12, cx - 13, cy + 6], sk);
+      } else {
+        [[cx + 9, cy - 10], [cx + 9, cy + 10], [cx - 9, cy - 10], [cx - 9, cy + 10]].forEach(function (p) { P.ell(p[0], p[1], 3.6, 2.8, sk); });
+      }
+      P.poly([cx - rx + 1, cy - 1.5, cx - rx - 4, cy, cx - rx + 1, cy + 1.5], sk);
+      // đầu
+      P.ell(cx + rx + 4, cy, a.soft ? 3.6 : 4.4, a.soft ? 3 : 3.6, sk); P.poly([cx + rx, cy - 2.5, cx + rx + 3, cy - 3, cx + rx + 3, cy + 3, cx + rx, cy + 2.5], sk);
+      if (a.soft) P.poly([cx + rx + 7, cy - 1, cx + rx + 9.5, cy, cx + rx + 7, cy + 1], sk);
+      // mai
+      P.ell(cx, cy, rx + (a.soft ? 1.5 : 0), ry + (a.soft ? 1.5 : 0), a.soft ? shade(a.c[0], .12) : fl);
+      P.ell(cx, cy, rx - 1.4, ry - 1.4, a.c[0]);
+      if (a.shell) { var R = rnd(21); for (var m = 0; m < 26; m++) P.ell(cx - rx + 3 + R() * (rx * 2 - 6), cy - ry + 3 + R() * (ry * 2 - 6), 1 + R() * 1.5, .8 + R(), R() > .5 ? a.c[2] : a.c[1]); }
+      if (a.soft) { var R3 = rnd(5); for (var d = 0; d < 20; d++) P.ell(cx - rx + 3 + R3() * (rx * 2 - 6), cy - ry + 3 + R3() * (ry * 2 - 6), .6, .6, shade(a.c[0], -.2)); }
+      var cv = P.done(OUT), ln = shade(a.c[0], -.38);
+      if (!a.soft) {
+        // vảy mai: 5 vảy sống lưng + 4 vảy sườn mỗi bên + vảy viền
+        var xs = [-.62, -.32, 0, .32, .62];
+        for (var i = 0; i < 5; i++) { var X = cx + xs[i] * rx * .95; inkS(cv, segPts(X, cy - ry * .3, X, cy - ry * (.85 - Math.abs(xs[i]) * .3)), ln); inkS(cv, segPts(X, cy + ry * .3, X, cy + ry * (.85 - Math.abs(xs[i]) * .3)), ln); }
+        inkS(cv, segPts(cx - rx * .78, cy - ry * .3, cx + rx * .78, cy - ry * .3), ln); inkS(cv, segPts(cx - rx * .78, cy + ry * .3, cx + rx * .78, cy + ry * .3), ln);
+        inkS(cv, arcPts(cx, cy, rx - 1.6, ry - 1.6, 0, 6.29), ln);
+        for (var r = 0; r < 22; r++) { var an = r / 22 * 6.283; inkS(cv, segPts(cx + Math.cos(an) * (rx - 1.6), cy + Math.sin(an) * (ry - 1.6), cx + Math.cos(an) * rx, cy + Math.sin(an) * ry), ln); }
+      } else inkS(cv, arcPts(cx, cy, rx - .8, ry - .8, 0, 6.29), shade(a.c[0], -.1));
+      if (sea) { var R4 = rnd(3); for (var sc = 0; sc < 14; sc++) { var px = cx + 6 + R4() * 7, py = R4() > .5 ? cy - 9 - R4() * 7 : cy + 9 + R4() * 7; inkS(cv, [px, py], shade(sk, -.3)); } }
+      eyeS(cv, cx + rx + 5, cy - 1.6, .8, '#3a2a1a'); eyeS(cv, cx + rx + 5, cy + 1.6, .8, '#3a2a1a');
       return cv;
     },
     puffer: function (a) {
-      var W = 30, H = 26, P = painter(W, H, false);
-      P.poly([5, 13, 1, 9, 1, 17], a.c[2]);
-      for (var i = 0; i < 14; i++) { var t = i / 14 * Math.PI * 2; P.line(15 + Math.cos(t) * 9, 13 + Math.sin(t) * 9, 15 + Math.cos(t) * 12, 13 + Math.sin(t) * 12, a.c[2]); }
-      P.ell(15, 13, 10, 10, a.c[0]); P.ell(16, 16, 7, 5, a.c[1]);
-      var R = rnd(9); for (var s = 0; s < 10; s++) P.rect(9 + R() * 12, 6 + R() * 5, 1, 1, a.c[2]);
-      var cv = P.done(OUT), c = cv.getContext('2d');
-      c.fillStyle = '#f8f8f0'; c.fillRect(20, 9, 3, 3); c.fillStyle = OUT; c.fillRect(21, 10, 2, 2); c.fillRect(25, 15, 2, 1);
+      var W = 40, H = 34, P = painter(W, H, false, SK), cx = 19, cy = 17, r = 11.5;
+      P.poly([cx - r + 1, cy, cx - r - 6, cy - 5, cx - r - 5, cy, cx - r - 6, cy + 5], a.c[2]);
+      P.poly([cx - 4, cy - r + 1, cx - 8, cy - r - 2.5, cx - 2, cy - r], shade(a.c[2], .1)); P.poly([cx - 4, cy + r - 1, cx - 8, cy + r + 2.5, cx - 2, cy + r], shade(a.c[2], .1));
+      var nsp = a.spines ? 26 : 16; for (var i = 0; i < nsp; i++) { var t = i / nsp * Math.PI * 2 + .1, L2 = a.spines ? 4.5 : 2.5; P.poly([cx + Math.cos(t - .06) * r, cy + Math.sin(t - .06) * r, cx + Math.cos(t) * (r + L2), cy + Math.sin(t) * (r + L2), cx + Math.cos(t + .06) * r, cy + Math.sin(t + .06) * r], shade(a.c[2], .2)); }
+      P.ell(cx, cy, r, r * .95, a.c[0]);
+      P.ell(cx + 1, cy + 4, r * .8, r * .55, a.c[1]);
+      var R = rnd(9); for (var s = 0; s < 26; s++) { var an = R() * 6.28, rr = R() * r * .85, y = cy + Math.sin(an) * rr * .9; if (y < cy + 2) P.ell(cx + Math.cos(an) * rr, y, .9, .9, a.c[2]); }
+      P.ell(cx + r - .5, cy + 2.5, 2.2, 1.8, shade(a.c[1], -.1));
+      P.poly([cx + 3, cy + 2, cx + 7, cy, cx + 8, cy + 4], shade(a.c[0], .15));
+      var cv = P.done(OUT);
+      lineS(cv, cx + r + .8, cy + 2.4, cx + r + 1.6, cy + 2.4, '#f4f0e0');
+      eyeS(cv, cx + 5.5, cy - 4, 2, '#6ac8a8');
       return cv;
     },
     sunfish: function (a) {
-      var W = 40, H = 46, P = painter(W, H, false);
-      P.poly([16, 12, 20, 1, 25, 12], a.c[2]); P.poly([16, 34, 20, 45, 25, 34], a.c[2]);
-      P.ell(4, 23, 3, 12, a.c[2]);
-      P.ell(20, 23, 17, 15, a.c[0]); P.ell(21, 27, 14, 9, a.c[1]);
-      var cv = P.done(OUT), c = cv.getContext('2d');
-      c.fillStyle = '#f8f8f0'; c.fillRect(31, 18, 3, 3); c.fillStyle = OUT; c.fillRect(32, 19, 2, 2); c.fillRect(36, 24, 1, 2);
+      var W = 46, H = 58, P = painter(W, H, false, SK), cx = 22, cy = 29;
+      P.poly([cx - 3, cy - 12, cx + 1, cy - 27, cx + 6, cy - 26, cx + 7, cy - 12], a.c[2]); P.poly([cx - 3, cy + 12, cx + 1, cy + 27, cx + 6, cy + 26, cx + 7, cy + 12], a.c[2]);
+      blob(P, [cx - 15, cy - 13, cx - 21, cy - 6, cx - 19, cy, cx - 21, cy + 6, cx - 15, cy + 13, cx - 13, cy], shade(a.c[2], .1));
+      blob(P, [cx - 15, cy - 14, cx, cy - 17, cx + 15, cy - 11, cx + 21, cy - 2, cx + 20, cy + 6, cx + 13, cy + 13, cx, cy + 16, cx - 15, cy + 14], a.c[0]);
+      P.ell(cx + 2, cy + 7, 15, 7, a.c[1]);
+      var R = rnd(11); for (var s = 0; s < 20; s++) P.ell(cx - 12 + R() * 28, cy - 12 + R() * 22, .7, .7, shade(a.c[0], .2));
+      P.ell(cx + 10, cy + 1, 2.2, 4, shade(a.c[2], .1));
+      var cv = P.done(OUT);
+      for (var k = 0; k < 7; k++) inkS(cv, segPts(cx - 13, cy - 11 + k * 3.6, cx - 19, cy - 11 + k * 3.7), shade(a.c[2], -.2));
+      for (var k2 = 0; k2 < 4; k2++) { inkS(cv, segPts(cx + k2 * 1.6, cy - 13, cx + 1.5 + k2 * 1.2, cy - 25), shade(a.c[2], -.25)); inkS(cv, segPts(cx + k2 * 1.6, cy + 13, cx + 1.5 + k2 * 1.2, cy + 25), shade(a.c[2], -.25)); }
+      inkS(cv, segPts(cx + 13, cy - 3, cx + 13, cy + 3), shade(a.c[0], -.35));
+      lineS(cv, cx + 19.5, cy + 3, cx + 20.5, cy + 3, OUT);
+      eyeS(cv, cx + 15, cy - 4, 1.8, '#c8d8e0');
       return cv;
     },
     sturgeon: function (a, L) {
-      var hh = L * .16, W = Math.ceil(L + 4), H = Math.ceil(hh * 2.6), P = painter(W, H, false), c = P.c, cy = H / 2;
-      P.poly([L * .2, cy - hh * .1, 2, cy - hh * .9, L * .1, cy, 4, cy + hh * .35, L * .2, cy + hh * .12], a.c[2]);
-      P.poly([L * .5, cy - hh * .45, L * .56, cy - hh * .8, L * .62, cy - hh * .45], a.c[2]);
-      c.beginPath(); c.moveTo(L + 2, cy + hh * .1); c.lineTo(L * .82, cy - hh * .45); c.quadraticCurveTo(L * .4, cy - hh * .6, L * .2, cy - hh * .1);
-      c.lineTo(L * .2, cy + hh * .12); c.quadraticCurveTo(L * .4, cy + hh * .55, L * .82, cy + hh * .45); c.closePath();
-      c.fillStyle = P.col(a.c[0]); c.fill(); c.save(); c.clip(); P.rect(0, cy + hh * .1, W, H, a.c[1]); c.restore();
-      for (var s = 0; s < 9; s++) P.rect(L * (.28 + s * .06), cy - hh * .38, 2, 1, '#e8e4d8');
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = OUT; cx.fillRect(Math.round(L * .82), Math.round(cy - hh * .2), 1, 1);
-      bres(cx, L * .9, cy + hh * .2, L * .92, cy + hh * .5, css(a.c[2]));
+      L = Math.max(L, 54); var hh = L * .15, W = Math.ceil(L + 8), H = Math.ceil(hh * 2.8), P = painter(W, H, false, SK), c = P.c, cy = H / 2;
+      P.poly([L * .2, cy - hh * .1, 3, cy - hh * 1.05, L * .08, cy - hh * .05, 5, cy + hh * .4, L * .2, cy + hh * .12], a.c[2]);
+      P.poly([L * .3, cy - hh * .3, L * .34, cy - hh * .85, L * .4, cy - hh * .32], a.c[2]);
+      P.poly([L * .5, cy + hh * .3, L * .56, cy + hh * .75, L * .6, cy + hh * .3], a.c[2]);
+      P.poly([L * .74, cy + hh * .3, L * .7, cy + hh * .8, L * .8, cy + hh * .35], a.c[2]);
+      c.beginPath(); c.moveTo(L + 5, cy + hh * .08); c.quadraticCurveTo(L * .9, cy - hh * .2, L * .8, cy - hh * .48); c.quadraticCurveTo(L * .45, cy - hh * .6, L * .2, cy - hh * .1);
+      c.lineTo(L * .2, cy + hh * .12); c.quadraticCurveTo(L * .45, cy + hh * .5, L * .8, cy + hh * .42); c.quadraticCurveTo(L * .95, cy + hh * .3, L + 5, cy + hh * .08); c.closePath();
+      c.fillStyle = P.col(a.c[0]); c.fill(); c.save(); c.clip(); P.rect(0, cy + hh * .12, W, H, a.c[1]); c.restore();
+      for (var s = 0; s < 12; s++) { var x = L * (.25 + s * .05); P.poly([x - 1, cy - hh * .5, x, cy - hh * .64, x + 1, cy - hh * .5], shade(a.c[0], .3)); P.ell(x + 1, cy, .9, .6, shade(a.c[1], -.08)); }
+      var cv = P.done(OUT);
+      inkS(cv, segPts(L * .78, cy - hh * .35, L * .76, cy + hh * .3), shade(a.c[0], -.35));
+      for (var b = 0; b < 4; b++) lineS(cv, L * (.9 + b * .015), cy + hh * .25, L * (.9 + b * .015), cy + hh * .5, '#d8c8a8');
+      inkS(cv, segPts(L * .86, cy + hh * .35, L * .9, cy + hh * .35), OUT);
+      eyeS(cv, L * .84, cy - hh * .18, 1, '#c8b87a');
       return cv;
     },
-    mudskip: function (a, L) {
-      var W = 44, H = 22, P = painter(W, H, false), c = P.c;
-      P.poly([8, 13, 1, 9, 2, 17], a.c[0]);
-      P.poly([14, 8, 18, 1, 26, 2, 30, 8], a.c[2]);
-      c.beginPath(); c.moveTo(40, 12); c.quadraticCurveTo(38, 5, 30, 6); c.quadraticCurveTo(16, 7, 8, 12); c.quadraticCurveTo(16, 18, 30, 17); c.quadraticCurveTo(40, 17, 40, 12); c.fillStyle = P.col(a.c[0]); c.fill();
-      P.ell(26, 15, 10, 2.5, a.c[1]);
-      P.ell(29, 18, 4, 2, shade(a.c[0], -.1));
-      P.ell(34, 5, 2.6, 2.6, a.c[0]); P.ell(38, 5, 2.6, 2.6, a.c[0]);
-      var R = rnd(5); for (var s = 0; s < 8; s++) P.rect(14 + R() * 20, 8 + R() * 5, 1, 1, '#9ac8e8');
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = OUT; cx.fillRect(34, 4, 1, 2); cx.fillRect(38, 4, 1, 2);
+    mudskip: function (a) {
+      var W = 52, H = 30, P = painter(W, H, false, SK), c = P.c, cy = 18;
+      P.poly([9, cy, 1, cy - 5, 2, cy, 1, cy + 5], shade(a.c[0], -.05));
+      blob(P, [14, cy - 4, 17, cy - 13, 22, cy - 14, 25, cy - 5], a.c[2]); blob(P, [27, cy - 5, 31, cy - 10, 38, cy - 9, 39, cy - 5], a.c[2]);
+      blob(P, [8, cy, 20, cy - 5.5, 34, cy - 6.5, 42, cy - 5, 46, cy, 44, cy + 4, 34, cy + 5.5, 18, cy + 5], a.c[0]);
+      P.ell(28, cy + 3, 12, 2.4, a.c[1]);
+      P.poly([32, cy + 2, 30, cy + 9, 36, cy + 10, 36, cy + 3], shade(a.c[0], -.1));
+      P.ell(39, cy - 6.5, 2.8, 2.8, a.c[0]); P.ell(43, cy - 6, 2.8, 2.8, a.c[0]);
+      var R = rnd(5); for (var s = 0; s < 22; s++) P.ell(12 + R() * 30, cy - 4 + R() * 6, .6, .6, a.dots ? '#9ad0f0' : shade(a.c[0], -.3));
+      var cv = P.done(OUT);
+      for (var k = 0; k < 4; k++) { inkS(cv, segPts(16 + k * 2.4, cy - 4, 18 + k * 1.4, cy - 12.5), shade(a.c[2], -.3)); inkS(cv, segPts(29 + k * 2.4, cy - 5, 31 + k * 2, cy - 9), shade(a.c[2], -.3)); }
+      lineS(cv, 44, cy + 1.5, 46, cy + 1, OUT);
+      eyeS(cv, 39, cy - 7, 1.5, '#c8a85a'); eyeS(cv, 43, cy - 6.6, 1.5, '#c8a85a');
       return cv;
     },
     squid: function (a) {
-      var W = 48, H = 22, P = painter(W, H, false), c = P.c;
-      for (var t = 0; t < 6; t++) { P.stroke(a.c[2], 1.2); c.beginPath(); c.moveTo(16, 9 + t); c.quadraticCurveTo(8, 6 + t * 2, 1 + (t % 2) * 3, 4 + t * 3); c.stroke(); }
-      P.poly([40, 11, 47, 3, 46, 11, 47, 19], a.c[0]);
-      c.beginPath(); c.moveTo(44, 11); c.quadraticCurveTo(40, 4, 26, 6); c.lineTo(16, 8); c.lineTo(16, 14); c.lineTo(26, 16); c.quadraticCurveTo(40, 18, 44, 11); c.fillStyle = P.col(a.c[0]); c.fill();
-      P.ell(30, 13, 10, 2, a.c[1]);
-      var R = rnd(3); for (var s = 0; s < 14; s++) P.rect(20 + R() * 20, 7 + R() * 7, 1, 1, a.c[2]);
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = '#f8f8f0'; cx.fillRect(17, 9, 3, 3); cx.fillStyle = OUT; cx.fillRect(18, 10, 2, 2);
+      var st = a.stout, wd = a.wide, gi = a.giant, W = gi ? 70 : 58, H = st ? 30 : 28, P = painter(W, H, false, SK), c = P.c, cy = H / 2;
+      var mx0 = gi ? 30 : 20, mx1 = W - 2, body = a.c[0];
+      // tay + xúc tu
+      for (var t = 0; t < 8; t++) curve(P, a.c[2], 1.3, [mx0 + 1, cy - 2.5 + t * .7, mx0 - 6, cy - 4 + t * 1.2, mx0 - 10 - (t % 3) * 2, cy - 5 + t * 1.5]);
+      curve(P, a.c[2], .8, [mx0, cy - 1, mx0 - 12, cy - 6, 3, cy - 7]); curve(P, a.c[2], .8, [mx0, cy + 1, mx0 - 12, cy + 6, 3, cy + 7]);
+      P.ell(4, cy - 7, 2.4, 1.2, a.c[2]); P.ell(4, cy + 7, 2.4, 1.2, a.c[2]);
+      // vây
+      if (st) blob(P, [mx0 + 1, cy - 8, mx1 - 4, cy - 9, mx1 + 1, cy, mx1 - 4, cy + 9, mx0 + 1, cy + 8, mx0 + 6, cy], shade(a.c[1], -.05));
+      else if (wd) blob(P, [mx0 + 4, cy - 4, mx0 + 14, cy - 11, mx1 - 2, cy - 7, mx1 + 1, cy, mx1 - 2, cy + 7, mx0 + 14, cy + 11, mx0 + 4, cy + 4], shade(body, .12));
+      else { P.poly([mx1 - 12, cy - 3, mx1 - 1, cy - 9, mx1 + 1, cy, mx1 - 1, cy + 9, mx1 - 12, cy + 3], shade(body, .08)); }
+      // thân áo
+      if (st) P.ell((mx0 + mx1) / 2 + 1, cy, (mx1 - mx0) / 2 - 2, 6.2, body);
+      else blob(P, [mx0 - 1, cy - 4, mx0 + 12, cy - 4.8, mx1 - 4, cy - 2.5, mx1, cy, mx1 - 4, cy + 2.5, mx0 + 12, cy + 4.8, mx0 - 1, cy + 4], body);
+      P.ell(mx0 - 1, cy, 4.5, 4, body);
+      P.ell((mx0 + mx1) / 2, cy + 2.4, (mx1 - mx0) / 2 - 4, 1.6, a.c[1]);
+      var R = rnd(3); for (var s = 0; s < (gi ? 30 : 22); s++) P.ell(mx0 + 3 + R() * (mx1 - mx0 - 8), cy - 4 + R() * 6, .5 + R() * .5, .5 + R() * .4, a.c[2]);
+      if (st) for (var z = 0; z < 6; z++) P.ell(mx0 + 6 + z * 4, cy - 2 + (z % 2) * 2, 1.5, .5, shade(body, -.2));
+      var cv = P.done(OUT);
+      for (var k = 0; k < 8; k++) { dotS(cv, mx0 - 7 - k * 1.1, cy - 3 + k * .8, shade(a.c[1], .2)); }
+      eyeS(cv, mx0 - 1, cy - 1, gi ? 2.2 : 1.7, '#e8d080');
       return cv;
     },
     octo: function (a) {
-      var W = 40, H = 34, P = painter(W, H, false), c = P.c;
+      var W = 46, H = 42, P = painter(W, H, false, SK), c = P.c, cx = 23, cy = 13, body = a.c[0];
+      if (a.web) blob(P, [cx - 14, cy + 18, cx - 8, cy + 6, cx + 8, cy + 6, cx + 14, cy + 18, cx + 4, cy + 22, cx - 4, cy + 22], shade(a.c[2], -.15));
       for (var t = 0; t < 8; t++) {
-        var x0 = 9 + t * 3, dir = t < 4 ? -1 : 1;
-        P.stroke(t % 2 ? a.c[0] : a.c[2], 2.2); c.beginPath(); c.moveTo(x0, 18);
-        c.quadraticCurveTo(x0 + dir * 4, 26, x0 + dir * (6 + t % 3 * 2), 30 - (t % 2) * 3); c.stroke();
+        var x0 = cx - 7 + t * 2, dir = t < 4 ? -1 : 1, sp = (t % 4), ex = cx + dir * (6 + sp * 3.5), ey = cy + 22 + (sp % 2) * 3;
+        curve(P, t % 2 ? body : shade(body, -.08), 2.6 - sp * .2, [x0, cy + 7, x0 + dir * (2 + sp), cy + 15, ex, ey, ex + dir * 3, ey + 2, ex + dir * 2, ey - 2]);
       }
-      if (a.ears) { P.ell(9, 5, 4, 3, a.c[2]); P.ell(31, 5, 4, 3, a.c[2]); }
-      P.ell(20, 11, 10, 10, a.c[0]); P.ell(17, 8, 4, 3, shade(a.c[0], .15));
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = '#f8f0c8'; cx.fillRect(14, 14, 3, 2); cx.fillRect(23, 14, 3, 2); cx.fillStyle = OUT; cx.fillRect(15, 14, 2, 2); cx.fillRect(24, 14, 2, 2);
+      if (a.ears) { blob(P, [cx - 8, cy - 2, cx - 15, cy - 7, cx - 14, cy, cx - 9, cy + 2], a.c[2]); blob(P, [cx + 8, cy - 2, cx + 15, cy - 7, cx + 14, cy, cx + 9, cy + 2], a.c[2]); }
+      blob(P, [cx - 8, cy + 6, cx - 9, cy - 4, cx - 4, cy - 11, cx + 4, cy - 11, cx + 9, cy - 4, cx + 8, cy + 6, cx, cy + 9], body);
+      P.ell(cx - 3, cy - 5, 3.5, 3, shade(body, .15));
+      var R = rnd(7); for (var s = 0; s < 20; s++) P.ell(cx - 7 + R() * 14, cy - 9 + R() * 14, .6, .6, shade(body, R() > .5 ? .2 : -.25));
+      var cv = P.done(OUT);
+      for (var t2 = 0; t2 < 8; t2++) { var dir2 = t2 < 4 ? -1 : 1, x02 = cx - 7 + t2 * 2; for (var k = 1; k < 5; k++) dotS(cv, x02 + dir2 * (k * 1.3), cy + 9 + k * 2.6, a.c[1]); }
+      eyeS(cv, cx - 4.5, cy + 2, 1.7, '#e8c878', true); eyeS(cv, cx + 4.5, cy + 2, 1.7, '#e8c878', true);
       return cv;
     },
     ray: function (a) {
-      var W = 50, H = 30, P = painter(W, H, false);
-      P.line(14, 15, 1, 15, a.c[2]); P.line(14, 16, 2, 17, a.c[2]);
-      P.poly([46, 15, 30, 2, 14, 13, 14, 17, 30, 28], a.c[0]);
-      P.poly([40, 15, 30, 6, 20, 14, 30, 22], shade(a.c[0], .1));
-      var R = rnd(11); for (var s = 0; s < 12; s++) P.rect(20 + R() * 18, 8 + R() * 14, 1, 1, shade(a.c[0], .3));
-      var cv = P.done(OUT), cx = cv.getContext('2d'); cx.fillStyle = OUT; cx.fillRect(38, 12, 1, 1); cx.fillRect(38, 18, 1, 1);
+      var mt = a.manta, W = mt ? 64 : 58, H = mt ? 42 : 38, P = painter(W, H, false, SK), c = P.c, cx = mt ? 38 : 36, cy = H / 2;
+      var hw = mt ? 18 : 15, len = mt ? 10 : 16;
+      curve(P, a.c[2], 1, [cx - len, cy, cx - len - 10, cy + .5, 2, cy - 1]);
+      if (!mt) P.poly([cx - len - 6, cy - .5, cx - len - 12, cy - 2, cx - len - 7, cy + .5], '#d8d0b8');
+      P.ell(cx - len + 1, cy - 3, 3, 2, a.c[0]); P.ell(cx - len + 1, cy + 3, 3, 2, a.c[0]);
+      blob(P, [cx + 10, cy, cx + 6, cy - hw * .55, cx - 2, cy - hw, cx - (mt ? 3 : 6), cy - hw * .9, cx - len, cy - 2, cx - len, cy + 2, cx - (mt ? 3 : 6), cy + hw * .9, cx - 2, cy + hw, cx + 6, cy + hw * .55], a.c[0]);
+      if (mt) { P.poly([cx + 7, cy - 4, cx + 14, cy - 6, cx + 13, cy - 3], a.c[0]); P.poly([cx + 7, cy + 4, cx + 14, cy + 6, cx + 13, cy + 3], a.c[0]); P.ell(cx - 1, cy - hw * .45, 4, 2.4, a.c[1]); P.ell(cx - 1, cy + hw * .45, 4, 2.4, a.c[1]); }
+      else { P.ell(cx - 1, cy, 9, 6, shade(a.c[0], .1)); }
+      var cv = P.done(OUT), R = rnd(11), sp = [];
+      if (!mt) for (var s = 0; s < (a.spots ? 50 : 22); s++) { var px = cx - 12 + R() * 20, py = cy - hw * .8 + R() * hw * 1.6; sp.push(px, py); if (a.spots) sp.push(px + .5, py, px, py + .5, px + .5, py + .5); }
+      inkS(cv, sp, a.spots ? '#e8dcc0' : shade(a.c[0], .3));
+      inkS(cv, segPts(cx + 6, cy, cx - len, cy), shade(a.c[0], -.25));
+      eyeS(cv, cx + 4, cy - 2.6, mt ? .9 : 1, '#c8b87a'); eyeS(cv, cx + 4, cy + 2.6, mt ? .9 : 1, '#c8b87a');
+      if (!mt) { dotS(cv, cx + 1.5, cy - 3.4, OUT, 2); dotS(cv, cx + 1.5, cy + 2.8, OUT, 2); }
       return cv;
     },
     jelly: function (a) {
-      var W = 26, H = 32, P = painter(W, H, false), c = P.c;
-      for (var t = 0; t < 6; t++) { P.stroke(t % 2 ? a.c[2] : a.c[0], 1); c.beginPath(); c.moveTo(5 + t * 3.2, 12); c.quadraticCurveTo(3 + t * 3.2 + (t % 2) * 4, 20, 6 + t * 3.2, 30); c.stroke(); }
-      c.beginPath(); c.arc(13, 13, 11, Math.PI, 0); c.closePath(); c.fillStyle = P.col(a.c[0]); c.fill();
-      P.ell(13, 9, 6, 3, a.c[1]); P.rect(2, 12, 22, 2, a.c[2]);
-      return P.done(OUT);
+      var W = 32, H = 44, P = painter(W, H, false, SK), c = P.c, cx = 16;
+      for (var t = 0; t < 4; t++) curve(P, a.c[1], 1.8, [cx - 3 + t * 2, 13, cx - 5 + t * 3 + (t % 2) * 3, 22, cx - 3 + t * 2, 32, cx - 5 + t * 3, 38, cx - 2 + t * 2, 42]);
+      c.beginPath(); c.moveTo(cx - 13, 14); c.quadraticCurveTo(cx - 13, 1, cx, 1); c.quadraticCurveTo(cx + 13, 1, cx + 13, 14);
+      for (var s = 0; s < 8; s++) c.quadraticCurveTo(cx + 13 - s * 3.25 - 1.6, 16, cx + 13 - (s + 1) * 3.25, 14);
+      c.closePath(); c.fillStyle = P.col(a.c[0]); c.fill();
+      P.ell(cx, 6, 8, 3.5, a.c[1]);
+      [[-4, 9], [4, 9], [0, 7], [0, 11]].forEach(function (p) { P.ell(cx + p[0], p[1], 2, 1.5, a.c[2]); });
+      var cv = P.done(OUT);
+      for (var r = 0; r < 7; r++) inkS(cv, segPts(cx, 4, cx - 11 + r * 3.6, 14), shade(a.c[0], -.12));
+      fx(cv, function (cc) { cc.fillStyle = css(a.c[2]); for (var k = 0; k < 9; k++) { var x0 = (cx - 12 + k * 3) * SK; for (var y = 15 * SK; y < (34 + (k % 3) * 3) * SK; y++) cc.fillRect(Math.round(x0 + Math.sin(y / 5 + k) * 2), y, 1, 1); } });
+      return cv;
     },
     snail: function (a) {
-      var W = 26, H = 22, P = painter(W, H, false);
-      P.ell(13, 18, 11, 3, a.c[1]); P.poly([21, 16, 25, 13, 24, 18], a.c[1]);
-      if (a.tall) { P.poly([4, 17, 9, 2, 20, 17], a.c[0]); for (var i = 0; i < 4; i++) P.line(6 + i * 1.5, 15 - i * 3.5, 19 - i * 1.5, 16 - i * 3.5, a.c[2]); }
-      else { P.ell(12, 11, 9, 8, a.c[0]); P.ell(12, 11, 5, 4.5, shade(a.c[0], .15)); P.ell(12, 11, 2, 2, a.c[2]); }
-      var cv = P.done(OUT), c = cv.getContext('2d'); c.fillStyle = OUT; c.fillRect(23, 13, 1, 1); return cv;
+      var W = 30, H = 32, P = painter(W, H, false, SK), c = P.c;
+      blob(P, [3, 28, 10, 25, 22, 25, 28, 27, 25, 30, 6, 30], a.c[1]);
+      curve(P, a.c[1], 1, [23, 26, 25, 22, 26, 20]); curve(P, a.c[1], 1, [24, 26, 27, 23, 29, 22]);
+      if (a.tall) { P.poly([7, 26, 13, 2, 15, 2, 22, 26], a.c[0]); P.ell(14.5, 25, 7.5, 3, a.c[0]); }
+      else { P.ell(13, 17, 10, 9, a.c[0]); }
+      var cv = P.done(OUT), ln = a.c[2];
+      if (a.tall) for (var i = 0; i < 6; i++) { var y = 24 - i * 3.8, hw = 7.5 - i * 1.1; inkS(cv, arcPts(14, y - 1, hw, 1.6, .1, 3.0), ln); inkS(cv, segPts(14 - hw, y, 14 - hw * .6, y - 3), shade(a.c[0], .25)); }
+      else for (var j = 0; j < 3; j++) inkS(cv, arcPts(13 + j, 17, 8 - j * 2.6, 7.5 - j * 2.4, 0, 6.2), ln);
+      dotS(cv, 26, 19.5, OUT, 2); dotS(cv, 29, 21.5, OUT, 2);
+      return cv;
     },
     sam: function (a) {
-      var W = 40, H = 24, P = painter(W, H, false);
-      P.line(4, 12, 0, 12, a.c[2]); P.line(4, 13, 0, 14, a.c[2]);
-      P.poly([6, 12, 16, 6, 22, 6, 22, 18, 16, 18], shade(a.c[0], -.08));
-      P.ell(28, 12, 11, 10, a.c[0]); P.ell(28, 12, 7, 6.5, a.c[1]); P.rect(22, 11, 16, 1, a.c[2]);
-      var cv = P.done(OUT), c = cv.getContext('2d'); c.fillStyle = OUT; c.fillRect(31, 8, 1, 1); c.fillRect(31, 15, 1, 1); return cv;
+      var W = 54, H = 34, P = painter(W, H, false, SK), cx = 34, cy = 17;
+      curve(P, a.c[2], 1.6, [cx - 14, cy, cx - 22, cy, 2, cy - .5]);
+      P.poly([cx - 16, cy - 8, cx - 5, cy - 9.5, cx - 2, cy, cx - 5, cy + 9.5, cx - 16, cy + 8, cx - 18, cy], shade(a.c[0], -.06));
+      for (var i = 0; i < 6; i++) { P.poly([cx - 15 + i * 2, cy - 8.5, cx - 16 + i * 2, cy - 11, cx - 14 + i * 2, cy - 8.5], a.c[2]); P.poly([cx - 15 + i * 2, cy + 8.5, cx - 16 + i * 2, cy + 11, cx - 14 + i * 2, cy + 8.5], a.c[2]); }
+      blob(P, [cx - 4, cy - 12, cx + 8, cy - 15, cx + 17, cy - 8, cx + 19, cy, cx + 17, cy + 8, cx + 8, cy + 15, cx - 4, cy + 12, cx - 2, cy], a.c[0]);
+      P.ell(cx + 6, cy, 8, 9, shade(a.c[0], .1));
+      var cv = P.done(OUT), ln = shade(a.c[0], -.35);
+      inkS(cv, segPts(cx - 3, cy, cx + 16, cy), ln); inkS(cv, arcPts(cx + 6, cy, 8, 9, -1.7, 1.7), ln);
+      inkS(cv, segPts(cx - 14, cy - 4, cx - 3, cy - 5), ln); inkS(cv, segPts(cx - 14, cy + 4, cx - 3, cy + 5), ln);
+      eyeS(cv, cx + 9, cy - 7, .7, '#2a2a2a'); eyeS(cv, cx + 9, cy + 7, .7, '#2a2a2a');
+      return cv;
     },
     seahorse: function (a) {
-      var W = 22, H = 34, P = painter(W, H, false), c = P.c;
-      P.stroke(a.c[0], 5); c.beginPath(); c.moveTo(12, 8); c.quadraticCurveTo(5, 16, 10, 24); c.quadraticCurveTo(14, 30, 9, 32); c.stroke();
-      P.ell(12, 7, 4, 4, a.c[0]); P.poly([14, 6, 21, 8, 21, 10, 14, 9], a.c[0]);
-      P.poly([10, 3, 12, 0, 14, 3], a.c[2]); P.poly([6, 14, 3, 16, 6, 19], a.c[2]);
-      P.ell(10, 18, 2, 4, a.c[1]);
-      for (var i = 0; i < 5; i++) P.rect(6 + (i % 2), 11 + i * 3, 1, 1, a.c[2]);
-      var cv = P.done(OUT), cx = cv.getContext('2d'); cx.fillStyle = OUT; cx.fillRect(13, 6, 1, 1); return cv;
+      var W = 28, H = 44, P = painter(W, H, false, SK), c = P.c;
+      P.ell(10, 23, 2, 5, shade(a.c[2], .2));
+      curve(P, a.c[0], 2.8, [14, 30, 15, 36, 12, 39, 8, 41, 8, 37, 10, 35, 11, 37]);
+      blob(P, [13, 9, 9, 14, 8, 22, 11, 29, 15, 31, 18, 26, 17, 18, 16, 11], a.c[0]);
+      P.ell(15.5, 22, 2.2, 6, a.c[1]);
+      P.ell(14, 8, 4, 3.6, a.c[0]); P.poly([16, 7, 25, 8.5, 25, 10.5, 16, 10.5], a.c[0]);
+      P.poly([12, 5, 13, 1, 15, 1, 16, 5], a.c[2]); P.poly([10, 6, 8, 3, 12, 5], a.c[2]);
+      for (var i = 0; i < 7; i++) P.ell(9 + Math.sin(i * .5) * .8, 12 + i * 2.6, .7, .7, a.c[2]);
+      var cv = P.done(OUT), ln = shade(a.c[0], -.3);
+      for (var k = 0; k < 9; k++) { var y = 12 + k * 2.2, xl = 8 + Math.sin(k * .35) * 1.5; inkS(cv, segPts(xl, y, xl + 9, y + 1), ln); }
+      for (var r = 0; r < 4; r++) inkS(cv, segPts(9.5, 20 + r * 1.5, 7, 21 + r * 1.5), shade(a.c[2], -.2));
+      eyeS(cv, 15, 7.5, 1.1, '#e8a03a');
+      return cv;
     },
     flat: function (a) {
-      var W = 44, H = 22, P = painter(W, H, false);
-      P.poly([7, 11, 1, 6, 1, 16], a.c[2]);
-      if (a.tongue) P.poly([6, 11, 18, 4, 36, 5, 42, 11, 36, 17, 18, 18], a.c[0]);
-      else P.ell(24, 11, 17, 8, a.c[0]);
-      P.ell(24, 11, 13, 5, shade(a.c[0], .08));
-      var R = rnd(13); if (a.spots) for (var s = 0; s < 14; s++) P.rect(12 + R() * 22, 6 + R() * 10, 1, 1, a.c[2]);
-      for (var f = 0; f < 10; f++) { P.rect(10 + f * 2.8, 3 + Math.abs(f - 5) * .4, 1, 2, a.c[2]); P.rect(10 + f * 2.8, 17 - Math.abs(f - 5) * .4, 1, 2, a.c[2]); }
-      var cv = P.done(OUT), c = cv.getContext('2d');
-      c.fillStyle = '#f8f8f0'; c.fillRect(35, 7, 2, 2); c.fillRect(37, 9, 2, 2); c.fillStyle = OUT; c.fillRect(36, 8, 1, 1); c.fillRect(38, 10, 1, 1); return cv;
+      var tg = a.tongue, W = 56, H = 30, P = painter(W, H, false, SK), cx = 28, cy = 15, rx = tg ? 21 : 18, ry = tg ? 7.5 : 9.5;
+      P.poly([cx - rx - 1, cy, cx - rx - 8, cy - 5, cx - rx - 7, cy, cx - rx - 8, cy + 5], a.c[2]);
+      var out = [], inn = [];
+      for (var i = 0; i < 24; i++) { var t = i / 24 * Math.PI * 2, sx = Math.cos(t), sy = Math.sin(t), tp = tg ? (sx > 0 ? 1 - sx * .35 : 1) : 1; out.push(cx + sx * (rx + 2.5), cy + sy * (ry + 2.8) * tp); inn.push(cx + sx * rx, cy + sy * ry * tp); }
+      blob(P, out, shade(a.c[2], .12)); blob(P, inn, a.c[0]);
+      var R = rnd(13); if (a.spots) for (var s = 0; s < 22; s++) P.ell(cx - rx * .8 + R() * rx * 1.5, cy - ry * .7 + R() * ry * 1.4, .7 + R() * .7, .7 + R() * .6, R() > .3 ? a.c[2] : shade(a.c[1], -.1));
+      else for (var s2 = 0; s2 < 14; s2++) P.ell(cx - rx * .8 + R() * rx * 1.5, cy - ry * .7 + R() * ry * 1.4, .6, .6, shade(a.c[0], .18));
+      var cv = P.done(OUT);
+      for (var k = 0; k < 26; k++) { var an = .15 + k / 26 * (Math.PI - .3); [1, -1].forEach(function (sg) { var ax = cx + Math.cos(an) * rx * .98, ay = cy + sg * Math.sin(an) * ry * .98; inkS(cv, segPts(ax, ay, cx + Math.cos(an) * (rx + 2.2), cy + sg * Math.sin(an) * (ry + 2.6)), shade(a.c[2], -.25)); }); }
+      inkS(cv, segPts(cx - rx * .85, cy, cx + rx * .7, cy), shade(a.c[0], -.25));
+      inkS(cv, arcPts(cx + rx * .62, cy, 2, ry * .6, -1.2, 1.2), shade(a.c[0], -.35));
+      eyeS(cv, cx + rx * .72, cy - ry * .35, 1, '#e8d080'); eyeS(cv, cx + rx * .62, cy - ry * .72, 1, '#e8d080');
+      return cv;
     },
     star: function (a) {
-      var W = 28, H = 28, P = painter(W, H, false), pts = [];
-      for (var i = 0; i < 10; i++) { var t = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 5 : 13; pts.push(14 + Math.cos(t) * r, 14 + Math.sin(t) * r); }
+      var W = 34, H = 34, P = painter(W, H, false, SK), pts = [];
+      for (var i = 0; i < 10; i++) { var t = -Math.PI / 2 + i * Math.PI / 5, r = i % 2 ? 5.5 : 15.5; pts.push(17 + Math.cos(t) * r, 17.5 + Math.sin(t) * r); }
+      blob(P, pts.map(function (v, k) { return k % 4 < 2 ? v : v; }), a.c[0]);
       P.poly(pts, a.c[0]);
-      var R = rnd(5); for (var s = 0; s < 18; s++) { var a2 = R() * 6.28, rr = R() * 9; P.rect(14 + Math.cos(a2) * rr, 14 + Math.sin(a2) * rr, 1, 1, a.c[1]); }
-      P.ell(14, 14, 2, 2, a.c[2]);
-      return P.done(OUT);
+      for (var arm = 0; arm < 5; arm++) { var ta = -Math.PI / 2 + arm * Math.PI * 2 / 5; for (var k = 1; k < 6; k++) P.ell(17 + Math.cos(ta) * k * 2.4, 17.5 + Math.sin(ta) * k * 2.4, 1.1 - k * .1, 1.1 - k * .1, a.c[1]); }
+      P.ell(17, 17.5, 3, 3, a.c[2]);
+      var cv = P.done(OUT), R = rnd(5), dt = [];
+      for (var s = 0; s < 60; s++) { var a2 = R() * 6.28, rr = 3 + R() * 11; dt.push(17 + Math.cos(a2) * rr, 17.5 + Math.sin(a2) * rr); }
+      inkS(cv, dt, a.c[2]);
+      dotS(cv, 17, 17.5, shade(a.c[2], -.3), 2);
+      return cv;
     },
     urchin: function (a) {
-      var W = 26, H = 26, P = painter(W, H, false);
-      for (var i = 0; i < 20; i++) { var t = i / 20 * Math.PI * 2; P.line(13 + Math.cos(t) * 6, 14 + Math.sin(t) * 5, 13 + Math.cos(t) * 12, 14 + Math.sin(t) * 11, i % 2 ? a.c[0] : a.c[2]); }
-      P.ell(13, 14, 7, 6, a.c[1]); P.ell(12, 12, 3, 2, shade(a.c[1], .2));
-      return P.done(OUT);
+      var W = 34, H = 32, P = painter(W, H, false, SK), cx = 17, cy = 18;
+      P.ell(cx, cy, 8.5, 7, a.c[1]);
+      var cv0 = P.done(null), cv = cv0;
+      fx(cv, function (cc) {
+        for (var i = 0; i < 44; i++) { var t = -Math.PI + i / 44 * Math.PI * 2 * .999 + (i % 2) * .05, L2 = (i % 3 ? 12 : 15) - (Math.sin(t) > 0 ? 5 : 0); bres(cc, (cx + Math.cos(t) * 6) * SK, (cy + Math.sin(t) * 5) * SK, (cx + Math.cos(t) * L2) * SK, (cy + Math.sin(t) * L2 * .9) * SK, css(i % 2 ? a.c[0] : shade(a.c[0], .3))); }
+      });
+      var P2 = painter(W, H, false, SK); P2.c.setTransform(1, 0, 0, 1, 0, 0); P2.c.drawImage(cv, 0, 0); P2.c.setTransform(SK, 0, 0, SK, 0, 0);
+      P2.col(a.c[0]); P2.col(shade(a.c[0], .3)); P2.col(a.c[1]);
+      P2.ell(cx, cy, 6.5, 5.4, a.c[1]); P2.ell(cx - 2, cy - 2, 2.5, 1.6, shade(a.c[1], .25));
+      var out = P2.done(OUT);
+      for (var k = 0; k < 10; k++) dotS(out, cx - 5 + k, cy + 2 + Math.sin(k) * .8, shade(a.c[1], -.3));
+      return out;
     },
     newt: function (a) {
-      var W = 40, H = 16, P = painter(W, H, false), c = P.c;
-      P.stroke(a.c[0], 3); c.beginPath(); c.moveTo(14, 8); c.quadraticCurveTo(6, 6, 1, 10); c.stroke();
-      P.ell(22, 8, 10, 3.5, a.c[0]); P.ell(33, 7.5, 4.5, 3.5, a.c[0]);
-      [[16, 11, 13, 15], [26, 11, 29, 15], [17, 5, 14, 1], [27, 5, 30, 1]].forEach(function (l) { P.line(l[0], l[1], l[2], l[3], a.c[2]); });
-      P.ell(22, 10, 8, 1.4, a.c[1]); for (var s = 0; s < 5; s++) P.rect(15 + s * 3.5, 5, 1, 1, a.c[1]);
-      var cv = P.done(OUT), cx = cv.getContext('2d'); cx.fillStyle = '#f8d87a'; cx.fillRect(34, 6, 2, 1); return cv;
+      var W = 50, H = 22, P = painter(W, H, false, SK), c = P.c, cy = 11;
+      curve(P, a.c[0], 3.4, [17, cy, 9, cy - 3, 1, cy + 2]);
+      [[19, 1, 15, -1], [32, 1, 36, -1]].forEach(function (l) { [1, -1].forEach(function (sg) { var x1 = l[0], x2 = l[2]; curve(P, a.c[0], 1.6, [x1, cy + sg * 2, (x1 + x2) / 2, cy + sg * 6, x2, cy + sg * 8]); P.ell(x2, cy + sg * 8.5, 1.4, 1, a.c[1]); }); });
+      P.ell(26, cy, 11, 4.2, a.c[0]); P.ell(40, cy, 5.5, 4.2, a.c[0]);
+      P.ell(26, cy + 3.5, 9, 1.2, a.c[1]); P.ell(41, cy + 3, 4, 1, a.c[1]);
+      var R = rnd(4); for (var s = 0; s < 34; s++) P.ell(14 + R() * 30, cy - 3.5 + R() * 6, .6, .6, R() > .6 ? '#d8682e' : shade(a.c[0], .2));
+      for (var k = 0; k < 8; k++) P.ell(17 + k * 2.6, cy - 3.6, .7, .7, a.c[1]);
+      var cv = P.done(OUT);
+      lineS(cv, 43, cy + 1.5, 45.5, cy + 1, OUT);
+      eyeS(cv, 42, cy - 2.4, .9, '#e8a040'); eyeS(cv, 42, cy + 2.2, .9, '#e8a040');
+      return cv;
     },
     nautilus: function (a) {
-      var W = 30, H = 26, P = painter(W, H, false);
-      for (var t = 0; t < 4; t++) P.line(6, 15 + t, 1, 13 + t * 3, a.c[2]);
-      P.ell(17, 13, 11, 11, a.c[0]);
-      for (var s = 0; s < 6; s++) { var an = -1.3 + s * .5; P.line(17 + Math.cos(an) * 4, 13 + Math.sin(an) * 4, 17 + Math.cos(an) * 10.5, 13 + Math.sin(an) * 10.5, a.c[1]); }
-      P.ell(17, 13, 4, 4, shade(a.c[0], -.1)); P.ell(17, 13, 2, 2, a.c[2]);
-      P.ell(8, 15, 3, 4, a.c[2]);
-      var cv = P.done(OUT), c = cv.getContext('2d'); c.fillStyle = OUT; c.fillRect(8, 12, 1, 1); return cv;
+      var W = 38, H = 32, P = painter(W, H, false, SK), cx = 21, cy = 16;
+      for (var t = 0; t < 9; t++) curve(P, shade(a.c[0], -.15), .9, [cx - 9, cy + 2 + t * .4, cx - 13, cy + t * .9, 2 + (t % 3), cy - 2 + t * 1.4]);
+      P.ell(cx, cy, 13, 13, a.c[0]);
+      P.poly([cx - 12, cy - 6, cx - 7, cy - 9, cx - 5, cy + 1, cx - 12, cy + 5], shade(a.c[2], .1));
+      var cv = P.done(OUT);
+      fx(cv, function (cc) {
+        for (var y = 0; y < cv.height; y++) for (var x = 0; x < cv.width; x++) {
+          var ux = x / SK - cx, uy = y / SK - cy, r = Math.sqrt(ux * ux + uy * uy), an = Math.atan2(uy, ux);
+          if (r > 12.4 || ux < -6 && uy > -9 && uy < 6) continue;
+          var stripe = Math.sin(an * 7 + r * .25) > .25 && (an > -1.9 && an < 1.2);
+          if (stripe && r > 5) { cc.fillStyle = css(a.c[1]); cc.fillRect(x, y, 1, 1); }
+        }
+      });
+      inkS(cv, arcPts(cx + 1, cy, 5, 5, 0, 6.2), shade(a.c[0], -.3)); inkS(cv, arcPts(cx + 1.5, cy, 2.5, 2.5, 0, 6.2), shade(a.c[0], -.35));
+      eyeS(cv, cx - 9, cy - 4.5, 1, '#2a2a2a');
+      return cv;
     },
     angler: function (a) {
-      var W = 40, H = 34, P = painter(W, H, false), c = P.c;
-      P.poly([8, 20, 1, 14, 1, 26], a.c[2]);
-      P.ell(20, 21, 13, 11, a.c[0]); P.ell(22, 25, 9, 5, a.c[1]);
-      P.poly([20, 25, 34, 20, 34, 30], shade(a.c[0], -.2));
-      P.stroke(a.c[2], 1); c.beginPath(); c.moveTo(24, 11); c.quadraticCurveTo(30, 0, 36, 5); c.stroke();
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = '#fff6a0'; cx.fillRect(35, 4, 3, 3); cx.fillStyle = '#8af0ff'; cx.fillRect(36, 5, 1, 1);
-      cx.fillStyle = '#f4f4ec'; for (var i = 0; i < 4; i++) { cx.fillRect(25 + i * 2, 22, 1, 2); cx.fillRect(26 + i * 2, 27, 1, 2); }
-      cx.fillStyle = '#f8f8f0'; cx.fillRect(25, 15, 2, 2); cx.fillStyle = OUT; cx.fillRect(26, 16, 1, 1);
+      var W = 48, H = 42, P = painter(W, H, false, SK), c = P.c, cx = 22, cy = 25;
+      P.poly([cx - 13, cy, cx - 20, cy - 6, cx - 19, cy, cx - 20, cy + 6], a.c[2]);
+      blob(P, [cx - 14, cy - 2, cx - 6, cy - 12, cx + 8, cy - 13, cx + 17, cy - 6, cx + 18, cy + 4, cx + 10, cy + 13, cx - 4, cy + 11, cx - 13, cy + 5], a.c[0]);
+      P.poly([cx + 4, cy + 1, cx + 19, cy - 4, cx + 21, cy + 1, cx + 18, cy + 11, cx + 6, cy + 6], '#4a1a24');
+      P.ell(cx - 2, cy + 6, 6, 3, shade(a.c[1], -.05));
+      var R = rnd(6); for (var s = 0; s < 24; s++) P.ell(cx - 12 + R() * 26, cy - 10 + R() * 16, .5, .5, a.c[1]);
+      curve(P, a.c[2], 1, [cx + 4, cy - 12, cx + 12, cy - 26, cx + 22, cy - 20]);
+      var cv = P.done(OUT);
+      fx(cv, function (cc) { var X = (cx + 22) * SK, Y = (cy - 19) * SK; cc.fillStyle = 'rgba(160,240,255,.35)'; cc.beginPath(); cc.arc(X, Y, 7, 0, 7); cc.fill(); cc.fillStyle = '#fff6a0'; cc.beginPath(); cc.arc(X, Y, 3.5, 0, 7); cc.fill(); cc.fillStyle = '#ffffff'; cc.fillRect(X - 1, Y - 1, 2, 2); });
+      for (var i = 0; i < 6; i++) { lineS(cv, cx + 7 + i * 2.2, cy + .5 - i * .9, cx + 7.5 + i * 2.2, cy + 3 - i * .9, '#f4f4ec'); lineS(cv, cx + 8 + i * 1.8, cy + 7.5 - i * .6, cx + 8.4 + i * 1.8, cy + 4.6 - i * .6, '#f4f4ec'); }
+      eyeS(cv, cx + 7, cy - 7, 1, '#7ae0f0');
       return cv;
     },
     shark: function (a, L) {
-      L = a.small ? Math.min(L, 46) : Math.max(L, 54);
-      var hh = L * .2, W = Math.ceil(L + 6), H = Math.ceil(hh * 2.8), P = painter(W, H, false), c = P.c, cy = Math.round(H * .55);
-      P.poly([L * .2, cy - hh * .1, 2, cy - hh * 1.05, L * .1, cy - hh * .1, 6, cy + hh * .5, L * .2, cy + hh * .1], a.c[0]);
-      P.poly([L * .44, cy - hh * .42, L * .52, cy - hh * 1.2, L * .62, cy - hh * .42], a.c[2]);
-      P.poly([L * .58, cy + hh * .3, L * .48, cy + hh * .9, L * .68, cy + hh * .32], a.c[2]);
-      c.beginPath(); c.moveTo(L + 4, cy + (a.goblin ? -hh * .4 : 0)); c.quadraticCurveTo(L * .9, cy - hh * .55, L * .6, cy - hh * .5);
-      c.quadraticCurveTo(L * .3, cy - hh * .4, L * .2, cy - hh * .1); c.lineTo(L * .2, cy + hh * .1);
-      c.quadraticCurveTo(L * .4, cy + hh * .45, L * .7, cy + hh * .42); c.quadraticCurveTo(L * .94, cy + hh * .35, L + 4, cy + (a.goblin ? -hh * .4 : 0)); c.closePath();
-      c.fillStyle = P.col(a.c[0]); c.fill(); c.save(); c.clip(); P.rect(0, cy + hh * .08, W, H, a.c[1]); c.restore();
-      if (!a.small) P.poly([L * .51, cy - hh * 1.2, L * .53, cy - hh * .95, L * .55, cy - hh * .9], '#1b1d2a');
-      var cv = P.done(OUT), cx = cv.getContext('2d');
-      cx.fillStyle = OUT; cx.fillRect(Math.round(L * .86), Math.round(cy - hh * .18), 1, 1);
-      for (var g = 0; g < 3; g++) bres(cx, L * (.74 - g * .03), cy - hh * .12, L * (.73 - g * .03), cy + hh * .16, css(shade(a.c[0], -.3)));
+      L = a.small ? 56 : a.goblin ? 66 : 64;
+      var hh = L * .19, W = Math.ceil(L + 8), H = Math.ceil(hh * 2.9), P = painter(W, H, false, SK), c = P.c, cy = Math.round(H * .52);
+      var tipC = a.c[2];
+      P.poly([L * .2, cy - hh * .1, 3, cy - hh * 1.1, L * .08, cy - hh * .05, 6, cy + hh * .5, L * .2, cy + hh * .12], a.c[0]);
+      P.poly([L * .42, cy - hh * .42, L * .5, cy - hh * 1.25, L * .54, cy - hh * 1.2, L * .62, cy - hh * .42], a.c[0]);
+      P.poly([L * .25, cy - hh * .25, L * .28, cy - hh * .6, L * .32, cy - hh * .25], a.c[0]);
+      P.poly([L * .62, cy + hh * .25, L * .5, cy + hh * 1.05, L * .55, cy + hh * 1.05, L * .7, cy + hh * .3], shade(a.c[0], -.05));
+      P.poly([L * .34, cy + hh * .3, L * .3, cy + hh * .62, L * .38, cy + hh * .32], a.c[0]);
+      var snout = a.goblin ? L + 7 : L + 4;
+      c.beginPath(); c.moveTo(snout, cy - (a.goblin ? hh * .25 : hh * .05)); c.quadraticCurveTo(L * .92, cy - hh * .6, L * .6, cy - hh * .5);
+      c.quadraticCurveTo(L * .3, cy - hh * .4, L * .2, cy - hh * .1); c.lineTo(L * .2, cy + hh * .12);
+      c.quadraticCurveTo(L * .4, cy + hh * .48, L * .7, cy + hh * .45); c.quadraticCurveTo(L * .94, cy + hh * .38, snout, cy - (a.goblin ? hh * .25 : hh * .05)); c.closePath();
+      c.fillStyle = P.col(a.c[0]); c.fill(); c.save(); c.clip();
+      c.beginPath(); c.moveTo(0, cy + hh * .12); c.quadraticCurveTo(L * .6, cy + hh * .02, L + 8, cy + hh * .05); c.lineTo(L + 8, H); c.lineTo(0, H); c.closePath(); c.fillStyle = P.col(a.c[1]); c.fill(); c.restore();
+      if (a.goblin) P.poly([L * .86, cy + hh * .3, L * .98, cy + hh * .2, L * .97, cy + hh * .45, L * .86, cy + hh * .45], '#d88a8a');
+      if (!a.small && !a.goblin) { P.poly([L * .5, cy - hh * 1.25, L * .54, cy - hh * 1.2, L * .56, cy - hh * .95, L * .51, cy - hh * 1], tipC); P.poly([L * .5, cy + hh * 1.05, L * .55, cy + hh * 1.05, L * .56, cy + hh * .9, L * .52, cy + hh * .88], tipC); P.poly([3, cy - hh * 1.1, 7, cy - hh * .8, 5, cy - hh * .75], tipC); }
+      if (a.small) { var R = rnd(2); for (var s = 0; s < 26; s++) P.ell(L * .2 + R() * L * .7, cy - hh * .4 + R() * hh * .45, .6, .6, shade(a.c[0], -.2)); }
+      var cv = P.done(OUT), gl = shade(a.c[0], -.35);
+      for (var g = 0; g < 5; g++) inkS(cv, segPts(L * (.76 - g * .025), cy - hh * .22, L * (.75 - g * .025), cy + hh * .18), gl);
+      inkS(cv, segPts(L * .86, cy + hh * .28, L * .96, cy + hh * .18), OUT);
+      eyeS(cv, L * .86, cy - hh * .14, 1.1, a.goblin ? '#c8d8e0' : '#2a3038');
       return cv;
     }
   };
@@ -987,8 +1272,9 @@
     else {
       var L = Math.round(Math.max(30, Math.min(58, 22 + Math.log(e.cm[1]) * 7))), LF = Math.round(Math.max(56, Math.min(100, 44 + Math.log(e.cm[1]) * 10)));
       if (a.s === 'fish') cv = drawFish(a, LF);
-      else if (a.s === 'eel') cv = eel(a, a.short ? 40 : 58);
+      else if (a.s === 'eel') cv = eel(a, a.short ? 34 : 50);
       else cv = SPECIAL[a.s](a, L);
+      if (a.s !== 'fish') cv = cropC(cv);
     }
     spriteCache[e.id] = cv;
     return cv;
