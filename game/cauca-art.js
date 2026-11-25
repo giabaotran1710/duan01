@@ -608,73 +608,138 @@
     else if (kind === 'fan') { P.c.fillStyle = P.col(col); P.c.beginPath(); P.c.moveTo(x + 2, cy); P.c.arc(x + 2, cy, L * .3, Math.PI - 1.05, Math.PI + 1.05); P.c.closePath(); P.c.fill(); }
     else if (kind === 'point') P.poly([x + 2, cy - hh * .22, 0, cy, x + 2, cy + hh * .22], col);
   }
+  /* Cá vẽ chi tiết: thân đổ bóng nhiều tầng (lưng tối, sườn ánh bạc, bụng sáng), vây có tia,
+   * nắp mang, miệng, mắt có tròng. L: chiều dài thân tính bằng điểm ảnh. */
   function drawFish(a, L) {
-    var hh = Math.max(4, L * (a.h || .3)), pad = Math.ceil(hh * (a.dor === 'sail' ? 1.1 : .55)) + 2, padL = a.tail === 'fan' ? Math.ceil(L * .14) : 1;
-    var extra = a.snout === 'bill' ? Math.ceil(L * .35) : 2;
-    var W = Math.ceil(L + padL + extra + 2), H = Math.ceil(hh + pad * 2), P = painter(W, H, false), c = P.c, cy = Math.round(H / 2) + (a.dor === 'sail' ? Math.round(hh * .3) : 0);
-    c.save(); c.translate(padL, 0);
-    var back = a.c[0], belly = a.c[1], fin = a.c[2], top = cy - hh * .48;
-    tail(P, L, cy, hh, a.tail, fin);
-    // vây lưng
-    if (a.dor === 'low') P.poly([L * .44, top + 1, L * .53, top - hh * .2, L * .62, top + 1], fin);
-    else if (a.dor === 'tall') P.poly([L * .42, top + 1, L * .5, top - hh * .42, L * .6, top + 1], fin);
-    else if (a.dor === 'spiky') { var pts = [L * .3, top + 2]; for (var i = 0; i <= 8; i++) pts.push(L * (.32 + i * .05), top - (i % 2 ? hh * .12 : hh * .3) + (i > 5 ? hh * .1 : 0)); pts.push(L * .74, top + 2); P.poly(pts, fin); }
-    else if (a.dor === 'long') P.poly([L * .26, top + 2, L * .3, top - hh * .2, L * .66, top - hh * .16, L * .72, top + 2], fin);
-    else if (a.dor === 'sail') P.poly([L * .3, top + 2, L * .38, top - hh * 1.05, L * .62, top - hh * .7, L * .78, top + 2], fin);
-    else if (a.dor === 'tiny') P.poly([L * .48, top + 1, L * .52, top - hh * .1, L * .56, top + 1], fin);
-    if (a.adi) P.ell(L * .3, top + 1, L * .03, hh * .08, fin);
-    if (a.anal) P.poly([L * .24, cy + hh * .3, L * .3, cy + hh * .58, L * .62, cy + hh * .52, L * .64, cy + hh * .36], fin);
-    else P.poly([L * .3, cy + hh * .3, L * .34, cy + hh * .52, L * .42, cy + hh * .36], fin);
-    if (a.finlet) for (var f = 0; f < 4; f++) { P.rect(L * (.22 + f * .04), top + hh * .32, 1, 1, '#e8c22a'); P.rect(L * (.22 + f * .04), cy + hh * .3, 1, 1, '#e8c22a'); }
-    if (a.snout === 'bill') P.poly([L * .96, cy - hh * .12, L * 1.33, cy - hh * .02, L * .96, cy + hh * .04], shade(back, .1));
-    // thân: lưng, bụng
-    c.save(); fishBody(c, L, cy, hh, a); c.fillStyle = P.col(back); c.fill(); c.clip();
-    P.rect(0, cy + hh * .06, L * 1.1, hh, belly);
-    P.rect(0, cy - hh, L * 1.1, hh * .62, shade(back, -.14));
-    var pc = a.pc || shade(back, -.3), R = rnd(L * 13 + (a.c[0].charCodeAt(2) || 1));
-    if (a.pat === 'bars') for (var b = 0; b < 5; b++) P.rect(L * (.32 + b * .12), 0, Math.max(1, L * .04), H, mix(back, [0, 0, 0], .28));
-    if (a.pat === 'stripes') for (var s = -1; s <= 1; s++) P.rect(0, cy + s * hh * .2, L, Math.max(1, hh * .07), mix(back, [0, 0, 0], .3));
-    if (a.pat === 'stripe') P.rect(L * .22, cy - hh * .05, L * .74, Math.max(1, hh * .1), hex(pc).slice(0, 3));
-    if (a.pat === 'band' && !a.band) P.rect(L * .2, cy - hh * .16, L * .8, hh * .18, mix(back, [0, 0, 0], .25));
-    if (a.band) P.rect(L * .22, cy - hh * .08, L * .74, Math.max(1, hh * .16), a.band);
-    if (a.pat === 'spots' || a.pat === 'dots') for (var d = 0; d < L * .5; d++) P.rect(L * (.22 + R() * .7), cy - hh * .45 + R() * hh * (a.pat === 'dots' ? .9 : .6), 1, 1, a.pat === 'dots' && a.pc && a.pc.indexOf('#') === 0 ? a.pc : mix(back, [0, 0, 0], .45));
-    if (a.pat === 'blotch') for (var k = 0; k < 6; k++) P.ell(L * (.28 + k * .11), cy - hh * .05 + (k % 2 ? hh * .12 : -hh * .1), L * .04, hh * .1, mix(back, [0, 0, 0], .4));
-    if (a.pat === 'wavy') for (var v = 0; v < 7; v++) P.rect(L * (.3 + v * .09), cy - hh * .42, 1, hh * .3, mix(back, [0, 0, 0], .35));
-    if (a.pat === 'clown') { [.78, .52, .28].forEach(function (x) { P.rect(L * x - L * .05, 0, L * .1, H, '#1b1d2a'); P.rect(L * x - L * .035, 0, L * .07, H, '#f8f8f4'); }); }
-    c.restore();
-    // vây ngực
-    P.poly([L * .7, cy + hh * .05, L * .58, cy + hh * .22, L * .64, cy + hh * .05], shade(fin, -.1));
-    if (a.snout === 'lips') P.ell(L * .99, cy + hh * .02, L * .04, hh * .1, '#e07a7a');
-    c.restore();
-    var cvs = P.done(OUT), cx = cvs.getContext('2d');
-    // vảy: chấm tối xen kẽ ở nửa trên thân
-    if (a.pat === 'scales') {
-      var im = cx.getImageData(0, 0, W, H), dd = im.data, step = a.bigScale ? 4 : 3;
-      for (var y = Math.round(cy - hh * .4); y < cy + hh * .1; y++) for (var x = Math.round(padL + L * .26); x < padL + L * .86; x++) {
-        var o = (y * W + x) * 4;
-        if (dd[o + 3] && ((x + (y % 2) * Math.floor(step / 2)) % step === 0) && !(dd[o] === 27 && dd[o + 1] === 29)) { dd[o] *= .78; dd[o + 1] *= .78; dd[o + 2] *= .78; }
-      }
-      cx.putImageData(im, 0, 0);
+    var hh = Math.max(8, L * (a.h || .3) * 1.12), sail = a.dor === 'sail';
+    var padT = Math.ceil(hh * (sail ? 1.15 : a.dor === 'tall' || a.dor === 'spiky' ? .62 : .42)) + 3, padB = Math.ceil(hh * (a.anal ? .5 : .36)) + 3;
+    var padL = Math.ceil(L * (a.tail === 'fan' ? .1 : .02)) + 1, extra = a.snout === 'bill' ? Math.ceil(L * .35) : 3;
+    var W = Math.ceil(L + padL + extra + 2), H = Math.ceil(hh + padT + padB), P = painter(W, H, false), c = P.c;
+    var cy0 = padT + hh / 2, x0 = L * .17, up = a.snout === 'up' ? -.14 : a.snout === 'lips' ? .04 : 0, blunt = a.snout === 'blunt';
+    var back = hex(a.c[0]), belly = hex(a.c[1]), fin = hex(a.c[2]);
+    var R = rnd(L * 31 + (a.c[0].charCodeAt(2) || 1) * 7 + (a.c[1].charCodeAt(3) || 1));
+    // dáng thân: u = 0 ở cuống đuôi, 1 ở mõm
+    function prof(x) {
+      var u = Math.max(0, Math.min(1, (x - x0) / (L - x0)));
+      var uu = blunt ? .05 + .87 * u : .02 + .96 * u;
+      var f = Math.pow(Math.sin(Math.PI * Math.pow(uu, .85)), .62);
+      f = .17 + .83 * f;
+      if (u > .985 && !blunt) f *= .6;
+      var hump = a.hump ? Math.max(0, 1 - Math.abs(u - .62) / .22) * .22 : 0;
+      var cy = cy0 + up * hh * Math.max(0, u - .55) / .45;
+      return { u: u, top: cy - hh * .5 * (f * 1.04 + hump), bot: cy + hh * .5 * f * .96, cy: cy };
     }
+    function ox(x) { return x + padL; }
+    var fd = shade(fin, -.28), fl = shade(fin, .18);
+    function finQ(b1, b2, o1, o2, col, rays) {
+      P.poly([ox(b1[0]), b1[1], ox(o1[0]), o1[1], ox(o2[0]), o2[1], ox(b2[0]), b2[1]], col);
+      for (var k = 1; k < rays; k++) { var t = k / rays; P.line(ox(b1[0] + (b2[0] - b1[0]) * t), b1[1] + (b2[1] - b1[1]) * t, ox(o1[0] + (o2[0] - o1[0]) * t), o1[1] + (o2[1] - o1[1]) * t, k % 2 ? fd : fl); }
+    }
+    var pT = prof(x0 + 1), tailX = x0 + 1, tcy = pT.cy;
+    // ---- đuôi
+    var th = hh * (a.tail === 'moon' ? .95 : a.tail === 'fork' ? .78 : .6);
+    if (a.tail === 'fork') { finQ([tailX + 2, tcy - hh * .1], [tailX + 2, tcy - 1], [0, tcy - th], [L * .07, tcy - 1], fin, 5); finQ([tailX + 2, tcy + 1], [tailX + 2, tcy + hh * .1], [L * .07, tcy + 1], [0, tcy + th], fin, 5); }
+    else if (a.tail === 'moon') { finQ([tailX + 2, tcy - hh * .08], [tailX + 2, tcy], [-1, tcy - th], [L * .1, tcy - th * .15], fin, 4); finQ([tailX + 2, tcy], [tailX + 2, tcy + hh * .08], [L * .1, tcy + th * .15], [-1, tcy + th], fin, 4); }
+    else if (a.tail === 'round') { P.ell(ox(L * .1), tcy, L * .1, hh * .36, fin); for (var rr = -3; rr <= 3; rr++) P.line(ox(tailX + 1), tcy, ox(L * .02), tcy + rr * hh * .1, rr % 2 ? fd : fl); }
+    else if (a.tail === 'fan') { c.fillStyle = P.col(fin); c.beginPath(); c.moveTo(ox(tailX + 2), tcy); c.arc(ox(tailX + 2), tcy, L * .26, Math.PI - 1.1, Math.PI + 1.1); c.closePath(); c.fill(); for (var fr = -4; fr <= 4; fr++) { var an = Math.PI + fr * .25; P.line(ox(tailX + 2), tcy, ox(tailX + 2 + Math.cos(an) * L * .25), tcy + Math.sin(an) * L * .25, fr % 2 ? fd : fl); } }
+    else if (a.tail === 'point') P.poly([ox(tailX + 3), tcy - hh * .2, ox(0), tcy, ox(tailX + 3), tcy + hh * .2], fin);
+    // ---- vây lưng, vây hậu môn, vây bụng (sau thân)
+    function topAt(t) { return prof(L * t).top; }
+    function botAt(t) { return prof(L * t).bot; }
+    var dh = hh * (a.dor === 'tall' ? .5 : a.dor === 'low' ? .22 : a.dor === 'long' ? .2 : a.dor === 'tiny' ? .1 : .3);
+    if (a.dor === 'spiky') {
+      var pts = [ox(L * .34), topAt(.34) + 2];
+      for (var i = 0; i <= 9; i++) { var tx = .36 + i * .035; pts.push(ox(L * tx), topAt(tx) - (i % 2 ? hh * .14 : hh * .36) * (1 - i * .05)); }
+      pts.push(ox(L * .7), topAt(.7) + 2); P.poly(pts, fin);
+      for (var s2 = 0; s2 <= 9; s2 += 2) P.line(ox(L * (.36 + s2 * .035)), topAt(.36 + s2 * .035) + 1, ox(L * (.36 + s2 * .035)), topAt(.36 + s2 * .035) - hh * .34 * (1 - s2 * .05), fd);
+      finQ([L * .24, topAt(.24) + 2], [L * .34, topAt(.34) + 2], [L * .27, topAt(.27) - hh * .22], [L * .34, topAt(.34) - hh * .12], fin, 3);
+    } else if (a.dor === 'sail') {
+      finQ([L * .3, topAt(.3) + 2], [L * .78, topAt(.78) + 2], [L * .36, topAt(.36) - hh * 1.1], [L * .64, topAt(.64) - hh * .75], fin, 9);
+    } else if (a.dor === 'long') {
+      finQ([L * .24, topAt(.24) + 2], [L * .7, topAt(.7) + 2], [L * .28, topAt(.28) - dh], [L * .66, topAt(.66) - dh * .9], fin, 9);
+    } else if (a.dor && a.dor !== 'none') {
+      finQ([L * .42, topAt(.42) + 2], [L * .6, topAt(.6) + 2], [L * .47, topAt(.47) - dh], [L * .52, topAt(.52) - dh * .5], fin, 4);
+      if (a.finlet || a.dor === 'tall' && L > 70 && a.tail === 'moon') finQ([L * .26, topAt(.26) + 2], [L * .33, topAt(.33) + 2], [L * .28, topAt(.28) - dh * .45], [L * .32, topAt(.32) - dh * .2], fin, 2);
+    }
+    if (a.adi) P.ell(ox(L * .29), topAt(.29) - 1, L * .025, hh * .07, fin);
+    if (a.anal) finQ([L * .24, botAt(.24) - 2], [L * .62, botAt(.62) - 2], [L * .28, botAt(.28) + hh * .3], [L * .58, botAt(.58) + hh * .22], fin, 7);
+    else finQ([L * .26, botAt(.26) - 2], [L * .36, botAt(.36) - 2], [L * .29, botAt(.29) + hh * .2], [L * .34, botAt(.34) + hh * .1], fin, 3);
+    finQ([L * .5, botAt(.5) - 2], [L * .58, botAt(.58) - 2], [L * .48, botAt(.48) + hh * .24], [L * .52, botAt(.52) + hh * .14], fin, 3);
+    if (a.finlet) for (var f = 0; f < 5; f++) { var fx = L * (.2 + f * .035); P.poly([ox(fx), topAt(fx / L) + 1, ox(fx + 1.5), topAt(fx / L) - 2, ox(fx + 2.5), topAt(fx / L) + 1], '#e8c22a'); P.poly([ox(fx), botAt(fx / L) - 1, ox(fx + 1.5), botAt(fx / L) + 2, ox(fx + 2.5), botAt(fx / L) - 1], '#e8c22a'); }
+    if (a.snout === 'bill') P.poly([ox(L * .97), prof(L * .97).cy - hh * .1, ox(L * 1.33), prof(L).cy - hh * .02, ox(L * .97), prof(L * .97).cy + hh * .05], shade(back, .12));
+    // ---- thân: tô từng điểm ảnh theo vị trí dọc, có hoà sắc Bayer ở chỗ chuyển màu
+    var dark = shade(back, -.25), side = mix(back, belly, .55), sheen = mix(mix(back, belly, .7), [255, 255, 255], .45), under = shade(belly, -.14);
+    var tones = [dark, back, side, belly, under];
+    var cut = [.13, .4, .55, .9];
+    var scaleStep = a.bigScale ? 5 : 4;
+    for (var x = Math.floor(x0); x <= Math.ceil(L); x++) {
+      var p = prof(x + .5), top = p.top, bot = p.bot, hgt = bot - top;
+      if (hgt < 1) continue;
+      for (var y = Math.floor(top); y <= Math.ceil(bot); y++) {
+        if (y + .5 < top || y + .5 > bot) continue;
+        var v = (y + .5 - top) / hgt, b = (BAYER[(y & 3) * 4 + (x & 3)] / 16 - .5) * .07, vv = v + b, k = 0;
+        while (k < cut.length && vv > cut[k]) k++;
+        var col = tones[k];
+        if (Math.abs(v - .47) < .5 / hgt * 1.2 && p.u > .1 && p.u < .78) col = sheen;
+        // vảy: hình bán nguyệt tối nhẹ ở nửa trên
+        if (a.pat === 'scales' && v < .62 && p.u > .08 && p.u < .76) {
+          var row = Math.floor((y - top) / (scaleStep * .75)), sx = (x + (row % 2) * scaleStep / 2) % scaleStep;
+          if (sx < .9 || (y - top) % (scaleStep * .75) < .8 && sx > scaleStep * .3 && sx < scaleStep * .7) col = mix(col, [10, 12, 20], .22);
+        }
+        c.fillStyle = P.col(col); c.fillRect(ox(x), y, 1, 1);
+      }
+    }
+    // ---- hoa văn
+    var pc = a.pc ? hex(a.pc) : shade(back, -.35);
+    function inBody(x, y) { var p = prof(x); return y >= p.top + .5 && y <= p.bot - .5; }
+    function dot(x, y, col, w, h) { for (var i = 0; i < (w || 1); i++) for (var j = 0; j < (h || 1); j++) if (inBody(x + i, y + j)) { c.fillStyle = P.col(col); c.fillRect(ox(Math.round(x + i)), Math.round(y + j), 1, 1); } }
+    var pcol = pc.length > 3 && pc[3] < 1 ? mix(back, [pc[0], pc[1], pc[2]], Math.min(1, pc[3] * 1.4)) : pc;
+    if (a.pat === 'bars') for (var bi = 0; bi < 6; bi++) { var bx = L * (.3 + bi * .095), pr = prof(bx); for (var by = pr.top; by < pr.top + (pr.bot - pr.top) * .75; by++) dot(bx, by, mix(back, [0, 0, 0], .3), Math.max(2, L * .035), 1); }
+    if (a.pat === 'stripes') for (var sr = 0; sr < 3; sr++) for (var sxx = x0 + 3; sxx < L * .82; sxx++) { var ps = prof(sxx); dot(sxx, ps.top + (ps.bot - ps.top) * (.28 + sr * .16), pcol); }
+    if (a.pat === 'stripe') for (var s1 = x0 + 2; s1 < L * .86; s1++) { var p1 = prof(s1); dot(s1, p1.top + (p1.bot - p1.top) * .46, pc.length > 3 && pc[3] < 1 ? mix(belly, [pc[0], pc[1], pc[2]], .8) : pc, 1, Math.max(1, Math.round(hh * .08))); }
+    if (a.band) for (var bd = x0 + 2; bd < L * .84; bd++) { var pb = prof(bd); dot(bd, pb.top + (pb.bot - pb.top) * .4, hex(a.band), 1, Math.max(2, Math.round(hh * .14))); }
+    if (a.pat === 'band' && !a.band) for (var bn = x0 + 2; bn < L * .84; bn++) { var pn = prof(bn); dot(bn, pn.top + (pn.bot - pn.top) * .36, mix(back, [0, 0, 0], .25), 1, Math.max(2, Math.round(hh * .16))); }
+    if (a.pat === 'spots' || a.pat === 'dots') for (var d = 0; d < L * .9; d++) { var dx = L * (.2 + R() * .62), pd = prof(dx), dy = pd.top + (pd.bot - pd.top) * (a.pat === 'dots' ? .1 + R() * .8 : .08 + R() * .5); dot(dx, dy, a.pat === 'dots' && a.pc && a.pc.indexOf('#') === 0 ? a.pc : mix(back, [0, 0, 0], .45), R() > .6 ? 2 : 1, 1); }
+    if (a.pat === 'blotch') for (var bk = 0; bk < 7; bk++) { var kx = L * (.26 + bk * .085), pk = prof(kx), ky = pk.top + (pk.bot - pk.top) * (bk % 2 ? .45 : .25); for (var q = 0; q < 9; q++) dot(kx + (R() - .5) * L * .06, ky + (R() - .5) * hh * .2, mix(back, [0, 0, 0], .42), 2, 1); }
+    if (a.pat === 'wavy') for (var wv = 0; wv < 9; wv++) { var wx = L * (.28 + wv * .06), pw = prof(wx); for (var wy = 0; wy < (pw.bot - pw.top) * .34; wy++) dot(wx + Math.sin(wy * .9) * 1.2, pw.top + 1 + wy, mix(back, [0, 0, 0], .38)); }
+    if (a.pat === 'clown') [.78, .52, .28].forEach(function (t) { var cx2 = L * t, pcw = prof(cx2); for (var yy = pcw.top; yy <= pcw.bot; yy++) { dot(cx2 - L * .05, yy, '#1b1d2a', 1, 1); dot(cx2 - L * .04, yy, '#f8f8f4', Math.max(2, L * .07), 1); dot(cx2 + L * .035, yy, '#1b1d2a', 1, 1); } });
+    // ---- nắp mang, vây ngực, miệng
+    var gx = L * (blunt ? .76 : .78), pg = prof(gx), gcol = mix(back, [0, 0, 0], .38);
+    for (var gy = pg.top + (pg.bot - pg.top) * .16; gy < pg.bot - (pg.bot - pg.top) * .08; gy++) { var gt = (gy - pg.top) / (pg.bot - pg.top); dot(gx - Math.sin(gt * Math.PI) * L * .035, gy, gcol); }
+    var head = mix(side, [255, 255, 255], .08);
+    for (var hy2 = pg.top + (pg.bot - pg.top) * .42; hy2 < pg.bot - (pg.bot - pg.top) * .2; hy2++) dot(gx + 1, hy2, head, Math.round(L * .05), 1);
+    var px0 = gx - L * .03, pp = prof(px0), py = pp.top + (pp.bot - pp.top) * .55, pf = shade(fin, .08), pe = shade(fin, -.4);
+    var pfl = L * .15, pfh = hh * .2;
+    P.poly([ox(px0), py - 1, ox(px0 - pfl * .55), py - pfh * .25, ox(px0 - pfl), py + pfh * .35, ox(px0 - pfl * .8), py + pfh, ox(px0), py + 2], pf);
+    for (var pr2 = 0; pr2 < 4; pr2++) P.line(ox(px0), py + pr2 * .7, ox(px0 - pfl * (.62 + pr2 * .12)), py - pfh * .2 + pr2 * pfh * .38, pr2 % 2 ? pe : fd);
+    P.line(ox(px0), py - 1, ox(px0 - pfl * .55), py - pfh * .25, pe);
+    var mp = prof(L * .985), my = mp.cy + hh * (a.snout === 'up' ? -.02 : .08);
+    for (var mx = L * .9; mx < L * .99; mx++) dot(mx, my + (L * .99 - mx) * .12, mix(back, [0, 0, 0], .5));
+    if (a.snout === 'lips') P.ell(ox(L * .995), my, L * .03, hh * .08, '#e07a7a');
+    c.restore && 0;
+    var cvs = P.done(OUT), cx = cvs.getContext('2d');
     if (a.glass) {
       var im2 = cx.getImageData(0, 0, W, H), d2 = im2.data;
       for (var g = 0; g < d2.length; g += 4) if (d2[g + 3] && !(d2[g] === 27 && d2[g + 1] === 29)) d2[g + 3] = 170;
       cx.putImageData(im2, 0, 0);
     }
-    // mắt
-    var ex = Math.round(padL + L * .86), ey = Math.round(cy - hh * (a.eye === 'low' ? -.02 : .14));
-    var er = (L >= 40 ? 2 : 1) + (a.eye === 'big' ? 1 : 0);
-    cx.fillStyle = a.eye === 'red' ? '#f05a3a' : '#f8f8f0'; cx.fillRect(ex - 1, ey - 1, er + 1, er + 1);
-    cx.fillStyle = OUT; cx.fillRect(ex, ey, er, er);
-    if (a.fangs) { cx.fillStyle = '#f4f4ec'; for (var fg = 0; fg < 3; fg++) { cx.fillRect(Math.round(padL + L * (.9 + fg * .03)), Math.round(cy + hh * .02), 1, 2); } }
-    // râu
-    if (a.bar) {
-      cx.fillStyle = shade(fin, -.2) && css(shade(fin, -.25));
-      for (var q = 0; q < a.bar; q++) bres(cx, padL + L * .97, cy + hh * (.08 + q * .1), padL + L * (1.02 + q * .02), cy + hh * (.45 + q * .25), css(shade(fin, -.3)));
-    }
-    // ánh mang
-    bres(cx, padL + L * .78, cy - hh * .3, padL + L * .75, cy + hh * .25, css(mix(back, [0, 0, 0], .35)));
-    return cvs;
+    // ---- mắt: tròng sáng, con ngươi, đốm sáng
+    var ep = prof(L * .885), er = Math.max(2, Math.round(L * (a.eye === 'big' ? .055 : .036))), ex = Math.round(ox(L * .885)), ey = Math.round(ep.top + (ep.bot - ep.top) * (a.eye === 'low' ? .5 : .36));
+    var iris = a.eye === 'red' ? '#e8503a' : css(mix(fin, [240, 220, 140], .55));
+    cx.fillStyle = css(mix(back, [0, 0, 0], .45)); cx.beginPath(); cx.arc(ex + .5, ey + .5, er + 1, 0, 7); cx.fill();
+    cx.fillStyle = iris; cx.beginPath(); cx.arc(ex + .5, ey + .5, er, 0, 7); cx.fill();
+    cx.fillStyle = OUT; cx.beginPath(); cx.arc(ex + .5, ey + .5, Math.max(1, er * .6), 0, 7); cx.fill();
+    cx.fillStyle = '#ffffff'; cx.fillRect(ex - Math.floor(er * .3), ey - Math.floor(er * .3), 1, 1);
+    if (a.fangs) { cx.fillStyle = '#f4f4ec'; for (var fg = 0; fg < 4; fg++) cx.fillRect(Math.round(ox(L * (.9 + fg * .025))), Math.round(my + 1), 1, 2); }
+    // ---- râu
+    if (a.bar) for (var qb = 0; qb < a.bar; qb++) bres(cx, ox(L * .97), my + qb * 1.5, ox(L * (1.03 + qb * .03)), my + hh * (.45 + qb * .28), css(shade(fin, -.3)));
+    return cropC(cvs);
+  }
+  function cropC(c) {
+    var w = c.width, h = c.height, d = c.getContext('2d').getImageData(0, 0, w, h).data, x0 = w, y0 = h, x1 = -1, y1 = -1;
+    for (var y = 0; y < h; y++) for (var x = 0; x < w; x++) if (d[(y * w + x) * 4 + 3]) { if (x < x0) x0 = x; if (x > x1) x1 = x; if (y < y0) y0 = y; if (y > y1) y1 = y; }
+    if (x1 < 0) return c;
+    var o = canvas(x1 - x0 + 3, y1 - y0 + 3); o.getContext('2d').drawImage(c, x0 - 1, y0 - 1, o.width, o.height, 0, 0, o.width, o.height); return o;
   }
   function eel(a, L) {
     var th = Math.max(3, L * (a.short ? .1 : .075)), W = Math.ceil(L + 4), H = Math.ceil(th * 3.4 + 4), P = painter(W, H, false), c = P.c, cy = H / 2;
@@ -920,8 +985,8 @@
     var a = e.a, cv;
     if (e.r === 'rac') cv = junk(a);
     else {
-      var L = Math.round(Math.max(30, Math.min(58, 22 + Math.log(e.cm[1]) * 7)));
-      if (a.s === 'fish') cv = drawFish(a, L);
+      var L = Math.round(Math.max(30, Math.min(58, 22 + Math.log(e.cm[1]) * 7))), LF = Math.round(Math.max(56, Math.min(100, 44 + Math.log(e.cm[1]) * 10)));
+      if (a.s === 'fish') cv = drawFish(a, LF);
       else if (a.s === 'eel') cv = eel(a, a.short ? 40 : 58);
       else cv = SPECIAL[a.s](a, L);
     }
@@ -1020,7 +1085,7 @@
       default: P = painter(4, 4, false); P.rect(0, 0, 4, 4, '#888');
     }
     var cv = P.done(OUT);
-    if (id === 'tuong') { var x = cv.getContext('2d'), f = CA.sprite(window.CC.byId.chepvang); x.save(); x.translate(13, 12); x.rotate(-.9); x.drawImage(f, -f.width * .22, -f.height * .22, f.width * .44, f.height * .44); x.restore(); }
+    if (id === 'tuong') { var x = cv.getContext('2d'), f = CA.sprite(window.CC.byId.chepvang); x.save(); x.translate(13, 12); x.rotate(-.9); var fk = 22 / f.width; x.drawImage(f, -f.width * fk / 2, -f.height * fk / 2, f.width * fk, f.height * fk); x.restore(); }
     decoCache[id] = cv; return cv;
   };
   var itemCache = {};
