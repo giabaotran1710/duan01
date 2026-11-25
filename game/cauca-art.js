@@ -832,7 +832,7 @@
     if (on.suc) { c.fillStyle = 'rgba(230,248,255,.8)'; for (var b = 0; b < 8; b++) { var by = (sy - 6) - ((t * 14 + b * 9) % (sy - 4)); c.fillRect(Math.round(.94 * w + Math.sin(t * 3 + b) * 1.5), Math.round(by), 1 + (b % 2), 1 + (b % 2)); } }
     fish.forEach(function (f) {
       var s = CA.sprite(f.e), tw = Math.round(Math.max(9, Math.min(w * .32, 5 + Math.log(f.cm + 2) * 5))), sc = tw / s.width, th = Math.max(2, Math.round(s.height * sc));
-      c.save(); c.translate(Math.round(f.x), Math.round(f.y + Math.sin(t * 2 + f.ph) * 1)); if (f.vx < 0) c.scale(-1, 1);
+      c.save(); c.translate(Math.round(f.x), Math.round(f.y + Math.sin(t * 1.2 + f.ph) * 1)); if ((f.face || f.vx) < 0) c.scale(-1, 1);
       c.drawImage(s, Math.round(-tw / 2), Math.round(-th / 2), tw, th); c.restore();
     });
     c.fillStyle = 'rgba(255,255,255,.25)'; c.fillRect(2, 2, 1, h - 14); c.fillRect(4, 2, 1, 6);
