@@ -402,6 +402,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     c.beginPath(); c.arc(fx + 3.5, fy - 3, 2.6, 0, TAU); fs(c, skin, 1.6);
     return [fx, fy];
   }
+  // Siêu khó: đồ cầm (đèn lồng, ngôi sao) tự phát sáng nên vẽ sau lớp tối; ghi lại phép biến đổi để vẽ bù
+  function putItem(c, lk, hx, hy, tm, ph, extra) {
+    if (extra && extra.defer) extra.defer.push({ m: c.getTransform(), lk, hx, hy, tm, ph });
+    else drawItem(c, lk, hx, hy, tm, ph);
+  }
   // vẽ đồ cầm; (hx,hy) là vị trí bàn tay
   function drawItem(c, lk, hx, hy, tm, ph) {
     const it = lk.item;
@@ -755,7 +760,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.fillStyle = 'rgba(255,255,255,.25)'; c.beginPath(); c.ellipse(6, -2, 5, 2, 0, 0, TAU); c.fill();
       c.restore();
     };
-    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); drawItem(c, lk, -16, hy, tm, kp); }
+    if (backHand) { arm(c, -6, shY, -16, hy + 4, shirtD, lk.skin, 1); putItem(c, lk, -16, hy, tm, kp, extra); }
     leg(-4, -a, pc, false);
     if (!backHand) arm(c, -6, shY, -6 + Math.sin(-a * .9) * 22, shY + 32, shirtD, hsl(25, 40, 60), 1);
     leg(6, a, pc, true);
@@ -788,7 +793,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
         seg(c, px, py, px + 22, py + 6 + beat * 6, 2.8, '#c08a4a');
         c.beginPath(); c.arc(px + 22, py + 6 + beat * 6, 3.4, 0, TAU); fs(c, '#e04e6a', 1.4);
       } else {
-        drawItem(c, lk, 20, hy, tm, kp);
+        putItem(c, lk, 20, hy, tm, kp, extra);
         arm(c, 4, shY, 20, hy + 4, shirt, lk.skin, 1);
       }
     } else {
@@ -809,9 +814,13 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     c.fillStyle = 'rgba(255,255,255,.7)'; for (let i = 0; i < 70; i++) { c.beginPath(); c.arc(r() * W, r() * 300, r() * 1.6 + .4, 0, TAU); c.fill(); }
     // trăng rằm
     const mx = W * .78, my = 120;
-    g = c.createRadialGradient(mx, my, 30, mx, my, 170); g.addColorStop(0, 'rgba(255,230,160,.35)'); g.addColorStop(1, 'rgba(255,230,160,0)'); c.fillStyle = g; c.fillRect(mx - 170, my - 170, 340, 340);
-    c.fillStyle = '#ffe9b0'; c.beginPath(); c.arc(mx, my, 56, 0, TAU); c.fill();
-    c.fillStyle = 'rgba(214,180,110,.35)'; for (const [dx, dy, rr] of [[-18, -12, 12], [14, 10, 16], [10, -22, 7], [-20, 22, 8]]) { c.beginPath(); c.arc(mx + dx, my + dy, rr, 0, TAU); c.fill(); }
+    const moon = () => {
+      const g = c.createRadialGradient(mx, my, 30, mx, my, 170); g.addColorStop(0, 'rgba(255,230,160,.35)'); g.addColorStop(1, 'rgba(255,230,160,0)'); c.fillStyle = g; c.fillRect(mx - 170, my - 170, 340, 340);
+      c.fillStyle = '#ffe9b0'; c.beginPath(); c.arc(mx, my, 56, 0, TAU); c.fill();
+      c.fillStyle = 'rgba(214,180,110,.35)'; for (const [dx, dy, rr] of [[-18, -12, 12], [14, 10, 16], [10, -22, 7], [-20, 22, 8]]) { c.beginPath(); c.arc(mx + dx, my + dy, rr, 0, TAU); c.fill(); }
+    };
+    moon();
+    const wins = [];
     // dãy nhà phố xa
     let x = -20;
     while (x < W + 40) {
@@ -821,7 +830,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       c.fillStyle = '#4a2140'; c.beginPath(); c.moveTo(x - 10, top + 6); c.lineTo(x + w / 2, top - 28 - r() * 14); c.lineTo(x + w + 10, top + 6); c.closePath(); c.fill();
       // cửa sổ sáng
       for (let wy = top + 30; wy < 560; wy += 50) for (let wx = x + 16; wx < x + w - 24; wx += 34) {
-        if (r() < .6) { c.fillStyle = r() < .7 ? 'rgba(255,196,110,.75)' : 'rgba(255,150,90,.6)'; c.fillRect(wx, wy, 16, 22); }
+        if (r() < .6) { const fc = r() < .7 ? 'rgba(255,196,110,.75)' : 'rgba(255,150,90,.6)'; c.fillStyle = fc; c.fillRect(wx, wy, 16, 22); wins.push([wx, wy, fc]); }
         else { c.fillStyle = 'rgba(10,5,25,.5)'; c.fillRect(wx, wy, 16, 22); }
       }
       x += w + 4;
@@ -832,6 +841,12 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     g = c.createLinearGradient(0, 636, 0, H); g.addColorStop(0, '#4b3346'); g.addColorStop(1, '#2d1d2e'); c.fillStyle = g; c.fillRect(0, 636, W, H - 636);
     c.strokeStyle = 'rgba(255,255,255,.05)'; c.lineWidth = 2;
     for (let yy = 660; yy < H; yy += 34 + (yy - 660) * .15) { c.beginPath(); c.moveTo(0, yy); c.lineTo(W, yy); c.stroke(); }
+    // Siêu khó: phố tối hơn, những thứ không có đèn đều tối theo; chỉ cửa sổ, trăng và đèn lồng còn sáng
+    if (sieu()) {
+      c.fillStyle = 'rgba(5,3,16,.55)'; c.fillRect(0, 0, W, H);
+      moon();
+      for (const [wx, wy, fc] of wins) { c.fillStyle = fc; c.fillRect(wx, wy, 16, 22); }
+    }
     // ánh đèn hắt xuống đường
     for (let lx = 140; lx < W; lx += 420) { g = c.createRadialGradient(lx, 760, 10, lx, 760, 260); g.addColorStop(0, 'rgba(255,170,80,.12)'); g.addColorStop(1, 'rgba(255,170,80,0)'); c.fillStyle = g; c.fillRect(lx - 260, 600, 520, 300); }
     // dây đèn lồng
@@ -1019,6 +1034,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       if (stT > (card.win ? 2.2 : 3.2)) nextAfterCard();
     }
   }
+  let kcv = null;
   function draw() {
     const c = ctx;
     c.setTransform(1, 0, 0, 1, 0, 0);
@@ -1026,13 +1042,31 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const sx = shake > 0 ? Math.sin(tm * 90) * 10 * shake : 0;
     c.setTransform(scale, 0, 0, scale, sx * scale, 0);
     if (P && !hidden()) {
+      // Siêu khó: các bạn vẽ lên lớp riêng rồi phủ tối, đồ cầm phát sáng vẽ đè lên sau
+      let kc = c, defer = null;
+      if (sieu()) {
+        kcv = kcv || document.createElement('canvas');
+        if (kcv.width !== cv.width || kcv.height !== cv.height) { kcv.width = cv.width; kcv.height = cv.height; }
+        kc = kcv.getContext('2d'); kc.setTransform(1, 0, 0, 1, 0, 0); kc.clearRect(0, 0, kcv.width, kcv.height);
+        kc.setTransform(scale, 0, 0, scale, sx * scale, 0); defer = [];
+      }
+      const marks = [];
       for (let r = 2; r >= 0; r--) for (let i = P.kids.length - 1; i >= 0; i--) {
         const k = P.kids[i]; if (k.row !== r) continue;
         const p = kidPos(k);
         if (p.x < -120 || p.x > W + 120) continue;
         const ph = st === 'walk' ? kidPhase(k) : (st === 'catch' && k.odd ? tm * 2 : kidPhase(k));
         const hop = k.hop ? Math.sin((1 - k.hop) * Math.PI * 2.5) * 40 * k.hop : 0;
-        drawKid(c, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row] });
+        drawKid(kc, k, p.x, p.y, p.s, ph, tm, { blink: k.blinkAt < 0, hop: Math.max(0, hop), flip: P.rowRtl[k.row], defer });
+        marks.push([k, p]);
+      }
+      if (defer) {
+        kc.setTransform(1, 0, 0, 1, 0, 0); kc.globalCompositeOperation = 'source-atop';
+        kc.fillStyle = 'rgba(8,5,26,.4)'; kc.fillRect(0, 0, kcv.width, kcv.height); kc.globalCompositeOperation = 'source-over';
+        c.save(); c.setTransform(1, 0, 0, 1, 0, 0); c.drawImage(kcv, 0, 0); c.restore();
+        for (const d of defer) { c.save(); c.setTransform(d.m); c.lineCap = 'round'; c.lineJoin = 'round'; drawItem(c, d.lk, d.hx, d.hy, d.tm, d.ph); c.restore(); }
+      }
+      for (const [k, p] of marks) {
         if (k.tried) {
           const s = p.s; c.strokeStyle = '#ff5b5b'; c.lineWidth = 7 * s; c.lineCap = 'round';
           const cx = p.x, cy = p.y - 210 * s;
@@ -1102,7 +1136,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   }
   function setMode(m) {
     mode = m === 'kho' || m === 'sieu' ? m : 'thuong'; save.mode = mode; store();
-    refreshModes();
+    refreshModes(); drawBg(scale);
     if (overFirst) $('overNum').textContent = bestOf(mode);
     updHud();
   }
