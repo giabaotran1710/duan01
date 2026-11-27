@@ -418,7 +418,7 @@
     return R.off;
   }
   /* Chọn con cắn câu. found: sổ đã có (loài chưa có được ưu tiên nhẹ). rnd: hàm ngẫu nhiên. */
-  function pick(regionId, slot, wx, found, rnd, bait, tide) {
+  function pick(regionId, slot, wx, found, rnd, bait, tide, mods) {
     rnd = rnd || Math.random;
     var B = BAITS[bait] || BAITS.giun;
     tide = tide || 'vua';
@@ -427,7 +427,7 @@
     list.forEach(function (e) {
       var w;
       if (e.r === 'rac') w = (e.rare ? 0.35 : 1) * 15 / Math.max(1, nJunk) * 0.1 * 10; // rác chiếm khoảng 12-15% số lần cắn
-      else w = rateOf(e, slot, wx, tide) * (e.r === 'thuong' ? 1 : B.rare);
+      else w = rateOf(e, slot, wx, tide) * (e.r === 'thuong' ? 1 : B.rare * (mods && mods.rare || 1));
       if (e.r === 'rac') w *= B.junk;
       if (found && !found[e.id]) w *= e.r === 'rac' ? 1.2 : 1.5;
       ws.push(w); tot += w;
@@ -437,11 +437,11 @@
     return list[list.length - 1];
   }
   /* Kích cỡ một con: phần lớn nhỏ, thỉnh thoảng (4%) gặp con cỡ lớn. Trả về { cm, kg, q (0..1 vị trí trong khoảng) } */
-  function roll(e, rnd, bait) {
+  function roll(e, rnd, bait, mods) {
     rnd = rnd || Math.random;
-    var B = BAITS[bait] || BAITS.giun;
+    var B = BAITS[bait] || BAITS.giun, sz = B.size * (mods && mods.size || 1);
     if (e.r === 'rac') return { cm: 0, kg: 0, q: 0 };
-    var q = rnd() < 0.04 * B.size ? 0.85 + rnd() * 0.15 : Math.pow(rnd(), 1.6 / B.size);
+    var q = rnd() < 0.04 * sz ? 0.85 + rnd() * 0.15 : Math.pow(rnd(), 1.6 / sz);
     var cm = e.cm[0] + (e.cm[1] - e.cm[0]) * q;
     cm = cm < 10 ? Math.round(cm * 10) / 10 : Math.round(cm);
     var kg = e.k * cm * cm * cm * 1e-5;
@@ -466,8 +466,8 @@
   };
   /* Giá bán (xu): theo độ hiếm, cỡ của loài và cỡ của con này. */
   var BASE = { thuong: 6, hiem: 26, hiemco: 110, rac: 1 };
-  function price(e, cm) {
-    if (e.r === 'rac') return 1;
+  function price(e, cm, mods) {
+    if (e.r === 'rac') return 1 + (mods && mods.junk || 0);
     var q = Math.max(0, Math.min(1, (cm - e.cm[0]) / Math.max(1, e.cm[1] - e.cm[0])));
     var cls = Math.max(.7, Math.min(2.4, 1 + Math.log(e.cm[1] / 20) / 2.2));
     return Math.max(1, Math.round(BASE[e.r] * cls * (.6 + 1.4 * q)));
@@ -481,6 +481,31 @@
   ];
   var TANK = { start: 3, max: 15, cost: function (slots) { return Math.round(80 * Math.pow(1.25, slots - 3) / 10) * 10; } };
   var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drink: { name: 'Nước tăng lực', gain: 30, price: 90, cap: 120 } };
+
+  /* Năng lực: nâng bằng xu. Cấp 0 = chỉ số gốc của game. cost(lv) là giá nâng từ cấp lv lên lv+1. */
+  function upCost(base, grow) { return function (lv) { return Math.round(base * Math.pow(grow, lv) / 10) * 10; }; }
+  var UPGRADES = [
+    { id: 'nl', name: 'Giới hạn năng lượng', icon: 'drink', max: 10, cost: upCost(80, 1.3),
+      val: function (lv) { return ENERGY.max + 6 * lv; }, text: function (v) { return v + ' năng lượng tối đa'; }, per: '+6 năng lượng tối đa mỗi cấp' },
+    { id: 'hoi', name: 'Tốc độ hồi năng lượng', icon: 'clock', max: 8, cost: upCost(80, 1.4),
+      val: function (lv) { return Math.round(ENERGY.regenMs * (1 - 0.06 * lv)); }, text: function (v) { var t = Math.round(v / 1000); return '1 năng lượng mỗi ' + Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60); }, per: 'hồi nhanh hơn 6% mỗi cấp' },
+    { id: 'kt', name: 'Tăng kích thước cá', icon: 'tom', max: 10, cost: upCost(90, 1.32),
+      val: function (lv) { return 1 + 0.12 * lv; }, text: function (v) { return 'cá to hơn, hệ số ×' + v.toFixed(2); }, per: 'dễ câu cá cỡ lớn, bán được giá hơn' },
+    { id: 'hiem', name: 'Tăng tỉ lệ câu cá hiếm', icon: 'cam', max: 10, cost: upCost(120, 1.34),
+      val: function (lv) { return 1 + 0.15 * lv; }, text: function (v) { return 'loài hiếm cắn nhiều hơn ×' + v.toFixed(2); }, per: 'cộng dồn với mồi Cám thơm và Mồi vàng' },
+    { id: 'rac', name: 'Tăng giá bán rác', icon: 'foam', max: 6, cost: upCost(50, 1.5),
+      val: function (lv) { return 1 + 2 * lv; }, text: function (v) { return 'rác bán ' + v + ' xu mỗi món'; }, per: '+2 xu mỗi món rác' }
+  ];
+  var UPBYID = {}; UPGRADES.forEach(function (u) { UPBYID[u.id] = u; });
+  /* Từ bảng cấp (up: {nl, hoi, kt, hiem, rac}) ra các hệ số dùng cho pick, roll, price. */
+  function upMods(up) {
+    up = up || {};
+    return { size: UPBYID.kt.val(up.kt | 0), rare: UPBYID.hiem.val(up.hiem | 0), junk: 2 * (up.rac | 0) };
+  }
+  function energyMax(up) { return UPBYID.nl.val((up || {}).nl | 0); }
+  function regenMs(up) { return UPBYID.hoi.val((up || {}).hoi | 0); }
+  /* Nước tăng lực được nạp vượt mức tối đa thêm 60. */
+  function drinkCap(up) { return energyMax(up) + 60; }
   function points(found) {
     var p = 0;
     for (var id in found) if (byId[id]) p += RARITY[byId[id].r].pts;
@@ -488,6 +513,6 @@
   }
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, DAYNIGHT: DAYNIGHT, TIDES: TIDES, dayOf: dayOf, tideAt: tideAt, tideLevel: tideLevel, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
-    BAITS: BAITS, DECOS: DECOS, TANK: TANK, ENERGY: ENERGY, price: price,
+    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, ENERGY: ENERGY, price: price,
     slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, condOk: condOk, rateOf: rateOf, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);

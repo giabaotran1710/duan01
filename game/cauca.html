@@ -90,6 +90,23 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 .mini.alt{background:var(--paper2);box-shadow:0 0 0 2px var(--ink)}
 .mini.on{background:var(--leaf);color:#fff}
 .mini[disabled]{opacity:.45;cursor:default}
+/* năng lực */
+#skill .px{width:min(680px,100%);max-height:100%;display:flex;flex-direction:column;padding:12px 12px 10px}
+#skill h3{margin:0;font-weight:400;font-size:30px;padding-right:40px}
+.skillList{overflow-y:auto;flex:1;padding:4px 4px 6px;display:grid;grid-template-columns:1fr 1fr;gap:10px;align-content:start}
+.sk{background:#fbf4e0;box-shadow:0 0 0 2px var(--ink),inset 0 -3px 0 0 var(--paper2);padding:8px 10px 8px;display:flex;flex-direction:column;gap:5px}
+.sk .hd{display:flex;align-items:center;gap:8px}
+.sk .hd canvas{width:36px;height:36px;image-rendering:pixelated;flex:none;background:#efe2bf;box-shadow:0 0 0 2px var(--ink)}
+.sk .hd b{font-weight:400;font-size:21px;line-height:1;flex:1}
+.sk .hd em{font-style:normal;font-size:17px;color:#5a4a34;white-space:nowrap}
+.sk .pips{display:flex;gap:3px}
+.sk .pip{flex:1;height:8px;background:#d8c8a0;box-shadow:0 0 0 1px var(--ink)}
+.sk .pip.on{background:var(--gold)}
+.sk .now{font-size:18px;line-height:1.05}
+.sk .nx{font-size:16px;color:#4a6a2a;line-height:1.05;min-height:17px}
+.sk .nx.mx{color:#8a6a10}
+.sk .mini{align-self:stretch;text-align:center}
+@media (max-width:560px){.skillList{grid-template-columns:1fr}}
 /* bể cá */
 #tankCv{width:100%;image-rendering:pixelated;display:block;box-shadow:0 0 0 3px var(--ink),0 0 0 7px #6a4a2a;margin:8px 0 10px;background:#2f6f9a}
 @media (max-width:520px){.item{flex-wrap:wrap}.item .tx{flex:1 1 60%}.item .bs{flex-basis:100%}}
@@ -195,6 +212,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 <button class="hud px dark" id="snd" data-no-scene aria-label="Tắt tiếng"><canvas id="sndIc" width="8" height="7"></canvas></button>
 <div class="hud" id="shore">
   <button id="bookBtn" data-no-scene aria-label="Mở sổ tay câu cá"><canvas id="bookIc" width="20" height="16"></canvas><span class="px tagn" id="bookN">0/0</span></button>
+  <button class="shoreBtn" id="skillBtn" data-no-scene aria-label="Mở Năng lực"><canvas id="skillIc" width="16" height="16"></canvas>Năng lực</button>
   <button class="shoreBtn" id="tankBtn" data-no-scene aria-label="Mở bể cá"><canvas id="tankIc" width="16" height="16"></canvas>Bể cá</button>
   <button class="shoreBtn" id="shopBtn" data-no-scene aria-label="Mở cửa hàng"><canvas id="shopIc" width="16" height="16"></canvas>Cửa hàng</button>
 </div>
@@ -259,6 +277,15 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   </div>
 </div>
 
+<div class="ov" id="skill">
+  <div class="px" role="dialog" aria-labelledby="skillTitle">
+    <button class="x" id="skillX" data-no-scene aria-label="Đóng">×</button>
+    <h3 id="skillTitle">Năng lực</h3>
+    <div class="purse" id="skillPurse"></div>
+    <div class="skillList" id="skillList"></div>
+  </div>
+</div>
+
 <div class="ov" id="tank">
   <div class="px" role="dialog" aria-labelledby="tankTitle">
     <button class="x" id="tankX" data-no-scene aria-label="Đóng">×</button>
@@ -296,7 +323,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     if (typeof s.sound !== 'boolean') s.sound = true;
     function num(v, d, lo, hi) { v = typeof v === 'number' && isFinite(v) ? v : d; return Math.max(lo, Math.min(hi, v)); }
     s.coins = Math.floor(num(s.coins, 0, 0, 1e9));
-    s.en = Math.floor(num(s.en, CC.ENERGY.max, 0, CC.ENERGY.drink.cap));
+    if (!s.up || typeof s.up !== 'object') s.up = {};
+    CC.UPGRADES.forEach(function (u) { s.up[u.id] = Math.floor(num(s.up[u.id], 0, 0, u.max)); });
+    s.en = Math.floor(num(s.en, CC.energyMax(s.up), 0, CC.drinkCap(s.up)));
     s.enT = num(s.enT, Date.now(), 0, 1e15);
     s.drinks = Math.floor(num(s.drinks, 0, 0, 999));
     if (!s.baits || typeof s.baits !== 'object') s.baits = {};
@@ -319,15 +348,19 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 
   // ---------- năng lượng: hồi 1 mỗi 5 phút theo giờ thật, tính cả lúc tắt game ----------
   var EN = CC.ENERGY;
+  function enMax() { return CC.energyMax(S.up); }          // tối đa theo cấp Năng lực
+  function regenMs() { return CC.regenMs(S.up); }          // số mili giây để hồi 1 năng lượng
+  function drinkCap() { return CC.drinkCap(S.up); }        // nước tăng lực nạp được tới mức này
+  function mods() { return CC.upMods(S.up); }              // hệ số cỡ cá, cá hiếm, giá rác
   function syncEnergy() {
-    var now = Date.now();
+    var now = Date.now(), mx = enMax(), rg = regenMs();
     if (now < S.enT) S.enT = now; // đồng hồ máy bị chỉnh lùi
-    if (S.en >= EN.max) { S.enT = now; return; }
-    var n = Math.floor((now - S.enT) / EN.regenMs);
-    if (n > 0) { S.en = Math.min(EN.max, S.en + n); S.enT += n * EN.regenMs; if (S.en >= EN.max) S.enT = now; }
+    if (S.en >= mx) { S.enT = now; return; }
+    var n = Math.floor((now - S.enT) / rg);
+    if (n > 0) { S.en = Math.min(mx, S.en + n); S.enT += n * rg; if (S.en >= mx) S.enT = now; }
   }
-  function nextIn() { return S.en >= EN.max ? 0 : EN.regenMs - (Date.now() - S.enT); }
-  function fullIn() { return S.en >= EN.max ? 0 : nextIn() + (EN.max - S.en - 1) * EN.regenMs; }
+  function nextIn() { return S.en >= enMax() ? 0 : regenMs() - (Date.now() - S.enT); }
+  function fullIn() { return S.en >= enMax() ? 0 : nextIn() + (enMax() - S.en - 1) * regenMs(); }
   function mmss(ms) { var t = Math.max(0, Math.ceil(ms / 1000)), m = Math.floor(t / 60), x = t % 60; return m + ':' + (x < 10 ? '0' : '') + x; }
   function hm(ms) { var m = Math.ceil(ms / 60000), h = Math.floor(m / 60); return h ? h + ' giờ ' + (m % 60) + ' phút' : m + ' phút'; }
   function money(v) { return v.toLocaleString('vi-VN'); }
@@ -450,12 +483,12 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   var lastWallet = '';
   function wallet(force) {
     syncEnergy();
-    var sub = S.en >= EN.max ? '' : '+1 sau ' + mmss(nextIn());
+    var sub = S.en >= enMax() ? '' : '+1 sau ' + mmss(nextIn());
     var bait = S.bait === 'giun' ? '' : CC.BAITS[S.bait].name + ' ×' + S.baits[S.bait];
     var key = S.en + '|' + sub + '|' + S.coins + '|' + bait;
     if (!force && key === lastWallet) return;
     lastWallet = key;
-    $('enT').textContent = S.en + '/' + EN.max; $('enS').textContent = sub;
+    $('enT').textContent = S.en + '/' + enMax(); $('enS').textContent = sub;
     $('coinT').textContent = money(S.coins); $('baitT').textContent = bait;
     $('wallet').classList.toggle('low', S.en < 5);
   }
@@ -467,6 +500,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     var coin = CA.canvas(8, 8), cx2 = coin.getContext('2d'); cx2.fillStyle = '#c8962a'; cx2.fillRect(1, 0, 6, 8); cx2.fillRect(0, 1, 8, 6); cx2.fillStyle = '#f0c040'; cx2.fillRect(1, 1, 6, 6); cx2.fillStyle = '#7a5a1a'; cx2.fillRect(3, 3, 2, 2); cx2.fillStyle = '#fff2a0'; cx2.fillRect(2, 1, 2, 1);
     iconTo('coinIc', coin);
     iconTo('tankIc', CA.item('slot'));
+    iconTo('skillIc', CA.item('skill'));
     var sp = CA.painter(16, 16, false); sp.rect(2, 7, 12, 8, '#a8763e'); sp.rect(4, 9, 3, 6, '#5a3a1a'); sp.rect(9, 9, 4, 3, '#bfe4f0');
     sp.poly([0, 7, 2, 2, 14, 2, 16, 7], '#e04a3a'); sp.rect(4, 2, 2, 5, '#f4ead0'); sp.rect(10, 2, 2, 5, '#f4ead0');
     iconTo('shopIc', sp.done('#1b1d2a'));
@@ -504,7 +538,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       var w = $('wallet'); w.classList.remove('flash'); void w.offsetWidth; w.classList.add('flash');
       return;
     }
-    if (S.en >= EN.max) S.enT = Date.now();
+    if (S.en >= enMax()) S.enT = Date.now();
     S.en--;
     G.usedBait = S.bait;
     if (S.bait !== 'giun') {
@@ -523,8 +557,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     G.state = 'wait';
     ripple(b.x, b.y, 1); splash(b.x, b.y, 5);
     sfx('splash', { vol: .8 });
-    G.pick = CC.pick(G.reg, G.slot, G.wx, S.found, null, G.usedBait, G.tide);
-    G.size = CC.roll(G.pick, null, G.usedBait);
+    G.pick = CC.pick(G.reg, G.slot, G.wx, S.found, null, G.usedBait, G.tide, mods());
+    G.size = CC.roll(G.pick, null, G.usedBait, mods());
     var wait = rand(2.2, 6.2);
     if (G.slot === 'binhminh' || G.slot === 'hoanghon') wait *= .8; // cá ăn mạnh lúc chạng vạng
     G.biteAt = G.t + wait;
@@ -629,7 +663,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       if (e.id === 'ruavang') $('cardNote').textContent = e.note;
     }
     if (e.r === 'hiemco') sfx('win'); else if (isNew) sfx('coin'); else if (isRec) sfx('level'); else if (e.r === 'rac') sfx('pick');
-    var pr = CC.price(e, size.cm), sell = $('cardSell'), tk = $('cardTank');
+    var pr = CC.price(e, size.cm, mods()), sell = $('cardSell'), tk = $('cardTank');
     sell.textContent = e.r === 'rac' ? 'Bỏ rác · +1 xu' : 'Bán · ' + money(pr) + ' xu';
     tk.hidden = e.r === 'rac';
     var full = S.tank.length >= S.slots;
@@ -953,7 +987,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   }
   $('cardSell').addEventListener('click', function () {
     if (!G.catchE) return closeOv();
-    var v = CC.price(G.catchE, G.catchSize.cm);
+    var v = CC.price(G.catchE, G.catchSize.cm, mods());
     S.coins += v; G.catchE = null; save(); wallet(true);
     sfx('coin', { vol: .6, pitch: 1.2 }); toast('+' + money(v) + ' xu', 1200);
     closeOv();
@@ -1167,7 +1201,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     if (openId !== 'shop') return;
     syncEnergy();
     var list = $('shopList'), top = list.scrollTop; list.innerHTML = '';
-    $('shopPurse').textContent = 'Xu: ' + money(S.coins) + '   ·   Năng lượng: ' + S.en + '/' + EN.max + (S.en < EN.max ? ' (đầy sau ' + hm(fullIn()) + ')' : '');
+    $('shopPurse').textContent = 'Xu: ' + money(S.coins) + '   ·   Năng lượng: ' + S.en + '/' + enMax() + (S.en < enMax() ? ' (đầy sau ' + hm(fullIn()) + ')' : '');
     function h(t) { var e = document.createElement('h4'); e.textContent = t; list.appendChild(e); }
     h('Mồi câu');
     Object.keys(CC.BAITS).forEach(function (k) {
@@ -1178,9 +1212,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     });
     h('Năng lượng');
     var D = EN.drink;
-    list.appendChild(itemRow('drink', D.name + ' (có ' + S.drinks + ')', 'Hồi ' + D.gain + ' năng lượng ngay, được vượt mức ' + EN.max + ' (tối đa ' + D.cap + ').', [
+    list.appendChild(itemRow('drink', D.name + ' (có ' + S.drinks + ')', 'Hồi ' + D.gain + ' năng lượng ngay, được vượt mức ' + enMax() + ' (tối đa ' + drinkCap() + ').', [
       { label: 'Mua · ' + D.price + ' xu', fn: function () { if (buy(D.price)) S.drinks++; } },
-      { label: 'Uống', cls: 'alt', disabled: !S.drinks || S.en >= D.cap, fn: drink }
+      { label: 'Uống', cls: 'alt', disabled: !S.drinks || S.en >= drinkCap(), fn: drink }
     ]));
     h('Bể cá');
     var full = S.slots >= CC.TANK.max, cost = CC.TANK.cost(S.slots);
@@ -1198,9 +1232,9 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   }
   function sandIcon() { var P = CA.painter(12, 12, false); P.ell(6, 8, 6, 4, '#f0e8d0'); P.rect(3, 7, 1, 1, '#d8ccae'); P.rect(8, 9, 1, 1, '#d8ccae'); return P.done('#1b1d2a'); }
   function drink() {
-    if (!S.drinks || S.en >= EN.drink.cap) return;
+    if (!S.drinks || S.en >= drinkCap()) return;
     syncEnergy();
-    S.drinks--; S.en = Math.min(EN.drink.cap, S.en + EN.drink.gain);
+    S.drinks--; S.en = Math.min(drinkCap(), S.en + EN.drink.gain);
     sfx('level', { vol: .6 }); toast('+' + EN.drink.gain + ' năng lượng!', 1400);
   }
   function openShop() { sfx('select'); openOv('shop'); renderShop(); }
@@ -1208,11 +1242,56 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
   $('wallet').addEventListener('click', function () {
     if (G.state === 'bite' || G.state === 'hook' || G.state === 'reel') return;
     syncEnergy();
-    if (S.drinks && S.en < EN.max) { drink(); save(); wallet(true); return; }
+    if (S.drinks && S.en < enMax()) { drink(); save(); wallet(true); return; }
     openShop();
   });
   $('shopX').addEventListener('click', function () { closeOv(); });
   $('shop').addEventListener('pointerdown', function (ev) { if (ev.target === $('shop')) closeOv(); });
+
+  // ---------- năng lực ----------
+  function upgradeTo(u) {
+    var lv = S.up[u.id];
+    if (lv >= u.max) return;
+    var cost = u.cost(lv);
+    if (!buy(cost)) return;
+    syncEnergy();
+    var full = S.en >= enMax();
+    S.up[u.id] = lv + 1;
+    if (u.id === 'nl' && full) S.enT = Date.now();     // đang đầy thì tính hồi từ lúc này, không tặng năng lượng
+    sfx('level', { vol: .6 }); toast(u.name + ' lên cấp ' + (lv + 1) + '!', 1500);
+  }
+  function renderSkill() {
+    if (openId !== 'skill') return;
+    syncEnergy();
+    var list = $('skillList'), top = list.scrollTop; list.innerHTML = '';
+    $('skillPurse').textContent = 'Xu: ' + money(S.coins);
+    CC.UPGRADES.forEach(function (u) {
+      var lv = S.up[u.id], max = lv >= u.max, card = document.createElement('div'); card.className = 'sk';
+      var hd = document.createElement('div'); hd.className = 'hd';
+      var ic = CA.item('up_' + u.id), c = document.createElement('canvas'); c.width = ic.width; c.height = ic.height; c.getContext('2d').drawImage(ic, 0, 0);
+      var nm = document.createElement('b'); nm.textContent = u.name;
+      var lvEl = document.createElement('em'); lvEl.textContent = lv + '/' + u.max;
+      hd.appendChild(c); hd.appendChild(nm); hd.appendChild(lvEl);
+      var pips = document.createElement('div'); pips.className = 'pips';
+      for (var i = 0; i < u.max; i++) { var p = document.createElement('span'); p.className = 'pip' + (i < lv ? ' on' : ''); pips.appendChild(p); }
+      var now = document.createElement('div'); now.className = 'now'; now.textContent = u.text(u.val(lv));
+      var nx = document.createElement('div'); nx.className = 'nx' + (max ? ' mx' : '');
+      nx.textContent = max ? 'Đã đạt cấp tối đa' : 'Cấp sau: ' + u.text(u.val(lv + 1));
+      var b = document.createElement('button'), cost = max ? 0 : u.cost(lv), can = !max && S.coins >= cost;
+      b.className = 'mini' + (can ? '' : ' alt'); b.setAttribute('data-no-scene', '');
+      b.textContent = max ? 'Tối đa' : 'Nâng cấp · ' + money(cost) + ' xu'; if (max) b.disabled = true;
+      b.addEventListener('click', function () { upgradeTo(u); save(); wallet(true); renderSkill(); });
+      card.appendChild(hd); card.appendChild(pips); card.appendChild(now); card.appendChild(nx); card.appendChild(b);
+      list.appendChild(card);
+    });
+    list.scrollTop = top;
+  }
+  $('skillBtn').addEventListener('click', function () {
+    if (G.state === 'bite' || G.state === 'hook' || G.state === 'reel') return;
+    sfx('select'); openOv('skill'); renderSkill();
+  });
+  $('skillX').addEventListener('click', function () { closeOv(); });
+  $('skill').addEventListener('pointerdown', function (ev) { if (ev.target === $('skill')) closeOv(); });
 
   // ---------- bể cá ----------
   var tankFish = [], tankRaf = 0;
@@ -1289,7 +1368,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
     var list = $('tankList'); list.innerHTML = '';
     if (!S.tank.length) { var m = document.createElement('div'); m.style.fontSize = '19px'; m.textContent = 'Bể còn trống. Câu được cá thì chọn "Thả vào bể".'; list.appendChild(m); }
     S.tank.forEach(function (f, i) {
-      var e = CC.byId[f.id], v = CC.price(e, f.cm);
+      var e = CC.byId[f.id], v = CC.price(e, f.cm, mods());
       list.appendChild(itemRow(CA.sprite(e), e.name, sizeText(f.cm, f.kg) + ' · ' + CC.RARITY[e.r].name, [
         { label: 'Bán · ' + money(v) + ' xu', fn: function () { S.tank.splice(i, 1); S.coins += v; sfx('coin', { vol: .6, pitch: 1.2 }); renderTank(); } },
         { label: 'Thả về nước', cls: 'alt', fn: function () { S.tank.splice(i, 1); sfx('splash', { vol: .5 }); renderTank(); } }
@@ -1329,7 +1408,7 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
       bite();
     },
     arc: function () { return G.arc && { g: G.arc.g, zc: G.arc.zc, zw: G.arc.zw, speed: G.arc.speed, tries: G.arc.tries }; },
-    strike: strike, act: act, openBook: openBook, openMap: openMap, openShop: openShop, renderTank: renderTank,
+    strike: strike, act: act, openBook: openBook, openMap: openMap, openShop: openShop, openSkill: function () { openOv('skill'); renderSkill(); }, upgradeTo: upgradeTo, renderTank: renderTank,
     hook: function (id, cm) {
       if (!G.bob) { G.bob = { x: LW * .45, y: HY + (FY - HY) * .5, tx: LW * .45, ty: HY + (FY - HY) * .5 }; }
       G.state = 'wait'; G.pick = CC.byId[id]; G.size = CC.roll(G.pick); if (cm) { G.size.cm = cm; G.size.kg = G.pick.k * cm * cm * cm * 1e-5; }

@@ -1383,6 +1383,12 @@
     else if (id === 'cam') { P.rect(3, 6, 10, 8, '#c8a060'); P.rect(3, 6, 10, 2, '#a88040'); for (var k = 0; k < 6; k++) P.rect(4 + (k % 3) * 3, 2 + Math.floor(k / 3) * 2, 2, 2, '#8a5a2a'); }
     else if (id === 'vang') { P.ell(8, 9, 5, 5, '#e8b83a'); P.ell(7, 8, 3, 3, '#ffe880'); P.line(8, 4, 8, 1, '#c8c8c8'); P.rect(12, 2, 1, 1, '#fff6c0'); P.rect(3, 4, 1, 1, '#fff6c0'); }
     else if (id === 'drink') { P.rect(4, 2, 8, 13, '#2fa85a'); P.rect(4, 2, 8, 2, '#c8c8c8'); P.poly([9, 5, 6, 9, 8, 9, 7, 13, 10, 8, 8, 8], '#ffd23f'); }
+    else if (id === 'up_nl') { P.rect(2, 4, 11, 9, '#3a4a6a'); P.rect(13, 6, 2, 5, '#3a4a6a'); P.rect(3, 5, 9, 7, '#2a3450'); P.rect(3, 5, 6, 7, '#ffd23f'); P.rect(8, 5, 1, 7, '#fff2a8'); P.rect(3, 5, 9, 1, '#fff6c0'); }
+    else if (id === 'up_hoi') { P.rect(3, 1, 10, 2, '#a8763e'); P.rect(3, 13, 10, 2, '#a8763e'); P.poly([4, 3, 12, 3, 9, 8, 12, 13, 4, 13, 7, 8], '#dfe8f0'); P.poly([5, 3, 11, 3, 8, 6], '#7ad0f0'); P.poly([5, 13, 11, 13, 8, 10], '#7ad0f0'); P.rect(7, 7, 2, 2, '#f8c040'); }
+    else if (id === 'up_kt') { P.ell(8, 8, 6, 3.5, '#5aa6ec'); P.poly([13, 8, 16, 4, 16, 12], '#3f8ad8'); P.ell(5, 7, 1, 1, '#1b1d2a'); P.rect(1, 13, 14, 1, '#f4e8c8'); for (var m = 0; m < 5; m++) P.rect(1 + m * 3, 12, 1, 2, '#7a5a3a'); P.rect(1, 2, 1, 1, '#ffd23f'); P.rect(0, 3, 3, 1, '#ffd23f'); }
+    else if (id === 'up_hiem') { P.poly([8, 0, 10, 6, 16, 6, 11, 10, 13, 16, 8, 12, 3, 16, 5, 10, 0, 6, 6, 6], '#ffd23f'); P.poly([8, 2, 9, 6, 8, 8, 7, 6], '#fff6c0'); P.rect(7, 7, 2, 2, '#e8a020'); }
+    else if (id === 'up_rac') { P.rect(4, 3, 8, 12, '#c8382f'); P.rect(4, 3, 8, 2, '#d8d8d8'); P.rect(4, 13, 8, 2, '#a8a8a8'); P.rect(6, 7, 2, 5, '#f4f4f4'); P.ell(12, 5, 3, 3, '#e8b83a'); P.ell(12, 5, 1.4, 1.4, '#7a5a1a'); }
+    else if (id === 'skill') { P.poly([8, 0, 10, 5, 15, 5, 11, 9, 13, 15, 8, 11, 3, 15, 5, 9, 1, 5, 6, 5], '#e8b83a'); P.poly([8, 2, 9, 5, 8, 7, 7, 5], '#fff6c0'); P.rect(2, 13, 12, 3, '#3f8ad8'); P.rect(3, 14, 10, 1, '#7ac0f8'); }
     else if (id === 'slot') { P.rect(1, 3, 14, 11, '#7ab8d8'); P.rect(1, 11, 14, 3, '#e8d8a8'); P.rect(1, 3, 14, 1, '#c8e8f8'); P.rect(6, 6, 4, 2, '#f08a3a'); P.rect(5, 6, 1, 2, '#f08a3a'); }
     var cv = P.done(OUT); itemCache[id] = cv; return cv;
   };
