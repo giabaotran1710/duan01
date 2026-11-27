@@ -26,8 +26,9 @@
   var TIDES = { cuong: { name: 'Triều cường' }, vua: { name: 'Nước vừa' }, nong: { name: 'Nước nông' } };
   var RARITY = {
     thuong: { name: 'Thường gặp', w: 10, zone: 30, pts: 1 },
-    hiem: { name: 'Hiếm', w: 4, zone: 20, pts: 3 },
-    hiemco: { name: 'Hiếm có', w: 2.6, zone: 14, pts: 6 },
+    /* w: trọng số khi gặp đúng điều kiện; half: hiếm có mới đúng một phần điều kiện; off: trái điều kiện (vẫn câu được nhưng ít). */
+    hiem: { name: 'Hiếm', w: 6, off: 0.6, zone: 20, pts: 3 },
+    hiemco: { name: 'Hiếm có', w: 4, half: 0.6, off: 0.25, zone: 14, pts: 6 },
     rac: { name: 'Rác', w: 1, zone: 38, pts: 1 }
   };
 
@@ -390,30 +391,43 @@
     var v = tideLevel(minutes, regionId);
     return v > .5 ? 'cuong' : v < -.5 ? 'nong' : 'vua';
   }
-  function condOk(e, slot, wx, tide) {
-    if (e.t && e.t.indexOf(slot) < 0) return false;
-    if (e.w && e.w.indexOf(wx) < 0) return false;
-    if (e.d && e.d !== dayOf(slot)) return false;
-    if (e.n && e.n !== tide) return false;
-    return true;
+  /* Đếm số nhóm điều kiện (khung giờ, thời tiết, ngày/đêm, con nước) của loài và số nhóm đang đúng. */
+  function condMatch(e, slot, wx, tide) {
+    var all = 0, ok = 0;
+    if (e.t) { all++; if (e.t.indexOf(slot) >= 0) ok++; }
+    if (e.w) { all++; if (e.w.indexOf(wx) >= 0) ok++; }
+    if (e.d) { all++; if (e.d === dayOf(slot)) ok++; }
+    if (e.n) { all++; if (e.n === tide) ok++; }
+    return { all: all, ok: ok };
   }
-  /* các sinh vật/rác có thể cắn câu ở vùng này, lúc này */
-  function eligible(regionId, slot, wx, tide) {
+  function condOk(e, slot, wx, tide) { var m = condMatch(e, slot, wx, tide); return m.ok === m.all; }
+  /* Các sinh vật/rác có thể cắn câu ở vùng này. Loài hiếm trái điều kiện vẫn có mặt, chỉ ít cắn hơn (xem rateOf). */
+  function eligible(regionId) {
     var out = [];
-    SPECIES.forEach(function (e) { if ((e.reg === regionId || e.also.indexOf(regionId) >= 0) && condOk(e, slot, wx, tide)) out.push(e); });
+    SPECIES.forEach(function (e) { if (e.reg === regionId || e.also.indexOf(regionId) >= 0) out.push(e); });
     JUNK.forEach(function (e) { if (e.reg.indexOf(regionId) >= 0) out.push(e); });
     return out;
+  }
+  /* Trọng số gốc của một sinh vật lúc này (chưa tính mồi): đúng điều kiện thì cắn nhiều, trái điều kiện thì hiếm hoi. */
+  function rateOf(e, slot, wx, tide) {
+    var R = RARITY[e.r];
+    if (e.r === 'thuong' || e.r === 'rac') return R.w;
+    var m = condMatch(e, slot, wx, tide);
+    if (m.ok === m.all) return R.w;
+    if (m.ok > 0 && R.half) return R.half;
+    return R.off;
   }
   /* Chọn con cắn câu. found: sổ đã có (loài chưa có được ưu tiên nhẹ). rnd: hàm ngẫu nhiên. */
   function pick(regionId, slot, wx, found, rnd, bait, tide) {
     rnd = rnd || Math.random;
     var B = BAITS[bait] || BAITS.giun;
-    var list = eligible(regionId, slot, wx, tide || 'vua'), tot = 0, ws = [];
+    tide = tide || 'vua';
+    var list = eligible(regionId), tot = 0, ws = [];
     var nJunk = 0; list.forEach(function (e) { if (e.r === 'rac') nJunk++; });
     list.forEach(function (e) {
       var w;
       if (e.r === 'rac') w = (e.rare ? 0.35 : 1) * 15 / Math.max(1, nJunk) * 0.1 * 10; // rác chiếm khoảng 12-15% số lần cắn
-      else w = RARITY[e.r].w * (e.r === 'thuong' ? 1 : B.rare);
+      else w = rateOf(e, slot, wx, tide) * (e.r === 'thuong' ? 1 : B.rare);
       if (e.r === 'rac') w *= B.junk;
       if (found && !found[e.id]) w *= e.r === 'rac' ? 1.2 : 1.5;
       ws.push(w); tot += w;
@@ -475,5 +489,5 @@
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, DAYNIGHT: DAYNIGHT, TIDES: TIDES, dayOf: dayOf, tideAt: tideAt, tideLevel: tideLevel, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
     BAITS: BAITS, DECOS: DECOS, TANK: TANK, ENERGY: ENERGY, price: price,
-    slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
+    slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, condOk: condOk, rateOf: rateOf, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);
