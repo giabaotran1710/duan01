@@ -485,15 +485,15 @@
   /* Năng lực: nâng bằng xu. Cấp 0 = chỉ số gốc của game. cost(lv) là giá nâng từ cấp lv lên lv+1. */
   function upCost(base, grow) { return function (lv) { return Math.round(base * Math.pow(grow, lv) / 10) * 10; }; }
   var UPGRADES = [
-    { id: 'nl', name: 'Giới hạn năng lượng', icon: 'drink', max: 10, cost: upCost(80, 1.3),
+    { id: 'nl', name: 'Giới hạn năng lượng', icon: 'drink', max: 10, cost: upCost(100, 1.3),
       val: function (lv) { return ENERGY.max + 6 * lv; }, text: function (v) { return v + ' năng lượng tối đa'; }, per: '+6 năng lượng tối đa mỗi cấp' },
-    { id: 'hoi', name: 'Tốc độ hồi năng lượng', icon: 'clock', max: 8, cost: upCost(80, 1.4),
+    { id: 'hoi', name: 'Tốc độ hồi năng lượng', icon: 'clock', max: 8, cost: upCost(100, 1.4),
       val: function (lv) { return Math.round(ENERGY.regenMs * (1 - 0.06 * lv)); }, text: function (v) { var t = Math.round(v / 1000); return '1 năng lượng mỗi ' + Math.floor(t / 60) + ':' + (t % 60 < 10 ? '0' : '') + (t % 60); }, per: 'hồi nhanh hơn 6% mỗi cấp' },
     { id: 'kt', name: 'Tăng kích thước cá', icon: 'tom', max: 10, cost: upCost(90, 1.32),
       val: function (lv) { return 1 + 0.12 * lv; }, text: function (v) { return 'cá to hơn, hệ số ×' + v.toFixed(2); }, per: 'dễ câu cá cỡ lớn, bán được giá hơn' },
     { id: 'hiem', name: 'Tăng tỉ lệ câu cá hiếm', icon: 'cam', max: 10, cost: upCost(120, 1.34),
       val: function (lv) { return 1 + 0.15 * lv; }, text: function (v) { return 'loài hiếm cắn nhiều hơn ×' + v.toFixed(2); }, per: 'cộng dồn với mồi Cám thơm và Mồi vàng' },
-    { id: 'rac', name: 'Tăng giá bán rác', icon: 'foam', max: 6, cost: upCost(50, 1.5),
+    { id: 'rac', name: 'Tăng giá bán rác', icon: 'foam', max: 6, cost: upCost(62.5, 1.5),
       val: function (lv) { return 1 + 2 * lv; }, text: function (v) { return 'rác bán ' + v + ' xu mỗi món'; }, per: '+2 xu mỗi món rác' }
   ];
   var UPBYID = {}; UPGRADES.forEach(function (u) { UPBYID[u.id] = u; });
