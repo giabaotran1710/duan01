@@ -56,6 +56,7 @@
     hainam: ['iris', '#1f3324', '#6e9a45', '#e8902a'],
     phitieu: ['iris', '#141a3d', '#d8382f', '#ffe7a3'],
     cauca: ['tiles', '#2f5f7f', '#4f8aa8', '#ffd23f'],
+    bowling: ['iris', '#140e2a', '#ff4f9a', '#3de3ff'],
     thongthai: ['blinds', '#0d2320', '#1c3b4f', '#f4c04e'],
     demsao: ['iris', '#020617', '#312e81', '#fde68a'],
     bongnay: ['iris', '#7c2d12', '#ea580c', '#fed7aa'],

@@ -262,4 +262,17 @@ BANKS = {
     'move':   [RPG+'cloth2.ogg'],
     'coin':   [jw('STEEL09')], 'level': [jw('STEEL07')], 'win': [jw('STEEL01')],
   },
+  # Bowling: bóng lăn ù trên ván gỗ, ki gỗ va lách cách, đổ ầm khi Strike, nhạc dàn nhạc HIT
+  'bowling': {
+    'roll':   [('gen/bowling_roll.wav', {'len': 2.6, 'db': -2})],
+    'shoot':  [(SW+'3.wav', {'db': -5}), (SW+'7.wav', {'db': -5})],
+    'hit':    [WM+'wood_slam_01.ogg', WM+'wood_slam_04.ogg', BFH+'wood_hit_03.ogg'],
+    'clack':  [WM+'wood_hit_01.ogg', WM+'wood_hit_04.ogg', WM+'wood_hit_06.ogg', WM+'wood_hit_09.ogg', BFH+'wood_hit_01.ogg'],
+    'boom':   [(BFH+'falling_04.ogg', {'len': 1.1}), (BFH+'falling_07.ogg', {'len': 1.1})],
+    'bump':   [WM+'wood_misc_05.ogg', WM+'wood_close_02.ogg'],
+    'bad':    [(WM+'wood_falling_04.ogg', {'db': -4})],
+    'move':   [(WM+'wood_squeak_01.ogg', {'len': .45, 'db': -6})],
+    'select': [(WM+'wood_hit_07.ogg', {'db': -6})],
+    'ok':     [jw('HIT02')], 'level': [jw('HIT07')], 'win': [jw('HIT11')], 'lose': [jw('HIT09')],
+  },
 }
