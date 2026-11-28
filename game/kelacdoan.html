@@ -99,11 +99,11 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   <div class="panel">
     <h2 id="helpH">Cách chơi</h2>
     <ul class="rules">
-      <li>Đoàn rước đèn đi ngang qua phố. Trong đoàn có đúng <b>một bạn lạc đoàn</b>: khác màu áo, mặc kiểu đồ khác, đội mũ khác, cầm đồ khác, không đội mũ, không cầm đồ, khác màu quần, khác màu giày, để kiểu tóc khác, hay <b>bước lệch nhịp</b>...</li>
+      <li>Đoàn rước đèn đi ngang qua phố. Trong đoàn có đúng <b>một bạn lạc đoàn</b>: khác màu áo, mặc kiểu đồ khác, đội mũ khác, cầm đồ khác, khác màu da, không đội mũ, không cầm đồ, khác màu quần, khác màu giày, để kiểu tóc khác, hay <b>bước lệch nhịp</b>...</li>
       <li>Có đoàn toàn bạn trai, có đoàn toàn bạn gái. Mỗi đoàn mặc chung một kiểu: đồng phục, áo phông, bà ba, áo dài, gi-lê, váy xòe hay áo yếm.</li>
       <li><b>Chạm vào bạn đó</b> trước khi cả đoàn đi hết khỏi khung hình.</li>
       <li>Chạm nhầm thì đoàn chạy vụt đi mất, không được chọn lại. Chạm nhầm hay để đoàn đi hết đều mất 1 tim. Chỉ có 3 tim, mất là không hồi lại.</li>
-      <li>Không tính là lạc đoàn: cao thấp, màu da, đèn lắc nhanh chậm hay sáng tối khác nhau.</li>
+      <li>Không tính là lạc đoàn: cao thấp, màu da khi cả đoàn đã lẫn nhiều màu da, đèn lắc nhanh chậm hay sáng tối khác nhau.</li>
       <li>Càng về sau đoàn càng đông, đi nhanh hơn, xếp nhiều hàng, và chỗ khác càng nhỏ.</li>
       <li><b>Ba chế độ:</b> Thường thì đoàn khó dần theo từng đoàn. Khó thì mọi kiểu lạc đoàn có ngay từ đầu, đoàn đi thưa hơn (từ đoàn 5 các bạn đi thành từng cụm, lúc sát lúc thưa), đoàn đi một hàng đến đoàn 12, hai hàng từ đoàn 13, ba hàng từ đoàn 25, và từ đoàn 10 có thể gặp đoàn "tự do": một thứ trên người (mũ, áo, quần, giày hoặc đồ cầm) mỗi bạn một kiểu. Siêu khó thì giống Khó nhưng đi hai hàng ngay từ đoàn đầu, mọi chỗ khác và đèn nhiễu có sẵn, có lúc hai hàng đi ngược chiều nhau, và tốc độ nhanh nhất thấp hơn một chút.</li>
       <li>Điểm là số đoàn bắt được kẻ lạc. Kỷ lục và bảng xếp hạng của từng chế độ tính riêng.</li>
@@ -160,7 +160,9 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   // ================= ĐỘ KHÓ TĂNG DẦN =================
   const HATS = ['non', 'mu', 'khan', 'mien'];
   const ITEMS = ['sao', 'long', 'co', 'trong'];
-  const SKINS = ['#f6cfa6', '#efbf92', '#e2ab7c', '#f8d9b8'];
+  // màu da theo độ sáng L (38 = nâu sẫm, 86 = trắng hồng): sẫm thì ngả đỏ nâu, sáng thì ngả hồng đào
+  const SKIN_LO = 38, SKIN_HI = 86;
+  const skinCol = L => { const t = (L - SKIN_LO) / (SKIN_HI - SKIN_LO); return hsl(22 + t * 8, 44 + t * 34, L); };
   const PANTS = ['#2c3156', '#3a2a4f', '#24405a', '#4a2f2a'];
   const PANTS_H = [232, 266, 209, 9];
   // đoàn nam (g = 0) và đoàn nữ (g = 1): mỗi đoàn chọn một kiểu đồ, một hoa văn, một kiểu tóc (đoàn nữ)
@@ -171,14 +173,14 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   const TOCS = ['bim', 'duoi', 'bui', 'xoa'];
   const WHY = {
     ao: 'Mặc áo khác màu', mu: 'Đội mũ khác', muMau: 'Mũ khác màu', do: 'Cầm đồ khác', doMau: 'Đồ cầm khác màu',
-    nhip: 'Bước lệch nhịp', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
+    nhip: 'Bước lệch nhịp', da: 'Khác màu da', tay: 'Cầm đồ bằng tay kia', ngoanh: 'Ngoảnh mặt ra sau', mat: 'Nhắm tịt mắt',
     trang: 'Mặc kiểu đồ khác', hoaVan: 'Áo khác hoa văn', toc: 'Để kiểu tóc khác',
     khongMu: 'Không đội mũ', khongDo: 'Không cầm đồ', quan: 'Mặc quần khác màu', giay: 'Đi giày khác màu',
   };
   // mốc: bắt được n đoàn thì có thử thách mới
   const STEPS = [
     [2, 'Để ý cả đồ cầm trên tay'],
-    [3, 'Có bạn không đội mũ, không cầm đồ'],
+    [3, 'Có bạn không đội mũ, không cầm đồ, khác màu da'],
     [4, 'Để ý nhịp bước chân'],
     [5, 'Để ý kiểu quần áo và tay cầm đồ'],
     [6, 'Để ý màu quần và giày'],
@@ -207,14 +209,16 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
   function cfgAt(n, hard, sieu) {
     let kinds = ['ao', 'mu'];
     if (n >= 2) kinds.push('do');
-    if (n >= 3) kinds.push('khongMu', 'khongDo');
+    if (n >= 3) kinds.push('khongMu', 'khongDo', 'da');
     if (n >= 4) kinds.push('nhip');
     if (n >= 5) kinds.push('trang', 'tay');
     if (n >= 6) kinds.push('quan', 'giay');
     if (n >= 8) { kinds = kinds.filter(k => k !== 'mu' && k !== 'do' && k !== 'trang'); kinds.push('muMau', 'doMau', 'mat'); }
     if (n >= 9) kinds.push('hoaVan', 'toc');
     if (n >= 10) kinds.push('ngoanh');
-    if (hard) kinds = KINDS_ALL.slice();
+    if (hard) kinds = KINDS_ALL.concat('da');
+    // từ đoàn 13 (Siêu khó: ngay từ đầu) màu da trộn ngẫu nhiên và không tính, nên bỏ kiểu khác màu da
+    if (n >= 13 || sieu) kinds = kinds.filter(k => k !== 'da');
     return {
       kinds,
       freeP: hard && n >= 10 ? .33 : 0,
@@ -222,6 +226,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       rows: sieu ? (n < 25 ? 2 : 3) : hard ? (n < 13 ? 1 : n < 25 ? 2 : 3) : (n < 10 ? 1 : n < 20 ? 2 : 3),
       T: Math.max(sieu ? 7.4 : 6.5, 14 - n * .375),
       hueD: Math.max(18, 130 - n * 7),
+      skinD: hard ? Math.max(16, 24 - n) : Math.max(16, 36 - n * 2),
       nhip: n < 8 ? 1.75 : n < 12 ? 1.5 : 1.25,
       vary: sieu || n >= 13,
       decoy: sieu || n >= 14,
@@ -245,7 +250,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     const free = c.freeP && Math.random() < c.freeP ? pick(FREES) : null;
     const g = Math.random() < .5 ? 1 : 0, hats = g ? HATS_NU : HATS;
     const base = {
-      shirt: rint(0, 359), shL: 54, pants: pick(PANTS), skin: pick(SKINS),
+      shirt: rint(0, 359), shL: 54, pants: pick(PANTS), skinL: rint(SKIN_LO, SKIN_HI),
       g, outfit: pick(OUTFITS[g]), pat: pick(PATS), toc: pick(TOCS), num: rint(1, 9),
       hat: { t: pick(hats), h: rint(0, 359) }, item: { t: pick(ITEMS), h: rint(0, 359) },
       hand: 1, dir: 1, face: 1, eyes: 1, off: 0, hs: 1, tempo: 1, amp: 1,
@@ -263,6 +268,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     if (kind === 'quan' && (SKIRT[base.outfit] || base.outfit === 'aodai')) kind = 'giay';
     // các phép đổi kiểu ở trên có thể rơi vào đúng nhóm đang tự do: chuyển sang kiểu không dính đồ mặc
     if (free && KIND_CAT[kind] === free) kind = pick(['nhip', 'mat', 'ngoanh']);
+    if (kind === 'da' && base.skinL + c.skinD > SKIN_HI && base.skinL - c.skinD < SKIN_LO) base.skinL = rint(SKIN_LO, SKIN_HI - c.skinD);
     const odd = JSON.parse(JSON.stringify(base));
     const dh = c.hueD * (Math.random() < .5 ? -1 : 1);
     const dl = c.hueD < 70 ? (Math.random() < .5 ? -7 : 7) : 0;
@@ -275,6 +281,12 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
     else if (kind === 'do') odd.item.t = pick(ITEMS.filter(x => x !== base.item.t));
     else if (kind === 'doMau') { odd.item.h += dh; odd.item.dl = dl; }
     else if (kind === 'nhip') { odd.tempo = Math.random() < .5 ? c.nhip : 1 / c.nhip; odd.off = .5; odd.amp = 1.35; }
+    else if (kind === 'da') {
+      // lệch skinD độ sáng; chọn chiều còn chỗ trong dải, cả hai chiều đều được thì bốc ngẫu nhiên
+      const up = base.skinL + c.skinD <= SKIN_HI, dn = base.skinL - c.skinD >= SKIN_LO;
+      const sg = up && dn ? (Math.random() < .5 ? 1 : -1) : up ? 1 : -1;
+      odd.skinL = base.skinL + sg * c.skinD;
+    }
     else if (kind === 'tay') odd.hand = -1;
     else if (kind === 'ngoanh') odd.face = -1;
     else if (kind === 'mat') odd.eyes = 0;
@@ -286,6 +298,8 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const gh = shoeH + Math.max(45, c.hueD) * (dh < 0 ? -1 : 1), gl = shoeL + dl;
       odd.shoe = hsl(gh, shoeS, gl); odd.shoeD = hsl(gh, shoeS - 8, gl - 14);
     }
+    base.skin = skinCol(base.skinL); odd.skin = skinCol(odd.skinL);
+    base.skinB = odd.skinB = null;
     const R = c.rows, N = c.size, cols = Math.ceil(N / R), sp = hard ? 185 : 160;
     // chế độ Khó: đoàn thưa hơn thường. Từ đoàn 5 các bạn đi thành cụm 2 đến 4 bạn sát nhau (cách 125 đến 145),
     // giữa các cụm chừa khoảng trống (200 đến 280); từ đoàn 13 mỗi hàng một dãy riêng nên không còn thẳng cột.
@@ -342,7 +356,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const col = Math.floor(i / R), row = i % R;
       const isOdd = i === oddIdx;
       const lk = JSON.parse(JSON.stringify(isOdd ? odd : base));
-      if (c.vary) { lk.hs = rnd(.88, 1.1); lk.skin = pick(SKINS); }
+      if (c.vary) { lk.hs = rnd(.88, 1.1); lk.skinL = rint(SKIN_LO, SKIN_HI); lk.skin = skinCol(lk.skinL); }
       if (free) freeLook(lk, free, hats);
       // mồi gây nhiễu (không tính là lạc đoàn): đèn lắc nhanh chậm, lệch pha, sáng tối khác nhau
       if (c.decoy && lk.item.t !== 'none' && lk.item.t !== 'trong') {
@@ -748,7 +762,7 @@ button:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
       const hipY = -50 + bob * .4, bend = Math.max(0, -ang) * 1.1 + .08;
       const kx = hx + Math.sin(ang) * 22, ky = hipY + Math.cos(ang) * 22;
       const fx = kx + Math.sin(ang - bend) * 21, fy = ky + Math.cos(ang - bend) * 21;
-      const sk = near ? lk.skin : hsl(25, 40, 58), lp = LONG[lk.outfit], sk2 = SKIRT[lk.outfit];
+      const sk = near ? lk.skin : (lk.skinB || (lk.skinB = skinCol(lk.skinL - 12))), lp = LONG[lk.outfit], sk2 = SKIRT[lk.outfit];
       seg(c, kx, ky, fx, fy, 10, sk);
       seg(c, fx + (kx - fx) * .3, fy + (ky - fy) * .3, fx, fy, 11, near ? '#f4f1ea' : '#c9c3bb');
       if (lp) seg(c, kx, ky, fx + (kx - fx) * .26, fy + (ky - fy) * .26, 13, pants);
