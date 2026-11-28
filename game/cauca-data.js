@@ -490,7 +490,8 @@
     rewards: [
       { id: 'tom', name: '10 Mồi tôm', cost: { vo: 25 }, lim: 3, give: { bait: 'tom', n: 10 } },
       { id: 'cam', name: '10 Cám thơm', cost: { vo: 40 }, lim: 3, give: { bait: 'cam', n: 10 } },
-      { id: 'drink', name: 'Nước tăng lực', cost: { vo: 30 }, lim: 5, give: { drink: 1 } },
+      { id: 'drm', name: 'Nước tăng lực (Vừa)', cost: { vo: 30 }, lim: 3, give: { drink: 'm' } },
+      { id: 'drl', name: 'Nước tăng lực (Lớn)', cost: { vo: 55 }, lim: 2, give: { drink: 'l' } },
       { id: 'xu', name: 'Túi 300 xu', cost: { vo: 50 }, lim: 4, give: { coins: 300 } },
       { id: 'vang', name: '5 Mồi vàng', cost: { ngoc: 5 }, lim: 2, give: { bait: 'vang', n: 5 } },
       { id: 'so', name: 'Sò ngọc', cost: { ngoc: 12 }, lim: 1, give: { deco: 'so' } }
@@ -516,7 +517,8 @@
       bich: { name: 'Ngọc bích', r: 'hiemco', rl: 'Rất hiếm', w: 5, desc: 'Viên ngọc xanh còn nguyên vẻ sáng trong.' }
     },
     rewards: [
-      { id: 'drink', name: 'Nước tăng lực', cost: { go: 8 }, lim: 0, give: { drink: 1 } },
+      { id: 'drm', name: 'Nước tăng lực (Vừa)', cost: { go: 6 }, lim: 0, give: { drink: 'm' } },
+      { id: 'drl', name: 'Nước tăng lực (Lớn)', cost: { go: 11 }, lim: 0, give: { drink: 'l' } },
       { id: 'cam', name: '10 Cám thơm', cost: { go: 6 }, lim: 0, give: { bait: 'cam', n: 10 } },
       { id: 'xu', name: 'Túi 250 xu', cost: { tien: 4 }, lim: 0, give: { coins: 250 } },
       { id: 'vang', name: '5 Mồi vàng', cost: { tien: 3 }, lim: 0, give: { bait: 'vang', n: 5 } },
@@ -534,7 +536,15 @@
     return EVENT2.list[0];
   }
   var TANK = { start: 3, max: 15, cost: function (slots) { return Math.round(80 * Math.pow(1.25, slots - 3) / 10) * 10; } };
-  var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drink: { name: 'Nước tăng lực', gain: 30, price: 90, cap: 120 } };
+  /* Ba cỡ nước tăng lực; day = số lần mua tối đa mỗi ngày (làm mới 00:00 giờ Việt Nam). */
+  var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drinks: [
+    { id: 's', name: 'Nước tăng lực (Nhỏ)', gain: 5, price: 90, day: 10 },
+    { id: 'm', name: 'Nước tăng lực (Vừa)', gain: 15, price: 250, day: 5 },
+    { id: 'l', name: 'Nước tăng lực (Lớn)', gain: 30, price: 450, day: 3 }
+  ] };
+  ENERGY.byId = {}; ENERGY.drinks.forEach(function (d) { ENERGY.byId[d.id] = d; });
+  /* Số ngày tính theo giờ Việt Nam, dùng cho giới hạn mua trong ngày. */
+  function dayOfVN(now) { return Math.floor((now + 7 * 3600000) / 86400000); }
 
   /* Năng lực: nâng bằng xu. Cấp 0 = chỉ số gốc của game. cost(lv) là giá nâng từ cấp lv lên lv+1. */
   function upCost(base, grow) { return function (lv) { return Math.round(base * Math.pow(grow, lv) / 10) * 10; }; }
@@ -567,6 +577,6 @@
   }
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, DAYNIGHT: DAYNIGHT, TIDES: TIDES, dayOf: dayOf, tideAt: tideAt, tideLevel: tideLevel, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
-    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, EVENT: EVENT, EVENT2: EVENT2, eventKind: eventKind, eventPick: eventPick, eventWeek: eventWeek, eventEnds: eventEnds, eventDrop: eventDrop, ENERGY: ENERGY, price: price,
+    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, EVENT: EVENT, EVENT2: EVENT2, eventKind: eventKind, eventPick: eventPick, eventWeek: eventWeek, eventEnds: eventEnds, eventDrop: eventDrop, ENERGY: ENERGY, dayOfVN: dayOfVN, price: price,
     slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, condOk: condOk, rateOf: rateOf, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);

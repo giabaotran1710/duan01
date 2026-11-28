@@ -1391,6 +1391,12 @@
     else if (id === 'cam') { P.rect(3, 6, 10, 8, '#c8a060'); P.rect(3, 6, 10, 2, '#a88040'); for (var k = 0; k < 6; k++) P.rect(4 + (k % 3) * 3, 2 + Math.floor(k / 3) * 2, 2, 2, '#8a5a2a'); }
     else if (id === 'vang') { P.ell(8, 9, 5, 5, '#e8b83a'); P.ell(7, 8, 3, 3, '#ffe880'); P.line(8, 4, 8, 1, '#c8c8c8'); P.rect(12, 2, 1, 1, '#fff6c0'); P.rect(3, 4, 1, 1, '#fff6c0'); }
     else if (id === 'drink') { P.rect(4, 2, 8, 13, '#2fa85a'); P.rect(4, 2, 8, 2, '#c8c8c8'); P.poly([9, 5, 6, 9, 8, 9, 7, 13, 10, 8, 8, 8], '#ffd23f'); }
+    else if (/^drink_[sml]$/.test(id)) {   // lon nhỏ, vừa, lớn: cao và rộng dần
+      var sz = { s: [6, 8], m: [7, 11], l: [9, 14] }[id[6]], w = sz[0], h = sz[1], x0 = 8 - Math.ceil(w / 2), y0 = 15 - h;
+      P.rect(x0, y0, w, h, '#2fa85a'); P.rect(x0, y0, w, 2, '#c8c8c8'); P.rect(x0 + 1, y0 + 2, 1, h - 3, '#5ac87e');
+      var cx = x0 + w / 2, cy = y0 + 2 + (h - 2) / 2, k = (h - 3) / 10;
+      P.poly([cx + 1.2 * k, cy - 4 * k, cx - 1.8 * k, cy + .5 * k, cx, cy + .5 * k, cx - .8 * k, cy + 4 * k, cx + 2 * k, cy - .5 * k, cx, cy - .5 * k], '#ffd23f');
+    }
     else if (id === 'up_nl') { P.rect(2, 4, 11, 9, '#3a4a6a'); P.rect(13, 6, 2, 5, '#3a4a6a'); P.rect(3, 5, 9, 7, '#2a3450'); P.rect(3, 5, 6, 7, '#ffd23f'); P.rect(8, 5, 1, 7, '#fff2a8'); P.rect(3, 5, 9, 1, '#fff6c0'); }
     else if (id === 'up_hoi') { P.rect(3, 1, 10, 2, '#a8763e'); P.rect(3, 13, 10, 2, '#a8763e'); P.poly([4, 3, 12, 3, 9, 8, 12, 13, 4, 13, 7, 8], '#dfe8f0'); P.poly([5, 3, 11, 3, 8, 6], '#7ad0f0'); P.poly([5, 13, 11, 13, 8, 10], '#7ad0f0'); P.rect(7, 7, 2, 2, '#f8c040'); }
     else if (id === 'up_kt') { P.ell(8, 8, 6, 3.5, '#5aa6ec'); P.poly([13, 8, 16, 4, 16, 12], '#3f8ad8'); P.ell(5, 7, 1, 1, '#1b1d2a'); P.rect(1, 13, 14, 1, '#f4e8c8'); for (var m = 0; m < 5; m++) P.rect(1 + m * 3, 12, 1, 2, '#7a5a3a'); P.rect(1, 2, 1, 1, '#ffd23f'); P.rect(0, 3, 3, 1, '#ffd23f'); }

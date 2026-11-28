@@ -52,7 +52,8 @@ button{font:inherit;color:inherit;cursor:pointer;border:0;background:none;paddin
 #clock .t{font-size:30px;line-height:1}
 #clock canvas{width:27px;height:21px;image-rendering:pixelated}
 #clock .s{font-size:17px;color:#cfd4e8}
-#clock .wait{font-size:15px;color:var(--gold);margin-top:2px}
+#clock .wait{font-size:15px;color:var(--gold);margin-top:2px;white-space:pre;display:flex;align-items:center;justify-content:flex-end}
+#clock .wait canvas{width:12px;height:12px;margin-left:0}
 #clock.ff .t{color:var(--gold)}
 #snd{right:calc(14px + env(safe-area-inset-right,0px));top:calc(112px + env(safe-area-inset-top,0px));width:36px;height:32px;display:grid;place-items:center}
 #snd canvas{width:24px;height:21px;image-rendering:pixelated}
@@ -254,11 +255,11 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 <canvas id="cv" role="img" aria-label="Bến câu cá"></canvas>
 
 <button class="hud" id="flag" data-no-scene aria-label="Mở bản đồ vùng câu"><span class="pole"></span><span class="cloth"><b id="regName">Ao làng</b><small>Bản đồ ▸</small></span></button>
-<button class="hud px dark" id="clock" data-no-scene aria-label="Chờ thêm một giờ">
+<button class="hud px dark" id="clock" data-no-scene aria-label="Bỏ qua một giờ, tốn 1 năng lượng">
   <div class="row"><canvas id="slotIc" width="11" height="7"></canvas><span class="t" id="clockT">06:00</span></div>
   <div class="row s"><span id="clockS">Bình minh · Nắng</span><canvas id="wxIc" width="10" height="7" style="width:20px;height:14px"></canvas></div>
   <div class="row s"><span id="clockN">Nước vừa</span><canvas id="tideIc" width="9" height="7" style="width:18px;height:14px"></canvas></div>
-  <div class="wait">Chạm: chờ 1 giờ</div>
+  <div class="wait"><span>Bỏ qua 1 giờ  </span><canvas id="clkBolt" width="8" height="8"></canvas><span>-1</span></div>
 </button>
 <button class="hud px dark" id="snd" data-no-scene aria-label="Tắt tiếng"><canvas id="sndIc" width="8" height="7"></canvas></button>
 <div class="hud" id="shore">
@@ -366,8 +367,8 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
 <footer class="tbFooter">Version: D20261125120000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
 <script src="../scores.js?v=20261116a"></script>
 <script src="../sfx.js?v=20261125a" data-bank="cauca"></script>
-<script src="cauca-data.js?v=5"></script>
-<script src="cauca-art.js?v=8"></script>
+<script src="cauca-data.js?v=6"></script>
+<script src="cauca-art.js?v=9"></script>
 <script>
 (function () {
   'use strict';
@@ -391,7 +392,13 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
     CC.UPGRADES.forEach(function (u) { s.up[u.id] = Math.floor(num(s.up[u.id], 0, 0, u.max)); });
     s.en = Math.floor(num(s.en, CC.energyMax(s.up), 0, CC.drinkCap(s.up)));
     s.enT = num(s.enT, Date.now(), 0, 1e15);
-    s.drinks = Math.floor(num(s.drinks, 0, 0, 999));
+    // Bản cũ lưu một loại nước (hồi 30): đổi sang 1 lon Lớn (hồi 30) cho mỗi lon cũ, không mất đồ.
+    var dr = s.drinks && typeof s.drinks === 'object' ? s.drinks : {};
+    if (typeof s.drinks === 'number') dr = { l: s.drinks };
+    s.drinks = {}; CC.ENERGY.drinks.forEach(function (d) { s.drinks[d.id] = Math.floor(num(dr[d.id], 0, 0, 999)); });
+    var bt = s.dBuy && typeof s.dBuy === 'object' ? s.dBuy : {};
+    s.dBuy = { d: Math.floor(num(bt.d, 0, 0, 1e7)), n: {} };
+    CC.ENERGY.drinks.forEach(function (d) { s.dBuy.n[d.id] = Math.floor(num(bt.n && bt.n[d.id], 0, 0, d.day)); });
     if (!s.baits || typeof s.baits !== 'object') s.baits = {};
     Object.keys(CC.BAITS).forEach(function (k) { s.baits[k] = Math.floor(num(s.baits[k], 0, 0, 9999)); });
     if (!CC.BAITS[s.bait] || (s.bait !== 'giun' && !s.baits[s.bait])) s.bait = 'giun';
@@ -422,7 +429,10 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
   var EN = CC.ENERGY;
   function enMax() { return CC.energyMax(S.up); }          // tối đa theo cấp Năng lực
   function regenMs() { return CC.regenMs(S.up); }          // số mili giây để hồi 1 năng lượng
-  function drinkCap() { return CC.drinkCap(S.up); }        // nước tăng lực nạp được tới mức này
+  function drinkCap() { return CC.drinkCap(S.up); }
+  function drinkTotal() { var n = 0; EN.drinks.forEach(function (d) { n += S.drinks[d.id]; }); return n; }
+  function drinkSync() { var d = CC.dayOfVN(Date.now()); if (S.dBuy.d !== d) { S.dBuy.d = d; EN.drinks.forEach(function (x) { S.dBuy.n[x.id] = 0; }); } }
+  function drinkLeft(D) { drinkSync(); return D.day - S.dBuy.n[D.id]; }        // nước tăng lực nạp được tới mức này
   function mods() { return CC.upMods(S.up); }              // hệ số cỡ cá, cá hiếm, giá rác
   function syncEnergy() {
     var now = Date.now(), mx = enMax(), rg = regenMs();
@@ -607,7 +617,7 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
   function evGive(r) {
     var g = r.give;
     if (g.bait) S.baits[g.bait] += g.n;
-    if (g.drink) S.drinks += g.drink;
+    if (g.drink) S.drinks[g.drink]++;
     if (g.coins) S.coins += g.coins;
     if (g.slot) S.slots = Math.min(CC.TANK.max, S.slots + g.slot);
     if (g.deco) { S.decos[g.deco] = 1; S.decoOn[g.deco] = true; }
@@ -627,7 +637,7 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
     var out = kho ? ev2Left(r) <= 0 : got[r.id] >= r.lim, own = kho ? ev2Own(r) : (r.give.deco && S.decos[r.give.deco] && !got[r.id]);
     var t = document.createElement('div'); t.className = 'tk' + (out || own ? ' done' : ''); t.style.setProperty('--r', [-1.5, 1, -.5, 1.5, -1, .5][i % 6] + 'deg');
     var hd = document.createElement('div'); hd.className = 'hd';
-    var g = r.give, ic = g.bait ? CA.item(g.bait) : g.drink ? CA.item('drink') : g.deco ? CA.deco(g.deco) : g.slot ? CA.item('slot') : null;
+    var g = r.give, ic = g.bait ? CA.item(g.bait) : g.drink ? CA.item('drink_' + g.drink) : g.deco ? CA.deco(g.deco) : g.slot ? CA.item('slot') : null;
     var c = document.createElement('canvas');
     if (ic) iconCv(c, ic); else { c.width = 8; c.height = 8; c.getContext('2d').drawImage($('coinIc'), 0, 0); }
     var nm = document.createElement('b'); nm.textContent = r.name;
@@ -698,7 +708,7 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
     $('regName').textContent = region().name;
     var bolt = CA.canvas(8, 8), bx = bolt.getContext('2d'); bx.fillStyle = '#ffd23f';
     [[4, 0, 3, 1], [3, 1, 3, 1], [2, 2, 3, 1], [1, 3, 6, 1], [3, 4, 3, 1], [3, 5, 2, 1], [2, 6, 2, 1], [2, 7, 1, 1]].forEach(function (r) { bx.fillRect(r[0], r[1], r[2], r[3]); });
-    iconTo('enIc', bolt);
+    iconTo('enIc', bolt); iconTo('clkBolt', bolt);
     var coin = CA.canvas(8, 8), cx2 = coin.getContext('2d'); cx2.fillStyle = '#c8962a'; cx2.fillRect(1, 0, 6, 8); cx2.fillRect(0, 1, 8, 6); cx2.fillStyle = '#f0c040'; cx2.fillRect(1, 1, 6, 6); cx2.fillStyle = '#7a5a1a'; cx2.fillRect(3, 3, 2, 2); cx2.fillStyle = '#fff2a0'; cx2.fillRect(2, 1, 2, 1);
     iconTo('coinIc', coin);
     iconTo('tankIc', CA.item('slot'));
@@ -737,7 +747,7 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
     syncEnergy();
     if (S.en < 1) {
       sfx('bad', { vol: .5 });
-      toast(S.drinks ? 'Hết năng lượng! Chạm ô năng lượng để uống nước tăng lực.' : 'Hết năng lượng! Hồi đầy sau ' + hm(fullIn()) + ', hoặc mua nước tăng lực.', 3600);
+      toast(drinkTotal() ? 'Hết năng lượng! Chạm ô năng lượng để uống nước tăng lực.' : 'Hết năng lượng! Hồi đầy sau ' + hm(fullIn()) + ', hoặc mua nước tăng lực.', 3600);
       var w = $('wallet'); w.classList.remove('flash'); void w.offsetWidth; w.classList.add('flash');
       return;
     }
@@ -1248,6 +1258,10 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
   $('clock').addEventListener('click', function () {
     if (G.state === 'title' || G.overlay || G.ff || G.state === 'reel' || G.state === 'cast') return;
     if (G.state === 'bite' || G.state === 'hook') return toast('Cá đang cắn câu, chạm đã!');
+    syncEnergy();
+    if (S.en < 1) { sfx('bad', { vol: .5 }); toast('Hết năng lượng, không bỏ qua giờ được.', 2200); var w = $('wallet'); w.classList.remove('flash'); void w.offsetWidth; w.classList.add('flash'); return; }
+    if (S.en >= enMax()) S.enT = Date.now();
+    S.en--; save(); wallet(true);
     if (G.state === 'wait') reelIn(true);
     var target = (Math.floor(S.min / 60) + 1) * 60;
     G.ff = { left: target - S.min }; G.state = 'ff'; showHint(false); say('');
@@ -1448,11 +1462,14 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
       list.appendChild(itemRow(k, B.name + ' (có ' + have + ')', B.desc, btns));
     });
     h('Năng lượng');
-    var D = EN.drink;
-    list.appendChild(itemRow('drink', D.name + ' (có ' + S.drinks + ')', 'Hồi ' + D.gain + ' năng lượng ngay, được vượt mức ' + enMax() + ' (tối đa ' + drinkCap() + ').', [
-      { label: 'Mua · ' + D.price + ' xu', fn: function () { if (buy(D.price)) S.drinks++; } },
-      { label: 'Uống', cls: 'alt', disabled: !S.drinks || S.en >= drinkCap(), fn: drink }
-    ]));
+    drinkSync();
+    EN.drinks.forEach(function (D) {
+      var left = D.day - S.dBuy.n[D.id];
+      list.appendChild(itemRow('drink_' + D.id, D.name + ' (có ' + S.drinks[D.id] + ')', 'Hồi ' + D.gain + ' năng lượng ngay, được vượt mức ' + enMax() + ' (tối đa ' + drinkCap() + '). Mua trong ngày ' + left + '/' + D.day + '.', [
+        { label: left > 0 ? 'Mua · ' + D.price + ' xu' : 'Hết lượt', disabled: left <= 0, fn: function () { if (drinkLeft(D) > 0 && buy(D.price)) { S.drinks[D.id]++; S.dBuy.n[D.id]++; } } },
+        { label: 'Uống', cls: 'alt', disabled: !S.drinks[D.id] || S.en >= drinkCap(), fn: function () { drink(D.id); } }
+      ]));
+    });
     h('Bể cá');
     var full = S.slots >= CC.TANK.max, cost = CC.TANK.cost(S.slots);
     list.appendChild(itemRow('slot', 'Thêm chỗ trong bể (' + S.slots + '/' + CC.TANK.max + ')', 'Mỗi chỗ trưng bày được một con cá.', [
@@ -1469,18 +1486,20 @@ body.ovOpen #toast{bottom:calc(22px + env(safe-area-inset-bottom,0px))}
     list.scrollTop = top;
   }
   function sandIcon() { var P = CA.painter(12, 12, false); P.ell(6, 8, 6, 4, '#f0e8d0'); P.rect(3, 7, 1, 1, '#d8ccae'); P.rect(8, 9, 1, 1, '#d8ccae'); return P.done('#1b1d2a'); }
-  function drink() {
-    if (!S.drinks || S.en >= drinkCap()) return;
+  function drink(id) {
+    if (!id) { var best = null; EN.drinks.forEach(function (d) { if (S.drinks[d.id] && !best) best = d.id; }); id = best; }   // chạm ô năng lượng: dùng lon nhỏ nhất đang có
+    if (!id || !S.drinks[id] || S.en >= drinkCap()) return;
+    var D = EN.byId[id];
     syncEnergy();
-    S.drinks--; S.en = Math.min(drinkCap(), S.en + EN.drink.gain);
-    sfx('level', { vol: .6 }); toast('+' + EN.drink.gain + ' năng lượng!', 1400);
+    S.drinks[id]--; S.en = Math.min(drinkCap(), S.en + D.gain);
+    sfx('level', { vol: .6 }); toast('+' + D.gain + ' năng lượng!', 1400);
   }
   function openShop() { sfx('select'); openOv('shop'); renderShop(); }
   $('shopBtn').addEventListener('click', function () { if (G.state === 'bite' || G.state === 'hook' || G.state === 'reel') return; openShop(); });
   $('wallet').addEventListener('click', function () {
     if (G.state === 'bite' || G.state === 'hook' || G.state === 'reel') return;
     syncEnergy();
-    if (S.drinks && S.en < enMax()) { drink(); save(); wallet(true); return; }
+    if (drinkTotal() && S.en < enMax()) { drink(); save(); wallet(true); return; }
     openShop();
   });
   $('shopX').addEventListener('click', function () { closeOv(); });
