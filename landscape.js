@@ -2,7 +2,7 @@
    Dùng: <script src="../landscape.js?v=..."></script> rồi gọi
      LandscapeGate.bind(nútOK, { note: phầnTửGhiChú, onSkip: hàm })
    - Nút OK: vào toàn màn hình rồi khóa hướng ngang (screen.orientation.lock), nên máy tự xoay ngang, người chơi không phải xoay tay.
-   - Máy không hỗ trợ (vd. iPhone/Safari): hiện ghi chú nhờ xoay tay; bấm OK lần nữa thì chơi tiếp ở màn hình dọc (onSkip).
+   - Máy không hỗ trợ (vd. iPhone/Safari): hiện ghi chú nhờ xoay tay; bấm lại thì thử xoay lần nữa. Không có đường chơi màn hình dọc (onSkip bị bỏ qua).
    - Việc hiện/ẩn lớp phủ "xoay ngang" vẫn do từng game tự quyết theo kích thước khung nhìn (portrait hay không). */
 (function () {
   'use strict';
@@ -24,14 +24,13 @@
     });
   }
   function bind(btn, opt) {
-    opt = opt || {}; var failed = false;
-    btn.textContent = 'OK';
+    opt = opt || {};
+    if (!btn.textContent.trim()) btn.textContent = 'OK';
     btn.onclick = function () {
-      if (failed) { if (opt.onSkip) opt.onSkip(); return; }
+      /* bấm lại: thử xoay lần nữa (không còn đường chơi màn hình dọc; opt.onSkip bị bỏ qua) */
       request().then(function (ok) {
-        if (ok) { if (opt.onOk) opt.onOk(); return; }
-        failed = true;
-        if (opt.note) opt.note.textContent = 'Máy này chưa tự xoay được. Hãy tắt khóa xoay màn hình rồi xoay ngang máy, hoặc bấm OK lần nữa để chơi màn hình dọc.';
+        if (ok) { if (opt.note) opt.note.textContent = ''; if (opt.onOk) opt.onOk(); return; }
+        if (opt.note) opt.note.textContent = 'Máy này chưa tự xoay được. Hãy tắt khóa xoay màn hình rồi xoay ngang máy.';
       });
     };
   }
