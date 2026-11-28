@@ -344,6 +344,7 @@ function step(dt) {
 /* ======================= Trạng thái ván ======================= */
 const BAL_R = 19, SH_R = 25, START_Y = -90;
 let state = 'menu', camY = 0, alt = 0, runBest = 0, nextY = 0, elapsed = 0, zoneIdx = 0, speed = 0;
+let camp = 0, campCool = 0;
 let target = { x: 0, sy: 0 }, drag = null, parts = [], popAt = 0, balloonDead = false, idleT = 0, passedBest = false;
 const balloon = { t: 'c', x: 0, y: 0, r: BAL_R };
 const by0 = () => FH * .64;            // vị trí bóng trên màn (đơn vị logic)
@@ -465,7 +466,7 @@ function spawnNext() {
 /* ======================= Ván chơi ======================= */
 function reset() {
   bodies = []; events = []; parts = []; lastPat = '';
-  camY = START_Y - by0(); alt = 0; runBest = 0; elapsed = 0; zoneIdx = 0; balloonDead = false; passedBest = false;
+  camY = START_Y - by0(); alt = 0; runBest = 0; elapsed = 0; zoneIdx = 0; balloonDead = false; passedBest = false; camp = 0; campCool = 0;
   balloon.x = 0; balloon.y = START_Y;
   shield = circle(0, START_Y - 110, SH_R, { kin: true, c: 'shield' });
   target.x = 0; target.sy = by0() - 110;
@@ -527,6 +528,16 @@ function update(dt) {
     let vx = (gx - shield.x) / h, vy = (gy - shield.y) / h; const sp = Math.hypot(vx, vy), cap = 2600;
     if (sp > cap) { vx *= cap / sp; vy *= cap / sp; }
     shield.vx = vx; shield.vy = vy; step(h);
+  }
+  // khiên đặt khớp lên bóng một lúc thì chặn ngay phía trước: hai thanh chắn sọc cố định cùng một thanh ngang dài ép bóng
+  if (Math.hypot(shield.x - balloon.x, shield.y - balloon.y) < 14) camp += dt; else camp = Math.max(0, camp - dt * 2);
+  if (campCool > 0) campCool -= dt;
+  if (camp > .7 && campCool <= 0) {
+    camp = 0; campCool = 6;
+    const yb = balloon.y - speed * 1.1 - 70, half = 40;
+    box(-half - 120, yb - 11, 240, 22, { kin: true, c: 'wall' });
+    box(half + 120, yb - 11, 240, 22, { kin: true, c: 'wall' });
+    box(0, yb - 38, 230, 14, { kin: true, c: 'wall', a: R() < .5 ? .05 : -.05 });
   }
   // dọn đồ đã rơi khỏi màn
   const yMax = camY + FH + 160, xMax = FW / 2 + 320;
