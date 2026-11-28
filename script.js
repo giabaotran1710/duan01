@@ -8,11 +8,9 @@ document.addEventListener('DOMContentLoaded', function () {
     const line2 = document.getElementById('intro-line2');
     const petalContainer = document.getElementById('petal-container');
     const skipIntroBtn = document.getElementById('skip-intro');
-    const chillBtn = document.getElementById('chillBar');          // Nút mở Chill Bar (trên thanh đầu trang)
-    const chillPanel = document.getElementById('chillBarPanel'); // Bảng mini-game
     const actions = document.getElementById('hActions');          // Cụm nút bên phải thanh đầu trang
 
-    if (!overlay || !line1 || !line2 || !petalContainer || !skipIntroBtn || !chillBtn || !chillPanel) {
+    if (!overlay || !line1 || !line2 || !petalContainer || !skipIntroBtn) {
         console.error('Thiếu phần tử DOM cần thiết. Kiểm tra lại HTML.');
         return;
     }
@@ -82,36 +80,6 @@ document.addEventListener('DOMContentLoaded', function () {
     }, 2000);
 
     // ============================================================
-    // 4. CHILL BAR (bảng mini-game mở từ nút xúc xắc trên thanh đầu trang)
-    // ============================================================
-    function openChillBar() {
-        chillPanel.hidden = false;
-        requestAnimationFrame(() => chillPanel.classList.add('open'));
-        chillBtn.classList.add('active');
-        chillBtn.setAttribute('aria-expanded', 'true');
-        requestAnimationFrame(checkDescOverflow);
-    }
-    function closeChillBar() {
-        if (chillPanel.hidden) return;
-        chillPanel.classList.remove('open');
-        chillBtn.classList.remove('active');
-        chillBtn.setAttribute('aria-expanded', 'false');
-        setTimeout(() => { if (!chillPanel.classList.contains('open')) chillPanel.hidden = true; }, 220);
-    }
-    chillBtn.addEventListener('click', function (e) {
-        e.stopPropagation();
-        if (chillPanel.classList.contains('open')) closeChillBar(); else openChillBar();
-    });
-    // Bấm ra ngoài khi bảng đang mở: chỉ đóng bảng, không mở nhầm game nằm bên dưới
-    document.addEventListener('click', function (e) {
-        if (!chillPanel.classList.contains('open')) return;
-        if (chillPanel.contains(e.target) || chillBtn.contains(e.target)) return;
-        e.stopPropagation(); e.preventDefault();
-        closeChillBar();
-    }, true);
-    document.addEventListener('keydown', function (e) { if (e.key === 'Escape') closeChillBar(); });
-
-    // ============================================================
     // 5. GOM CÁC NÚT CỦA SCRIPT KHÁC VÀO THANH ĐẦU TRANG
     //    (bảng xếp hạng, patch note, nhật ký và quản trị tự tạo nút riêng; đưa chúng về cùng một hàng)
     // ============================================================
@@ -122,7 +90,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 const b = document.getElementById(id);
                 if (b && b.parentElement !== actions) { b.classList.add('h-act'); actions.appendChild(b); }
             });
-            // giữ thứ tự cố định: xúc xắc, quản trị, nhật ký, bảng xếp hạng, patch note
+            // giữ thứ tự cố định: quản trị, nhật ký, bảng xếp hạng, patch note
             ORDER.forEach(id => { const b = document.getElementById(id); if (b && b.parentElement === actions) actions.appendChild(b); });
         };
         adopt();
@@ -181,21 +149,4 @@ document.addEventListener('DOMContentLoaded', function () {
         if (loadingOverlay) loadingOverlay.style.display = 'none';
     });
     
-    function checkDescOverflow() {
-        document.querySelectorAll(".chill-game-desc-wrap").forEach(wrap => {
-            const text = wrap.querySelector(".chill-game-desc");
-            if (!text) return;
-            wrap.classList.remove("is-overflowing");
-            if (text.scrollWidth > wrap.clientWidth) {
-                wrap.classList.add("is-overflowing");
-            }
-        });
-    }
-
-    if (document.fonts && document.fonts.ready) {
-        document.fonts.ready.then(() => requestAnimationFrame(checkDescOverflow));
-    } else {
-        setTimeout(checkDescOverflow, 300);
-    }
-
 }); // END DOMContentLoaded

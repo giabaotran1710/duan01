@@ -56,7 +56,6 @@
     { id: 'timochu', name: 'Tìm ô chữ' },
     { id: 'daibacvutru', name: 'Đại bác vũ trụ' },
     { id: 'truottuyet3d', name: 'Trượt tuyết' },
-    { id: 'daokhobau', name: 'Đào kho báu' },
     { id: 'nhodovat', name: 'Nhớ đồ vật', fmt: v => v + ' vòng' },
     { id: 'meodem', name: 'Mèo đêm đột nhập', fmt: v => 'hầm ' + v },
     { id: 'denkeoquan', name: 'Đèn kéo quân', fmt: v => v + ' điểm' },
