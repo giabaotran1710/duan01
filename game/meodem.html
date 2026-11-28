@@ -7,6 +7,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="theme-color" content="#0f1328">
 <title>Mèo đêm đột nhập</title>
+<link rel="stylesheet" href="../rotate-lock.css?v=20261128b">
+<script src="../rotate-lock.js?v=20261128b" data-mode="none"></script>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@500;700;800&family=Bricolage+Grotesque:wght@800&display=swap">
 <style>
 /* Kế hoạch giao diện: thành cổ về đêm. Gạch đá ong ấm trên nền chàm thẫm, ánh đèn lồng đỏ, điểm nhấn vàng đồng
@@ -89,13 +91,9 @@ canvas#cv{position:absolute;left:0;top:0;width:var(--bw,960px);height:100%;displ
 .pager{display:flex;align-items:center;justify-content:center;gap:calc(var(--u)*2);margin-top:calc(var(--u)*2);font-weight:800}
 .pager .b{padding:.35em .9em}
 /* Xoay ngang */
-#rotate{position:fixed;inset:0;z-index:50;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:24px;text-align:center;
-  background:#0b0d1c;font-weight:700}
+#rotate{display:none}
 #rotate.show{display:flex}
-#rotate svg{width:84px;height:84px;animation:rot 2.2s ease-in-out infinite}
-@keyframes rot{0%,25%{transform:rotate(0)}55%,100%{transform:rotate(-90deg)}}
-#rotate p{color:var(--muted);margin:0;max-width:300px;line-height:1.5;font-weight:500}
-@media (prefers-reduced-motion:reduce){#tapHint,#rotate svg,.spin{animation:none}}
+@media (prefers-reduced-motion:reduce){#tapHint,.spin{animation:none}}
 </style>
 <link rel="stylesheet" href="../footer.css?v=20261027174003">
 </head>
@@ -178,14 +176,16 @@ canvas#cv{position:absolute;left:0;top:0;width:var(--bw,960px);height:100%;displ
     </div></div>
   </div>
 </div>
-<div id="rotate">
-  <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="20" y="6" width="24" height="44" rx="5" fill="none" stroke="#f2c14e" stroke-width="3.5"/><circle cx="32" cy="43" r="2.4" fill="#f2c14e"/></svg>
-  <div>Xoay ngang điện thoại để chơi</div>
-  <p id="rotNote">Mèo đêm đột nhập là trò chơi màn hình ngang. Bấm OK để máy tự chuyển sang màn hình ngang.</p>
-  <button class="b" id="bPortrait" data-no-scene>OK</button>
+<div id="rotate" class="rl-screen" role="dialog" aria-modal="true" aria-labelledby="rotH">
+  <div class="rl-card rl-land"><svg class="rl-icon" viewBox="0 0 24 24" aria-hidden="true"><rect x="5.5" y="1.5" width="13" height="21" rx="3" fill="currentColor"/><rect x="7.3" y="4" width="9.4" height="14.2" rx="1" fill="#fff"/><circle cx="12" cy="20.2" r="1" fill="#fff"/></svg>
+    <h2 id="rotH">Vui lòng xoay ngang màn hình</h2>
+    <p>Trò chơi chỉ hỗ trợ màn hình ngang.</p>
+    <button class="rl-btn" id="bPortrait" type="button" data-no-scene>Xoay tự động</button>
+    <div class="rl-note" id="rotNote" aria-live="polite"></div>
+  </div>
 </div>
 <footer class="tbFooter">Version: D20261113140000 &gt;&gt;&gt; developed by Tran Gia Bao</footer>
-<script src="../landscape.js?v=20261115"></script>
+<script src="../landscape.js?v=20261128b"></script>
 <script src="../scores.js?v=20261116a"></script>
 <script id="mdcore">
 /*CORE-START*/
@@ -1065,11 +1065,12 @@ var SFX={
 };
 
 /* ---------- Khung hình co giãn 16:9 ---------- */
-var scale=1, dpr=1, forcePortrait=false;
+var scale=1, dpr=1;
 function isPortraitPhone(){ return innerHeight>innerWidth && Math.min(innerWidth,innerHeight)<700 && ('ontouchstart' in window || navigator.maxTouchPoints>0); }
 function fit(){
   var portrait=isPortraitPhone();
-  $('rotate').classList.toggle('show', portrait && !forcePortrait);
+  $('rotate').classList.toggle('show', portrait);
+  if(portrait && mode==='play' && started && !paused && S && !S.won && !demo) togglePause(); // bị che thì tạm dừng
   var vw=innerWidth, vh=innerHeight-(portrait?0:14);
   var bw=Math.min(vw, vh*16/9), bh=bw*9/16;
   box.style.setProperty('--bw',bw+'px'); box.style.setProperty('--bh',bh+'px');
@@ -1078,7 +1079,7 @@ function fit(){
   staticDirty=true;
 }
 addEventListener('resize',fit); addEventListener('orientationchange',function(){setTimeout(fit,200)});
-LandscapeGate.bind($('bPortrait'),{note:$('rotNote'),onSkip:function(){forcePortrait=true;fit()},onOk:fit});
+LandscapeGate.bind($('bPortrait'),{note:$('rotNote'),onOk:fit});
 
 /* ---------- Trạng thái ---------- */
 var mode='menu';           // menu | play
