@@ -344,7 +344,7 @@ function step(dt) {
 /* ======================= Trạng thái ván ======================= */
 const BAL_R = 19, SH_R = 25, START_Y = -90;
 let state = 'menu', camY = 0, alt = 0, runBest = 0, nextY = 0, elapsed = 0, zoneIdx = 0, speed = 0;
-let camp = 0, campCool = 0;
+let camp = 0, campCool = 0, trap = null;
 let target = { x: 0, sy: 0 }, drag = null, parts = [], popAt = 0, balloonDead = false, idleT = 0, passedBest = false;
 const balloon = { t: 'c', x: 0, y: 0, r: BAL_R };
 const by0 = () => FH * .64;            // vị trí bóng trên màn (đơn vị logic)
@@ -466,7 +466,7 @@ function spawnNext() {
 /* ======================= Ván chơi ======================= */
 function reset() {
   bodies = []; events = []; parts = []; lastPat = '';
-  camY = START_Y - by0(); alt = 0; runBest = 0; elapsed = 0; zoneIdx = 0; balloonDead = false; passedBest = false; camp = 0; campCool = 0;
+  camY = START_Y - by0(); alt = 0; runBest = 0; elapsed = 0; zoneIdx = 0; balloonDead = false; passedBest = false; camp = 0; campCool = 0; trap = null;
   balloon.x = 0; balloon.y = START_Y;
   shield = circle(0, START_Y - 110, SH_R, { kin: true, c: 'shield' });
   target.x = 0; target.sy = by0() - 110;
@@ -534,10 +534,25 @@ function update(dt) {
   if (campCool > 0) campCool -= dt;
   if (camp > .7 && campCool <= 0) {
     camp = 0; campCool = 6;
-    const yb = balloon.y - speed * 1.1 - 70, half = 40;
-    box(-half - 120, yb - 11, 240, 22, { kin: true, c: 'wall' });
-    box(half + 120, yb - 11, 240, 22, { kin: true, c: 'wall' });
-    box(0, yb - 38, 230, 14, { kin: true, c: 'wall', a: R() < .5 ? .05 : -.05 });
+    const yb = camY - 90, half = 40; // mọi thứ xuất hiện từ mép trên màn hình, không bật ra giữa màn
+    const b1 = box(-half - 120, yb - 11, 240, 22, { kin: true, c: 'wall', vy: 110 }), b2 = box(half + 120, yb - 11, 240, 22, { kin: true, c: 'wall', vy: 110 });
+    // thanh gỗ dài rơi từ trên xuống, nằm dưới hai thanh cố định: đỡ lên khiên rồi bị hai thanh cố định ép xuống
+    trap = { bars: [b1, b2], plank: box(rr(-12, 12), yb + 50, 230, 14, { c: 'plank', a: rr(-.06, .06), dens: 2.5, fl: false, vy: 280, f: 1 }) };
+  }
+  // thanh gỗ rơi xuống nằm lên khiên đang che bóng, hai thanh cố định tới sau thì bóng bị ép vỡ
+  if (trap) {
+    const pl = trap.plank, near = Math.hypot(shield.x - balloon.x, shield.y - balloon.y) < 30;
+    if (bodies.indexOf(pl) < 0) trap = null;
+    else if (!trap.pinned && near && Math.abs(pl.x - shield.x) < 100 && pl.y - shield.y > -(SH_R + 18) && pl.y - shield.y < -4) {
+      trap.pinned = true; trap.ox = pl.x - shield.x; trap.oy = -(SH_R + 7); trap.im = pl.iM; trap.ii = pl.iI;
+      pl.kin = true; pl.iM = 0; pl.iI = 0; pl.vx = pl.vy = pl.w = 0; pl.a = 0; upd(pl);
+    } else if (trap.pinned) {
+      if (!near) { trap.pinned = false; pl.kin = false; pl.iM = trap.im; pl.iI = trap.ii; }
+      else {
+        pl.x = shield.x + trap.ox; pl.y = shield.y + trap.oy; upd(pl);
+        if (trap.bars.some(b => { const m = collide(pl, b); return m && m.p[0][2] > .5; })) { pop(); return; }
+      }
+    }
   }
   // dọn đồ đã rơi khỏi màn
   const yMax = camY + FH + 160, xMax = FW / 2 + 320;
