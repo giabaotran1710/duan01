@@ -35,7 +35,7 @@
     <link rel="stylesheet" href="game.css?v=20261103dbv2">
     <link rel="stylesheet" href="animations.css?v=20261013">
 <link href="https://fonts.googleapis.com/css2?family=Exo+2:wght@400;700&family=Quicksand:wght@400;500&family=Be+Vietnam+Pro:wght@500;600;700;800&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="home.css?v=20261118e">
+    <link rel="stylesheet" href="home.css?v=20261128a">
 </head>
 <body>
 <!-- ===== INTRO OVERLAY ===== -->
@@ -1425,6 +1425,21 @@
         <div class="games-grid h-feed" id="hFeed"></div>
     </main>
 
+    <!-- ===== TÌM KIẾM GAME ===== -->
+    <button class="h-fab" id="hFindBtn" type="button" aria-label="Tìm game"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg><span>Tìm game</span></button>
+    <div class="h-find" id="hFind" role="dialog" aria-modal="true" aria-label="Tìm game" hidden>
+        <div class="h-find-dim" data-close></div>
+        <div class="h-find-sheet">
+            <div class="h-find-grab" aria-hidden="true"></div>
+            <div class="h-find-box">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.6-3.6"/></svg>
+                <input id="hFindIn" type="search" placeholder="Tên game, ví dụ: co vua" autocomplete="off" autocapitalize="off" spellcheck="false" enterkeyhint="go" aria-label="Tên game">
+                <button type="button" class="h-find-x" data-close aria-label="Đóng"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+            </div>
+            <div class="h-find-list" id="hFindList"></div>
+        </div>
+    </div>
+
     <script src="maintenance.js?v=20261123a"></script>
     <script src="script.js?v=20261106a"></script>
     <script>
@@ -1623,7 +1638,7 @@
         };
         const genreOrder = ['sieukho', 'co', 'chien-thuat', 'tri-tue', 'phan-xa', 'quan-sat', 'ghi-nho', 'giai-tri'];
         const genreColor = {
-            'moi': '#f2c14e', 'co': '#f2c14e', 'chien-thuat': '#ff8a5c', 'tri-tue': '#7aa2ff', 'phan-xa': '#ff5d8f',
+            'moi': '#f2c14e', 'recent': '#4fd1c5', 'fav': '#ff8fb1', 'sieukho': '#e5484d', 'co': '#f2c14e', 'chien-thuat': '#ff8a5c', 'tri-tue': '#7aa2ff', 'phan-xa': '#ff5d8f',
             'quan-sat': '#4fd1c5', 'ghi-nho': '#b48cff', 'giai-tri': '#6fdc78', 'sap': '#8a93ab'
         };
         // Game mới ra mắt: id -> ngày ra mắt (game mới nhất đứng trước). Nhãn NEW và mục "Mới ra mắt"
@@ -1719,18 +1734,21 @@
             const hot = HARD_IDS.includes(g.id) && !off && !soon;
             const badge = off ? '<b class="h-badge off">BẢO TRÌ</b>'
                 : soon ? '<b class="h-badge soon">SẮP RA</b>'
-                : hot ? '<b class="h-badge hot"><i class="fl f1"></i><i class="fl f2"></i><i class="fl f3"></i><span>SIÊU KHÓ</span></b>'
+                : hot ? '<b class="h-badge hot">SIÊU KHÓ</b>'
                 : NEW_IDS.includes(g.id) ? '<b class="h-badge new">NEW</b>' : '';
             const sub = off ? '<span class="h-sub">Đang bảo trì</span>'
                 : soon ? '<span class="h-sub">' + g.status + '</span>'
                 : diffHTML(g.diff, g.id);
+            const pin = isFav(g.id) ? '<i class="h-pin" aria-hidden="true">★</i>' : '';
             return '<div class="h-tile' + (hot ? ' is-hot' : '') + (off ? ' is-off' : '') + (soon ? ' is-soon' : '') + '" role="button" tabindex="' + (off || soon ? -1 : 0) +
                 '" data-id="' + g.id + '" aria-label="' + g.name + '">' +
-                '<span class="h-ico">' + iconHTML(g.id) + badge + '</span>' +
+                '<span class="h-ico">' + iconHTML(g.id) + badge + pin + '</span>' +
                 '<span class="h-name">' + g.name + '</span>' + sub + '</div>';
         }
         function sectionHTML(key, title, list) {
             if (!list.length) return '';
+            // game đang bảo trì xuống cuối mục (giữ nguyên thứ tự còn lại)
+            list = list.map((g, i) => [g, i]).sort((a, b) => (maintenanceOff(a[0].id) - maintenanceOff(b[0].id)) || (a[1] - b[1])).map(x => x[0]);
             return '<section class="h-sec' + (key === 'sieukho' ? ' hot' : '') + '" style="--c:' + (genreColor[key] || '#8a93ab') + '">' +
                 '<h2 class="h-sec-title"><i></i><span>' + title + '</span><em>' + list.length + '</em></h2>' +
                 '<div class="h-grid">' + list.map(tileHTML).join('') + '</div></section>';
@@ -1739,10 +1757,36 @@
         // Mỗi game nằm ở đúng một mục (không lặp): Siêu khó, rồi Cờ, còn lại theo thể loại đầu tiên
         function homeKey(g) { return HARD_IDS.includes(g.id) ? 'sieukho' : g.genre.includes('co') ? 'co' : g.genre[0]; }
 
+        // ========== CHƠI TIẾP + YÊU THÍCH (lưu trên máy) ==========
+        const RECENT_KEY = 'home:recent', FAV_KEY = 'home:fav';
+        function loadIds(key) { try { const a = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(a) ? a.filter(x => typeof x === 'string') : []; } catch (e) { return []; } }
+        function saveIds(key, a) { try { localStorage.setItem(key, JSON.stringify(a)); } catch (e) { } }
+        const gameById = id => playable.find(g => g.id === id);
+        const recentList = () => loadIds(RECENT_KEY).map(gameById).filter(g => g && !maintenanceOff(g.id)).slice(0, 6);
+        const favList = () => loadIds(FAV_KEY).map(gameById).filter(Boolean);
+        const isFav = id => loadIds(FAV_KEY).includes(id);
+        function pushRecent(id) { saveIds(RECENT_KEY, [id].concat(loadIds(RECENT_KEY).filter(x => x !== id)).slice(0, 12)); }
+        function toggleFav(id) {
+            const a = loadIds(FAV_KEY), on = !a.includes(id);
+            saveIds(FAV_KEY, on ? [id].concat(a) : a.filter(x => x !== id));
+            const g = gameById(id);
+            if (g) homeToast((on ? 'Đã ghim ' : 'Đã bỏ ghim ') + g.name);
+            return on;
+        }
+        let toastT;
+        function homeToast(msg) {
+            let t = document.getElementById('hToast');
+            if (!t) { t = document.createElement('div'); t.id = 'hToast'; t.className = 'h-toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+            t.textContent = msg; t.classList.add('show');
+            clearTimeout(toastT); toastT = setTimeout(() => t.classList.remove('show'), 1800);
+        }
+
         let currentGenre = 'all';
         function renderGames(genre) {
             let html = '';
             if (genre === 'all') {
+                html += sectionHTML('fav', 'Yêu thích', favList());
+                html += sectionHTML('recent', 'Chơi tiếp', recentList());
                 html += sectionHTML('moi', 'Mới ra mắt', NEW_IDS.map(id => games.find(g => g.id === id)).filter(Boolean));
                 genreOrder.forEach(k => { html += sectionHTML(k, genreNames[k], playable.filter(g => homeKey(g) === k)); });
                 html += sectionHTML('sap', 'Sắp ra mắt', games.filter(g => g.status));
@@ -1757,7 +1801,7 @@
         chipBar.innerHTML = '<button class="h-chip active" data-genre="all">Tất cả</button>' +
             genreOrder.map(k => {
                 const n = k === 'sieukho' ? HARD_IDS.length : playable.filter(g => g.genre.includes(k)).length;
-                return n ? '<button class="h-chip' + (k === 'sieukho' ? ' hot' : '') + '" data-genre="' + k + '">' + (k === 'sieukho' ? '<i class="fa-solid fa-fire-flame-curved"></i> ' : '') + genreNames[k] +
+                return n ? '<button class="h-chip' + (k === 'sieukho' ? ' hot' : '') + '" data-genre="' + k + '">' + genreNames[k] +
                     ' <small>' + n + '</small></button>' : '';
             }).join('');
 
@@ -1782,14 +1826,95 @@
             const g = games.find(x => x.id === tile.dataset.id);
             if (!g) return;
             const url = routes[g.id];
-            if (url && !maintenanceOff(g.id)) navigateToGame(url, g.name);
+            if (url && !maintenanceOff(g.id)) { pushRecent(g.id); navigateToGame(url, g.name); }
         }
-        feed.addEventListener('click', (e) => { const t = e.target.closest('.h-tile'); if (t) openTile(t); });
+        // giữ một ô (hoặc bấm chuột phải, hoặc phím F) để ghim / bỏ ghim
+        let pressT = null, pressXY = null, justPinned = false;
+        function pinTile(tile) {
+            if (!tile || tile.classList.contains('is-soon') || tile.classList.contains('is-off')) return;
+            toggleFav(tile.dataset.id); justPinned = true; setTimeout(() => { justPinned = false; }, 400);
+            renderGames(currentGenre); renderFind();
+        }
+        feed.addEventListener('pointerdown', (e) => {
+            const t = e.target.closest('.h-tile'); if (!t || (e.pointerType === 'mouse' && e.button !== 0)) return;
+            pressXY = [e.clientX, e.clientY]; clearTimeout(pressT);
+            pressT = setTimeout(() => { pressT = null; if (navigator.vibrate) try { navigator.vibrate(12); } catch (x) { } pinTile(t); }, 520);
+        });
+        const endPress = () => { clearTimeout(pressT); pressT = null; };
+        feed.addEventListener('pointerup', endPress); feed.addEventListener('pointercancel', endPress); feed.addEventListener('pointerleave', endPress);
+        feed.addEventListener('pointermove', (e) => { if (pressT && pressXY && Math.hypot(e.clientX - pressXY[0], e.clientY - pressXY[1]) > 8) endPress(); });
+        feed.addEventListener('contextmenu', (e) => { const t = e.target.closest('.h-tile'); if (t) { e.preventDefault(); if (e.pointerType === 'mouse' || e.button === 2) pinTile(t); } });
+        feed.addEventListener('click', (e) => { if (justPinned) return; const t = e.target.closest('.h-tile'); if (t) openTile(t); });
         feed.addEventListener('keydown', (e) => {
             if (e.key !== 'Enter' && e.key !== ' ') return;
             const t = e.target.closest('.h-tile'); if (!t) return;
             e.preventDefault(); openTile(t);
         });
+        feed.addEventListener('keydown', (e) => { if (e.key !== 'f' && e.key !== 'F') return; const t = e.target.closest('.h-tile'); if (t) { e.preventDefault(); pinTile(t); } });
+
+        // ========== TÌM KIẾM GAME (nút nổi + bảng trượt từ dưới lên) ==========
+        const findBtn = document.getElementById('hFindBtn'), find = document.getElementById('hFind'), findIn = document.getElementById('hFindIn'), findList = document.getElementById('hFindList');
+        const normCh = c => c.normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[đĐ]/g, 'd').toLowerCase().charAt(0) || c;
+        const norm = s => Array.from(s).map(normCh).join('');
+        const escH = s => s.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+        // mỗi từ gõ vào phải khớp đầu một từ trong tên game, bỏ dấu, không phân biệt hoa thường
+        function findMatch(g, q) {
+            const toks = norm(q).trim().split(/\s+/).filter(Boolean); if (!toks.length) return null;
+            const n = norm(g.name), rs = [];
+            for (const t of toks) {
+                let from = 0, at = -1;
+                while ((from = n.indexOf(t, from)) >= 0) { if (from === 0 || n[from - 1] === ' ') { at = from; break; } from++; }
+                if (at < 0) return false; rs.push([at, at + t.length]);
+            }
+            return rs;
+        }
+        function hl(name, rs) {
+            const ch = Array.from(name), on = ch.map(() => false);
+            (rs || []).forEach(r => { for (let i = r[0]; i < r[1]; i++) on[i] = true; });
+            let out = '', open = false;
+            ch.forEach((c, i) => { if (on[i] && !open) { out += '<mark>'; open = true; } if (!on[i] && open) { out += '</mark>'; open = false; } out += escH(c); });
+            return out + (open ? '</mark>' : '');
+        }
+        function findRow(g, rs) {
+            const off = maintenanceOff(g.id), fav = isFav(g.id);
+            return '<div class="h-fr' + (off ? ' is-off' : '') + '" data-id="' + g.id + '"><div role="button" tabindex="' + (off ? -1 : 0) + '" class="h-fr-main"' + (off ? ' aria-disabled="true"' : '') + '>' +
+                '<span class="h-fr-ico">' + iconHTML(g.id) + '</span><span class="h-fr-txt"><span class="h-fr-name">' + hl(g.name, rs) + '</span><span class="h-fr-meta">' +
+                (off ? 'Đang bảo trì' : g.genre.map(k => genreNames[k]).join(' · ')) + '</span>' + (off ? '' : diffHTML(g.diff, g.id)) + '</span></div>' +
+                '<button type="button" class="h-fr-star' + (fav ? ' on' : '') + '" aria-pressed="' + fav + '" aria-label="' + (fav ? 'Bỏ ghim ' : 'Ghim ') + escH(g.name) + '">' + (fav ? '★' : '☆') + '</button></div>';
+        }
+        function renderFind() {
+            if (find.hidden) return;
+            const q = findIn.value;
+            if (!q.trim()) {
+                const rc = recentList(), fv = favList();
+                findList.innerHTML = (fv.length ? '<div class="h-fl">Yêu thích</div>' + fv.map(g => findRow(g)).join('') : '') +
+                    (rc.length ? '<div class="h-fl">Chơi tiếp</div>' + rc.map(g => findRow(g)).join('') : '') +
+                    '<p class="h-fhint">Gõ tên game để tìm, không cần gõ dấu. Bấm ☆ để ghim game lên đầu trang chủ, hoặc giữ một ô game.</p>';
+                return;
+            }
+            const m = new Map(); playable.forEach(g => { const r = findMatch(g, q); if (r) m.set(g, r); });
+            const l = [...m.keys()].sort((a, b) => (maintenanceOff(a.id) - maintenanceOff(b.id)) || (m.get(a)[0][0] - m.get(b)[0][0]));
+            findList.innerHTML = l.length ? '<div class="h-fl">' + l.length + ' kết quả</div>' + l.map(g => findRow(g, m.get(g))).join('')
+                : '<div class="h-fempty"><b>Không thấy game nào tên “' + escH(q.trim()) + '”</b>Thử gõ ngắn hơn, ví dụ “co”, “cau ca”.</div>';
+        }
+        let findRet = null;
+        function openFind() { find.hidden = false; document.body.classList.add('h-find-open'); findRet = document.activeElement; requestAnimationFrame(() => { find.classList.add('open'); findIn.focus(); }); renderFind(); }
+        function closeFind() { find.classList.remove('open'); document.body.classList.remove('h-find-open'); setTimeout(() => { if (!find.classList.contains('open')) find.hidden = true; }, 260); if (findRet && findRet.focus) findRet.focus(); }
+        findBtn.addEventListener('click', openFind);
+        find.addEventListener('click', (e) => { if (e.target.closest('[data-close]')) { closeFind(); return; }
+            const st = e.target.closest('.h-fr-star'); if (st) { toggleFav(st.parentNode.dataset.id); renderFind(); renderGames(currentGenre); return; }
+            const mn = e.target.closest('.h-fr-main'); if (mn) { const id = mn.parentNode.dataset.id; const g = games.find(x => x.id === id); if (g && routes[id] && !maintenanceOff(id)) { pushRecent(id); navigateToGame(routes[id], g.name); } } });
+        findIn.addEventListener('input', renderFind);
+        findIn.addEventListener('keydown', (e) => { if (e.key === 'Enter') { const f = findList.querySelector('.h-fr-main:not([aria-disabled])'); if (f) f.click(); } });
+        findList.addEventListener('keydown', (e) => { if ((e.key === 'Enter' || e.key === ' ') && e.target.classList.contains('h-fr-main')) { e.preventDefault(); e.target.click(); } });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && !find.hidden) { closeFind(); return; }
+            if (e.key === '/' && find.hidden && !/input|textarea|select/i.test(document.activeElement.tagName) && !document.querySelector('#pn-overlay')) { e.preventDefault(); openFind(); }
+        });
+
+        // chip thể loại mờ dần ở mép còn kéo được
+        function chipFade() { const m = chipBar.scrollWidth - chipBar.clientWidth; chipBar.style.setProperty('--fl', chipBar.scrollLeft > 4 ? '28px' : '0px'); chipBar.style.setProperty('--fr', m - chipBar.scrollLeft > 4 ? '28px' : '0px'); }
+        chipBar.addEventListener('scroll', chipFade, { passive: true }); window.addEventListener('resize', chipFade); setTimeout(chipFade, 0); setTimeout(chipFade, 600);
 
         renderGames('all');
 
