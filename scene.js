@@ -44,7 +44,6 @@
     xepnuoc: ['iris', '#0b2a4a', '#0891b2', '#cffafe'],
     truotbang: ['tiles', '#0e3a5c', '#7dd3fc', '#e0f7ff'],
     truottuyet3d: ['diagonal', '#0c4a6e', '#38bdf8', '#ffffff'],
-    daokhobau: ['diagonal', '#2b1d14', '#8a5a36', '#f4c542'],
     nhodovat: ['curtain', '#0a0d24', '#a3213f', '#f2f5ff'],
     meodem: ['iris', '#0b0d1c', '#2a2c5a', '#f2c14e'],
     denkeoquan: ['iris', '#0e1024', '#b8322a', '#ffb13b'],
