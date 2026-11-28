@@ -275,4 +275,14 @@ BANKS = {
     'select': [(WM+'wood_hit_07.ogg', {'db': -6})],
     'ok':     [jw('HIT02')], 'level': [jw('HIT07')], 'win': [jw('HIT11')], 'lose': [jw('HIT09')],
   },
+  # Hộ tống bóng bay: khiên đẩy đồ vật kêu "bộp" mềm, đồ bay vút qua, bóng vỡ, nhạc pizzicato nhẹ
+  'hotongbong': {
+    'bump':   [(S1+'plop_01.ogg', {'db': -4}), (S1+'plop_02.ogg', {'db': -4})],
+    'hit':    [(S1+'hit_01.ogg', {'db': -6}), (S1+'hit_03.ogg', {'db': -6}), (S1+'wooden_02.ogg', {'db': -6})],
+    'whoosh': [(SW+'2.wav', {'db': -6}), (SW+'5.wav', {'db': -6})],
+    'pop':    ['x/misc/balloon_pop.ogg'],
+    'jump':   [('x/misc/balloon_inflate.ogg', {'len': .5, 'db': -6})],
+    'tap':    [(UI+'click_002.ogg', {'db': -4})],
+    'level':  [jw('PIZZA03')], 'lose': [jw('PIZZA05')],
+  },
 }

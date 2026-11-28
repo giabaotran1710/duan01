@@ -70,6 +70,7 @@
     { id: 'phitieu', name: 'Phi tiêu trăng rằm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
     { id: 'cauca', name: 'Câu cá', fmt: v => v.toLocaleString('vi-VN') + ' điểm sưu tầm' },
     { id: 'bowling', name: 'Bowling', fmt: v => v + ' điểm' },
+    { id: 'hotongbong', name: 'Hộ tống bóng bay', fmt: v => v.toLocaleString('vi-VN') + ' m' },
     { id: 'thongthai', name: 'Thông thái trắc nghiệm', fmt: v => v.toLocaleString('vi-VN') + ' điểm' },
   ];
   const gameInfo = id => GAMES.find(g => g.id === id);
