@@ -477,8 +477,33 @@
     { id: 'soi', name: 'Đá cuội', price: 30 }, { id: 'rong', name: 'Rong xanh', price: 40 }, { id: 'cat', name: 'Cát trắng', price: 60 },
     { id: 'suc', name: 'Máy sục khí', price: 80 }, { id: 'sanho', name: 'San hô', price: 120 }, { id: 'den', name: 'Đèn bể', price: 150 },
     { id: 'ruong', name: 'Rương báu', price: 260 }, { id: 'laudai', name: 'Lâu đài', price: 300 }, { id: 'tuong', name: 'Tượng cá chép', price: 400 },
-    { id: 'thuyen', name: 'Thuyền đắm', price: 500 }
+    { id: 'thuyen', name: 'Thuyền đắm', price: 500 },
+    { id: 'so', name: 'Sò ngọc', price: 0, ev: true }
   ];
+  /* Event hàng tuần: câu được gì cũng nhặt được Vỏ ốc, cá hiếm có thể kèm Ngọc trai; đổi quà có giới hạn mỗi tuần.
+     Tuần bắt đầu 00:00 thứ hai giờ Việt Nam (UTC+7), hết tuần thì vật phẩm và lượt đổi về 0. */
+  var EVENT = {
+    tz: 7,
+    drop: { thuong: { vo: 1 }, rac: { vo: 1 }, hiem: { vo: 3, ngoc: .2 }, hiemco: { vo: 8, ngoc: 2 } },
+    items: { vo: { name: 'Vỏ ốc' }, ngoc: { name: 'Ngọc trai' } },
+    rewards: [
+      { id: 'tom', name: '10 Mồi tôm', cost: { vo: 25 }, lim: 3, give: { bait: 'tom', n: 10 } },
+      { id: 'cam', name: '10 Cám thơm', cost: { vo: 40 }, lim: 3, give: { bait: 'cam', n: 10 } },
+      { id: 'drink', name: 'Nước tăng lực', cost: { vo: 30 }, lim: 5, give: { drink: 1 } },
+      { id: 'xu', name: 'Túi 300 xu', cost: { vo: 50 }, lim: 4, give: { coins: 300 } },
+      { id: 'vang', name: '5 Mồi vàng', cost: { ngoc: 5 }, lim: 2, give: { bait: 'vang', n: 5 } },
+      { id: 'so', name: 'Sò ngọc', cost: { ngoc: 12 }, lim: 1, give: { deco: 'so' } }
+    ]
+  };
+  /* Số tuần tính từ mốc 00:00 thứ hai, và thời điểm (ms) bắt đầu tuần sau. 01/01/1970 là thứ năm. */
+  function eventWeek(now) { var d = Math.floor((now + EVENT.tz * 3600000) / 86400000); return Math.floor((d + 3) / 7); }
+  function eventEnds(now) { return ((eventWeek(now) + 1) * 7 - 3) * 86400000 - EVENT.tz * 3600000; }
+  /* Vật phẩm nhặt được khi câu lên một con: số lẻ của ngọc là xác suất được thêm 1 viên. */
+  function eventDrop(e, rnd) {
+    var d = EVENT.drop[e.r] || {}, out = {};
+    Object.keys(d).forEach(function (k) { var v = d[k], n = Math.floor(v); if ((rnd ? rnd() : Math.random()) < v - n) n++; if (n) out[k] = n; });
+    return out;
+  }
   var TANK = { start: 3, max: 15, cost: function (slots) { return Math.round(80 * Math.pow(1.25, slots - 3) / 10) * 10; } };
   var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drink: { name: 'Nước tăng lực', gain: 30, price: 90, cap: 120 } };
 
@@ -513,6 +538,6 @@
   }
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, DAYNIGHT: DAYNIGHT, TIDES: TIDES, dayOf: dayOf, tideAt: tideAt, tideLevel: tideLevel, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
-    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, ENERGY: ENERGY, price: price,
+    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, EVENT: EVENT, eventWeek: eventWeek, eventEnds: eventEnds, eventDrop: eventDrop, ENERGY: ENERGY, price: price,
     slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, condOk: condOk, rateOf: rateOf, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);

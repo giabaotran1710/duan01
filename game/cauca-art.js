@@ -1368,6 +1368,10 @@
       case 'tuong': P = painter(26, 30, false); P.rect(6, 22, 14, 8, '#8a8070'); P.rect(4, 20, 18, 3, '#a8a090'); break;
       case 'thuyen': P = painter(38, 18, false); c = P.c; c.translate(19, 9); c.rotate(-.18); c.translate(-19, -9);
         P.poly([2, 8, 36, 8, 31, 16, 7, 16], '#6a4a2a'); P.rect(6, 10, 26, 1, '#4a3018'); P.rect(18, 0, 2, 8, '#5a3a1a'); P.poly([20, 1, 28, 6, 20, 7], '#c8c0a8'); P.rect(12, 12, 2, 2, '#2a3a4a'); P.rect(22, 12, 3, 2, '#2a3a4a'); break;
+      case 'so': P = painter(20, 14, false);
+        P.poly([1, 13, 19, 13, 17, 9, 3, 9], '#c8a8c0'); P.rect(2, 11, 16, 1, '#a888a8');
+        P.poly([2, 9, 4, 2, 10, 0, 16, 2, 18, 9], '#e8c8dc'); for (var r2 = 0; r2 < 4; r2++) P.line(5 + r2 * 3.4, 8, 6 + r2 * 2.6, 2, '#c8a0bc');
+        P.ell(10, 10, 2.6, 2.4, '#f4f0f8'); P.rect(9, 9, 1, 1, '#ffffff'); break;
       default: P = painter(4, 4, false); P.rect(0, 0, 4, 4, '#888');
     }
     var cv = P.done(OUT);
@@ -1389,11 +1393,14 @@
     else if (id === 'up_hiem') { P.poly([8, 0, 10, 6, 16, 6, 11, 10, 13, 16, 8, 12, 3, 16, 5, 10, 0, 6, 6, 6], '#ffd23f'); P.poly([8, 2, 9, 6, 8, 8, 7, 6], '#fff6c0'); P.rect(7, 7, 2, 2, '#e8a020'); }
     else if (id === 'up_rac') { P.rect(4, 3, 8, 12, '#c8382f'); P.rect(4, 3, 8, 2, '#d8d8d8'); P.rect(4, 13, 8, 2, '#a8a8a8'); P.rect(6, 7, 2, 5, '#f4f4f4'); P.ell(12, 5, 3, 3, '#e8b83a'); P.ell(12, 5, 1.4, 1.4, '#7a5a1a'); }
     else if (id === 'skill') { P.poly([8, 0, 10, 5, 15, 5, 11, 9, 13, 15, 8, 11, 3, 15, 5, 9, 1, 5, 6, 5], '#e8b83a'); P.poly([8, 2, 9, 5, 8, 7, 7, 5], '#fff6c0'); P.rect(2, 13, 12, 3, '#3f8ad8'); P.rect(3, 14, 10, 1, '#7ac0f8'); }
+    else if (id === 'vo') { P.poly([8, 1, 14, 6, 13, 12, 8, 15, 3, 12, 2, 6], '#f0b890'); P.poly([8, 1, 11, 6, 8, 13, 5, 6], '#f8d4b0'); P.line(8, 3, 8, 13, '#c8805a'); P.line(5, 5, 4, 11, '#c8805a'); P.line(11, 5, 12, 11, '#c8805a'); P.rect(6, 13, 4, 2, '#d89068'); }
+    else if (id === 'ngoc') { P.ell(8, 9, 5.5, 5.5, '#dcd8ec'); P.ell(7, 8, 3.6, 3.6, '#f4f2fa'); P.rect(5, 5, 2, 2, '#ffffff'); P.ell(10, 12, 2, 1.2, '#b8b0d0'); }
+    else if (id === 'event') { P.rect(1, 3, 14, 11, '#e04a3a'); P.rect(1, 3, 14, 2, '#f87a5a'); P.rect(7, 3, 2, 11, '#ffd23f'); P.rect(1, 8, 14, 2, '#ffd23f'); P.poly([8, 3, 3, 0, 4, 3], '#ffd23f'); P.poly([8, 3, 13, 0, 12, 3], '#ffd23f'); }
     else if (id === 'slot') { P.rect(1, 3, 14, 11, '#7ab8d8'); P.rect(1, 11, 14, 3, '#e8d8a8'); P.rect(1, 3, 14, 1, '#c8e8f8'); P.rect(6, 6, 4, 2, '#f08a3a'); P.rect(5, 6, 1, 2, '#f08a3a'); }
     var cv = P.done(OUT); itemCache[id] = cv; return cv;
   };
   /* Vẽ bể cá: w x h (thấp), fish = [{e, cm, x, y, vx}], on = {decoId: true}, t: giây */
-  var DECO_POS = { soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
+  var DECO_POS = { so: .21, soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
   /* Lớp tĩnh của bể (nước, cát, đồ trang trí): chỉ vẽ lại khi bộ trang trí đổi */
   function tankStatic(w, h, on) {
     var cv = canvas(w, h), c = cv.getContext('2d'), lamp = on.den;
