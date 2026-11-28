@@ -1266,6 +1266,7 @@
   /* hình nhân vật/vật phẩm, đã nắn pixel và có viền; cache theo id */
   var spriteCache = {};
   CA.sprite = function (e) {
+    if (e.ev) return CA.item(e.id);
     if (spriteCache[e.id]) return spriteCache[e.id];
     var a = e.a, cv;
     if (e.r === 'rac') cv = junk(a);
@@ -1368,6 +1369,9 @@
       case 'tuong': P = painter(26, 30, false); P.rect(6, 22, 14, 8, '#8a8070'); P.rect(4, 20, 18, 3, '#a8a090'); break;
       case 'thuyen': P = painter(38, 18, false); c = P.c; c.translate(19, 9); c.rotate(-.18); c.translate(-19, -9);
         P.poly([2, 8, 36, 8, 31, 16, 7, 16], '#6a4a2a'); P.rect(6, 10, 26, 1, '#4a3018'); P.rect(18, 0, 2, 8, '#5a3a1a'); P.poly([20, 1, 28, 6, 20, 7], '#c8c0a8'); P.rect(12, 12, 2, 2, '#2a3a4a'); P.rect(22, 12, 3, 2, '#2a3a4a'); break;
+      case 'binh': P = painter(14, 22, false);
+        P.rect(4, 0, 6, 2, '#a8642e'); P.rect(5, 2, 4, 3, '#c8803c'); P.ell(7, 13, 6.5, 8, '#b8702e'); P.ell(6, 11, 3, 4.5, '#d89050');
+        P.rect(1, 12, 12, 2, '#6a3a1a'); P.rect(2, 8, 10, 1, '#6a3a1a'); for (var bq = 0; bq < 5; bq++) P.rect(2 + bq * 2, 10 + (bq % 2), 1, 1, '#f4d890'); P.rect(9, 16, 2, 3, '#8a4a1e'); break;
       case 'so': P = painter(20, 14, false);
         P.poly([1, 13, 19, 13, 17, 9, 3, 9], '#c8a8c0'); P.rect(2, 11, 16, 1, '#a888a8');
         P.poly([2, 9, 4, 2, 10, 0, 16, 2, 18, 9], '#e8c8dc'); for (var r2 = 0; r2 < 4; r2++) P.line(5 + r2 * 3.4, 8, 6 + r2 * 2.6, 2, '#c8a0bc');
@@ -1395,12 +1399,16 @@
     else if (id === 'skill') { P.poly([8, 0, 10, 5, 15, 5, 11, 9, 13, 15, 8, 11, 3, 15, 5, 9, 1, 5, 6, 5], '#e8b83a'); P.poly([8, 2, 9, 5, 8, 7, 7, 5], '#fff6c0'); P.rect(2, 13, 12, 3, '#3f8ad8'); P.rect(3, 14, 10, 1, '#7ac0f8'); }
     else if (id === 'vo') { P.poly([8, 1, 14, 6, 13, 12, 8, 15, 3, 12, 2, 6], '#f0b890'); P.poly([8, 1, 11, 6, 8, 13, 5, 6], '#f8d4b0'); P.line(8, 3, 8, 13, '#c8805a'); P.line(5, 5, 4, 11, '#c8805a'); P.line(11, 5, 12, 11, '#c8805a'); P.rect(6, 13, 4, 2, '#d89068'); }
     else if (id === 'ngoc') { P.ell(8, 9, 5.5, 5.5, '#dcd8ec'); P.ell(7, 8, 3.6, 3.6, '#f4f2fa'); P.rect(5, 5, 2, 2, '#ffffff'); P.ell(10, 12, 2, 1.2, '#b8b0d0'); }
+    else if (id === 'go') { P.poly([2, 11, 5, 3, 11, 5, 13, 12], '#c8803c'); P.poly([3, 10, 5, 4, 8, 6, 6, 11], '#e8a860'); P.line(6, 9, 11, 7, '#6a3a1a'); P.line(8, 11, 12, 11, '#6a3a1a'); P.rect(4, 12, 9, 2, '#a8642e'); }
+    else if (id === 'tien') { P.ell(8, 8, 6.5, 6.5, '#9a7a3a'); P.ell(8, 8, 5, 5, '#c8a050'); P.rect(6, 6, 4, 4, '#6a4a1a'); P.rect(7, 7, 2, 2, '#2f3a34'); P.rect(4, 4, 2, 1, '#f0d890'); P.rect(11, 10, 1, 2, '#6a8a5a'); }
+    else if (id === 'bich') { P.poly([8, 1, 13, 4, 13, 11, 8, 15, 3, 11, 3, 4], '#2f9a6a'); P.poly([8, 3, 11, 5, 11, 10, 8, 13, 5, 10, 5, 5], '#5ad89a'); P.poly([6, 5, 8, 4, 8, 8, 6, 9], '#c8f8e0'); P.rect(9, 9, 2, 2, '#2f9a6a'); }
+    else if (id === 'kho') { P.ell(8, 10, 6, 5, '#3a7a86'); P.ell(7, 9, 4, 3, '#5ab0b8'); P.rect(6, 3, 4, 3, '#a8763e'); P.rect(7, 1, 2, 2, '#c8c8c8'); P.rect(11, 5, 2, 2, '#ffd23f'); P.rect(12, 4, 1, 4, '#fff6c0'); P.rect(10, 6, 4, 1, '#fff6c0'); P.rect(3, 12, 2, 1, '#ffd23f'); }
     else if (id === 'event') { P.rect(1, 3, 14, 11, '#e04a3a'); P.rect(1, 3, 14, 2, '#f87a5a'); P.rect(7, 3, 2, 11, '#ffd23f'); P.rect(1, 8, 14, 2, '#ffd23f'); P.poly([8, 3, 3, 0, 4, 3], '#ffd23f'); P.poly([8, 3, 13, 0, 12, 3], '#ffd23f'); }
     else if (id === 'slot') { P.rect(1, 3, 14, 11, '#7ab8d8'); P.rect(1, 11, 14, 3, '#e8d8a8'); P.rect(1, 3, 14, 1, '#c8e8f8'); P.rect(6, 6, 4, 2, '#f08a3a'); P.rect(5, 6, 1, 2, '#f08a3a'); }
     var cv = P.done(OUT); itemCache[id] = cv; return cv;
   };
   /* Vẽ bể cá: w x h (thấp), fish = [{e, cm, x, y, vx}], on = {decoId: true}, t: giây */
-  var DECO_POS = { so: .21, soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
+  var DECO_POS = { binh: .49, so: .21, soi: .14, rong: .05, sanho: .8, ruong: .3, laudai: .56, tuong: .42, thuyen: .68, suc: .94 };
   /* Lớp tĩnh của bể (nước, cát, đồ trang trí): chỉ vẽ lại khi bộ trang trí đổi */
   function tankStatic(w, h, on) {
     var cv = canvas(w, h), c = cv.getContext('2d'), lamp = on.den;

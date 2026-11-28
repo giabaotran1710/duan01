@@ -462,7 +462,8 @@
     giun: { name: 'Giun đất', size: 1, rare: 1, junk: 1, price: 0, pack: 0, desc: 'Mồi thường, dùng mãi không hết.' },
     tom: { name: 'Mồi tôm', size: 1.7, rare: 1, junk: .7, price: 60, pack: 10, desc: 'Cá to cắn nhiều hơn.' },
     cam: { name: 'Cám thơm', size: 1, rare: 2, junk: .6, price: 100, pack: 10, desc: 'Dễ gặp loài hiếm và hiếm có hơn.' },
-    vang: { name: 'Mồi vàng', size: 2, rare: 2.8, junk: .3, price: 260, pack: 5, desc: 'Vừa cá to vừa cá hiếm.' }
+    vang: { name: 'Mồi vàng', size: 2, rare: 2.8, junk: .3, price: 260, pack: 5, desc: 'Vừa cá to vừa cá hiếm.' },
+    kho: { name: 'Mồi kho báu', size: 1, rare: 1, junk: 1, price: 80, pack: 5, ev: true, desc: 'Có cơ hội câu được vật phẩm sự kiện, vẫn câu được cá như thường.' }
   };
   /* Giá bán (xu): theo độ hiếm, cỡ của loài và cỡ của con này. */
   var BASE = { thuong: 6, hiem: 26, hiemco: 110, rac: 1 };
@@ -478,7 +479,7 @@
     { id: 'suc', name: 'Máy sục khí', price: 80 }, { id: 'sanho', name: 'San hô', price: 120 }, { id: 'den', name: 'Đèn bể', price: 150 },
     { id: 'ruong', name: 'Rương báu', price: 260 }, { id: 'laudai', name: 'Lâu đài', price: 300 }, { id: 'tuong', name: 'Tượng cá chép', price: 400 },
     { id: 'thuyen', name: 'Thuyền đắm', price: 500 },
-    { id: 'so', name: 'Sò ngọc', price: 0, ev: true }
+    { id: 'so', name: 'Sò ngọc', price: 0, ev: true }, { id: 'binh', name: 'Bình gốm cổ', price: 0, ev: true }
   ];
   /* Event hàng tuần: câu được gì cũng nhặt được Vỏ ốc, cá hiếm có thể kèm Ngọc trai; đổi quà có giới hạn mỗi tuần.
      Tuần bắt đầu 00:00 thứ hai giờ Việt Nam (UTC+7), hết tuần thì vật phẩm và lượt đổi về 0. */
@@ -503,6 +504,34 @@
     var d = EVENT.drop[e.r] || {}, out = {};
     Object.keys(d).forEach(function (k) { var v = d[k], n = Math.floor(v); if ((rnd ? rnd() : Math.random()) < v - n) n++; if (n) out[k] = n; });
     return out;
+  }
+  /* Event thứ hai (Kho báu chìm), luân phiên từng tuần với Event Vỏ ốc: tuần lẻ là Vỏ ốc, tuần chẵn là Kho báu.
+     Mồi kho báu chỉ bán trong tuần của nó; vật phẩm câu được thì giữ mãi, không bị xóa khi hết sự kiện.
+     lim = số lần đổi tối đa trong cả trò chơi (0 là không giới hạn). */
+  var EVENT2 = {
+    bait: 'kho', chance: .3,
+    items: {
+      go: { name: 'Mảnh gốm', r: 'thuong', rl: 'Thường', w: 70, desc: 'Mảnh gốm vỡ nằm dưới đáy nước từ lâu.' },
+      tien: { name: 'Đồng tiền cổ', r: 'hiem', rl: 'Hiếm', w: 25, desc: 'Đồng tiền đồng đã xỉn màu, lỗ vuông ở giữa.' },
+      bich: { name: 'Ngọc bích', r: 'hiemco', rl: 'Rất hiếm', w: 5, desc: 'Viên ngọc xanh còn nguyên vẻ sáng trong.' }
+    },
+    rewards: [
+      { id: 'drink', name: 'Nước tăng lực', cost: { go: 8 }, lim: 0, give: { drink: 1 } },
+      { id: 'cam', name: '10 Cám thơm', cost: { go: 6 }, lim: 0, give: { bait: 'cam', n: 10 } },
+      { id: 'xu', name: 'Túi 250 xu', cost: { tien: 4 }, lim: 0, give: { coins: 250 } },
+      { id: 'vang', name: '5 Mồi vàng', cost: { tien: 3 }, lim: 0, give: { bait: 'vang', n: 5 } },
+      { id: 'slot', name: 'Thêm 1 chỗ trong bể', cost: { bich: 2 }, lim: 3, give: { slot: 1 } },
+      { id: 'binh', name: 'Bình gốm cổ', cost: { tien: 5, bich: 2 }, lim: 1, give: { deco: 'binh' } }
+    ]
+  };
+  EVENT2.list = Object.keys(EVENT2.items).map(function (k) { var o = EVENT2.items[k]; return { id: k, name: o.name, r: o.r, rl: o.rl, w: o.w, desc: o.desc, ev: true, cm: [10, 10], k: 0 }; });
+  /* 'vo' = Event Vỏ ốc, 'kho' = Event Kho báu. force chỉ dùng để kiểm thử. */
+  function eventKind(now) { return EVENT2.force || (eventWeek(now) % 2 ? 'vo' : 'kho'); }
+  function eventPick(rnd) {
+    var tot = 0, r; EVENT2.list.forEach(function (e) { tot += e.w; });
+    r = (rnd || Math.random)() * tot;
+    for (var i = 0; i < EVENT2.list.length; i++) { r -= EVENT2.list[i].w; if (r < 0) return EVENT2.list[i]; }
+    return EVENT2.list[0];
   }
   var TANK = { start: 3, max: 15, cost: function (slots) { return Math.round(80 * Math.pow(1.25, slots - 3) / 10) * 10; } };
   var ENERGY = { max: 60, regenMs: 5 * 60 * 1000, drink: { name: 'Nước tăng lực', gain: 30, price: 90, cap: 120 } };
@@ -538,6 +567,6 @@
   }
 
   root.CC = { SLOTS: SLOTS, WEATHER: WEATHER, DAYNIGHT: DAYNIGHT, TIDES: TIDES, dayOf: dayOf, tideAt: tideAt, tideLevel: tideLevel, RARITY: RARITY, REGIONS: REGIONS, SPECIES: SPECIES, JUNK: JUNK, ALL: ALL, byId: byId,
-    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, EVENT: EVENT, eventWeek: eventWeek, eventEnds: eventEnds, eventDrop: eventDrop, ENERGY: ENERGY, price: price,
+    BAITS: BAITS, UPGRADES: UPGRADES, UPBYID: UPBYID, upMods: upMods, energyMax: energyMax, regenMs: regenMs, drinkCap: drinkCap, DECOS: DECOS, TANK: TANK, EVENT: EVENT, EVENT2: EVENT2, eventKind: eventKind, eventPick: eventPick, eventWeek: eventWeek, eventEnds: eventEnds, eventDrop: eventDrop, ENERGY: ENERGY, price: price,
     slotOf: slotOf, weatherAt: weatherAt, eligible: eligible, condOk: condOk, rateOf: rateOf, pick: pick, roll: roll, speedOf: speedOf, zoneOf: zoneOf, points: points, hash: hash };
 })(typeof window !== 'undefined' ? window : globalThis);
